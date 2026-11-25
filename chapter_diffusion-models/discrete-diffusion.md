@@ -1,7 +1,7 @@
 # Discrete Diffusion
 :label:`sec_diffusion-discrete`
 
-Every model in the preceding sections relied on adding Gaussian noise to continuous vectors: points in $\mathbb{R}^2$, pixel intensities, or autoencoder latents. Discrete sequences—such as text tokens, source code, or quantized image tokens—cannot be perturbed by small additive real numbers. While autoregressive models (:numref:`sec_gpt`) generate $L$ tokens in $L$ sequential forward passes from left to right, discrete diffusion models generate multiple tokens in parallel per network evaluation with bidirectional context.
+Every model in the preceding sections relied on adding Gaussian noise to continuous vectors: points in $\mathbb{R}^2$, pixel intensities, or autoencoder latents. Discrete sequences such as text tokens, source code, or quantized image tokens cannot be perturbed by small additive real numbers. While autoregressive models (:numref:`sec_gpt`) generate $L$ tokens in $L$ sequential forward passes from left to right, discrete diffusion models generate multiple tokens in parallel per network evaluation with bidirectional context.
 
 To define diffusion on a finite vocabulary, :citet:`Hoogeboom.Nielsen.Jaini.ea.2021` and :citet:`Austin.Johnson.Ho.ea.2021` replaced Gaussian perturbation with a discrete-state Markov chain governed by transition matrices $\mathbf{Q}_t$. On text and discrete codes, the most effective corruption process is the *absorbing (masking) kernel*, which independently replaces tokens with a mask symbol $[\textrm{M}]$ until the sequence is completely erased. Under this absorbing chain, the variational lower bound of :numref:`sec_diffusion-design-space` simplifies to a weighted masked cross-entropy objective :cite:`Sahoo.Arriola.Schiff.ea.2024,Shi.Han.Wang.ea.2024`. In this section we derive the absorbing Markov chain and its variational bound, analyze the independence error incurred when unmasking multiple tokens in parallel on a quantized two-token version of the three-mode mixture and on binary Fashion-MNIST images, and connect masked diffusion to autoregressive and masked language models (:numref:`sec_transformer` and :numref:`sec_gpt`).
 
@@ -1236,10 +1236,7 @@ it surveys (:numref:`sec_lm_architectures_fr`).
 
 ## Summary
 
-- Discrete diffusion corrupts categorical tokens via transition matrices $\mathbf{Q}_t$. Under the absorbing kernel, each token survives $t$ steps with probability $\bar\alpha_t = \prod_{s \le t}(1 - \beta_s)$ and is otherwise replaced by $[\textrm{M}]$.
-- The variational bound (ELBO) on the negative log-likelihood simplifies to a weighted sum of masked-token cross-entropies, with weight $w_t = (\bar\alpha_{t-1} - \bar\alpha_t)/(1 - \bar\alpha_t)$ ($1/t$ under a linear schedule) and continuous-time limit $\int_0^1 \frac{1}{u}\, \mathbb{E}_u[\ell]\, du$. Under independent masking, the optimal clean-token distribution at a masked position is time-agnostic.
-- Because the reverse model factorizes across positions within a single step, unmasking multiple tokens simultaneously incurs an independence error: on a two-token distribution $p$, $S$ equal linear jumps sample from $(1 - 1/S)p + (1/S)p^1 \otimes p^2$ (total variation error $\propto 1/S$), and the $T$-step ELBO floor exceeds the entropy $H(X^1, X^2)$ by $I(X^1; X^2)/T$.
-- Masked diffusion unifies classical sequence models: revealing one token per step in a fixed left-to-right order recovers autoregressive modeling (:numref:`sec_gpt`), revealing one token per step in a random order recovers order-agnostic autoregression, and training at a single fixed masking rate $u = 0.15$ recovers BERT (:numref:`sec_transformer`).
+Discrete diffusion corrupts categorical tokens via row-stochastic transition matrices $\mathbf{Q}_t$; under the absorbing kernel, each token survives $t$ steps with probability $\bar\alpha_t = \prod_{s \le t}(1 - \beta_s)$ and is otherwise replaced by $[\textrm{M}]$. Its variational bound on the negative log-likelihood simplifies to a weighted sum of masked-token cross-entropies with weight $w_t = (\bar\alpha_{t-1} - \bar\alpha_t)/(1 - \bar\alpha_t)$ ($1/t$ under a linear schedule) and continuous-time limit $\int_0^1 \frac{1}{u}\, \mathbb{E}_u[\ell]\, du$, where independent masking renders the optimal clean-token distribution at a masked position time-agnostic. Because the reverse model factorizes across positions within each step, unmasking multiple tokens simultaneously incurs an independence error: on a two-token distribution $p$, $S$ equal linear jumps sample from $(1 - 1/S)p + (1/S)p^1 \otimes p^2$ with total variation error proportional to $1/S$, and the $T$-step bound floor exceeds the entropy $H(X^1, X^2)$ by $I(X^1; X^2)/T$. Viewed across unmasking schedules, masked diffusion connects classical sequence models: revealing one token per step left to right recovers autoregressive modeling (:numref:`sec_gpt`), revealing one token per step in a random order recovers order-agnostic autoregression, and training at a single masking rate $u = 0.15$ recovers BERT (:numref:`sec_transformer`).
 
 ## Exercises
 
@@ -1469,7 +1466,7 @@ Discrete and Masked Diffusion Models<br>**transition matrices Q_t · absorbing (
 ::: {.col}
 - **No continuous vector addition:** Adding $0.3\,\boldsymbol\epsilon$ to token index `412` (*"cat"*) is meaningless—categorical IDs have no Euclidean metric structure.
 - **Sequential bottleneck of GPT:** Autoregressive decoding of $L = 1{,}024$ tokens requires $1{,}024$ sequential calls, each a cached pass over one new token.
-- **Discrete diffusion (Austin et al., 2021; Sahoo et al., 2024):** Corrupt tokens into masks $[\textrm{M}]$ via a Markov chain and train a bidirectional denoiser to unmask tokens in parallel!
+- **Discrete diffusion (Austin et al., 2021; Sahoo et al., 2024):** Corrupt tokens into masks $[\textrm{M}]$ via a Markov chain and train a bidirectional denoiser to unmask tokens in parallel.
 :::
 
 ::: {.col .fig .big}
@@ -1503,7 +1500,7 @@ $$q(\mathbf{x}_t \mid \mathbf{x}_0) = \mathrm{Cat}\big(\mathbf{x}_t;\; \mathbf{x
 ::: {.col}
 - **Symmetric $10\%$ binary flip ($\mathbf{Q}_1 = \mathbf{Q}_2$):** Starting at $\mathbf{x}_0 = (1, 0)$ and observing $\mathbf{x}_2 = (0, 1)$ after two steps means exactly one flip occurred.
 - **Forward prior $\odot$ backward likelihood:** $\mathbf{x}_0\bar{\mathbf{Q}}_1 = (0.9, 0.1)$ and $\mathbf{x}_2\mathbf{Q}_2^\top = (0.1, 0.9)$ multiply elementwise to $(0.09, 0.09)$ with marginal evidence $0.18$.
-- **Normalized posterior $(0.50, 0.50)$:** The single flip is equally likely to have occurred at step 1 ($\mathbf{x}_1 = 1$) or step 2 ($\mathbf{x}_1 = 0$)!
+- **Normalized posterior $(0.50, 0.50)$:** The single flip is equally likely to have occurred at step 1 ($\mathbf{x}_1 = 1$) or step 2 ($\mathbf{x}_1 = 0$).
 :::
 
 ::: {.col .fig .big}
@@ -1557,7 +1554,7 @@ $$q\big(\mathbf{x}_{t-1} = \mathbf{x}_0 \,\big|\, [\textrm{M}], \mathbf{x}_0\big
 $$L_{\textrm{VLB}}(\mathbf{x}_0) = \sum_{t=1}^T w_t\;\mathbb{E}_{q(\mathbf{x}_t \mid \mathbf{x}_0)}\!\left[\sum_{i \,:\, \mathbf{x}_t^i = [\textrm{M}]} -\log p_{\boldsymbol\theta}\big(\mathbf{x}_0^i \mid \mathbf{x}_t\big)\right]$$
 
 - **Exact cancellation inside $D_{\textrm{KL}}$:** Unmasked divergences vanish ($0$), while $(1-w_t)\log\frac{1-w_t}{1-w_t} = 0$ leaves $-w_t\log p_{\boldsymbol\theta}(\mathbf{x}_0^i \mid \mathbf{x}_t)$ on masked sites.
-- **Linear schedule ($\bar\alpha_t = 1 - t/T$):** A fraction $t/T$ of tokens are masked with weight $w_t = 1/t$, giving constant expected weighted mask count $L/T$ at every step!
+- **Linear schedule ($\bar\alpha_t = 1 - t/T$):** A fraction $t/T$ of tokens are masked with weight $w_t = 1/t$, giving constant expected weighted mask count $L/T$ at every step.
 :::
 
 ::: {.col .fig}
@@ -1574,7 +1571,7 @@ $$L_{\textrm{VLB}}(\mathbf{x}_0) = \sum_{t=1}^T w_t\;\mathbb{E}_{q(\mathbf{x}_t 
 $$L_{\textrm{VLB}}(\mathbf{x}_0) \xrightarrow{T \to \infty} \int_0^1 \frac{-\bar\alpha'(\tau)}{1 - \bar\alpha(\tau)}\,\mathbb{E}\big[\ell(\mathbf{x}_0, \mathbf{x}_\tau)\big]\,d\tau = \int_0^1 \frac{1}{u}\,\mathbb{E}_u\big[\ell(\mathbf{x}_0, \mathbf{x})\big]\,du$$
 
 - **Schedule invariance:** Changing variables to the masking rate $u(\tau) = 1 - \bar\alpha(\tau) \in [0, 1]$ eliminates the schedule $\bar\alpha(\tau)$ completely.
-- **Time-agnostic optimality (Ou et al., 2025):** Once $\mathbf{x}_t$ reveals which positions are masked, the step index $t$ carries zero extra information about $\mathbf{x}_0$, so $p^\star(\mathbf{x}_0^i \mid \mathbf{x}_t)$ does not need $t$!
+- **Time-agnostic optimality (Ou et al., 2025):** Once $\mathbf{x}_t$ reveals which positions are masked, the step index $t$ carries zero extra information about $\mathbf{x}_0$, so $p^\star(\mathbf{x}_0^i \mid \mathbf{x}_t)$ does not need $t$.
 :::
 
 ::: {.col .fig}
@@ -1601,7 +1598,7 @@ Because composing absorbing kernels yields another absorbing kernel, `unmask` ca
 $$q_S = \left(1 - \frac{1}{S}\right)p + \frac{1}{S}\,p^1 \otimes p^2 \quad \Longrightarrow \quad \mathrm{TV}(q_S, p) = \frac{\mathrm{TV}(p^1 \otimes p^2, p)}{S} = \frac{0.314}{S}$$
 
 - **Sequential reveal (prob $1 - 1/S$):** $X^1$ and $X^2$ unmask in different jumps (marginal then conditional), drawing an exact sample from $p$.
-- **Simultaneous collision (prob $S \cdot (1/S)^2 = 1/S$):** Both unmask in the same jump from $([\textrm{M}], [\textrm{M}])$, drawing independently from $p^1 \otimes p^2$ and creating phantom modes!
+- **Simultaneous collision (prob $S \cdot (1/S)^2 = 1/S$):** Both unmask in the same jump from $([\textrm{M}], [\textrm{M}])$, drawing independently from $p^1 \otimes p^2$ and creating phantom modes.
 :::
 
 ::: {.col .fig}
@@ -1626,7 +1623,7 @@ In practice, MaskGIT (Chang et al., 2022) and LLaDA (Nie et al., 2025) draw cand
 @!discrete-diffusion-diffusion-language-models-in-practice
 
 - **Fixed order (1 token/step):** Zero independence error ($\mathrm{TV} = 0.000$), recovering the exact entropy $4.840$ nats and mode weights $[0.500, 0.300, 0.200]$.
-- **Confidence remasking ($\mathrm{TV} = 0.179$, worse than 2 random jumps at $0.157$!):** Because draws from the lightest mode ($\pi_3 = 0.20$) have lower marginal probability, they lose the confidence contest and get overwritten—collapsing mode 3's weight from **$0.200$ to $0.068$** and dropping entropy to $4.41$ nats!
+- **Confidence remasking ($\mathrm{TV} = 0.179$, worse than 2 random jumps at $0.157$):** Because draws from the lightest mode ($\pi_3 = 0.20$) have lower marginal probability, they lose the confidence contest and get overwritten—collapsing mode 3's weight from **$0.200$ to $0.068$** and dropping entropy to $4.41$ nats.
 :::
 
 ::: {.slide title="The ELBO Floor of Any Factorized Denoiser"}
@@ -1639,7 +1636,7 @@ We train `MaskedMLP` ($K = 32, T = 32$) for $6{,}000$ updates on quantized mixtu
 - **Analytical derivation of the $H(X^1, X^2) + I(X^1; X^2)/T$ floor:**
   - When $X^1$ and $X^2$ are unmasked at different steps (probability $1 - 1/T$), their expected cross-entropy is $H(X^1) + H(X^2 \mid X^1) = H(X^1, X^2)$.
   - When both are unmasked in the same step (probability $1/T$), predicting them independently from $([\textrm{M}], [\textrm{M}])$ costs $H(X^1) + H(X^2) = H(X^1, X^2) + I(X^1; X^2)$.
-  - Thus no factorized reverse network can score below $H + I/T = 4.840 + 0.479/32 = \mathbf{4.855\text{ nats}}$ (our trained MLP hits **$4.856\text{ nats}$**, within $0.001$ nats of the theoretical floor!).
+  - Thus no factorized reverse network can score below $H + I/T = 4.840 + 0.479/32 = \mathbf{4.855\text{ nats}}$ (our trained MLP hits **$4.856\text{ nats}$**, within $0.001$ nats of the theoretical floor).
 :::
 
 ::: {.slide title="Trained vs. Exact Unmasking Across Step Budgets"}
@@ -1651,7 +1648,7 @@ Summing the exact output distribution of `unmask` for our trained `pair_model` v
 ::: {.col}
 @!discrete-diffusion-the-quantized-mixture-1
 
-- **1 step ($\mathrm{TV} = 0.315$):** Dominated entirely by the parallel independence error ($0.314$); the scatter plot visibly populates the **three phantom modes** where mode columns and rows cross!
+- **1 step ($\mathrm{TV} = 0.315$):** Dominated entirely by the parallel independence error ($0.314$); the scatter plot visibly populates the **three phantom modes** where mode columns and rows cross.
 - **32 steps ($\mathrm{TV} = 0.020$):** Parallel error drops $32\times$ to $0.010$, leaving the network's fixed $\approx 0.010$ approximation error.
 :::
 
@@ -1690,7 +1687,7 @@ Unmasking $L = 784$ binary pixels in $S = 4$ jumps ($\approx 196$ per jump) vs. 
 @!discrete-diffusion-images-as-binary-tokens-7
 
 - **4 steps ($9\times$ more speckles than real data):** In jump 1, $\approx 196$ pixels are drawn independently from the all-mask marginal, creating uncorrelated salt-and-pepper noise that subsequent jumps cannot erase.
-- **100 vs. 784 steps ($10\,\mathrm{SE}$ drop in speckles):** Refining from $100$ to $784$ steps eliminates $70\%$ of the excess speckles using the *exact same trained U-Net*—proving the 100-step artifacts were parallel independence error!
+- **100 vs. 784 steps ($10\,\mathrm{SE}$ drop in speckles):** Refining from $100$ to $784$ steps eliminates $70\%$ of the excess speckles using the *exact same trained U-Net*—proving the 100-step artifacts were parallel independence error.
 :::
 
 ::: {.col .fig}
@@ -1740,7 +1737,7 @@ Test your mastery of discrete and masked diffusion mechanics:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. Under the uniform kernel, the network must infer **whether each visible token is genuine clean data or was randomly resampled by noise**; under the absorbing kernel, any visible token ($\neq [\textrm{M}]$) is guaranteed to be $100\%$ clean!
+1. Under the uniform kernel, the network must infer **whether each visible token is genuine clean data or was randomly resampled by noise**; under the absorbing kernel, any visible token ($\neq [\textrm{M}]$) is guaranteed to be $100\%$ clean.
 2. Since $w_t = 1/t$, we have **$w_1 = 1$** and **$w_{32} = 1/32$**. At step $t$, the expected number of masked tokens is $L(t/T) = 2t/32$, so the expected weighted count is $(2t/32) \cdot (1/t) = \mathbf{1/16 = L/T}$ at every step $t$.
 :::
 :::

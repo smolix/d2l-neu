@@ -531,9 +531,7 @@ In :numref:`sec_diffusion-images` we move from two dimensions to $28 \times 28$ 
 
 ## Summary
 
-- The marginal velocity $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon \mid \mathbf{x}_t = \mathbf{x}]$ satisfies the continuity equation $\partial_t p_t + \nabla \cdot (p_t \mathbf{u}_t) = 0$ with the marginal density $p_t$. Consequently, integrating the probability-flow ODE $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ from $t = 1$ to $t = 0$ transports $\mathcal{N}(\mathbf{0}, \mathbf{I})$ onto $p_0$ while preserving mode weights.
-- A single Euler step from $t = 1$ to $t = 0$ collapses every start onto the data mean $\mathbb{E}[\mathbf{x}_0]$. In the rescaled coordinates $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ and $\bar\sigma = \sigma_t/\alpha_t$, every Gaussian path obeys $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$, and one Euler step reads $\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sigma_s \hat{\boldsymbol\epsilon}$.
-- To first order in the step variance $\beta$, DDPM's ancestral step decomposes into an Euler step of the probability-flow ODE plus a Langevin step on $p_t$, corresponding to an Euler--Maruyama discretization of Anderson's reverse-time SDE.
+The marginal velocity $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon \mid \mathbf{x}_t = \mathbf{x}]$ satisfies the continuity equation $\partial_t p_t + \nabla \cdot (p_t \mathbf{u}_t) = 0$ with the marginal density $p_t$, so integrating the probability-flow ODE $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ from $t = 1$ to $t = 0$ transports $\mathcal{N}(\mathbf{0}, \mathbf{I})$ onto $p_0$ while preserving mode weights. Although a single Euler step from $t = 1$ to $t = 0$ collapses every starting point onto the data mean $\mathbb{E}[\mathbf{x}_0]$, working in the rescaled coordinates $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ and $\bar\sigma = \sigma_t/\alpha_t$ puts every Gaussian path into the common ODE $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$, whose Euler step reads $\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sigma_s \hat{\boldsymbol\epsilon}$. To first order in the step variance $\beta$, DDPM's stochastic ancestral step decomposes into this probability-flow Euler step plus a Langevin step on $p_t$, corresponding to an Euler–Maruyama discretization of Anderson's reverse-time SDE.
 
 ## Exercises
 
@@ -627,8 +625,8 @@ $$\frac{\partial p_t(\mathbf{x})}{\partial t} = -\nabla \cdot \big(p_t(\mathbf{x
 ::: {.col}
 $$\mathbb{E}_{\mathbf{x}_0}\big[p_t(\mathbf{x} \mid \mathbf{x}_0)\,\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big] = p_t(\mathbf{x})\,\mathbf{u}_t(\mathbf{x})$$
 
-- **Step 1 — Conditional conservation:** For each fixed $\mathbf{x}_0$, the Gaussian cloud $p_t(\mathbf{x} \mid \mathbf{x}_0)$ satisfies $\partial_t p_t(\mathbf{x} \mid \mathbf{x}_0) = -\nabla \cdot \big(p_t(\mathbf{x} \mid \mathbf{x}_0)\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big)$.
-- **Step 2 — Bayes' rule averaging:** Using $p(\mathbf{x}_0)p_t(\mathbf{x} \mid \mathbf{x}_0) = p_t(\mathbf{x})p(\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x})$ factors $p_t(\mathbf{x})$ out of the expectation, yielding $\partial_t p_t = -\nabla \cdot (p_t\mathbf{u}_t)$ by linearity!
+- **Step 1: Conditional conservation:** For each fixed $\mathbf{x}_0$, the Gaussian cloud $p_t(\mathbf{x} \mid \mathbf{x}_0)$ satisfies $\partial_t p_t(\mathbf{x} \mid \mathbf{x}_0) = -\nabla \cdot \big(p_t(\mathbf{x} \mid \mathbf{x}_0)\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big)$.
+- **Step 2: Bayes' rule averaging:** Using $p(\mathbf{x}_0)p_t(\mathbf{x} \mid \mathbf{x}_0) = p_t(\mathbf{x})p(\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x})$ factors $p_t(\mathbf{x})$ out of the expectation, yielding $\partial_t p_t = -\nabla \cdot (p_t\mathbf{u}_t)$ by linearity.
 :::
 
 ::: {.col .fig}
@@ -662,7 +660,7 @@ $$\frac{d\mathbf{x}}{dt} = \mathbf{u}_t(\mathbf{x}), \qquad t: 1 \to 0$$
 $$\mathbf{u}_1(\mathbf{x}_1) = \mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0] \quad \Longrightarrow \quad \mathbf{x}_1 - \mathbf{u}_1(\mathbf{x}_1) = \mathbb{E}[\mathbf{x}_0]$$
 
 - **Euler discretization:** $\mathbf{x}_{t_{k-1}} = \mathbf{x}_{t_k} - \frac{1}{K}\mathbf{u}_{t_k}(\mathbf{x}_{t_k})$ across $K$ steps.
-- **Why $K = 1$ collapses on general data:** At $t = 1$, $\mathbf{x}_1 = \boldsymbol\epsilon$ is independent of $\mathbf{x}_0$, so the posterior mean is the global data mean $\mathbb{E}[\mathbf{x}_0]$ and a single Euler jump sends **every starting point** to $\mathbb{E}[\mathbf{x}_0] = (-0.50, -0.70)$!
+- **Why $K = 1$ collapses on general data:** At $t = 1$, $\mathbf{x}_1 = \boldsymbol\epsilon$ is independent of $\mathbf{x}_0$, so the posterior mean is the global data mean $\mathbb{E}[\mathbf{x}_0]$ and a single Euler jump sends **every starting point** to $\mathbb{E}[\mathbf{x}_0] = (-0.50, -0.70)$.
 :::
 
 ::: {.col .fig}
@@ -674,7 +672,7 @@ $$\mathbf{u}_1(\mathbf{x}_1) = \mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0] \quad \Lo
 ::: {.slide title="Tracing Five Starts Under 1, 10, and 100 Euler Steps"}
 [Exact Velocity Field Trajectories]{.kicker}
 
-Integrating the exact mixture field `mix.velocity` from five fixed initial points—the origin $(0, 0)$ and $(\pm 1.5, 0), (0, \pm 1.5)$—illustrates how multi-step curvature partitions the prior:
+Integrating the exact mixture field `mix.velocity` from five fixed initial points, the origin $(0, 0)$ and $(\pm 1.5, 0), (0, \pm 1.5)$, illustrates how multi-step curvature partitions the prior:
 
 @!gaussian-paths-the-probability-flow-ode-and-euler-s-method
 

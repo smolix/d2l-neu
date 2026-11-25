@@ -868,14 +868,11 @@ for name, xh in outputs.items():               # error of each of 1,000 images
 d2l.show_gray(jnp.concatenate([x[:8], xt[:8], x_lin[:8], x_net[0][:8]]), 4, 8);
 ```
 
-The noisy input has a per-pixel squared error of $\sigma^2 = 0.25$, the optimal linear (Wiener) filter achieves $\approx 0.045$, and both four-layer convolutional networks reach $\approx 0.031$ ($30\%$ lower error, separated by more than 20 standard errors). While the Wiener filter shrinks every image toward a single global linear subspace—leaving blurred edges and background grain—the convolutional network projects noisy points toward the nonlinear manifold of garment images (compare Exercise :exref:`ex_denoising-data-on-a-line`). Because the posterior mean averages over all clean images consistent with $\tilde{\mathbf{x}}$, however, fine high-frequency texture destroyed by the noise is still replaced by a smooth average. Turning a denoiser into a sharpness-preserving generator requires integrating across noise levels (:numref:`sec_diffusion-gaussian-paths` and :numref:`sec_diffusion-integration`).
+The noisy input has a per-pixel squared error of $\sigma^2 = 0.25$, the optimal linear (Wiener) filter achieves $\approx 0.045$, and both four-layer convolutional networks reach $\approx 0.031$ ($30\%$ lower error, separated by more than 20 standard errors). While the Wiener filter shrinks every image toward a single global linear subspace, leaving blurred edges and background grain, the convolutional network projects noisy points toward the nonlinear manifold of garment images (compare Exercise :exref:`ex_denoising-data-on-a-line`). Because the posterior mean averages over all clean images consistent with $\tilde{\mathbf{x}}$, however, fine high-frequency texture destroyed by the noise is still replaced by a smooth average. Turning a denoiser into a sharpness-preserving generator requires integrating across noise levels (:numref:`sec_diffusion-gaussian-paths` and :numref:`sec_diffusion-integration`).
 
 ## Summary
 
-- Minimizing the squared denoising error $\mathbb{E}\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2$ for $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma\boldsymbol\epsilon$ recovers the posterior mean $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$.
-- By Vincent's theorem and Tweedie's formula, $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} + \sigma^2 \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}})$, so predicting the clean point $\hat{\mathbf{x}}_0$, the noise $\hat{\boldsymbol\epsilon}$, and the score $\hat{\mathbf{s}} = -\hat{\boldsymbol\epsilon}/\sigma$ are affine reparameterizations of a single conditional expectation.
-- Learning the score avoids the intractable normalizing constant $Z_{\boldsymbol\theta}$ of energy-based models and the Jacobian trace $\nabla \cdot \mathbf{s}$ of explicit score matching.
-- At a single noise level $\sigma$, small $\sigma$ yields high-variance targets, steep gradients near low-dimensional data manifolds, blindness of the Fisher divergence to mode weights, and non-mixing Langevin chains; large $\sigma$ enables fast mixing and accurate mode weights but samples a heavily smoothed density $p_\sigma$.
+Minimizing the squared denoising error $\mathbb{E}\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2$ for $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma\boldsymbol\epsilon$ recovers the posterior mean $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$. By Vincent's theorem and Tweedie's formula, $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} + \sigma^2 \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}})$, so predicting the clean point $\hat{\mathbf{x}}_0$, the noise $\hat{\boldsymbol\epsilon}$, and the score $\hat{\mathbf{s}} = -\hat{\boldsymbol\epsilon}/\sigma$ are affine reparameterizations of a single conditional expectation. Learning the score avoids both the intractable normalizing constant $Z_{\boldsymbol\theta}$ of energy-based models and the Jacobian trace $\nabla \cdot \mathbf{s}$ of explicit score matching. A single noise level $\sigma$, however, faces a sharp trade-off: small $\sigma$ produces high-variance targets, steep gradients near low-dimensional data manifolds, blindness of the Fisher divergence to mode weights, and non-mixing Langevin chains, whereas large $\sigma$ mixes rapidly and recovers mode weights but samples only the heavily smoothed density $p_\sigma$.
 
 ## Exercises
 
@@ -1097,7 +1094,7 @@ $$\mathbb{E}\big[\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2 \,\big|\, \tilde{\ma
 $$J_{\mathrm{DSM}}(\boldsymbol\theta) = \frac{1}{2}\mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\!\left[\Big\|\mathbf{s}_{\boldsymbol\theta}(\mathbf{x}_0 + \sigma\boldsymbol\epsilon) + \frac{\boldsymbol\epsilon}{\sigma}\Big\|^2\right]$$
 
 - **Known conditional score:** For $p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0) = \mathcal{N}(\mathbf{x}_0, \sigma^2\mathbf{I})$, the conditional score is $\nabla_{\tilde{\mathbf{x}}}\log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0) = (\mathbf{x}_0 - \tilde{\mathbf{x}})/\sigma^2 = -\boldsymbol\epsilon/\sigma$.
-- **Vincent's theorem (2011):** Differentiating $p_\sigma(\tilde{\mathbf{x}}) = \int p(\mathbf{x}_0)p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\,d\mathbf{x}_0$ shows $\nabla_{\tilde{\mathbf{x}}}\log p_\sigma(\tilde{\mathbf{x}}) = \mathbb{E}[-\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}}]$, so regressing onto $-\boldsymbol\epsilon/\sigma$ fits $\nabla\log p_\sigma$ exactly!
+- **Vincent's theorem (2011):** Differentiating $p_\sigma(\tilde{\mathbf{x}}) = \int p(\mathbf{x}_0)p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\,d\mathbf{x}_0$ shows $\nabla_{\tilde{\mathbf{x}}}\log p_\sigma(\tilde{\mathbf{x}}) = \mathbb{E}[-\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}}]$, so regressing onto $-\boldsymbol\epsilon/\sigma$ fits $\nabla\log p_\sigma$ exactly.
 :::
 
 ::: {.col .fig}
@@ -1151,7 +1148,7 @@ We train a 2-layer MLP (`TimeMLP(128, 2)`) on $J_{\mathrm{DSM}}$ at $\sigma = 0.
 @denoising-tweedie-s-formula
 
 ::: {.d2l-note .warn}
-**Hidden amplification of score errors:** The excess denoising MSE over the exact posterior mean is $\mathbb{E}\|\sigma^2(\hat{\mathbf{s}} - \nabla \log p_\sigma)\|^2 = \sigma^4\,\mathbb{E}\|\hat{\mathbf{s}} - \nabla \log p_\sigma\|^2$. Because $\sigma^4 = 0.0081$, a tiny $0.001$ denoising gap masks a **$0.06$ Fisher score error**!
+**Hidden amplification of score errors:** The excess denoising MSE over the exact posterior mean is $\mathbb{E}\|\sigma^2(\hat{\mathbf{s}} - \nabla \log p_\sigma)\|^2 = \sigma^4\,\mathbb{E}\|\hat{\mathbf{s}} - \nabla \log p_\sigma\|^2$. Because $\sigma^4 = 0.0081$, a tiny $0.001$ denoising gap masks a **$0.06$ Fisher score error**.
 :::
 :::
 
@@ -1251,7 +1248,7 @@ Compare our true mixture $\pi = (0.5, 0.3, 0.2)$ against an equal-weight mixture
 ::: {.col}
 @!denoising-blindness-to-mode-weights
 
-- **Four orders of magnitude below network error:** At $\sigma = 0$, the KL divergence is $0.069$ nats, yet the Fisher divergence is only **$1.2 \times 10^{-5}$** (versus $\ge 0.15$ for our best trained MLP).
+- **Four orders of magnitude below network error:** At $\sigma = 0$, the KL divergence is $0.069$ nats, yet the Fisher divergence is only **$1.5 \times 10^{-5}$** (versus $\ge 0.15$ for our best trained MLP).
 - **Why:** Within each mode $k$, $\nabla \log p(\mathbf{x}) \approx (\boldsymbol\mu_k - \mathbf{x})/s^2$ is independent of $\pi_k$; the scores differ only in the empty valleys where $p(\mathbf{x}) \approx 0$.
 :::
 
@@ -1269,7 +1266,7 @@ Compare our true mixture $\pi = (0.5, 0.3, 0.2)$ against an equal-weight mixture
 $$\mathbf{x}_{k+1} = \mathbf{x}_k + \frac{h}{2}\,\mathbf{s}(\mathbf{x}_k) + \sqrt{h}\,\boldsymbol\xi_k, \qquad \boldsymbol\xi_k \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
 
 - **Stationary guarantee vs. step inflation:** As $h \to 0$ with $\mathbf{s} = \nabla\log p$, uphill drift balances Brownian noise to keep $p(\mathbf{x})$ invariant (while finite $h$ inflates variance to $v/(1 - h/4v)$).
-- **Kramers' barrier bottleneck:** Crossing a $\Delta U \approx 10\text{--}12$ nat valley between modes requires expected time $\tau \propto e^{\Delta U} \approx 10^6$ steps!
+- **Kramers' barrier bottleneck:** Crossing a $\Delta U \approx 10\text{--}12$ nat valley between modes requires expected time $\tau \propto e^{\Delta U} \approx 10^6$ steps.
 :::
 
 ::: {.col .fig}

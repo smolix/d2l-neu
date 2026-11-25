@@ -973,7 +973,7 @@ for name, f in (('uniform', f_real[:5000]), ('gamma 0', f_real[mixed])):
           f'{d2l.fid_score(f, f_test[:5000]):.2f}')
 ```
 
-Although the unconditional sampler overproduces pullovers ($13\%$–$14\%$) and underproduces sandals ($6\%$–$7\%$), imposing this same class skew on real images raises the FD by only $0.2$–$0.3$ (from $0.19$ to $0.4$–$0.5$), accounting for less than a sixth of the $1.9$ FD gap between $\gamma = 1$ and $\gamma = 0$. The remaining gap arises because the unconditional field $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$—trained on only $10\%$ of the minibatches across all ten classes simultaneously—produces more malformed or ambiguous garments. Because :eqref:`eq_diffusion-cfg` can be written as $\mathbf{u}_c + (\gamma - 1)(\mathbf{u}_c - \mathbf{u}_\varnothing)$, any error in the unconditional baseline $\mathbf{u}_\varnothing$ enters guided samples with weight $1 - \gamma$.
+Although the unconditional sampler overproduces pullovers ($13\%$–$14\%$) and underproduces sandals ($6\%$–$7\%$), imposing this same class skew on real images raises the FD by only $0.2$–$0.3$ (from $0.19$ to $0.4$–$0.5$), accounting for less than a sixth of the $1.9$ FD gap between $\gamma = 1$ and $\gamma = 0$. The remaining gap arises because the unconditional field $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$, trained on only $10\%$ of the minibatches across all ten classes simultaneously, produces more malformed or ambiguous garments. Because :eqref:`eq_diffusion-cfg` can be written as $\mathbf{u}_c + (\gamma - 1)(\mathbf{u}_c - \mathbf{u}_\varnothing)$, any error in the unconditional baseline $\mathbf{u}_\varnothing$ enters guided samples with weight $1 - \gamma$.
 
 Increasing $\gamma$ beyond $1$ illustrates the diversity–typicality trade-off. Mild guidance ($\gamma = 1.25$) raises class agreement by about five percentage points (to $93\%$–$94\%$) without increasing the FD beyond run-to-run noise. For $\gamma \ge 1.5$, class agreement climbs past $96\%$ (exceeding $99\%$ at $\gamma = 3$ and $4$, higher than the classifier's accuracy on real test images), while the FD rises steadily to $5.5$–$6$ as within-class diversity collapses onto high-contrast canonical prototypes:
 
@@ -1068,10 +1068,7 @@ the question of :numref:`sec_diffusion-samplers`.
 
 ## Summary
 
-- A denoising U-Net combines low-resolution bottleneck layers (which capture global context with most of the parameters and a fraction of the FLOPs) with full-resolution skip connections (which preserve sharp spatial edges), injecting time and class embeddings into every residual block.
-- Sampling from an exponential moving average (EMA) of the weights substantially reduces Fréchet distance compared to using the final Adam iterate.
-- The Fréchet distance (FD) in classifier feature space has a positive finite-sample bias proportional to $1/n$ and must always be interpreted alongside the reference floor between disjoint real sets of the same size $n$.
-- Random label dropout trains conditional and unconditional fields within a single network. Classifier-free guidance $\tilde{\mathbf{u}} = \mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$ amplifies class-specific features: mild scales ($\gamma \approx 1.25$) improve class agreement without hurting FD, whereas large scales ($\gamma > 1.5$) trade sample diversity for typicality because high-noise tilted scores contract variance more sharply than any valid Gaussian-convolved density.
+A denoising U-Net pairs low-resolution bottleneck layers, which capture global context with most of the parameters and a fraction of the arithmetic, with full-resolution skip connections that preserve sharp spatial edges, injecting time and class embeddings into every residual block. Sampling from an exponential moving average (EMA) of the weights substantially reduces the Fréchet distance compared with using the final Adam iterate, while the Fréchet distance itself carries a positive $O(1/n)$ finite-sample bias and must always be read against the reference floor between disjoint real sets of the same size $n$. Finally, random label dropout trains conditional and unconditional fields inside a single network so that classifier-free guidance $\tilde{\mathbf{u}} = \mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$ can steer generation: mild scales ($\gamma \approx 1.25$) raise class agreement without hurting FD, whereas larger scales ($\gamma > 1.5$) trade sample diversity for typicality because high-noise tilted scores contract variance more sharply than any Gaussian-convolved density.
 
 ## Exercises
 
@@ -1247,7 +1244,7 @@ A stack of full-resolution $3 \times 3$ convolutions would need $14$ layers just
 ::: {.cols .vc}
 ::: {.col}
 
-- **Low resolution holds the capacity:** The $14 \times 14$ and $7 \times 7$ stages hold **$82\%$ of the $1.20\text{M}$ parameters** ($38\%$ in the $7 \times 7$ bottleneck for just $8\%$ of the compute).
+- **Low resolution holds the capacity:** The $14 \times 14$ and $7 \times 7$ stages hold **$80\%$ of the $1.20\text{M}$ parameters** ($38\%$ in the $7 \times 7$ bottleneck for just $8\%$ of the compute).
 - **Full resolution dominates the arithmetic:** The $28 \times 28$ blocks hold $18\%$ of the weights but consume **$57\%$ of the $266\text{M}$ MACs** (about $15\times$ more compute per weight than $7 \times 7$).
 :::
 
@@ -1289,7 +1286,7 @@ We train our $1.2\text{M}$-parameter U-Net with Adam ($\text{lr} = 10^{-3}$, bat
 ::: {.cols .vc}
 ::: {.col}
 - **Rapid convergence to the velocity floor:** Per-pixel velocity MSE drops from $\approx 0.50$ to $\approx 0.20$ within the first $1{,}000$ steps and plateaus at the conditional variance floor.
-- **Why sampling can cost more than training:** $15{,}000$ updates process $1.92\text{M}$ training images ($\approx 5.8\text{M}$ forward-equivalent passes), whereas generating the $5{,}000$-image evaluation suites in this section takes **$\approx 20\text{M}$ U-Net evaluations** ($3.5\times$ the training arithmetic)!
+- **Why sampling can cost more than training:** $15{,}000$ updates process $1.92\text{M}$ training images ($\approx 5.8\text{M}$ forward-equivalent passes), whereas generating the $5{,}000$-image evaluation suites in this section takes **$\approx 20\text{M}$ U-Net evaluations** ($3.5\times$ the training arithmetic).
 :::
 
 ::: {.col .fig}
@@ -1405,7 +1402,7 @@ $$\nabla_{\mathbf{x}} \log p_t(\mathbf{x} \mid c) = \nabla_{\mathbf{x}} \log p_t
 $$\tilde{\mathbf{u}}(\mathbf{x}, t, c) = \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing) + \gamma\,\big(\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, c) - \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing)\big)$$
 
 - **Implicit Bayes classifier gradient (Ho & Salimans, 2022):** Inverts Bayes' rule so $\nabla_{\mathbf{x}}\log p_t(c \mid \mathbf{x}) = \mathbf{s}_c(\mathbf{x}, t) - \mathbf{s}_\varnothing(\mathbf{x}, t)$.
-- **Universal dictionary invariance:** Because $(1 - \gamma) + \gamma = 1$, the exact same linear extrapolation applies identically to $\hat{\mathbf{x}}_0$, $\hat{\boldsymbol\epsilon}$, $\hat{\mathbf{v}}$, score, and velocity predictions!
+- **Universal dictionary invariance:** Because $(1 - \gamma) + \gamma = 1$, the exact same linear extrapolation applies identically to $\hat{\mathbf{x}}_0$, $\hat{\boldsymbol\epsilon}$, $\hat{\mathbf{v}}$, score, and velocity predictions.
 :::
 
 ::: {.col .fig}
@@ -1474,7 +1471,7 @@ Why is the unconditional FD ($\gamma = 0$, $\mathrm{FD} \approx 2.75$) more than
 @!image-diffusion-classifier-free-guidance-3
 
 - **Class skew accounts for $< 15\%$ of the gap:** Although $\gamma = 0$ overproduces pullovers ($13\%$–$14\%$) and underproduces sandals ($6\%$–$7\%$), resampling $5{,}000$ real images to that exact skewed histogram raises real FD by only $0.2$–$0.3$ (from $0.19$ to $0.4$–$0.5$).
-- **The true cause ($> 85\%$ of the gap):** Trained on only $10\%$ of minibatches without class hints, $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ produces more ambiguous, blended garments—and its errors enter every guided step with weight $(1 - \gamma)$!
+- **The true cause ($> 85\%$ of the gap):** Trained on only $10\%$ of minibatches without class hints, $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ produces more ambiguous, blended garments—and its errors enter every guided step with weight $(1 - \gamma)$.
 :::
 
 ::: {.slide title="Theory: Why Guided ODE Trajectories Overshoot the Tilt"}
@@ -1486,7 +1483,7 @@ $$\frac{1}{v} = \frac{\gamma}{s^2} - \frac{\gamma - 1}{S^2} > \frac{1}{s^2}, \qq
 
 - **Static tilt vs. dynamic ODE overshoot ($\mu_c = 1, s = 0.5, S^2 = 2, \gamma = 4$):**
   - Static $t = 0$ tilted density $\tilde{p}_0 \propto p_0^{1-\gamma}p_0(\cdot \mid c)^\gamma$ narrows width $2\times$ ($0.50 \to 0.26$) and shifts mean to $1.10$.
-  - Integrating the guided ODE from $t = 1 \to 0$ shrinks width **about $23\times$ to $0.02$** and shifts the mean to $1.23$!
+  - Integrating the guided ODE from $t = 1 \to 0$ shrinks width **about $23\times$ to $0.02$** and shifts the mean to $1.23$.
 :::
 
 ::: {.col .fig}
@@ -1523,7 +1520,7 @@ Test your grasp of U-Net design, Fréchet distance calibration, and classifier-f
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. At $28 \times 28$, $1 + 2k \ge 28 \implies \mathbf{k = 14}$ layers. At $7 \times 7$ (where each site covers a $4 \times 4$ patch), $1 + 2k \ge 7 \implies \mathbf{k = 3}$ layers!
+1. At $28 \times 28$, $1 + 2k \ge 28 \implies \mathbf{k = 14}$ layers. At $7 \times 7$ (where each site covers a $4 \times 4$ patch), $1 + 2k \ge 7 \implies \mathbf{k = 3}$ layers.
 2. **Model A is much better:** At $n = 1{,}000$, the real-vs.-real reference floor is $\approx 0.87$, so Model A ($0.85$) is indistinguishable from real data. At $n = 5{,}000$, the real floor is $\approx 0.17$, so Model B ($0.80$) is nearly $5\times$ above the floor.
 3. $1/v = \gamma/s^2 - (\gamma - 1)/S^2 = 2/0.25 - 1/2 = 7.5 \implies v = 2/15 \approx 0.133$ (**width $\sqrt{v} \approx \mathbf{0.37} < 0.5$**), and **$\text{mean} = \gamma v / s^2 = 2(2/15)/0.25 \approx \mathbf{1.07} > 1$**.
 :::
@@ -1534,7 +1531,7 @@ Test your grasp of U-Net design, Fréchet distance calibration, and classifier-f
 
 | Component | Mechanism / Formula | Quantitative Finding on Fashion-MNIST | Best-Practice Guideline |
 | :--- | :--- | :--- | :--- |
-| **Denoising U-Net** | $28 \to 14 \to 7$ encoder–decoder + skips | $83\%$ params at low res; $59\%$ FLOPs at $28 \times 28$ | Put channel capacity at low resolution; use GroupNorm |
+| **Denoising U-Net** | $28 \to 14 \to 7$ encoder–decoder + skips | $80\%$ params at low res; $57\%$ MACs at $28 \times 28$ | Put channel capacity at low resolution; use GroupNorm |
 | **Weight EMA** | $\bar{\boldsymbol\theta} \leftarrow \bar{\boldsymbol\theta} + (1 - 2^{-1/n_{1/2}})(\boldsymbol\theta - \bar{\boldsymbol\theta})$ | Lowers FD by **$0.45$–$0.55$** vs. final iterate | Always sample from EMA weights ($n_{1/2} \approx 10^3$–$10^4$) |
 | **Fréchet Distance (FD)** | $\|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2 + \operatorname{tr}(\boldsymbol\Sigma_p + \boldsymbol\Sigma_q - 2(\boldsymbol\Sigma_p^{1/2}\boldsymbol\Sigma_q\boldsymbol\Sigma_p^{1/2})^{1/2})$ | Real floor drops $5\times$ from $0.87$ ($1\text{k}$) to $0.17$ ($5\text{k}$) | Always report sample size $n$ and real-vs.-real floor |
 | **Label Dropout** | Replace label $c \leftarrow \varnothing$ with $p_{\textrm{drop}} = 0.1$ | Trains $\mathbf{u}_c$ ($90\%$) and $\mathbf{u}_\varnothing$ ($10\%$) jointly | $p_{\textrm{drop}} \in [0.1, 0.2]$ suffices for the unconditional baseline |

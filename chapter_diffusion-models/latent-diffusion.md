@@ -1193,9 +1193,7 @@ In summary: for low-resolution images where pixel-space diffusion fits the compu
 
 ## Summary
 
-- Latent diffusion compresses images via a KL-regularized autoencoder into a lower-dimensional spatial grid, rescales the latents to unit standard deviation, and runs standard diffusion or flow-matching regression in latent space.
-- An autoencoder trades off rate (latent dimension), distortion (reconstruction FD), and modelability (how easily the diffusion model learns the latent distribution). Raising the KL weight $\beta$ makes the decoder more tolerant to random latent perturbations but degrades both reconstruction quality and generated sample FD.
-- A diffusion transformer (DiT) tokenizes the image or latent grid into patches and injects conditioning via `adaLN-Zero` (adaptive layer normalization with zero-initialized residual gates). At small compute on $28 \times 28$ images, the convolutional U-Net outperforms DiT at equal FLOPs, whereas DiT exhibits a steeper improvement slope as compute per step scales.
+Latent diffusion compresses images via a KL-regularized autoencoder into a lower-dimensional spatial grid, rescales the latents to unit standard deviation, and runs standard diffusion or flow-matching regression in latent space. The autoencoder balances rate (latent dimension), distortion (reconstruction FD), and modelability (how easily the diffusion model learns the latent distribution): raising the KL weight $\beta$ makes the decoder more tolerant to random latent perturbations, yet degrades both reconstruction quality and generated sample FD. For the denoising backbone itself, a diffusion transformer (DiT) tokenizes the image or latent grid into patches and injects conditioning via `adaLN-Zero`, adaptive layer normalization with zero-initialized residual gates. At small compute budgets on $28 \times 28$ images, the convolutional U-Net outperforms DiT at equal FLOPs, whereas DiT exhibits a steeper improvement slope as compute per step scales.
 
 ## Exercises
 
@@ -1406,7 +1404,7 @@ class Autoencoder(nnx.Module):
 ::: {.slide title="Autoencoder Reconstructions & Distortion Reference"}
 [Measuring Reconstruction Quality on Fashion-MNIST]{.kicker}
 
-We train our residual convolutional `Autoencoder` ($2.1\text{M}$ parameters) for $20{,}000$ cosine-decayed Adam updates at $\beta = 10^{-4}$ and score $5{,}000$ test reconstructions against the $5{,}000$-image real-vs.-real FD floor ($0.17$):
+We train our residual convolutional `Autoencoder` ($2.4\text{M}$ parameters) for $20{,}000$ cosine-decayed Adam updates at $\beta = 10^{-4}$ and score $5{,}000$ test reconstructions against the $5{,}000$-image real-vs.-real FD floor ($0.17$):
 
 @!latent-diffusion-the-autoencoder-2
 
@@ -1424,7 +1422,7 @@ We train our residual convolutional `Autoencoder` ($2.1\text{M}$ parameters) for
 ::: {.col}
 @latent-diffusion-the-autoencoder-5
 
-- **Mandatory scale factor $c = 1/\mathrm{std}(\mathbf{z})$:** Unscaled latents of std $\varsigma$ shift log-SNR by $+\log \varsigma^2$ (Stable Diffusion's $\varsigma \approx 5.5$ uses $c = 0.18215$ to avoid a $+3.4\text{ nat}$ shift)..
+- **Mandatory scale factor $c = 1/\mathrm{std}(\mathbf{z})$:** Unscaled latents of std $\varsigma$ shift log-SNR by $+\log \varsigma^2$ (Stable Diffusion's $\varsigma \approx 5.5$ uses $c = 0.18215$ to avoid a $+3.4\text{ nat}$ shift).
 - **Sub-Gaussian tails:** Excess kurtosis $\le 0$ confirms the KL penalty eliminated heavy-tailed outliers.
 :::
 
@@ -1458,8 +1456,8 @@ With rescaled latents $\mathbf{z}_0 = c\,(\boldsymbol\mu + \mathbf{s} \odot \bol
 
 Why do decoded latent diffusion samples score $\mathrm{FD} \approx 2.0$ when reconstructions score $\approx 0.7$? We test two competing hypotheses by training a second autoencoder `ae_10` with $10\times$ higher KL weight ($\beta = 10^{-3}$):
 
-- **Hypothesis A — Decoder intolerance:** At $\beta = 10^{-4}$, the encoder blurs codes by only $\mathbf{s}/\mathrm{std}(\boldsymbol\mu) \approx 3\%$, so the decoder might shatter slightly off-manifold latents produced by the diffusion model.
-- **Hypothesis B — Latent diffusion modeling error:** The diffusion U-Net itself makes large distributional errors on the compressed $7 \times 7 \times 4$ latent code.
+- **Hypothesis A: Decoder intolerance:** At $\beta = 10^{-4}$, the encoder blurs codes by only $\mathbf{s}/\mathrm{std}(\boldsymbol\mu) \approx 3\%$, so the decoder might shatter slightly off-manifold latents produced by the diffusion model.
+- **Hypothesis B: Latent diffusion modeling error:** The diffusion U-Net itself makes large distributional errors on the compressed $7 \times 7 \times 4$ latent code.
 
 @!latent-diffusion-reading-the-result-2
 :::
@@ -1472,7 +1470,7 @@ Training two latent U-Nets (seeds 10, 11) on each autoencoder's latents settles 
 @!latent-diffusion-reading-the-result-3
 
 - **$\beta = 10^{-3}$ makes the decoder tolerant to random noise:** Adding $\sigma = 0.5$ Gaussian noise to real test latents degrades `ae_10` to only $\mathrm{FD} \approx 1.3$ (whereas the $\beta = 10^{-4}$ decoder jumps to $\mathrm{FD} > 3.0$).
-- **Yet $\beta = 10^{-3}$ yields *worse* end-to-end diffusion samples ($\mathrm{FD} \approx 2.7$ vs. $2.1$):** Because a $50\%$ random latent perturbation on `ae_10` costs only $1.3$ FD while trained latent U-Nets score about $2.7$, the gap is **latent diffusion modeling error**, not decoder fragility!
+- **Yet $\beta = 10^{-3}$ yields *worse* end-to-end diffusion samples ($\mathrm{FD} \approx 2.7$ vs. $2.1$):** Because a $50\%$ random latent perturbation on `ae_10` costs only $1.3$ FD while trained latent U-Nets score about $2.7$, the gap is **latent diffusion modeling error**, not decoder fragility.
 - **Takeaway:** Keep the autoencoder KL weight light ($\beta = 10^{-4}$) so reconstructions stay sharp and latent channels remain easy to model.
 :::
 
@@ -1504,7 +1502,7 @@ $$\mathbf{X} \leftarrow \mathbf{X} + \mathbf{g}_1 \odot \mathrm{Attn}\!\Big(\mat
 $$\mathbf{X} \leftarrow \mathbf{X} + \mathbf{g}_2 \odot \mathrm{MLP}\!\Big(\mathrm{LN}(\mathbf{X}) \odot (\mathbf{1} + \mathbf{a}_2) + \mathbf{b}_2\Big)$$
 
 - **Six modulation vectors per block:** A linear layer on $\mathrm{SiLU}(\mathbf{c})$ outputs $(\mathbf{b}_1, \mathbf{a}_1, \mathbf{g}_1, \mathbf{b}_2, \mathbf{a}_2, \mathbf{g}_2) \in \mathbb{R}^{6d}$ shared across all $L$ tokens.
-- **Identity initialization (`Zero`):** Initializing the `ada` linear layers and final output projection to **zero** sets $\mathbf{g}_1 = \mathbf{g}_2 = \mathbf{0}$, so every block starts as an exact identity map and the untrained network outputs $\mathbf{0}$ everywhere!
+- **Identity initialization (`Zero`):** Initializing the `ada` linear layers and final output projection to **zero** sets $\mathbf{g}_1 = \mathbf{g}_2 = \mathbf{0}$, so every block starts as an exact identity map and the untrained network outputs $\mathbf{0}$ everywhere.
 :::
 
 ::: {.col .fig}
@@ -1614,7 +1612,7 @@ Test your understanding of latent diffusion autoencoders and Diffusion Transform
 **Answers:**
 
 1. Raw latent std was $\varsigma = 1 / 0.18215 \approx \mathbf{5.49}$ (variance $\varsigma^2 \approx 30.1$). Skipping $c$ inflates signal variance $30\times$ at every $t$, shifting $\lambda_t$ upward by $+\log(30.1) \approx \mathbf{+3.4\text{ nats}}$.
-2. Every `DiTBlock` computes the exact identity ($\mathbf{g}_1 = \mathbf{g}_2 = \mathbf{0}$), so the network outputs `self.out(self.ln(patch(x) + pos))`—a **nonzero** linear projection of the normalized input patches that is completely **independent of time $t$**!
+2. Every `DiTBlock` computes the exact identity ($\mathbf{g}_1 = \mathbf{g}_2 = \mathbf{0}$), so the network outputs `self.out(self.ln(patch(x) + pos))`—a **nonzero** linear projection of the normalized input patches that is completely **independent of time $t$**.
 :::
 :::
 

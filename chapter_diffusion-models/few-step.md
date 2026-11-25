@@ -1002,7 +1002,7 @@ The gradient is the student's score minus the teacher's, so a descent step
 moves each noised sample toward where the data have more mass than the
 student puts there. The teacher supplies $\nabla \log p_t$, since on the
 linear path the score is an affine function of the velocity
-:eqref:`eq_diffusion-linear-dictionary`, and a second diffusion model,
+(:numref:`sec_diffusion-gaussian-paths`), and a second diffusion model,
 trained alongside on the student's own samples, supplies
 $\nabla \log q_{\boldsymbol\theta, t}$
 (:numref:`fig_diffusion-dmd`). Such a student is bounded by
@@ -1034,10 +1034,7 @@ sequence of tokens, the subject of :numref:`sec_diffusion-discrete`.
 
 ## Summary
 
-- A single Euler step of the probability-flow ODE from $t = 1$ to $t = 0$ collapses every starting point onto the data mean $\mathbb{E}[\mathbf{x}_0]$ because it follows the initial tangent of a curved trajectory.
-- A flow map $\Phi_{t \to s}(\mathbf{x}_t) = \mathbf{x}_t - (t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s, t)$ predicts the integrated displacement along the ODE trajectory via the average velocity $\bar{\mathbf{u}}$. Differentiating with respect to $t$ yields the Eulerian / MeanFlow identity $\bar{\mathbf{u}} = \mathbf{u}_t - (t - s)\, \frac{d}{dt}\bar{\mathbf{u}}$, which can be trained with one forward-mode Jacobian-vector product and a stop-gradient target.
-- Pairing the reference velocity $\mathbf{u}_{\textrm{ref}}$ (a pretrained teacher $\hat{\mathbf{u}}$ versus the conditional velocity $\boldsymbol\epsilon - \mathbf{x}_0$) with the time domain ($s = 0$ versus $s \le t$) unifies consistency distillation, consistency training, flow-map distillation, and MeanFlow.
-- On the three-mode mixture and Fashion-MNIST, flow-map distillation from a teacher accurately preserves within-mode spread and matches 10–20 teacher Euler steps in 2–4 student jumps, whereas teacher-free MeanFlow, trained here with plain squared error on noisy per-example velocities, contracts the modes of the mixture.
+A single Euler step of the probability-flow ODE from $t = 1$ to $t = 0$ collapses every starting point onto the data mean $\mathbb{E}[\mathbf{x}_0]$ because it follows the initial tangent of a curved trajectory. A flow map $\Phi_{t \to s}(\mathbf{x}_t) = \mathbf{x}_t - (t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s, t)$ instead predicts the integrated displacement along the ODE trajectory via the average velocity $\bar{\mathbf{u}}$, and differentiating in $t$ yields the Eulerian or MeanFlow identity $\bar{\mathbf{u}} = \mathbf{u}_t - (t - s)\, \frac{d}{dt}\bar{\mathbf{u}}$, which can be trained with a single forward-mode Jacobian-vector product and a stop-gradient target. Pairing the choice of reference velocity $\mathbf{u}_{\textrm{ref}}$ (a pretrained teacher $\hat{\mathbf{u}}$ versus the conditional velocity $\boldsymbol\epsilon - \mathbf{x}_0$) with the time domain ($s = 0$ versus $s \le t$) unifies consistency distillation, consistency training, flow-map distillation, and MeanFlow. On the three-mode mixture and Fashion-MNIST, flow-map distillation from a teacher preserves within-mode spread and matches 10–20 teacher Euler steps in 2–4 student jumps, whereas teacher-free MeanFlow trained with plain squared error on noisy per-example velocities contracts the modes of the mixture.
 
 ## Exercises
 
@@ -1169,7 +1166,7 @@ Few-Step Generation: Flow Maps, Consistency, and Distillation<br>**curved ODE tr
 ::: {.cols .vc}
 ::: {.col}
 - **Velocity $\neq$ displacement:** A velocity network $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t)$ predicts the instantaneous tangent $d\mathbf{x}_t/dt$ at time $t$, not the chord to $t = 0$.
-- **Curved trajectories cause tangent overshoot:** Even with the exact field $\mathbf{u}_t$, a 1-step Euler jump from $t = 1$ follows $\mathbf{u}_1(\mathbf{x}_1) = \mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0]$ and collapses all samples onto the global mean $\mathbb{E}[\mathbf{x}_0]$!
+- **Curved trajectories cause tangent overshoot:** Even with the exact field $\mathbf{u}_t$, a 1-step Euler jump from $t = 1$ follows $\mathbf{u}_1(\mathbf{x}_1) = \mathbf{x}_1 - \mathbb{E}[\mathbf{x}_0]$ and collapses all samples onto the global mean $\mathbb{E}[\mathbf{x}_0]$.
 - **Two routes to 1–4 steps:** Straighten or integrate trajectories via **Reflow / Flow Maps**, or match densities directly via **DMD / ADD**.
 :::
 
@@ -1187,7 +1184,7 @@ Running Euler's method on the exact mixture velocity `mix.velocity` from $20{,}0
 ::: {.cols .vc}
 ::: {.col}
 - **1 Euler step:** Collapses $100\%$ of starts onto $(-0.5, -0.7)$ in the empty valley between modes (`weights` $[1, 0, 0]$, $100\%$ strays).
-- **2 Euler steps:** Separates into three clusters, but leaves **$\approx 25\%$ strays** and severely distorts mode weights to **$[0.64, 0.22, 0.14]$** (vs. $[0.50, 0.30, 0.20]$) because the first half-step pulls all points toward $(-0.5, -0.7)$, closest to mode 1!
+- **2 Euler steps:** Separates into three clusters, but leaves **$\approx 25\%$ strays** and severely distorts mode weights to **$[0.64, 0.22, 0.14]$** (vs. $[0.50, 0.30, 0.20]$) because the first half-step pulls all points toward $(-0.5, -0.7)$, closest to mode 1.
 - **4 vs. 10 Euler steps:** Strays remain at $\approx 6.5\%$ at $4$ steps before dropping to $\approx 2\%$ at $10$ steps ($\approx 1\%$ in true data).
 :::
 
@@ -1226,7 +1223,7 @@ $$\Phi_{t \to s}(\mathbf{x}_t) = \mathbf{x}_t - \int_s^t \mathbf{u}_\tau(\mathbf
 - **Average velocity $\bar{\mathbf{u}}(\mathbf{x}_t, s, t)$:** The time-averaged velocity along the curved trajectory over $[s, t]$.
 - **Boundary condition at zero step ($s \to t$):** As $s \to t$, the average velocity collapses to the instantaneous velocity:
   $$\bar{\mathbf{u}}(\mathbf{x}_t, t, t) = \mathbf{u}_t(\mathbf{x}_t)$$
-- **One-step & multi-step sampling:** A single evaluation $\mathbf{x}_1 - \bar{\mathbf{u}}(\mathbf{x}_1, 0, 1)$ jumps straight from noise to data!
+- **One-step & multi-step sampling:** A single evaluation $\mathbf{x}_1 - \bar{\mathbf{u}}(\mathbf{x}_1, 0, 1)$ jumps straight from noise to data.
 :::
 
 ::: {.col .fig}
@@ -1243,7 +1240,7 @@ $$\Phi_{t \to s}(\mathbf{x}_t) = \mathbf{x}_t - \int_s^t \mathbf{u}_\tau(\mathbf
 $$\Phi_{t \to s}(x) = (1 - s)\,m + \frac{k_s}{k_t}\big(x - (1 - t)\,m\big)$$
 
 - **Exact quantile preservation:** For $x_0 \sim \mathcal{N}(2, 0.5^2)$ with $k_t = \sqrt{0.25(1-t)^2 + t^2}$, the 1D ODE preserves the standardized z-score from $t=1$ ($k_1 = 1$) to $s=0$ ($k_0 = 0.5$).
-- **1-Step Euler jump ($u_1(x) = x - 2$):** Lands at $x - (x - 2) = \mathbf{2}$, collapsing variance to zero!
+- **1-Step Euler jump ($u_1(x) = x - 2$):** Lands at $x - (x - 2) = \mathbf{2}$, collapsing variance to zero.
 - **1-Step Flow-Map jump ($\bar{u}(x, 0, 1) = 0.5x - 2$):** Lands at $x - (0.5x - 2) = \mathbf{2 + 0.5x} \sim \mathcal{N}(2, 0.5^2)$.
 :::
 
@@ -1258,9 +1255,9 @@ $$\Phi_{t \to s}(x) = (1 - s)\,m + \frac{k_s}{k_t}\big(x - (1 - t)\,m\big)$$
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Compositional (Semigroup):** $\Phi_{r \to s}(\Phi_{t \to r}(\mathbf{x}_t)) = \Phi_{t \to s}(\mathbf{x}_t)$ — uses two student passes at $r$ and no derivatives (Progressive Distillation, Shortcut Models).
-- **2. Lagrangian (Moving endpoint $s$):** $\partial_s \Phi_{t \to s}(\mathbf{x}_t) = \mathbf{u}_s(\Phi_{t \to s}(\mathbf{x}_t))$ — evaluates velocity $\mathbf{u}_s$ at the landing point $\Phi_{t \to s}(\mathbf{x}_t)$.
-- **3. Eulerian (Moving start $t$):** $\partial_t \Phi_{t \to s} + (\nabla_{\mathbf{x}}\Phi_{t \to s})\mathbf{u}_t = \mathbf{0}$ — evaluates velocity $\mathbf{u}_t$ at the start point $\mathbf{x}_t$ via 1 forward-mode JVP (Consistency Models, MeanFlow).
+- **1. Compositional (Semigroup):** $\Phi_{r \to s}(\Phi_{t \to r}(\mathbf{x}_t)) = \Phi_{t \to s}(\mathbf{x}_t)$, using two student passes at $r$ and no derivatives (Progressive Distillation, Shortcut Models).
+- **2. Lagrangian (Moving endpoint $s$):** $\partial_s \Phi_{t \to s}(\mathbf{x}_t) = \mathbf{u}_s(\Phi_{t \to s}(\mathbf{x}_t))$, evaluating velocity $\mathbf{u}_s$ at the landing point $\Phi_{t \to s}(\mathbf{x}_t)$.
+- **3. Eulerian (Moving start $t$):** $\partial_t \Phi_{t \to s} + (\nabla_{\mathbf{x}}\Phi_{t \to s})\mathbf{u}_t = \mathbf{0}$, evaluating velocity $\mathbf{u}_t$ at the start point $\mathbf{x}_t$ via 1 forward-mode JVP (Consistency Models, MeanFlow).
 :::
 
 ::: {.col .fig .big}
@@ -1375,11 +1372,11 @@ Comparing the six independent seeds of two-time `distillation` against teacher-f
 | **True Mixture Data** | $0.005$ (sampling noise) | $1.1\%$ | **$0.474$** | *(Ground-truth target)* |
 | **Teacher (50 Euler steps)** | $0.002$ | $1.5\%$ | **$0.471$** | Matches data distribution closely |
 | **Consistency ($s=0$), 1 jump** | $0.002$–$0.006$ | $1.9\%$–$2.1\%$ | **$0.453$–$0.463$** | Accurate 1-step weights & spread |
-| **Distillation ($s \le t$), 1 / 2 / 4 jumps** | $0.001$–$0.006$ (all seeds!) | $2.0\% \to \mathbf{1.0\%}$ | **$0.452$–$0.463$** | Preserves spread & deterministic map |
+| **Distillation ($s \le t$), 1 / 2 / 4 jumps** | $0.001$–$0.006$ (all seeds) | $2.0\% \to \mathbf{1.0\%}$ | **$0.452$–$0.463$** | Preserves spread & deterministic map |
 | **MeanFlow (no teacher), 1 / 4 jumps** | $\le 0.007 \to$ up to $\mathbf{0.02}$ | $\approx 4\% \to \approx 1\%$ | **$0.31$–$0.34 \to 0.35$–$0.39$** | **Contracts mode spread by $\approx 30\%$ (1 jump), $15$–$25\%$ (4 jumps)** |
 
 ::: {.d2l-note .warn}
-**Why noisy JVP tangents contract spread:** When $\boldsymbol\epsilon - \mathbf{x}_0$ drives the JVP tangent, high variance in the correction term $(t - s)\,d\bar{\mathbf{u}}/dt$ causes the student to under-fit the curvature correction—partially reverting toward a coarse Euler stride that shrinks mode variance!
+**Why noisy JVP tangents contract spread:** When $\boldsymbol\epsilon - \mathbf{x}_0$ drives the JVP tangent, high variance in the correction term $(t - s)\,d\bar{\mathbf{u}}/dt$ causes the student to under-fit the curvature correction—partially reverting toward a coarse Euler stride that shrinks mode variance.
 :::
 :::
 
@@ -1408,7 +1405,7 @@ Evaluating the teacher ($1$ to $50$ Euler steps) and two distilled students (`se
 
 ::: {.cols .vc}
 ::: {.col}
-- **1 evaluation:** Teacher Euler collapses onto the gray dataset mean ($\mathrm{FD} \approx 160$), whereas 1 student jump scores **$\mathrm{FD} \approx 11.5$** ($14\times$ lower!).
+- **1 evaluation:** Teacher Euler collapses onto the gray dataset mean ($\mathrm{FD} \approx 160$), whereas 1 student jump scores **$\mathrm{FD} \approx 11.5$** ($14\times$ lower).
 - **2 evaluations:** Teacher Euler scores $\mathrm{FD} \approx 80$, while 2 student jumps reach **$\mathrm{FD} \approx 4.5$ to $5$** (outperforming 10 teacher steps at about $7$).
 - **4 evaluations:** Student reaches **$\mathrm{FD} \approx 3.7$**, matching 20 teacher Euler steps ($3.5$ to $4$) and within $1.4\times$ of the 50-step teacher ($2.6$).
 :::

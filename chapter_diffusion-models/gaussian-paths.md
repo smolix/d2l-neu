@@ -3,7 +3,7 @@
 
 As :numref:`sec_diffusion-denoising` showed, a single noise level $\sigma$ cannot serve both mixing and sharp generation: at small $\sigma$ Langevin chains are trapped in their initial modes, whereas at large $\sigma$ they mix across modes but sample a heavily blurred density. The remedy is to connect the data distribution at $t = 0$ to a unit Gaussian at $t = 1$ along a continuous *Gaussian path* $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon$, and to walk from high noise down to zero noise.
 
-Both denoising diffusion probabilistic models (DDPM) :cite:`ho2020denoising`, score-based models :cite:`song2019generative,song2021score`, and flow matching :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022,Albergo.Boffi.VandenEijnden.2023` train a single time-conditioned network across all levels $t \in [0, 1]$ by least-squares regression. Because every common training target—the clean point $\mathbf{x}_0$, the noise $\boldsymbol\epsilon$, the score $\nabla \log p_t(\mathbf{x}_t)$, the velocity $\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon$, and the angular velocity $\mathbf{v} = \alpha_t \boldsymbol\epsilon - \sigma_t \mathbf{x}_0$—is an affine function of $\mathbf{x}_t$ and the posterior mean $\hat{\mathbf{x}}_0(\mathbf{x}_t) = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t]$, a network trained on any one target determines all the others. In this section we define the standard Gaussian paths and their shared log signal-to-noise ratio (log-SNR) clock, verify annealed Langevin sampling on exact scores, derive conditional flow matching and the target conversion dictionary, and verify our trained networks against the exact loss floor on the three-mode mixture.
+Denoising diffusion probabilistic models (DDPM) :cite:`ho2020denoising`, score-based models :cite:`song2019generative,song2021score`, and flow matching :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022,Albergo.Boffi.VandenEijnden.2023` all train a single time-conditioned network across levels $t \in [0, 1]$ by least-squares regression. Because every common training target (the clean point $\mathbf{x}_0$, the noise $\boldsymbol\epsilon$, the score $\nabla \log p_t(\mathbf{x}_t)$, the velocity $\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon$, and the angular velocity $\mathbf{v} = \alpha_t \boldsymbol\epsilon - \sigma_t \mathbf{x}_0$) is an affine function of $\mathbf{x}_t$ and the posterior mean $\hat{\mathbf{x}}_0(\mathbf{x}_t) = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t]$, a network trained on any one target determines all the others. In this section we define the standard Gaussian paths and their shared log signal-to-noise ratio (log-SNR) clock, verify annealed Langevin sampling on exact scores, derive conditional flow matching and the target conversion dictionary, and verify our trained networks against the exact loss floor on the three-mode mixture.
 
 ```{.python .input #gaussian-paths-gaussian-paths-diffusion-and-flow-matching}
 %%tab pytorch
@@ -692,10 +692,7 @@ Both trained networks reach their theoretical floors: the mean squared error aga
 
 ## Summary
 
-- A Gaussian path $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon$ interpolates between clean data at $t = 0$ and Gaussian noise at $t = 1$. All Gaussian paths share a canonical clock given by the log signal-to-noise ratio $\lambda_t = \log(\alpha_t^2 / \sigma_t^2)$.
-- Annealing across noise levels resolves the single-level dilemma: high-noise levels establish the global mode weights across smoothed valleys, while low-noise levels sharpen each mode.
-- Regressing onto per-example conditional targets ($\mathbf{x}_0$, $\boldsymbol\epsilon$, $-\boldsymbol\epsilon/\sigma_t$, $\mathbf{v}$, or $\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon$) trains a network to output the corresponding conditional expectation given $\mathbf{x}_t$. Because all five targets are affine functions of $\mathbf{x}_t$ and $\hat{\mathbf{x}}_0 = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t]$, a single trained predictor determines all five across any Gaussian path.
-- Every per-example regression objective has a positive loss floor $c_t^2\, \mathbb{E}\operatorname{tr}\textrm{Cov}[\mathbf{x}_0 \mid \mathbf{x}_t]$ due to the unobservable noise realization; predictor accuracy is measured by the excess loss above this floor.
+A Gaussian path $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon$ interpolates between clean data at $t = 0$ and Gaussian noise at $t = 1$, and all such paths share a canonical clock given by the log signal-to-noise ratio $\lambda_t = \log(\alpha_t^2 / \sigma_t^2)$. Annealing across noise levels resolves the single-level dilemma because high-noise levels establish global mode weights across smoothed valleys while low-noise levels sharpen each mode. Regressing onto per-example conditional targets ($\mathbf{x}_0$, $\boldsymbol\epsilon$, $-\boldsymbol\epsilon/\sigma_t$, $\mathbf{v}$, or $\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon$) trains a network to output the corresponding conditional expectation given $\mathbf{x}_t$; since all five targets are affine functions of $\mathbf{x}_t$ and $\hat{\mathbf{x}}_0 = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t]$, a single trained predictor determines all five across any Gaussian path. Finally, every per-example regression objective has a positive loss floor $c_t^2\, \mathbb{E}\operatorname{tr}\textrm{Cov}[\mathbf{x}_0 \mid \mathbf{x}_t]$ arising from the unobserved noise realization, so predictor accuracy is measured by the excess loss above this floor rather than by the raw training loss.
 
 ## Exercises
 
@@ -776,7 +773,7 @@ Before training any network, we test multi-scale annealing using the exact mixtu
 ::: {.cols .vc}
 ::: {.col}
 - **Single fine level ($1{,}000$ steps at $\tilde\sigma = 0.05$):** Chains stay trapped in their initial modes, returning equal weights $\approx [0.33, 0.33, 0.33]$.
-- **Ten annealed levels ($10 \times 100$ steps):** Coarse levels mix across smoothed valleys and fine levels sharpen each mode, recovering $[0.50, 0.30, 0.20]$ within $\pm 0.03$ and $\approx 1.5\%$ strays!
+- **Ten annealed levels ($10 \times 100$ steps):** Coarse levels mix across smoothed valleys and fine levels sharpen each mode, recovering $[0.50, 0.30, 0.20]$ within $\pm 0.03$ and $\approx 1.5\%$ strays.
 - **Why move from a ladder to a continuous path:** Hand-tuning discrete levels $\tilde\sigma_i$ and step sizes $h_i$ in high dimensions is fragile; a continuous path $t \in [0, 1]$ replaces the ladder with a smooth ODE or SDE.
 :::
 
@@ -919,7 +916,7 @@ Training `TimeMLP(256, 3)` on the linear path draws fresh batches of $512$ mixtu
 ::: {.col}
 - **Per-example target:** On the linear path, `path.target('velocity', x0, eps, t)` is simply `eps - x0`.
 - **Sinusoidal time features:** `TimeMLP` embeds $t \in [0, 1]$ at geometric frequencies from $1$ to $64\,\text{rad}$ so nearby noise levels remain distinct.
-- **Why does the loss plateau near $4.9$?** The training curve drops rapidly and flattens far above zero—not because training stalled, but because of the irreducible variance floor $C$!
+- **Why does the loss plateau near $4.9$?** The training curve drops rapidly and flattens far above zero—not because training stalled, but because of the irreducible variance floor $C$.
 :::
 
 ::: {.col .fig}
@@ -1026,7 +1023,7 @@ Using $10^6$ Monte Carlo draws, we decompose the loss of our trained linear-velo
 @!gaussian-paths-the-loss-floor
 
 ::: {.d2l-note}
-**Both networks learn the exact same posterior mean:** Their excess errors over the oracle are $\le 0.001$ (smaller than Monte Carlo standard error), and querying the linear-path velocity network as a VP noise predictor via `eps_from_velocity` matches `ema_eps` to four decimal places ($0.540$ loss, $0.0002$ excess)!
+**Both networks learn the exact same posterior mean:** Their excess errors over the oracle are $\le 0.001$ (smaller than Monte Carlo standard error), and querying the linear-path velocity network as a VP noise predictor via `eps_from_velocity` matches `ema_eps` to four decimal places ($0.540$ loss, $0.0002$ excess).
 :::
 :::
 
@@ -1035,9 +1032,9 @@ Using $10^6$ Monte Carlo draws, we decompose the loss of our trained linear-velo
 
 Because the loss floor scales with $c_t^2$, raw training losses in diffusion and flow matching carry three counterintuitive diagnostic traps:
 
-- **Trap 1 — High plateau $\neq$ underfitting:** A velocity flow-matching loss plateauing at $4.9$ and a DDPM noise loss plateauing at $0.54$ are *both* within $0.001$ of the Bayes-optimal oracle.
-- **Trap 2 — Lower raw loss $\neq$ better model:** The $9\times$ difference between $4.9$ and $0.54$ comes from the magnification factor $c_t^2$ ($1/t^2$ vs. $\alpha_t^2/\sigma_t^2$) and the different clocks of the two paths. Models trained on different targets or schedules must be compared in a **common target unit** (such as $\mathbb{E}\|\hat{\mathbf{x}}_0 - \mathbf{x}_0\|^2$ at matched log-SNR $\lambda$) or by sample quality.
-- **Trap 3 — Finite-dataset memorization:** The empirical optimum on a small dataset of $N$ points is the exact posterior mean of $N$ Dirac delta masses, which memorizes training examples verbatim (Exercise 17.2.5); neural networks generalize because architectural inductive bias smooths the velocity field across space.
+- **Trap 1: High plateau $\neq$ underfitting:** A velocity flow-matching loss plateauing at $4.9$ and a DDPM noise loss plateauing at $0.54$ are *both* within $0.001$ of the Bayes-optimal oracle.
+- **Trap 2: Lower raw loss $\neq$ better model:** The $9\times$ difference between $4.9$ and $0.54$ comes from the magnification factor $c_t^2$ ($1/t^2$ vs. $\alpha_t^2/\sigma_t^2$) and the different clocks of the two paths. Models trained on different targets or schedules must be compared in a **common target unit** (such as $\mathbb{E}\|\hat{\mathbf{x}}_0 - \mathbf{x}_0\|^2$ at matched log-SNR $\lambda$) or by sample quality.
+- **Trap 3: Finite-dataset memorization:** The empirical optimum on a small dataset of $N$ points is the exact posterior mean of $N$ Dirac delta masses, which memorizes training examples verbatim (Exercise 17.2.5); neural networks generalize because architectural inductive bias smooths the velocity field across space.
 :::
 
 ::: {.slide title="Concept Check: Log-SNR Clock & Target Conversions"}

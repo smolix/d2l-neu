@@ -38,10 +38,6 @@ when the section is written.
 - Courses, tutorials and blogs: [FlexAttention blog](https://pytorch.org/blog/flexattention/) (why a Python mask can run at fused speed); [CS336 assignment 1](https://github.com/stanford-cs336/assignment1-basics) (the test discipline for the data path); [build-nanogpt](https://github.com/karpathy/build-nanogpt) (the incremental data-loader construction).
 -->
 
-<!-- Placeholder (stage 2, infra step): the cells below are the section's
-shared library, written before the section; the prose around them comes with
-the section. Cell ids follow the section specification (S/spec/21.1.md). -->
-
 ```{.python .input #data-path-imports}
 %%tab pytorch
 import math
@@ -51,13 +47,70 @@ from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 ```
-
 ```{.python .input #data-path-the-pretraining-data-path-1}
 %%tab pytorch
 import collections
 ```
+<!-- Placeholder (prose): opening: the afternoon run of sec_gpt sliced one text file; two silent failures of a real data path, one number each. -->
 
-<!-- Placeholder (cell 5): document ids and positions from the EOS that ends each document. -->
+```{.python .input #data-path-opening-leak}
+%%tab pytorch
+torch.manual_seed(0)
+V, lengths = 128, torch.tensor([5, 4, 3])  # three documents in one window
+T = int(lengths.sum())
+model = d2l.PackedGPT(V, 64, 4, 2, 2, max_len=T, backend='sdpa').eval()
+X = torch.randint(1, V, (1, T))
+X[0, lengths.cumsum(0) - 1] = 0  # each document ends in EOS (id 0)
+d = torch.repeat_interleave(torch.arange(len(lengths)), lengths)
+same = d[:, None] == d[None, :]  # query and key in the same document
+causal = torch.ones(T, T, dtype=torch.bool).tril()
+print('\n'.join(''.join('1' if m else '.' for m in row)
+                for row in same & causal))
+pos = torch.cat([torch.arange(n) for n in lengths.tolist()])
+doc2 = slice(5, 9)  # the second document's positions
+with torch.no_grad():
+    alone = model(X[:, doc2])
+    masked = model(X, d2l.PackCtx(d[None], pos[None]))[:, doc2]
+    unmasked = model(X)[:, doc2]  # causal attention across the window
+for name, logits in (('masked:  ', masked), ('unmasked:', unmasked)):
+    print(f'max |logit change| of doc 2, {name} '
+          f'{(logits - alone).abs().max():.1e}')
+```
+
+<!-- Placeholder (prose): the second failure: a restart that re-seeds its shuffle. -->
+
+```{.python .input #data-path-opening-restart}
+%%tab pytorch
+r = d2l.reseeded_restart_overlap(n_seq=10_000, batch=64, crash_step=40,
+                                 steps=50)
+print(f're-seeded restart: {r.naive_match} of {r.steps} batches match the '
+      f'uninterrupted run; {r.naive_repeats} windows seen twice')
+print(f'stateless cursor: {r.stateless_match} of {r.steps} match; '
+      f'{r.stateless_repeats} seen twice')
+```
+
+<!-- Placeholder (prose): the contract: batch(step) is a pure function of (manifest, seed, epoch, step, skip); exactness levels L1-L3 (tab_lm_pdp_exactness); dataset reproducibility is not run reproducibility (sec_repro). -->
+
+## The Corpus as Shards
+
+<!-- Placeholder (prose): the d2l-corpus/1 layout of 20.6 (flat uint16 tokens, uint32 document offsets, meta.parquet, manifest with SHA-256 per file); uint16 wraps above 65,535; HF datasets streaming and torchdata named once. -->
+
+```{.python .input #data-path-shards}
+%%tab pytorch
+train, val = d2l.fwedu_shards('100m'), d2l.fwedu_shards('val')
+for name, shards in (('train', train), ('val', val)):
+    print(f'{name}: {shards.n_tokens:,} tokens in {shards.n_docs:,} '
+          f'documents ({shards.n_shards} shard, {shards.dtype.name})')
+ell = np.diff(train.offsets(0))  # document lengths, EOS included
+print(f'mean document length: {ell.mean():.0f} tokens '
+      f'(median {np.median(ell):.0f})')
+```
+
+## Packing with Document Masks
+
+### Document Ids and Positions
+
+<!-- Placeholder (prose): conventions (tab_lm_pdp_conventions): the EOS ends and belongs to its document and is a predicted target; doc_ids count the EOS strictly before t; pos_ids restart at each document start and at a fragment start; a literal <|endoftext|> in text is encoded as text by the R2 tokenizer (20.6). -->
 
 ```{.python .input #data-path-doc-ids}
 %%tab pytorch
@@ -72,9 +125,18 @@ def doc_ids_from_eos(tokens, eos_id=0):
     first = torch.cummax(starts, -1).values       # where t's document starts
     return doc_ids.to(tokens.dtype), (t - first).to(tokens.dtype)
 ```
+<!-- Placeholder (prose): the fixture of the plan. -->
 
-<!-- Placeholder (cell 7): attention over packed windows; the mask is the
-conjunction of the same-document test and the causal test. -->
+```{.python .input #data-path-doc-ids-fixture}
+%%tab pytorch
+doc_ids, pos_ids = doc_ids_from_eos(torch.tensor([5, 6, 0, 7, 0, 0, 8]))
+print('doc_ids:', doc_ids.tolist())
+print('pos_ids:', pos_ids.tolist())
+```
+
+### Packed Attention
+
+<!-- Placeholder (prose): restate in one sentence each: the mask as the conjunction of same-document and causal (sec_attention-scoring-functions); FlexAttention's mask_mod and create_block_mask (sec_windowed-linear-attention), with the SDPA boolean mask as the CPU path; fig_lm_packing_mask. FlexAttention retraces the block mask when B or T change (the library caches it per (B, T, device)). -->
 
 ```{.python .input #data-path-packed-attention}
 %%tab pytorch
@@ -137,9 +199,7 @@ class PackedAttention(d2l.Qwen3Attention):
             Y = d2l._math_attention(q, k, v, mask, self.softcap)
         return self.W_o(Y.transpose(1, 2).flatten(2))
 ```
-
-<!-- Placeholder (cell 8): the packed model; RoPE angles from per-document
-positions, conversions to and from the Qwen3 port, scaled RoPE for 21.5. -->
+<!-- Placeholder (prose): the packed model: RoPE angles from per-document positions, a learned table indexed by pos_ids for the reset check, the mask built once per forward; adopt/from_arch/set_rope/forward_cached named in a sentence each. -->
 
 ```{.python .input #data-path-packed-gpt}
 %%tab pytorch
@@ -239,9 +299,65 @@ class PackedGPT(d2l.Qwen3GPT):
         new.load_state_dict(model.state_dict(), assign=True)
         return new
 ```
+<!-- Placeholder (prose): predict before running: with RoPE, does resetting positions change the logits within a document? Derivation D1 (induction over layers) follows the check. -->
 
-<!-- Placeholder (cell 11): the token-weighted loss, and the chunked form
-that never holds the full (tokens x vocabulary) logits. -->
+```{.python .input #data-path-packed-equals-alone}
+%%tab pytorch
+lengths = (5, 9)
+T = sum(lengths)
+torch.manual_seed(0)
+X = torch.randint(1, V, (1, T))
+X[0, [4, 13]] = 0  # EOS ends each document
+doc_ids = torch.repeat_interleave(torch.arange(2),
+                                  torch.tensor(lengths))[None]
+reset = torch.cat([torch.arange(n) for n in lengths])[None]
+no_reset = torch.arange(T)[None]
+settings = {  # name: (position scheme, pos_ids, document mask)
+    'RoPE, reset': ('rope', reset, True),
+    'RoPE, no reset': ('rope', no_reset, True),
+    'RoPE, unmasked': ('rope', no_reset, False),
+    'learned, reset': ('learned', reset, True),
+    'learned, no reset': ('learned', no_reset, True)}
+delta = {}
+for name, (pos, pos_ids, masked) in settings.items():
+    torch.manual_seed(0)
+    net = d2l.PackedGPT(V, 64, 4, 2, 2, max_len=T, pos=pos,
+                        backend='sdpa').eval()
+    one_doc = torch.zeros_like(doc_ids)  # unmasked: one document
+    ctx = d2l.PackCtx(doc_ids if masked else one_doc, pos_ids)
+    with torch.no_grad():
+        alone = torch.cat([net(X[:, :5]), net(X[:, 5:])], 1)
+        delta[name] = (net(X, ctx) - alone).abs().max().item()
+print(f'{"setting":<18} max |Δ|')
+for name, value in delta.items():
+    print(f'{name:<18} {value:.1e}')
+exact = ('RoPE, reset', 'RoPE, no reset', 'learned, reset')
+assert max(delta[k] for k in exact) <= 1e-5
+assert min(delta['RoPE, unmasked'], delta['learned, no reset']) >= 1e-3
+```
+
+### How Many Documents a Window Cuts
+
+<!-- Placeholder (prose): derivation D2: a document of length l is cut with probability min(1, (l-1)/T), so f_cut(T) = E[l min(1, (l-1)/T)] / E[l]; predicted from the histogram alone, measured from the real offsets of the validation shard; best-fit packing as the alternative (an exercise). -->
+
+```{.python .input #data-path-window-cuts}
+%%tab pytorch
+ell = np.diff(val.offsets(0)).astype(np.int64)  # document lengths
+starts = val.offsets(0)[:-1].astype(np.int64)   # their stream offsets
+print(f'{"T":>5} {"predicted":>10} {"measured":>9}')
+for T in (256, 512, 1024, 2048, 4096, 8192):
+    predicted = (ell * np.minimum(1, (ell - 1) / T)).sum() / ell.sum()
+    cut = starts // T != (starts + ell - 1) // T  # a window boundary inside
+    print(f'{T:>5} {predicted:>10.3f} {ell[cut].sum() / ell.sum():>9.3f}')
+edges = np.logspace(np.log10(ell.min()), np.log10(ell.max()), 40)
+counts, _ = np.histogram(ell, edges)
+d2l.plot(np.sqrt(edges[:-1] * edges[1:]), [counts],
+         'document length (tokens)', 'documents', xscale='log')
+```
+
+## The Token-Weighted Loss
+
+<!-- Placeholder (prose): the loss is a sum over valid targets divided by the global count; masking attention but not the loss predicts the first token of a document from the previous one's EOS (the -100 rule); chunked_lm_loss keeps the [tokens, vocabulary] logits out of memory. -->
 
 ```{.python .input #data-path-losses}
 %%tab pytorch
@@ -279,9 +395,66 @@ def chunked_lm_loss(hidden, weight, labels, chunk=8192, z_loss=0.0,
     return (total[0], n_valid, total[1]) if return_nll else (total[0],
                                                              n_valid)
 ```
+<!-- Placeholder (prose): derivation D3: mean of micro-batch means minus the token-weighted loss is -Cov(n_k / n-bar, l-bar_k); the two-micro-batch example, then the eight micro-batches of the plan. -->
 
-<!-- Placeholder (cell 14): the resumable stream; the batch at step s is a
-pure function of the manifest, the seed and s. -->
+```{.python .input #data-path-token-weighting}
+%%tab pytorch
+n, ell_bar = torch.tensor([1024., 300.]), torch.tensor([3.0, 4.0])
+print(f'two batches: token-weighted {(n * ell_bar).sum() / n.sum():.2f}, '
+      f'mean of means {ell_bar.mean():.2f}')
+torch.manual_seed(0)
+counts = [1024, 900, 512, 1024, 300, 1000, 700, 1024]  # valid targets
+batches = [(torch.randn(n_k, V, dtype=torch.float64),  # fp64: exact checks
+            torch.randint(0, V, (n_k,))) for n_k in counts]
+N = sum(counts)
+sums = [d2l.token_weighted_loss(Z, y)[0] for Z, y in batches]
+single = d2l.token_weighted_loss(torch.cat([Z for Z, _ in batches]),
+                                 torch.cat([y for _, y in batches]))[0] / N
+accumulated = sum(sums) / N
+ell_bar = torch.stack(sums) / torch.tensor(counts)  # mean loss per batch
+w = torch.tensor(counts, dtype=torch.float64) / (N / len(counts))  # n/n̄
+cov = ((w - 1) * (ell_bar - ell_bar.mean())).mean()
+print(f'eight batches: accumulated − single pass = {accumulated - single:.1e}')
+print(f'mean of means − single pass = {ell_bar.mean() - single:.4f}')
+print(f'predicted −Cov(n/n̄, l̄) = {-cov:.4f}')
+assert abs(accumulated - single) <= 1e-6
+assert abs(ell_bar.mean() - single + cov) <= 1e-6
+```
+
+<!-- Placeholder (prose): what chunking saves, at the t1 widths (the t1 preset of the next section): one window of 8 x 1,024 positions against a 32,768-token vocabulary. -->
+
+```{.python .input #data-path-chunked-memory}
+%%tab pytorch
+B, T, d, V_r2 = 8, 1024, 384, 32768  # t1 widths, the R2 vocabulary
+if torch.cuda.is_available():
+    torch.manual_seed(0)
+    h = torch.randn(B, T, d, device='cuda', requires_grad=True)
+    W = (0.02 * torch.randn(V_r2, d, device='cuda')).requires_grad_()
+    y = torch.randint(0, V_r2, (B, T), device='cuda')
+
+    def peak(loss_fn):  # GiB above the inputs, forward and backward
+        torch.cuda.reset_peak_memory_stats()
+        base = torch.cuda.memory_allocated()
+        loss = loss_fn()
+        grads = torch.autograd.grad(loss, (h, W))
+        return (torch.cuda.max_memory_allocated() - base) / 2**30, loss, grads
+    full = peak(lambda: F.cross_entropy(F.linear(h, W).flatten(0, 1),
+                                        y.flatten()))
+    chunked = peak(lambda: d2l.chunked_lm_loss(h, W, y, chunk=1024)[0]
+                   / y.numel())
+    print(f'full logits: {full[0]:.1f} GiB peak')
+    print(f'chunked (1,024 positions): {chunked[0]:.1f} GiB peak')
+    grad_gap = max((a - b).abs().max() for a, b in zip(full[2], chunked[2]))
+    print(f'max |Δ| loss / grad: {(full[1] - chunked[1]).abs():.1e} / '
+          f'{grad_gap:.1e}')
+else:
+    print(f'GPU not available; the full logits alone take '
+          f'{B * T * V_r2 * 4 / 2**30:.1f} GiB (B·T·V·4 bytes)')
+```
+
+## A Stream That Names Its Batches
+
+<!-- Placeholder (prose): stateless addressing: perm = default_rng([seed, epoch]).permutation(n_seq), step s takes perm[sG:(s+1)G], rank r takes every world-th window; state_dict is the consumed count plus the layout hash; fig_lm_data_cursor. DataLoader workers that fork one RNG duplicate batches; the book's d2l.DataModule is the stack this replaces for pretraining. -->
 
 ```{.python .input #data-path-packed-stream}
 %%tab pytorch
@@ -341,3 +514,147 @@ class PackedStream:
                                             state['step'])
         self.skipped = tuple(state['skip'])
 ```
+<!-- Placeholder (prose): resume, elasticity, skip and the layout check, on the training shard at the t1 window and batch. -->
+
+```{.python .input #data-path-resume}
+%%tab pytorch
+T, G = 1024, 64  # the t1 window and global batch (sequences)
+stream = d2l.PackedStream(train, T, G, seed=0)
+stream.step = 37  # the run dies here; a fresh process resumes
+resumed = d2l.PackedStream(train, T, G)
+resumed.load_state_dict(stream.state_dict())
+same = sum(torch.equal(stream.batch(37 + s)['input_ids'], b['input_ids'])
+           for s, b in zip(range(50), resumed))
+print(f'resume at 37: {same} of 50 batches identical')
+
+def windows(world):  # the windows of steps 0-9 on all ranks, sorted
+    ranks = [d2l.PackedStream(train, T, G, rank=r, world=world)
+             for r in range(world)]
+    return sorted(row.numpy().tobytes() for s in range(10) for rank in ranks
+                  for row in rank.batch(s)['input_ids'])
+one, two, four = windows(1), windows(2), windows(4)
+print(f'world sizes 1, 2, 4: {"same" if one == two == four else "different"}'
+      f' {len(one)} windows at 10 steps')
+skipped = d2l.PackedStream(train, T, G, skip=(3,))
+physical = next(p for p in range(10) if torch.equal(
+    skipped.batch(3)['input_ids'], stream.batch(p)['input_ids']))
+print(f'skip=(3,): logical step 3 = physical step {physical}')
+try:
+    stream.load_state_dict(d2l.PackedStream(train, 2 * T, G).state_dict())
+except ValueError as e:
+    print(f'layout check: ValueError: {e}')
+assert same == 50 and one == two == four and physical == 4
+```
+
+### Data Parallelism
+
+<!-- Placeholder (prose): the DDP form: the step's valid-target count is all-reduced before the backward pass, and each rank scales its summed loss by world / N; two simulated ranks with unequal counts. -->
+
+```{.python .input #data-path-ddp}
+%%tab pytorch
+def ddp_loss(sum_loss, n_valid_global, world):
+    """One rank's loss: DDP averages the ranks' gradients, so scaling by
+    world over the global count of valid targets yields the gradient of
+    the global token-weighted mean."""
+    return sum_loss * world / n_valid_global
+
+torch.manual_seed(0)
+W = torch.randn(V, 16, requires_grad=True)  # logits h W^T
+ranks = [(torch.randn(n_r, 16) + r, torch.randint(0, V, (n_r,)))
+         for r, n_r in enumerate((1000, 300))]  # unequal valid counts
+N, world = sum(len(y) for _, y in ranks), len(ranks)
+
+def ddp_grad(loss_of):  # DDP: the mean of the ranks' gradients
+    return torch.stack([torch.autograd.grad(loss_of(
+        *d2l.token_weighted_loss(h @ W.T, y)), W)[0]
+        for h, y in ranks]).mean(0)
+s, n = d2l.token_weighted_loss(torch.cat([h for h, _ in ranks]) @ W.T,
+                               torch.cat([y for _, y in ranks]))
+single = torch.autograd.grad(s / n, W)[0]
+glob = ddp_grad(lambda s, n: ddp_loss(s, N, world))
+local = ddp_grad(lambda s, n: s / n)  # each rank divides by its own count
+print(f'global count: max |Δ grad| = {(glob - single).abs().max():.1e}')
+print(f'local count: max |Δ grad| = {(local - single).abs().max():.4f}')
+assert (glob - single).abs().max() <= 1e-6
+assert (local - single).abs().max() >= 1e-3
+```
+
+## Measurements
+
+### Four Pipelines
+
+<!-- Placeholder (prose): useful tokens per second of the t1 training step under four input pipelines (padded documents, packed without mask, SDPA mask, FlexAttention mask) at T = 1,024 and 4,096, the same tokens per step; a difference is stated only where the IQRs do not overlap; flash_attn_varlen_func with cu_seqlens named as the other production route. -->
+
+```{.python .input #data-path-throughput}
+%%tab pytorch
+tp = d2l.packing_throughput(
+    d2l.r2_config('t1'), pipelines=('padded', 'packed', 'sdpa-mask',
+                                    'flex-mask'),
+    seq_lens=(1024, 4096), steps=50)
+d2l.plot_intervals(
+    tp.pipeline.unique(),
+    {f'T = {T}': (g.tok_s / 1e3, g.tok_s_q1 / 1e3, g.tok_s_q3 / 1e3)
+     for T, g in tp.groupby('T')},
+    'pipeline', 'useful tokens/s (thousands)')
+print(f'{"pipeline":<10} {"T":>5} {"useful tok/s":>13} {"IQR":>14} '
+      f'{"padding":>8} {"peak GiB":>9}')
+for r in tp.itertuples():  # tokens/s in thousands: median, quartiles
+    rate = (f'{r.tok_s / 1e3:>12.1f}k {r.tok_s_q1 / 1e3:>7.1f}-'
+            f'{r.tok_s_q3 / 1e3:.1f}k' if r.status == 'ok' else r.status)
+    print(f'{r.pipeline:<10} {r.T:>5} {rate} {r.padding:>8.0%} '
+          f'{r.peak_gib:>9.1f}')
+```
+
+### Data Wait
+
+<!-- Placeholder (prose): input starvation measured as the time to build one batch against the step it feeds (flex-mask, T = 1,024, from the table above); the cost, if any, is reading and the doc-id cumsum, not packing. -->
+
+```{.python .input #data-path-data-wait}
+%%tab pytorch
+batches = iter(d2l.PackedStream(train, 1024, 64))  # the t1 window, batch
+t_batch = d2l.Benchmark(lambda: next(batches), warmup=5, repeats=50).time
+t_step = tp.set_index(['pipeline', 'T']).step_ms[('flex-mask', 1024)] / 1e3
+print(f'stream: {1e3 * t_batch:.1f} ms per batch (64 × 1,024 tokens)')
+print(f't1 training step ({tp.gpu.iloc[0]}): {1e3 * t_step:.0f} ms; '
+      f'data wait {t_batch / t_step:.1%} of a step')
+```
+
+### Does the Mask Change the Model?
+
+<!-- Placeholder (prose): six runs of the t1 preset for 25M tokens: masked and unmasked, seeds 0-2, a pair sharing its batches; both validated document by document (with the mask), as at inference; paired differences with a t interval on two degrees of freedom, and how weak that is. -->
+
+```{.python .input #data-path-mask-runs}
+%%tab pytorch
+runs = d2l.packing_comparison(d2l.r2_config('t1'), tokens=25_000_000,
+                              seeds=(0, 1, 2))
+for r in runs.table.itertuples():
+    print(f'seed {r.seed}: masked {r.masked:.3f}, unmasked {r.unmasked:.3f}')
+diff = runs.table.unmasked - runs.table.masked
+mean, half = d2l.t_interval(diff)
+print(f'paired difference (unmasked − masked): {mean:.3f} ± {half:.3f} '
+      f'(95% t, {len(diff) - 1} dof)')
+print('no conclusion' if abs(mean) <= half else
+      f'unmasked {"higher" if mean > 0 else "lower"}: the interval excludes 0')
+```
+
+<!-- Placeholder (prose): the leak: attention mass a query of the unmasked model puts on earlier keys of other documents, per block, on 64 validation windows (seed 0); the dashed line is the share uniform attention would give. -->
+
+```{.python .input #data-path-leak}
+%%tab pytorch
+leak = runs.leak
+axes = d2l.plot_intervals(leak.layer + 1,
+                          {'unmasked, seed 0': (leak.leak, leak.lo, leak.hi)},
+                          'block', 'attention mass on other documents',
+                          reference=leak.uniform.iloc[0])  # uniform attention
+axes.set_ylim(bottom=0)
+print(f'leak positive in {(leak.lo > 0).sum()} of {len(leak)} layers '
+      f'(lower 95% bound > 0)')
+```
+
+## Summary
+
+<!-- Placeholder (prose): 3-6 sentences (W1). -->
+
+## Exercises
+
+<!-- Placeholder (prose): 5-7 exercises per S/spec/21.1.md part H. -->

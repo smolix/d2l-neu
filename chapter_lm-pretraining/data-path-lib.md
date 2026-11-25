@@ -24,7 +24,12 @@ uses these symbols at import time). It holds the library code that
   the Qwen3 shape it adopts;
 - `PackedStream` internals (layout hash, permutation slice, window reads);
 - the naive-restart contrast of the opening (`reseeded_restart_overlap`);
-- the DDP helpers shared with 21.2 and the small-sample t interval.
+- the DDP helpers shared with 21.2 and the small-sample t interval;
+- the drivers behind the section's two measurements, `packing_throughput`
+  (four input pipelines timed on one GPU) and `packing_comparison`
+  (masked against unmasked training, three paired seeds, and the attention
+  leak of the unmasked model), each computing under its regeneration name
+  and otherwise loading its committed result.
 
 Every block is tagged `%%tab pytorch` and imports what it needs beyond the
 library preamble inside its functions (`torch.distributed`, FlexAttention,
@@ -126,7 +131,7 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
 d2l.PRETRAIN_ARTIFACTS['packing-throughput'] = (
     'lm-pdp-throughput-v1', 'parquet')
 d2l.PRETRAIN_ARTIFACTS['packing-mask-runs'] = (
-    'lm-pdp-mask-runs-v1', 'parquet')
+    'lm-pdp-mask-runs-v1', 'json-table')
 ```
 
 ## Committed Results: Load or Regenerate
@@ -765,4 +770,299 @@ def t_interval(x, alpha=0.05):
         from scipy import stats
         t = float(stats.t.ppf(1 - alpha / 2, n - 1))
     return float(x.mean()), float(t * x.std(ddof=1) / math.sqrt(n))
+```
+
+## The Measurements: Pipeline Throughput and the Mask Comparison
+
+`packing_throughput` times training steps of one model under four input
+pipelines; `packing_comparison` trains masked and unmasked models with
+paired seeds and probes the unmasked model's attention. Each builds its
+configuration from its arguments and leaves the choice between measuring
+and loading to `_pretrain_result`.
+
+```{.python .input #data-path-lib-throughput}
+%%tab pytorch
+#@save
+PACKING_PIPELINES = ('padded', 'packed', 'sdpa-mask', 'flex-mask')
+
+#@save
+def _padded_batch(shards, T, G, step):
+    """Documents step * G ... step * G + G - 1, one per row, cut after T
+    targets and padded with EOS; padded targets are -100."""
+    X = torch.full((G, T), shards.eos_id, dtype=torch.int64)
+    Y = torch.full((G, T), -100, dtype=torch.int64)
+    for r in range(G):
+        d = torch.from_numpy(shards.doc((step * G + r) % shards.n_docs)).long()
+        n = min(len(d) - 1, T)
+        X[r, :n], Y[r, :n] = d[:n], d[1:n + 1]
+    pos = torch.arange(T, dtype=torch.int32).expand(G, T).contiguous()
+    return dict(input_ids=X, labels=Y, doc_ids=torch.zeros_like(pos),
+                pos_ids=pos)
+
+#@save
+def _pipeline_batches(pipeline, shards, T, G, steps, seed):
+    """The first steps global batches of a pipeline: padded documents, or
+    the windows of a PackedStream."""
+    if pipeline == 'padded':
+        return [_padded_batch(shards, T, G, s) for s in range(steps)]
+    stream = d2l.PackedStream(shards, T, G, seed=seed)
+    return [stream.batch(s) for s in range(steps)]
+
+#@save
+def _timed_step(model, optimizer, micro, n_valid, masked, cfg):
+    """One training step as pretrain_step takes it (bf16 autocast, chunked
+    token-weighted loss, clipping, AdamW), with the document mask only if
+    masked (else causal attention over the whole row)."""
+    for mb in micro:
+        ctx = d2l.PackCtx(mb['doc_ids'], mb['pos_ids']) if masked else None
+        with torch.autocast(mb['input_ids'].device.type, torch.bfloat16,
+                            enabled=cfg.dtype == 'bf16'):
+            H, W = model(mb['input_ids'], ctx, return_hidden=True)
+            loss, _ = d2l.chunked_lm_loss(H, W, mb['labels'],
+                                          z_loss=cfg.z_loss)
+        (loss / n_valid).backward()
+    params = [p for g in optimizer.param_groups for p in g['params']]
+    torch.nn.utils.clip_grad_norm_(params, cfg.clip or math.inf)
+    optimizer.step()
+    optimizer.zero_grad(set_to_none=True)
+
+#@save
+def _throughput_row(cfg, pipeline, T, batches, warmup, device):
+    """Useful (valid-target) tokens per second, median and quartiles over
+    the steps after warmup, the median step time, the padding share and the
+    peak memory of one pipeline at window length T."""
+    torch._dynamo.reset()  # a fresh compile for every model
+    torch.manual_seed(cfg.seed)
+    backend = {'sdpa-mask': 'sdpa', 'flex-mask': 'flex'}.get(pipeline,
+                                                             'auto')
+    raw = d2l.PackedGPT.from_arch(cfg.arch._replace(T=T),
+                                  backend=backend).to(device)
+    cuda = device.type == 'cuda'
+    optimizer = torch.optim.AdamW(d2l.param_groups(raw, cfg.wd),
+                                  lr=cfg.peak_lr, betas=cfg.betas,
+                                  eps=cfg.eps, fused=cuda)
+    model = torch.compile(raw) if cfg.compile else raw
+    m = max(1, cfg.micro_batch * cfg.arch.T // T)  # same tokens per micro
+    sync = (lambda: torch.cuda.synchronize(device)) if cuda else (
+        lambda: None)
+    if cuda:
+        torch.cuda.reset_peak_memory_stats(device)
+    rates, times = [], []
+    for k, b in enumerate(batches):
+        b = {key: v.to(device) for key, v in b.items()}
+        n_valid = (b['labels'] != -100).sum()
+        micro = [{key: v[i:i + m] for key, v in b.items()}
+                 for i in range(0, len(b['labels']), m)]
+        sync()
+        t = time.perf_counter()
+        _timed_step(model, optimizer, micro, n_valid,
+                    pipeline.endswith('-mask'), cfg)
+        sync()
+        if k >= warmup:
+            times.append(time.perf_counter() - t)
+            rates.append(n_valid.item() / times[-1])
+    padding = (float(np.mean([(b['labels'] == -100).float().mean()
+                              for b in batches]))
+               if pipeline == 'padded' else 0.0)  # every -100 is a pad
+    q1, med, q3 = np.percentile(rates, [25, 50, 75])
+    row = dict(pipeline=pipeline, T=T, tok_s=med, tok_s_q1=q1, tok_s_q3=q3,
+               step_ms=1e3 * float(np.median(times)), padding=padding,
+               peak_gib=(torch.cuda.max_memory_allocated(device) / 2 ** 30
+                         if cuda else float('nan')), status='ok')
+    del model, raw, optimizer
+    if cuda:
+        torch.cuda.empty_cache()
+    return row
+
+#@save
+def _throughput_table(cfg, pipelines, seq_lens, steps, warmup, shards,
+                      device):
+    """_throughput_row for every pipeline and window length, at cfg's
+    tokens per step; a FlexAttention row that fails reads 'flex
+    unavailable' (any other failure raises)."""
+    rows = []
+    for T in seq_lens:
+        G = cfg.global_batch * cfg.arch.T // T  # sequences per step
+        for p in pipelines:
+            batches = _pipeline_batches(p, shards, T, G, warmup + steps,
+                                        cfg.data_seed)
+            try:
+                rows.append(_throughput_row(cfg, p, T, batches, warmup,
+                                            device))
+            except Exception as e:
+                if p != 'flex-mask':
+                    raise
+                print(f'flex-mask at T={T}: {type(e).__name__}: {e}',
+                      file=sys.stderr)
+                rows.append(dict(pipeline=p, T=T, status='flex unavailable'))
+    df = pd.DataFrame(rows)
+    df['gpu'] = (torch.cuda.get_device_name(device)
+                 if device.type == 'cuda' else 'cpu')
+    return df
+
+#@save
+def packing_throughput(cfg, pipelines=PACKING_PIPELINES, seq_lens=(1024,
+                       4096), steps=50, warmup=5):
+    """Training throughput of cfg's model under each input pipeline at each
+    window length T, at cfg's tokens per step: 'padded' (one document per
+    row), 'packed' (windows, causal attention across documents),
+    'sdpa-mask' and 'flex-mask' (windows with the document mask). Columns:
+    useful tokens/s (median, quartiles over steps), step time, padding
+    share, peak memory. The committed table, or measured on one GPU
+    (compiled) under D2L_RERUN=pdp-throughput."""
+    config = dict(cfg=d2l._cfg_json(cfg), pipelines=list(pipelines),
+                  seq_lens=list(seq_lens), steps=steps, warmup=warmup)
+
+    def compute():
+        if not torch.cuda.is_available():
+            raise RuntimeError('pdp-throughput measures on a GPU')
+        return _throughput_table(cfg, pipelines, seq_lens, steps, warmup,
+                                 d2l._train_shards(cfg), torch.device('cuda'))
+    return d2l._pretrain_result('pdp-throughput', compute, config)
+```
+
+```{.python .input #data-path-lib-mask-runs}
+%%tab pytorch
+#@save
+PackingRuns = collections.namedtuple('PackingRuns',
+                                     ['table', 'losses', 'leak', 'label'])
+
+#@save
+class _UnmaskedStream(d2l.PackedStream):
+    """A PackedStream read the way a plain causal model reads it: every
+    window is one document for attention (doc_ids 0, positions 0 ... T-1);
+    windows and targets are PackedStream's, so a pair of runs differs only
+    in the mask."""
+    def batch(self, step):
+        b = super().batch(step)
+        b['doc_ids'] = torch.zeros_like(b['doc_ids'])
+        b['pos_ids'] = torch.arange(self.seq_len, dtype=torch.int32).expand_as(
+            b['pos_ids']).contiguous()
+        return b
+
+#@save
+def _mask_run_config(cfg, tokens):
+    """cfg shortened to tokens (rounded to whole steps): WSD with 5% warmup
+    and 10% decay, validation at the end only, nothing saved."""
+    steps = round(tokens / (cfg.global_batch * cfg.arch.T))
+    return dataclasses.replace(
+        cfg, steps=steps, warmup=round(0.05 * steps),
+        decay=round(0.1 * steps), val_every=0, probe_every=0, stats_every=0,
+        ckpt_steps=(), state_steps=(), state_every=0, branches=(),
+        out_dir=None)
+
+#@save
+def _foreign_mass(q, k, doc_ids, chunk=256):
+    """Per window: the mean, over queries that have an earlier key of
+    another document, of the causal attention mass on such keys (averaged
+    over heads; fp32), and the share uniform attention would put there;
+    nan for a window that holds one document."""
+    B, H, T, d_h = q.shape
+    q, k = q.float(), k.float()
+    j = torch.arange(T, device=q.device)
+    mass, base, n = (torch.zeros(B, device=q.device) for _ in range(3))
+    for a in range(0, T, chunk):
+        i = torch.arange(a, min(a + chunk, T), device=q.device)
+        causal = j[None, :] <= i[:, None]                   # (c, T)
+        s = q[:, :, i] @ k.transpose(-2, -1) / math.sqrt(d_h)
+        p = torch.softmax(s.masked_fill(~causal, -math.inf), -1)
+        foreign = (doc_ids[:, i, None] != doc_ids[:, None, :]) & causal
+        has = foreign.any(-1)                               # (B, c)
+        m = (p * foreign[:, None]).sum(-1).mean(1)          # over heads
+        mass += torch.where(has, m, 0.0).sum(-1)
+        base += torch.where(has, foreign.sum(-1) / (i + 1), 0.0).sum(-1)
+        n += has.sum(-1)
+    return mass / n, base / n
+
+#@save
+def _leak_table(model, X, eos_id=0, batch=8, n_boot=2000, seed=0):
+    """Per block of a model trained without the document mask: the mean
+    over windows X of the attention mass on other documents' keys, a 95%
+    bootstrap interval over windows, and the uniform-attention share."""
+    dev = next(model.parameters()).device
+    doc_ids = d2l.doc_ids_from_eos(X.int(), eos_id)[0]
+    leak, uniform = [], []
+    with torch.no_grad():
+        for a in range(0, len(X), batch):
+            Xb, db = X[a:a + batch].to(dev), doc_ids[a:a + batch].to(dev)
+            per_layer = []
+            for attn, Y, tables in d2l._attention_inputs(model, Xb, None):
+                q, k, _ = attn.qkv(Y.float(), tables=tables)
+                k = k.repeat_interleave(attn.num_heads // attn.num_kv_heads,
+                                        1)
+                m, u = _foreign_mass(q, k, db)
+                per_layer.append(m)
+            leak.append(torch.stack(per_layer, 1).cpu())
+            uniform.append(u.cpu())
+    M, U = torch.cat(leak).double().numpy(), torch.cat(uniform).numpy()
+    keep = ~np.isnan(M[:, 0])  # windows with more than one document
+    M, U = M[keep], U[keep]
+    idx = np.random.default_rng(seed).integers(0, len(M), (n_boot, len(M)))
+    lo, hi = np.percentile(M[idx].mean(1), [2.5, 97.5], axis=0)
+    return pd.DataFrame(dict(layer=np.arange(M.shape[1]), leak=M.mean(0),
+                             lo=lo, hi=hi, uniform=float(U.mean()),
+                             windows=len(M)))
+
+#@save
+def _mask_runs(cfg, seeds, train, val_fn, leak_X, device, every=10):
+    """For each seed, train cfg's model on train (on device) with and
+    without the document mask (the stream seed is the model seed, so a pair
+    sees the same batches): final validation loss (val_fn), the training
+    loss every `every` steps, and the leak of the unmasked seeds[0] model on
+    leak_X."""
+    finals, traces, leak = [], [], None
+    for seed in seeds:
+        row = dict(seed=seed)
+        for arm, Stream in (('masked', d2l.PackedStream),
+                            ('unmasked', _UnmaskedStream)):
+            torch._dynamo.reset()
+            torch.manual_seed(seed)
+            model = d2l.PackedGPT.from_arch(cfg.arch).to(device)
+            stream = Stream(train, cfg.arch.T, cfg.global_batch, seed=seed)
+            log = d2l.pretrain(model, stream, dataclasses.replace(
+                cfg, seed=seed, data_seed=seed), val_fn=val_fn)
+            row[arm] = float(log['val_loss'].dropna().iloc[-1])
+            keep = log[(log['step'] % every == 0) | (log['step'] ==
+                                                      cfg.steps)]
+            traces.append(pd.DataFrame(dict(arm=arm, seed=seed,
+                                            step=keep['step'],
+                                            loss=keep['loss'])))
+            if arm == 'unmasked' and seed == seeds[0]:
+                leak = _leak_table(model, leak_X, train.eos_id)
+            del model, stream
+        finals.append(row)
+    return PackingRuns(pd.DataFrame(finals), pd.concat(traces,
+                                                       ignore_index=True),
+                       leak, '')
+
+#@save
+def packing_comparison(cfg, tokens=25_000_000, seeds=(0, 1, 2),
+                       leak_windows=64):
+    """Masked against unmasked training of cfg's model for tokens tokens
+    with paired seeds, both validated with the document mask (each
+    document on its own, as at inference): PackingRuns(table: seed, masked,
+    unmasked final validation loss; losses: training loss every 10 steps;
+    leak: per block, the unmasked seeds[0] model's attention mass on other
+    documents over leak_windows validation windows, with a 95% bootstrap
+    interval). The committed result, or trained on one GPU under
+    D2L_RERUN=pdp-mask-runs."""
+    run_cfg = _mask_run_config(cfg, tokens)
+    config = dict(cfg=d2l._cfg_json(run_cfg), tokens=tokens,
+                  seeds=list(seeds), leak_windows=leak_windows)
+
+    def compute():
+        if not torch.cuda.is_available():
+            raise RuntimeError('pdp-mask-runs trains on a GPU')
+        with d2l._quiet():
+            val = d2l.fwedu_shards('val')
+        T = cfg.arch.T
+        leak_X = torch.from_numpy(np.stack([
+            val.read(i * T, T) for i in range(leak_windows)]).astype(np.int64))
+        return _mask_runs(run_cfg, seeds, d2l._train_shards(run_cfg),
+                          d2l._val_fn(run_cfg), leak_X, torch.device('cuda'))
+    result = d2l._pretrain_result('pdp-mask-runs', compute, config)
+    if isinstance(result, pd.DataFrame):  # the labelled pending result
+        return PackingRuns(result, result, result, d2l._label_of(result))
+    return PackingRuns(result.table, result.losses, result.leak,
+                       result.label)
 ```

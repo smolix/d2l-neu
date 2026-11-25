@@ -41,6 +41,15 @@ import torch
 
 from d2l import torch as d2l
 
+
+def uncommitted():
+    """d2l.DATA_HUB without chapter 21's results: the state before a
+    campaign's result is registered (the tests of pending and regeneration
+    paths must not depend on which results run A has committed)."""
+    keys = {key for key, _ in d2l.PRETRAIN_ARTIFACTS.values()}
+    return mock.patch.object(d2l, 'DATA_HUB', {
+        k: v for k, v in d2l.DATA_HUB.items() if k not in keys})
+
 torch.set_num_threads(min(8, torch.get_num_threads()))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -331,8 +340,10 @@ class ShapesAndPendingTest(unittest.TestCase):
         self.assertEqual(int(s['params'][0]), 596_049_920)
 
     def test_pending_table(self):
-        self.assertIn('decode-rates', d2l.PRETRAIN_PENDING)
         with in_chapter(), mock.patch.dict(os.environ, {'D2L_RERUN': ''}), \
+                uncommitted(), mock.patch.object(
+                    d2l, 'PRETRAIN_PENDING',
+                    d2l.PRETRAIN_PENDING | {'decode-rates'}), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
             r = d2l.decode_rates(['r2'], (1, 8), 1024, 128)
         self.assertEqual(out.getvalue().strip(), '[decode-rates pending]')
@@ -507,9 +518,10 @@ class PageTest(unittest.TestCase):
         if not qwen_configs_cached():
             self.skipTest('Qwen3 configs not cached')
         ns, fit_cells, t_fit, outs = {}, False, 0.0, {}
-        with in_chapter(), mock.patch.object(
-                d2l, 'PRETRAIN_PENDING', d2l.PRETRAIN_PENDING | C1), \
-                mock.patch.dict(os.environ, {'D2L_RERUN': ''}):
+        with in_chapter(), mock.patch.object(  # decode rates pending too
+                d2l, 'PRETRAIN_PENDING',
+                d2l.PRETRAIN_PENDING | C1 | {'decode-rates'}), \
+                uncommitted(), mock.patch.dict(os.environ, {'D2L_RERUN': ''}):
             for name, code in page_cells().items():
                 fit_cells |= name == FIT_FIRST
                 t = time.time()

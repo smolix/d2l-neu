@@ -38,6 +38,15 @@ from torch.nn import functional as F
 
 from d2l import torch as d2l
 
+
+def uncommitted():
+    """d2l.DATA_HUB without chapter 21's results: the state before a
+    campaign's result is registered (the tests of pending and regeneration
+    paths must not depend on which results run A has committed)."""
+    keys = {key for key, _ in d2l.PRETRAIN_ARTIFACTS.values()}
+    return mock.patch.object(d2l, 'DATA_HUB', {
+        k: v for k, v in d2l.DATA_HUB.items() if k not in keys})
+
 torch.set_num_threads(min(8, torch.get_num_threads()))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -435,7 +444,7 @@ class ArmsTest(unittest.TestCase):
         with mock.patch.object(d2l, 'PRETRAIN_PENDING',
                                frozenset({'lowp-runs', 'gemm-sweep'})), \
                 mock.patch.dict(os.environ, {'D2L_RERUN': ''}), \
-                contextlib.redirect_stdout(io.StringIO()):
+                uncommitted(), contextlib.redirect_stdout(io.StringIO()):
             runs = d2l.lowp_arms(d2l.r2_config('fp8'),
                                  {'bf16': ('bf16', (0,))})
             sweep = d2l.fp8_gemm_sweep(16384, (512,), [(16384, 768, 768)])

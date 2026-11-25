@@ -39,6 +39,15 @@ import torch
 
 from d2l import torch as d2l
 
+
+def uncommitted():
+    """d2l.DATA_HUB without chapter 21's results: the state before a
+    campaign's result is registered (the tests of pending and regeneration
+    paths must not depend on which results run A has committed)."""
+    keys = {key for key, _ in d2l.PRETRAIN_ARTIFACTS.values()}
+    return mock.patch.object(d2l, 'DATA_HUB', {
+        k: v for k, v in d2l.DATA_HUB.items() if k not in keys})
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import test_lm_data_path as dp  # noqa: E402
 
@@ -196,7 +205,8 @@ class ConfigTest(unittest.TestCase):
                              set(d2l.PRETRAIN_ARTIFACTS))
         needs_run = {'ladder-evals', 'inst-t2', 'inst-t1-none',
                      'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap'}
-        with mock.patch.object(d2l, '_rerun_dir', lambda: '/nonexistent'):
+        with mock.patch.object(d2l, '_rerun_dir', lambda: '/nonexistent'), \
+                uncommitted():
             for name, (driver, kwargs) in d2l.PRETRAIN_JOBS.items():
                 self.assertTrue(callable(getattr(d2l, driver)), name)
                 if name in needs_run:  # reads an earlier job's result
@@ -766,7 +776,7 @@ class ResultTest(unittest.TestCase):
         self.cwd = os.getcwd()
         os.chdir(chapter)
         self.patches = [
-            mock.patch.object(d2l, 'DATA_HUB', dict(d2l.DATA_HUB)),
+            uncommitted(),
             mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset()),
             mock.patch.dict(os.environ, {'D2L_RERUN': ''})]
         for p in self.patches:

@@ -77,6 +77,11 @@ FORCE:
 .figstamps/gen_mdl_lm_encoders_figures: tools/figstyle/tokens.py \
     tools/figstyle/textmetrics.py tools/figstyle/mpl.py
 
+# ch. 22 (Hardware for Training and Inference): matplotlib on the shared style
+# of gen_mdl_figures.py, plus figstyle.mpl primitives and measured text widths.
+.figstamps/gen_mdl_lm_hardware_figures: tools/figstyle/tokens.py \
+    tools/figstyle/textmetrics.py tools/figstyle/mpl.py
+
 .PHONY: figures
 figures: $(FIGURE_STAMPS)
 	@python3 tools/sync_auto_figures.py

@@ -84,6 +84,30 @@ LIB_ONLY_FILES = [
     'chapter_lm-pretraining/continued-pretraining-lib.md',
     'chapter_lm-pretraining/long-context-lib.md',
     'chapter_lm-pretraining/budgets-lib.md',
+    # Chapter 22: the chapter's measurement plumbing (registries, _hw_result,
+    # BenchLog internals, campaign readers, tool runner) and 22.1's spec
+    # loader, microbenchmark kernels and displays (first: its empty
+    # registries exist before the later files add entries to them).
+    'chapter_lm-hardware/accelerator-design-lib.md',
+    # 22.2's Triton binding (a stub when Triton is absent), the flash SDPA
+    # wrapper, sweeps, timers and displays (early, see LIB_ONLY_EARLY_FILES).
+    'chapter_lm-hardware/kernels-lib.md',
+    # 22.3's workload configurations, grid and MoE regeneration, model fits,
+    # InferenceX reader and displays.
+    'chapter_lm-hardware/workload-hardware-lib.md',
+    # 22.4's sweeps (host links, DRAM, fio, object store, CPU optimizer), the
+    # offloaded run and displays.
+    'chapter_lm-hardware/memory-tiers-lib.md',
+    # 22.5's captures, GPU matrix, NCCL sweeps (nccl-tests or a
+    # torch.distributed fallback), fits and the box's alpha-beta reader.
+    'chapter_lm-hardware/server-paths-lib.md',
+    # 22.6's loopback sweeps, quoted latencies and the layout plot.
+    'chapter_lm-hardware/networks-lib.md',
+    # 22.7's NCCL INFO digest, forced-pair sweeps, tuner check and
+    # hierarchical benchmark.
+    'chapter_lm-hardware/collectives-lib.md',
+    # 22.8's power profiles, energy runs, price reader and cost displays.
+    'chapter_lm-hardware/energy-cost-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a
@@ -102,6 +126,10 @@ LIB_ONLY_EARLY_FILES = {
     # `d2l.HyperParameters`, the import-time base class of the classes in
     # sec_oo-design; the book shows only its method (utils.md).
     'chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md',
+    # `triton` and `tl` (or their stand-ins without Triton), evaluated by the
+    # `@triton.jit` kernels and `tl.constexpr` annotations of sec_lm_kernels
+    # when d2l.torch is imported.
+    'chapter_lm-hardware/kernels-lib.md',
 }
 
 # Source files whose saved blocks keep the "Defined in" label of the file
@@ -714,7 +742,10 @@ d2l = sys.modules[__name__]
 # PRETRAIN_ARTIFACTS (chapter 21: load name -> DATA_HUB key) is keyed too, so
 # a page literal reaches one entry and, through its key literal, one DATA_HUB
 # shard.
-KEYED_REGISTRIES = ('DATA_HUB', 'PRETRAIN_ARTIFACTS')
+# HW_ARTIFACTS, HW_CAMPAIGNS and HW_STATIC (chapter 22: box results, campaign
+# logs and static tables, name -> DATA_HUB key) are keyed the same way.
+KEYED_REGISTRIES = ('DATA_HUB', 'PRETRAIN_ARTIFACTS', 'HW_ARTIFACTS',
+                    'HW_CAMPAIGNS', 'HW_STATIC')
 
 _SAFE_KEY = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]*')
 

@@ -472,6 +472,99 @@ def test_unmanifested_notebook(tmp):
           '--verify-fresh fails on it (a cpu notebook: runnable on any host)')
 
 
+HW_SRC = (
+    '# Hardware\n\n'
+    '```{.python .input #h-1}\n#@save\n'
+    'HW_ARTIFACTS = {}\n\n#@save\nHW_CAMPAIGNS = {}\n```\n\n'
+    '```{.python .input #h-2}\n#@save\n'
+    "d2l.HW_ARTIFACTS['box-p2p'] = ('lm-hw-buildbox-p2p-v1', 'tar')\n"
+    "d2l.HW_ARTIFACTS['box-net'] = ('lm-hw-buildbox-net-v1', 'tar')\n"
+    "d2l.HW_CAMPAIGNS['node-p2p'] = ('lm-hw-node-p2p-v1', 'tar', 'C-T3', "
+    "'node')\n```\n\n"
+    '```{.python .input #h-3}\n#@save\n'
+    "d2l.DATA_HUB['lm-hw-buildbox-p2p-v1'] = (d2l.DATA_URL + 'p2p.tar', "
+    "'1' * 40)\n"
+    "d2l.DATA_HUB['lm-hw-buildbox-net-v1'] = (d2l.DATA_URL + 'net.tar', "
+    "'2' * 40)\n```\n\n"
+    '```{.python .input #h-4}\n'
+    'def _hw_result(name, compute, config):  #@save\n'
+    '    assert name in tuple(d2l.HW_ARTIFACTS)\n'
+    '    key, kind = d2l.HW_ARTIFACTS[name]\n'
+    '    return d2l.DATA_HUB[key]\n\n'
+    'def nccl_sweeps(config):  #@save\n'
+    "    return _hw_result('box-p2p', None, config)\n\n"
+    'def hw_campaign_log(name):  #@save\n'
+    '    return d2l.HW_CAMPAIGNS[name]\n```\n')
+
+
+def test_hw_artifact_shards(tmp):
+    print('per-name HW_ARTIFACTS / HW_CAMPAIGNS shards (chapter 22)')
+    check({'HW_ARTIFACTS', 'HW_CAMPAIGNS', 'HW_STATIC'}
+          <= set(build_lib.KEYED_REGISTRIES),
+          'the three chapter-22 registries are keyed')
+    src = tmp / 'src'
+    (src / 'chapter_h').mkdir(parents=True)
+    (src / 'chapter_h' / 'lib.md').write_text(HW_SRC)
+    (src / 'chapter_h' / 'nb_p2p.md').write_text(
+        '# P2P\n\n```{.python .input #nb-p-1}\n%%tab pytorch\n'
+        "nccl = d2l.nccl_sweeps('box')\n"
+        "twin = d2l.hw_campaign_log('node-p2p')\n```\n")
+    lib = tmp / 'd2l' / 'torch.py'
+    lib.parent.mkdir(parents=True)
+    lib.write_text('DATA_HUB = dict()\n')
+    files = ['chapter_h/lib.md']
+
+    def build():
+        build_lib.build_library(src, lib, 'pytorch', {'lib_name': 'torch'},
+                                files)
+    build()
+    shards = tmp / 'd2l' / '_blocks' / 'pytorch'
+    names = {p.stem for p in shards.glob('*.py')}
+    check({'HW_ARTIFACTS.box-p2p', 'HW_ARTIFACTS.box-net',
+           'HW_CAMPAIGNS.node-p2p', 'DATA_HUB.lm-hw-buildbox-p2p-v1'}
+          <= names, f'one shard per name and key: {sorted(names)}')
+    pre = (shards / '_preamble.py').read_bytes() if (
+        shards / '_preamble.py').exists() else b''
+
+    def scan_deps():
+        stub_other_frameworks(tmp / 'd2l' / '_blocks')
+        r = subprocess.run(
+            [sys.executable, str(TOOLS / 'scan_d2l_usage.py'),
+             '--source', str(src), '--output-dir', '_notebooks',
+             '--shard-dir', 'd2l/_blocks'],
+            cwd=tmp, capture_output=True, text=True)
+        check(r.returncode == 0, f'scanner runs ({r.stderr.strip()[-200:]})')
+        d = tmp / '_notebooks' / 'pytorch' / 'chapter_h' / 'nb_p2p.d'
+        return ({Path(t).name[:-3] for t in d.read_text().split()
+                 if '_blocks' in t}, d2l_lib_fingerprint(tmp, d))
+    deps, fp = scan_deps()
+    reg = {n for n in deps if n.startswith(('DATA_HUB', 'HW_'))}
+    check(reg == {'HW_ARTIFACTS', 'HW_CAMPAIGNS', 'HW_ARTIFACTS.box-p2p',
+                  'DATA_HUB.lm-hw-buildbox-p2p-v1', 'HW_CAMPAIGNS.node-p2p'},
+          "nccl_sweeps('box') and hw_campaign_log('node-p2p') reach their "
+          f'entries and key only: {sorted(reg)}')
+    (src / 'chapter_h' / 'more.md').write_text(
+        '# More\n\n```{.python .input #m-1}\n#@save\n'
+        "d2l.HW_ARTIFACTS['box-coll'] = ('lm-hw-buildbox-coll-v1', 'tar')\n"
+        '```\n\n```{.python .input #m-2}\n#@save\n'
+        "d2l.DATA_HUB['lm-hw-buildbox-coll-v1'] = (d2l.DATA_URL + 'c.tar', "
+        "'3' * 40)\n```\n")
+    files.append('chapter_h/more.md')
+    build()
+    after = (shards / '_preamble.py').read_bytes() if (
+        shards / '_preamble.py').exists() else b''
+    check(after == pre, 'new entries leave the _preamble shard unchanged')
+    check(scan_deps()[1] == fp, 'registering another result stales nothing')
+    (src / 'chapter_h' / 'lib.md').write_text(
+        HW_SRC.replace("'2' * 40", "'5' * 40"))
+    build()
+    check(scan_deps()[1] == fp, 're-versioning another key stales nothing')
+    (src / 'chapter_h' / 'lib.md').write_text(
+        HW_SRC.replace("'1' * 40", "'4' * 40"))
+    build()
+    check(scan_deps()[1] != fp, 're-registering its key stales the notebook')
+
+
 def main():
     test_shard_names()
     test_shard_references()
@@ -481,6 +574,7 @@ def main():
         test_build_lib_extra_shards(tmp / 'buildlib')
         test_data_hub_key_shards(tmp / 'registry')
         test_pretrain_artifact_shards(tmp / 'pretrain')
+        test_hw_artifact_shards(tmp / 'hardware')
         test_unmanifested_notebook(tmp / 'audit')
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

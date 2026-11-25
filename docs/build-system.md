@@ -1633,6 +1633,30 @@ runs reproduced the registered lens and SAE files bit for bit. The CPU path
 Regenerate, upload, then run the notebook once
 more without `D2L_RERUN` and capture that run.
 
+**Chapter 22's regenerations (`tools/hw_regen.py`).** Chapter 22 (Hardware)
+never regenerates through a notebook. Its committed box measurements have
+short names in `d2l.HW_ARTIFACTS` (`box-microbench`, `box-workloads`,
+`box-moe`, `box-storage`, `box-p2p`, `box-net`, `box-coll`, `box-power`;
+keyed registries, like `HW_CAMPAIGNS` and `HW_STATIC`, so a page literal
+reaches one entry and its `DATA_HUB` key). `python tools/hw_regen.py <name>`
+sets `D2L_RERUN=<name>`, runs the driver of `d2l.HW_JOBS[<name>]` in three
+processes one after the other, combines them (median of the per-process
+medians), refuses to pack if a foreign process was on a measured card, and
+writes `../data/lm/rerun/ch22/<next key>.tar` (or `.jsonl.gz`) with its sha1;
+it never edits a tracked file and refuses to overwrite an earlier folder
+(`--replace`). Run it under a GPU-lock helper with the cards the name needs.
+`D2L_RERUN=1` is refused for the chapter (`d2l._hw_regenerating`). The
+library's one load-or-measure function is `d2l._hw_result` (its stored
+configuration must equal the page's call, then one live agreement line).
+`tools/hw_regen.py --prefetch` fetches every registered chapter-22 key and
+the pinned model configurations before a capture run. The benchmark tools
+(fio, nvbandwidth, nccl-tests against the torch wheel's NCCL,
+`p2pBandwidthLatencyTest`) are built without root by
+`bash tools/build_hw_tools.sh [PREFIX]` (default `data/hw-tools`; pinned
+tags and commits, `versions.json`); `d2l.hw_bin` reads `D2L_HW_BIN`, else
+`../data/hw-tools/bin`, and every notebook falls back to `torch.distributed`
+or the committed logs without them.
+
 **18.7's capture (`api.md`, locked).** Measured 2026-11-13 on one RTX 4090
 (whole card, `GPU_SLOTS_PER="0,0,0,3"`): the record run
 (`D2L_API_MODE=record make rerun-locked FILES=chapter_lm-pretrained/api.md

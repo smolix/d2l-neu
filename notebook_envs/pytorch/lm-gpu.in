@@ -26,3 +26,4 @@ tldextract==5.4.0
 tokenizers==0.23.3
 tiktoken==0.13.0
 torchao==0.17.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'
+nvidia-ml-py==13.615.71 ; sys_platform == 'linux' and platform_machine == 'x86_64'

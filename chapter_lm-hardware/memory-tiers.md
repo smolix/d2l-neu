@@ -32,3 +32,46 @@ when the section is written.
 - Code and documentation: [GPUDirect Storage](https://docs.nvidia.com/gpudirect-storage/) (`gdsio`, compatibility mode); [nvbandwidth](https://github.com/NVIDIA/nvbandwidth) (host-device sweeps); [fio](https://github.com/axboe/fio) (NVMe and file-system reads); [3FS](https://github.com/deepseek-ai/3FS) (a parallel file system built for this workload); [LMCache](https://github.com/LMCache/LMCache) (KV tiers in an engine); [MosaicML Streaming](https://github.com/mosaicml/streaming) and [WebDataset](https://github.com/webdataset/webdataset) (shard-based loaders over object stores).
 - Courses, tutorials and blogs: Stas Bekman, [Machine Learning Engineering Open Book](https://github.com/stas00/ml-engineering) (storage and I/O chapters); [The Datacenter as a Computer](https://link.springer.com/book/10.1007/978-3-031-01761-2) (the tier hierarchy); [Latency Numbers Every Programmer Should Know](https://gist.github.com/jboner/2841832) (dated contrast only).
 -->
+
+<!-- Placeholder (infra step): the cells below are the section's shared
+library, written before the section (22.3's hw_calibrate needs the fitter);
+the prose around them comes with the section. Cell ids follow the section
+specification (S/spec/22.4.md). -->
+
+```{.python .input #memory-tiers-imports}
+%%tab pytorch
+import torch
+from d2l import torch as d2l
+```
+
+```{.python .input #memory-tiers-extras}
+%%tab pytorch
+import numpy as np
+import pandas as pd
+```
+
+<!-- Placeholder: the alpha-beta model t(s) = alpha + s / beta is linear in
+alpha and 1 / beta; weights 1 / t^2 make the fit relative, so the small
+latency-bound sizes count as much as the large bandwidth-bound ones. -->
+
+```{.python .input #memory-tiers-fit-alpha-beta}
+%%tab pytorch
+def fit_alpha_beta(sizes, times, weights=None):  #@save
+    """Fit t = alpha + s / beta to transfer times (seconds) at sizes
+    (bytes) by weighted least squares, weights 1 / t^2 by default (each
+    point's relative error counts alike). Returns (alpha, beta, cov) with
+    alpha in seconds, beta in bytes per second and cov the 2 x 2
+    covariance of (alpha, beta)."""
+    s = np.asarray(sizes, dtype=float)
+    t = np.asarray(times, dtype=float)
+    w = 1 / t**2 if weights is None else np.asarray(weights, dtype=float)
+    X = np.stack([np.ones_like(s), s], axis=1)  # columns: alpha, 1 / beta
+    XtW = X.T * w
+    A = np.linalg.inv(XtW @ X)
+    alpha, g = A @ (XtW @ t)
+    r = t - X @ np.array([alpha, g])
+    dof = max(len(t) - 2, 1)
+    cov_ag = A * (w @ r**2) / dof
+    J = np.array([[1.0, 0.0], [0.0, -1 / g**2]])  # d(alpha, beta) / d(alpha, g)
+    return float(alpha), float(1 / g), J @ cov_ag @ J.T
+```

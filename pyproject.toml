@@ -104,6 +104,10 @@ lm = [
     # tensorwise and rowwise recipes) on the Ada cards. CUDA only, so no darwin
     # pin; d2l.torch imports it inside functions and works without it.
     "torchao==0.17.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Chapter 22 (hardware): NVML (pynvml) for the power traces of the
+    # microbenchmark logs. Pure Python; without it the library reads
+    # nvidia-smi instead.
+    "nvidia-ml-py==13.615.71 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "torch==2.11.0 ; sys_platform == 'darwin'",
     "torchvision==0.26.0 ; sys_platform == 'darwin'",
     "transformers[serving]==5.22.2 ; sys_platform == 'darwin'",

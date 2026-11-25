@@ -1,0 +1,15 @@
+ 	[4mGPU0	GPU1	GPU2	GPU3	[0m
+ GPU0	X	CNS	CNS	CNS	
+ GPU1	CNS	X	CNS	CNS	
+ GPU2	CNS	CNS	X	CNS	
+ GPU3	CNS	CNS	CNS	X	
+
+Legend:
+
+  X    = Self
+  OK   = Status Ok
+  CNS  = Chipset not supported
+  GNS  = GPU not supported
+  TNS  = Topology not supported
+  NS   = Not supported
+  U    = Unknown

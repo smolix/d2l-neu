@@ -658,6 +658,13 @@ marker = "sys_platform == 'linux'"
 wheels = [{ url = "https://files.pythonhosted.org/packages/56/79/12978b96bd44274fe38b5dde5cfb660b1d114f70a65ef962bcbbed99b549/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl", upload-time = 2025-02-26T00:15:44Z, size = 287193691, hashes = { sha256 = "f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623" } }]
 
 [[packages]]
+name = "nvidia-ml-py"
+version = "13.615.71"
+marker = "platform_machine == 'x86_64' and sys_platform == 'linux'"
+sdist = { url = "https://files.pythonhosted.org/packages/fd/30/b25216758be3d3e2834825d8193609e2d71c770a8bd7984438c058c90268/nvidia_ml_py-13.615.71.tar.gz", upload-time = 2026-09-25T15:15:28Z, size = 57485, hashes = { sha256 = "bebe4e48f51b1dc75028c0815cb7bfa14a31a5bb80be70c9d980c6036953fc3d" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-13.615.71-py3-none-any.whl", upload-time = 2026-09-25T15:15:26Z, size = 58132, hashes = { sha256 = "959bf4adf6fe1308e4bd739e722236b0d1ec8392e2cefad33ff70c311380b9b6" } }]
+
+[[packages]]
 name = "nvidia-nccl-cu12"
 version = "2.28.9"
 marker = "sys_platform == 'linux'"

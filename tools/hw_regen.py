@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""Run one regeneration of chapter 22 (Hardware for Training and Inference)
+without a notebook.
+
+    python tools/hw_regen.py <name> [--processes 3] [--replace]
+    python tools/hw_regen.py --prefetch
+
+`<name>` is a key of `d2l.HW_ARTIFACTS` (box-microbench, box-workloads,
+box-moe, box-storage, box-p2p, box-net, box-coll, box-power). The script
+changes into chapter_lm-hardware (data paths are `../data/...` as in the
+notebooks), sets `D2L_RERUN=<name>` and calls the name's driver from
+`d2l.HW_JOBS` with its keyword arguments (the page's calls on the full
+configuration) in `--processes` separate processes, one after the other
+(the microbenchmark contract: the headline is the median of the
+per-process medians). Each process writes its entries under
+`../data/lm/rerun/ch22/<next key>/proc<i>/`; the script then combines them
+(`d2l._hw_combine`) into `<next key>/<entry>.json.gz`, checks that no
+measurement saw a foreign process on its cards, and packs
+`<next key>.tar` (or `.jsonl.gz`). It never executes a notebook and never
+edits a tracked file. Then: `make upload-data FILES=... PREFIX=lm/`, one
+`DATA_HUB` statement with the printed sha1 in the section's -lib.md file,
+`make lib`, and a normal run.
+
+Run it under the GPU-lock helper with the locks the name needs (one whole
+card; all four for box-storage, box-p2p, box-coll and box-moe; two for
+box-net). Exit status: 0 done, 2 usage or missing driver, 3 a measurement
+was contended (re-run on a quiet box), 1 failure.
+
+`--prefetch` downloads every registered chapter-22 artifact and the pinned
+model configurations quietly, so a capture run never downloads. `--out DIR`
+writes under DIR instead of ../data/lm/rerun/ch22 (the campaign launcher).
+"""
+import argparse
+import hashlib
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CHAPTER = os.path.join(REPO, 'chapter_lm-hardware')
+
+
+def sha1(path):
+    with open(path, 'rb') as f:
+        return hashlib.sha1(f.read()).hexdigest()
+
+
+def prefetch(d2l):
+    for registry in (d2l.HW_ARTIFACTS, d2l.HW_CAMPAIGNS, d2l.HW_STATIC):
+        for name, (key, kind, *_) in sorted(registry.items()):
+            if key not in d2l.DATA_HUB:
+                continue
+            t = time.time()
+            with d2l._quiet():
+                path = d2l.download_keyed(key)
+            if kind in ('tar', 'jsonl') and registry is not d2l.HW_STATIC:
+                d2l._hw_unpack(path, kind)
+            print(f'{name}: {os.path.getsize(path) / 1e6:.1f} MB '
+                  f'({time.time() - t:.0f} s)', flush=True)
+    models = sorted({m for m in d2l.HF_REVISIONS if m.startswith('Qwen/Qwen3-')
+                     and m.endswith(('0.6B', '1.7B', '8B'))}
+                    | set(d2l.HW_REVISIONS))
+    for model in models:
+        d2l.hw_config(model)
+        print(f'{model}: configuration', flush=True)
+    return 0
+
+
+def child(d2l, name):
+    driver, kwargs = d2l.HW_JOBS[name]
+    getattr(d2l, driver)(**kwargs())
+    return 0
+
+
+def combine(d2l, folder, n):
+    """Combine proc0..proc{n-1} into folder; return the contended count."""
+    procs = [os.path.join(folder, f'proc{i}') for i in range(n)]
+    entries = sorted(f for f in os.listdir(procs[0]) if f.endswith('.json.gz'))
+    contended = 0
+    for f in entries:
+        parts = [d2l._hw_read(os.path.join(p, f)) for p in procs]
+        configs = [m['config'] for _, m in parts]
+        if any(c != configs[0] for c in configs):
+            raise RuntimeError(f'{f}: the processes ran different configs')
+        meta = dict(parts[0][1])
+        env = dict(meta['env'])
+        env['contended'] = any(m['env']['contended'] for _, m in parts)
+        env['neighbours_busy'] = any(m['env']['neighbours_busy']
+                                     for _, m in parts)
+        env['seconds'] = round(sum(m['env']['seconds'] for _, m in parts), 1)
+        env['n_proc'] = n
+        contended += env['contended']
+        meta['env'] = env
+        d2l._hw_write(os.path.join(folder, f),
+                      d2l._hw_combine([r for r, _ in parts]), meta)
+    return contended, entries
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument('name', nargs='?')
+    p.add_argument('--processes', type=int, default=3)
+    p.add_argument('--replace', action='store_true',
+                   help='delete an earlier unregistered regeneration folder')
+    p.add_argument('--prefetch', action='store_true')
+    p.add_argument('--out')
+    p.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
+    a = p.parse_args()
+    os.chdir(CHAPTER)
+    if a.out:
+        os.environ['D2L_HW_OUT'] = os.path.abspath(os.path.join(REPO, a.out))
+    if a.prefetch:
+        os.environ.pop('D2L_RERUN', None)
+        from d2l import torch as d2l
+        return prefetch(d2l)
+    if not a.name:
+        p.error('give a regeneration name or --prefetch')
+    os.environ['D2L_RERUN'] = a.name
+    from d2l import torch as d2l
+    if a.name not in d2l.HW_JOBS:
+        print(f'{a.name} is not a regeneration; one of {sorted(d2l.HW_JOBS)}',
+              file=sys.stderr)
+        return 2
+    driver = d2l.HW_JOBS[a.name][0]
+    if not hasattr(d2l, driver):
+        print(f'{a.name}: driver d2l.{driver} is not defined yet',
+              file=sys.stderr)
+        return 2
+    if a.child:
+        return child(d2l, a.name)
+    key, kind = d2l.HW_ARTIFACTS[a.name]
+    os.environ.pop('D2L_HW_PROC', None)
+    folder = d2l._hw_regen_dir(a.name)
+    out = folder + d2l._HW_EXT[kind]
+    if os.path.exists(folder) or os.path.exists(out):
+        if not a.replace:
+            print(f'{folder} exists (an earlier regeneration); pass --replace '
+                  'to delete it', file=sys.stderr)
+            return 2
+        shutil.rmtree(folder, ignore_errors=True)
+        if os.path.exists(out):
+            os.remove(out)
+    t = time.time()
+    for i in range(a.processes):
+        env = dict(os.environ, D2L_RERUN=a.name, D2L_HW_PROC=str(i))
+        print(f'{a.name}: process {i + 1} of {a.processes}', flush=True)
+        r = subprocess.run([sys.executable, os.path.abspath(__file__),
+                            a.name, '--child'], env=env)
+        if r.returncode != 0:
+            print(f'{a.name}: process {i + 1} failed (exit {r.returncode})',
+                  file=sys.stderr)
+            return 1
+    contended, entries = combine(d2l, folder, a.processes)
+    if contended:
+        print(f'{a.name}: {contended} of {len(entries)} entries saw a foreign '
+              'process on their cards; not packed: re-run on a quiet box',
+              file=sys.stderr)
+        return 3
+    d2l._hw_pack(folder, kind, out)
+    print(f'{a.name}: {len(entries)} entries in {(time.time() - t) / 60:.1f} '
+          f'min', flush=True)
+    print(f'wrote {out}\n  size {os.path.getsize(out) / 1e6:.2f} MB, '
+          f'sha1 {sha1(out)}')
+    print(f'register: d2l.DATA_HUB[{os.path.basename(folder)!r}] = (\n'
+          f'    d2l.LM_DATA_URL + {os.path.basename(out)!r}, '
+          f'{sha1(out)!r})')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

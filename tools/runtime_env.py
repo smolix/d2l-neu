@@ -300,6 +300,11 @@ MULTI_GPU_NOTEBOOKS = {
 WHOLE_BOX_NOTEBOOKS = {
     "chapter_computational-performance/multi-gpu-practice.ipynb",
     "chapter_computational-performance/fast-transformer.ipynb",
+    # 22.5 and 22.7 measure the box itself: GPU-to-GPU copies, NCCL
+    # collectives over every card and the host bridges they share; any other
+    # tenant on any card changes the numbers (chapter 22 spec, part 1.13).
+    "chapter_lm-hardware/server-paths.ipynb",
+    "chapter_lm-hardware/collectives.ipynb",
 }
 
 # rel → number of GPUs this notebook takes WHOLE (every slot on each card,
@@ -376,6 +381,15 @@ FULL_CARD_NOTEBOOKS = {
     # and reranking for the text, and its regeneration runs
     # (D2L_RERUN=rag-gen-stages, rag-gen-fix) load the same generator.
     "chapter_lm-encoders/rag-failures.ipynb": 1,
+    # Chapter 22's microbenchmarks and workload timings run on whole cards
+    # (22.6's loopback sweeps on two); a co-tenant on a card or its PCIe link
+    # skews the live checks against the committed box results.
+    "chapter_lm-hardware/accelerator-design.ipynb": 1,
+    "chapter_lm-hardware/kernels.ipynb": 1,
+    "chapter_lm-hardware/workload-hardware.ipynb": 1,
+    "chapter_lm-hardware/memory-tiers.ipynb": 1,
+    "chapter_lm-hardware/networks.ipynb": 2,
+    "chapter_lm-hardware/energy-cost.ipynb": 1,
 }
 
 # rel → the physical GPUs (nvidia-smi indices) a notebook must run on, for

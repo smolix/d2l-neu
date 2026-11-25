@@ -1,0 +1,42 @@
+nvbandwidth Version: v0.11.0
+Built from Git version: v0.11.0
+
+Warning: driver reports maximum supported CUDA version 13.2, which is below the toolkit nvbandwidth was built against (13.3). Within the same major version this is usually handled by CUDA Minor Version Compatibility (MVC).
+CUDA Runtime Version: 13.3 (13030)
+CUDA Driver Version (API): 13.2 (13020)
+Driver Version: 595.71.05
+
+<host>
+Device 0: NVIDIA GeForce RTX 4090 (00000000:81:00)
+Device 1: NVIDIA GeForce RTX 4090 (00000000:82:00)
+Device 2: NVIDIA GeForce RTX 4090 (00000000:c1:00)
+Device 3: NVIDIA GeForce RTX 4090 (00000000:c2:00)
+
+Running host_to_device_memcpy_ce.
+memcpy CE CPU(row) -> GPU(column) bandwidth (GB/s)
+           0         1         2         3
+ 0     25.41     25.69     25.69     25.97
+
+SUM host_to_device_memcpy_ce 102.76
+COEFFICIENT_OF_VARIATION host_to_device_memcpy_ce 0.000340
+
+Running device_to_host_memcpy_ce.
+memcpy CE CPU(row) <- GPU(column) bandwidth (GB/s)
+           0         1         2         3
+ 0     22.37     22.38     24.64     24.83
+
+SUM device_to_host_memcpy_ce 94.21
+COEFFICIENT_OF_VARIATION device_to_host_memcpy_ce 0.018955
+
+Running host_to_device_memcpy_sm.
+memcpy SM CPU(row) -> GPU(column) bandwidth (GB/s)
+           0         1         2         3
+ 0     23.16     23.34     24.07     25.41
+
+SUM host_to_device_memcpy_sm 95.98
+COEFFICIENT_OF_VARIATION host_to_device_memcpy_sm 0.005792
+
+Waived device_to_device_memcpy_read_ce: no accessible peer GPU pairs (P2P not supported between any devices)
+NOTE: The reported results may not reflect the full capabilities of the platform.
+Performance can vary with software drivers, hardware clocks, and system topology.
+

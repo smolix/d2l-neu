@@ -185,7 +185,7 @@ p_{X\mid Y}(x\mid y)=\frac{1/\pi}{(2/\pi)\sqrt{1-y^2}}=\frac{1}{2\sqrt{1-y^2}}
 $$
 
 Given $Y=y$, the horizontal position $X$ is uniform along the chord at height
-$y$. Because that chord shrinks as $|y|$ grows, observing $Y$ genuinely changes
+$y$. Because that chord shrinks as $|y|$ grows, observing $Y$ changes
 the distribution of $X$.
 
 Rearranging :eqref:`eq_mdl-cond_density` gives the *chain rule*
@@ -264,7 +264,7 @@ $$
 
 Similarly, the spread of $X$ within a strip is the *conditional variance*
 $\textrm{Var}(X\mid Y)=\mathbb{E}[X^2\mid Y]-(\mathbb{E}[X\mid Y])^2$, which
-is just the computational form :eqref:`eq_mdl-var_comp` applied inside each
+is just the computational variance identity of :numref:`sec_mdl-random_variables` applied inside each
 strip.
 
 Intuitively, averaging the strip averages should recover the overall average,
@@ -311,7 +311,7 @@ $$
 \end{aligned}
 $$
 
-Applying the computational form :eqref:`eq_mdl-var_comp` to the random variable
+Applying $\textrm{Var}(Z)=\mathbb{E}[Z^2]-(\mathbb{E}[Z])^2$ (:numref:`sec_mdl-random_variables`) to the random variable
 $\mathbb{E}[X\mid Y]$, whose mean is $\mathbb{E}[X]$ by the tower property,
 gives
 
@@ -687,8 +687,8 @@ $$
 
 **Proof.** Suppose first that $g$ is increasing. Then $g(X)\le y$ holds
 precisely when $X\le g^{-1}(y)$, so the c.d.f.s satisfy $F_Y(y)=F_X(g^{-1}(y))$
-for $y\in g(I)$. Differentiating via the chain rule and
-:eqref:`eq_mdl-cdf_deriv` gives $p_Y(y)=p_X(g^{-1}(y))\,\frac{dg^{-1}}{dy}(y)$.
+for $y\in g(I)$. Differentiating via the chain rule and $F_X' = p_X$
+(:numref:`sec_mdl-random_variables`) gives $p_Y(y)=p_X(g^{-1}(y))\,\frac{dg^{-1}}{dy}(y)$.
 If $g$ is decreasing instead, then $g(X)\le y$ holds when $X\ge g^{-1}(y)$, so
 $F_Y(y)=1-F_X(g^{-1}(y))$. Its derivative introduces a minus sign, which
 cancels the negative sign of $dg^{-1}/dy$; taking the absolute value covers
@@ -987,7 +987,7 @@ Joint Distributions and Transformations: Conditioning, Covariance, and Jacobians
 ::: {.col}
 - **Dependent ($p_{X,Y} \ne p_X p_Y$):** On the unit disk, observing $Y = 0.9$ restricts $|X| \le \sqrt{1 - 0.9^2} \approx 0.44$.
 - **Unpredictable in mean ($\mathbb{E}[X \mid Y = y] = 0$):** Every horizontal chord is symmetric around $0$, so knowing $Y$ narrows the range of $X$ without shifting its center.
-- **Uncorrelated ($\mathrm{Cov}(X, Y) = 0$):** Independence implies $\mathbb{E}[X \mid Y] = \mathbb{E}[X]$, which implies $\mathrm{Cov}(X, Y) = 0$—but **neither arrow reverses**!
+- **Uncorrelated ($\mathrm{Cov}(X, Y) = 0$):** Independence implies $\mathbb{E}[X \mid Y] = \mathbb{E}[X]$, which implies $\mathrm{Cov}(X, Y) = 0$, though **neither arrow reverses**.
 :::
 
 ::: {.col .fig .big}
@@ -1221,7 +1221,7 @@ $$\boldsymbol{\Sigma} = \mathbb{E}\bigl[(\mathbf{X} - \boldsymbol{\mu})(\mathbf{
 ::: {.cols .vc}
 ::: {.col}
 - If $X$ has density $p_X$ and $Y = g(X)$ for a smooth, strictly monotone map $g$, why is $p_Y(y) \ne p_X(g^{-1}(y))$?
-- **Probability mass—not density height—is conserved:** An interval of width $\Delta x$ carries probability $p_X(x)\Delta x$ and stretches to width $\Delta y \approx |g'(x)|\Delta x$:
+- **Probability mass, not density height, is conserved:** An interval of width $\Delta x$ carries probability $p_X(x)\Delta x$ and stretches to width $\Delta y \approx |g'(x)|\Delta x$:
   $$p_Y(y)\,\Delta y \approx p_X(x)\,\Delta x \implies p_Y(y) = \frac{p_X(x)}{|g'(x)|}$$
 - **Formal 1D Rule:** On the image interval $g(I)$,
   $$p_Y(y) = p_X\bigl(g^{-1}(y)\bigr)\left|\frac{dg^{-1}}{dy}(y)\right|$$

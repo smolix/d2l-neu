@@ -105,7 +105,7 @@ short of the truth.
 
 ### Chebyshev's Rate
 
-Chebyshev's bound is simply Markov's inequality :eqref:`eq_mdl-markov` applied
+Chebyshev's bound is simply Markov's inequality (:numref:`sec_mdl-random_variables`) applied
 to a squared deviation. Consider the sample mean $\bar X$ of $n$ independent
 draws, each with mean $\mu$ and finite variance $\sigma^2$. Because the
 expected squared deviation is $\mathbb{E}[(\bar X-\mu)^2]=\textrm{Var}(\bar
@@ -1331,7 +1331,7 @@ $$P\bigl(\lvert\bar{X} - \mathbb{E}[\bar{X}]\rvert \ge t\bigr) \le 2\exp\!\left(
 
 ::: {.cols .vc}
 ::: {.col}
-- **Where does $\mathbf{x} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_{784})$ live?** Although the density $(2\pi)^{-d/2}e^{-\|\mathbf{x}\|^2/2}$ is highest at the origin $\mathbf{0}$, the probability of landing within distance $14$ of the origin is $\approx 10^{-110}$!
+- **Where does $\mathbf{x} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_{784})$ live?** Although the density $(2\pi)^{-d/2}e^{-\|\mathbf{x}\|^2/2}$ is highest at the origin $\mathbf{0}$, the probability of landing within distance $14$ of the origin is $\approx 10^{-110}$.
 - **Density vs. spherical volume:** Integrating over spherical shells of radius $r = \|\mathbf{x}\|$ multiplies the decaying density $e^{-r^2/2}$ by the exploding surface area $\propto r^{d-1}$:
   $$p(r) \propto r^{d-1}e^{-r^2/2}$$
 - **The thin shell:** The radial density peaks at $r_{\mathrm{mode}} = \sqrt{d - 1} \approx \sqrt{d}$. At $d = 784$, virtually all probability mass sits in a thin shell at radius $\sqrt{784} = 28.0 \pm 0.7$.
@@ -1373,7 +1373,7 @@ $$\|\mathbf{x}\| = \sqrt{\|\mathbf{x}\|^2} \approx \sqrt{d} + \frac{\|\mathbf{x}
 $$P\bigl(\lvert\cos(\mathbf{x}, \mathbf{u})\rvert \ge \varepsilon\bigr) \le 2e^{-d\varepsilon^2 / 2}, \qquad \mathbb{E}\bigl[\lvert\cos(\mathbf{x}, \mathbf{y})\rvert\bigr] \approx \sqrt{\frac{2}{\pi d}}$$
 
 - **Unequal-range Hoeffding:** For unit $\mathbf{u}$ and random signs $\mathbf{x} \in \{\pm 1\}^d$, $Y_i = u_i x_i \in [-|u_i|, |u_i|]$ has $\sum (2|u_i|)^2 = 4$, keeping $\langle\mathbf{x}, \mathbf{u}\rangle = O(1)$ while $\|\mathbf{x}\| = \sqrt{d}$.
-- **Embedding baseline ($d = 784$):** Random vectors have $\mathrm{sd}(\cos) = 1/\sqrt{784} = 0.036$ ($90^\circ \pm 2.1^\circ$), so $\cos = 0.30$ is an $>8\sigma$ signal!
+- **Embedding baseline ($d = 784$):** Random vectors have $\mathrm{sd}(\cos) = 1/\sqrt{784} = 0.036$ ($90^\circ \pm 2.1^\circ$), so $\cos = 0.30$ is an $>8\sigma$ signal.
 :::
 
 ::: {.col .fig}
@@ -1406,7 +1406,7 @@ For two independent Gaussian vectors $\mathbf{x}, \mathbf{y} \sim \mathcal{N}(\m
 
 @!mdl-concentration-generalization-measuring-the-shell
 
-- **All random points become equidistant:** By a union bound over $\binom{n}{2}$ pairs, all pairwise distances among $n$ random points lie inside $(1 \pm \varepsilon)\sqrt{2d}$ once $d \ge \frac{8}{\varepsilon^2}\log(n^2/\delta)$. At $d = 2000$, the farthest of $200$ random neighbors is only $8\%$ farther away than the nearest!
+- **All random points become equidistant:** By a union bound over $\binom{n}{2}$ pairs, all pairwise distances among $n$ random points lie inside $(1 \pm \varepsilon)\sqrt{2d}$ once $d \ge \frac{8}{\varepsilon^2}\log(n^2/\delta)$. At $d = 2000$, the farthest of $200$ random neighbors is only $8\%$ farther away than the nearest.
 :::
 
 ::: {.slide title="Consequence 1: Weight Initialization Across Depth"}
@@ -1444,7 +1444,7 @@ $$\rho_k = \frac{\|\mathbf{h}_k\|^2}{\|\mathbf{h}_{k-1}\|^2}, \qquad \mathbb{E}[
 ::: {.slide title="Pitfall: Single-Average Bounds Fail After Selection"}
 [The Bridge to Uniform Convergence]{.kicker}
 
-Every concentration inequality in this section—Hoeffding, Bernstein, and sub-exponential norm bounds—rests on one crucial hypothesis:
+Every concentration inequality in this section (Hoeffding, Bernstein, and sub-exponential norm bounds) rests on one crucial hypothesis:
 
 ::: {.d2l-note .warn}
 **The Fixed-Variable Hypothesis:** The random variable being averaged (the classifier $f$ on a test set, or the vector $\mathbf{v}$ being projected) must be chosen and fixed **before** the random sample $S$ is drawn.
@@ -1481,7 +1481,7 @@ Every concentration inequality in this section—Hoeffding, Bernstein, and sub-e
 **Answers:**
 
 1. $n \ge \frac{\log(2/\delta)}{2t^2} = \frac{\log(200)}{2 \times 10^{-4}} \approx \frac{5.2983}{0.0002} = 26{,}492$ test examples.
-2. Typical draws have $\|\mathbf{z}_1\| \approx \|\mathbf{z}_2\| \approx \sqrt{512} \approx 22.6 \pm 0.7$, whereas $\mathbf{z}_{\mathrm{mid}} \sim \mathcal{N}(\mathbf{0}, \frac{1}{2}\mathbf{I}_{512})$ has typical norm $\sqrt{256} = 16.0 \pm 0.5$—More than $9$ shell standard deviations below the training shell!
+2. Typical draws have $\|\mathbf{z}_1\| \approx \|\mathbf{z}_2\| \approx \sqrt{512} \approx 22.6 \pm 0.7$, whereas $\mathbf{z}_{\mathrm{mid}} \sim \mathcal{N}(\mathbf{0}, \frac{1}{2}\mathbf{I}_{512})$ has typical norm $\sqrt{256} = 16.0 \pm 0.5$, more than $9$ shell standard deviations below the training shell.
 3. Hoeffding bounds every $[0,1]$ variable using the worst-case variance proxy $\sigma^2 = 1/4 = 0.25$ (attained only at $p = 0.5$), whereas Bernstein uses the true Bernoulli variance $\sigma^2 = 0.01 \times 0.99 \approx 0.01$, which is $25\times$ smaller.
 :::
 :::

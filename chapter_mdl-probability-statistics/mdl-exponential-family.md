@@ -1577,7 +1577,7 @@ $$H_h[q] = H_h[p] - D_{\mathrm{KL}}(q \| p) \le H_h[p] \qquad (\text{with equali
 $$\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \mathbb{E}\bigl[T(\mathbf{x})\bigr], \qquad \nabla_{\boldsymbol{\eta}}^2 A(\boldsymbol{\eta}) = \mathrm{Cov}\bigl(T(\mathbf{x})\bigr) \succeq \mathbf{0}$$
 
 - **Moment generation by differentiation:** Differentiating $A(\boldsymbol{\eta}) = \log \int h(\mathbf{x})e^{\boldsymbol{\eta}^\top T(\mathbf{x})}\,d\mathbf{x}$ once yields the mean of $T(\mathbf{x})$; differentiating twice yields its covariance matrix.
-- **Universal convexity:** Because every covariance matrix is positive semidefinite, $A(\boldsymbol{\eta})$ and the negative log-likelihood are **always convex** in $\boldsymbol{\eta}$!
+- **Universal convexity:** Because every covariance matrix is positive semidefinite, $A(\boldsymbol{\eta})$ and the negative log-likelihood are **always convex** in $\boldsymbol{\eta}$.
 :::
 
 ::: {.col .fig}
@@ -1590,7 +1590,7 @@ $$\nabla_{\boldsymbol{\eta}} A(\boldsymbol{\eta}) = \mathbb{E}\bigl[T(\mathbf{x}
 [Analytical & Autograd Verification]{.kicker}
 
 - **Bernoulli ($A(\eta) = \log(1 + e^\eta)$):** $A'(\eta) = \mathrm{sigmoid}(\eta) = p$ and $A''(\eta) = \mathrm{sigmoid}(\eta)(1 - \mathrm{sigmoid}(\eta)) = p(1 - p)$.
-- **Poisson ($A(\eta) = e^\eta$ with $\eta = \log\lambda$):** Since $e^\eta$ is its own derivative, $A'(\eta) = A''(\eta) = e^\eta = \lambda$, explaining in one line why the Poisson mean equals its variance!
+- **Poisson ($A(\eta) = e^\eta$ with $\eta = \log\lambda$):** Since $e^\eta$ is its own derivative, $A'(\eta) = A''(\eta) = e^\eta = \lambda$, explaining in one line why the Poisson mean equals its variance.
 :::
 
 ::: {.slide title="Computing Moments via Automatic Differentiation (cont.)"}
@@ -1657,7 +1657,7 @@ Suppose a decision maker picks the class with the highest noise-perturbed score 
 - **Why Gaussian noise ($\epsilon_k \sim \mathcal{N}(0, s^2)$) stalls for $K > 2$:** The **probit** model $P(y=1) = \Phi\!\left(\frac{z_1 - z_2}{\sqrt{2}s}\right)$ requires a $(K-1)$-dimensional numerical integral with no closed form as soon as $K \ge 3$.
 - **Proposition (Gumbel Noise Yields Softmax):** If $\epsilon_1, \dots, \epsilon_K$ are i.i.d. standard **Gumbel** variables with CDF $G(t) = \exp(-e^{-t})$, then $z_j + \epsilon_j$ has CDF $\exp(-e^{z_j}e^{-t})$. Integrating over the winning score $t = z_k + \epsilon_k$ with $S = \sum_{j=1}^K e^{z_j}$ and $v = e^{-t}$ closes analytically:
   $$P\Bigl(\operatorname*{argmax}_j (z_j + \epsilon_j) = k\Bigr) = \int_{-\infty}^{\infty} e^{z_k}e^{-t}\exp(-Se^{-t})\,dt = e^{z_k}\int_0^{\infty} e^{-Sv}\,dv = \frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}}$$
-- **Log-sum-exp as a smooth maximum:** The winning score itself satisfies $\max_j(z_j + \epsilon_j) \sim \mathrm{Gumbel}(\log \sum_j e^{z_j})$, and its gradient with respect to $\mathbf{z}$ is the softmax vector!
+- **Log-sum-exp as a smooth maximum:** The winning score itself satisfies $\max_j(z_j + \epsilon_j) \sim \mathrm{Gumbel}(\log \sum_j e^{z_j})$, and its gradient with respect to $\mathbf{z}$ is the softmax vector.
 :::
 
 ::: {.slide title="The Gumbel-Max Trick and Temperature Scaling"}

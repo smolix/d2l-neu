@@ -348,7 +348,7 @@ $$
 $$
 
 Notice that the entropy depends on $p$ alone; only the KL divergence depends
-on the model $q$. By Gibbs' inequality :eqref:`eq_mdl-exp_family_gibbs`, the
+on the model $q$. By Gibbs' inequality (:numref:`subsec_mdl-max-entropy-derivation`), the
 KL divergence is never negative and vanishes only when $q=p$.
 
 Setting $p=\hat p_{\textrm{data}}$ and $q=p_{\boldsymbol{\theta}}$, we see
@@ -647,7 +647,7 @@ for $30$ draws.
 
 For both the coin and the Gaussian, the MLE is a sample average, so we could
 have worked out its spread without Fisher information. A model whose MLE is
-not an average shows what the theory genuinely adds. The *Cauchy location
+not an average shows what the theory adds. The *Cauchy location
 model* has density
 
 $$
@@ -818,7 +818,7 @@ first need assurance that the MLE heads toward the right value at all, and
 then a description of how it fluctuates around that target. Three tools from
 earlier sections do the work. From :numref:`sec_mdl-statistics` we use
 consistency ($\hat{\boldsymbol{\theta}}\xrightarrow{P}\boldsymbol{\theta}^\star$)
-and the weak law of large numbers :eqref:`eq_mdl-lln`. From
+and the weak law of large numbers. From
 :numref:`sec_mdl-distributions` we use the central limit theorem, which states
 that a sum of $n$ i.i.d. mean-zero terms with variance $v$, divided by
 $\sqrt n$, converges in distribution ($\xrightarrow{d}$) to $\mathcal N(0,v)$.
@@ -837,7 +837,7 @@ $$
 
 with differential entropy $h$ replacing $H$ for continuous densities
 (:numref:`subsec_mdl-mle-densities`). By Gibbs' inequality
-:eqref:`eq_mdl-exp_family_gibbs`, this objective attains its minimum where the
+(:numref:`subsec_mdl-max-entropy-derivation`), this objective attains its minimum where the
 KL divergence vanishes, namely at $\boldsymbol{\theta}=\boldsymbol{\theta}^\star$.
 That minimizer is unique if the model is **identifiable**, meaning distinct
 parameter vectors always define distinct distributions. Neural networks are
@@ -1167,7 +1167,7 @@ $$
 $$
 
 Multiplying through by the positive constant $\sigma^2/n$ leaves the minimizer
-unchanged and recovers the weight-decay objective :eqref:`eq_wd-objective`,
+unchanged and recovers the weight-decay objective of :numref:`sec_weight_decay`,
 
 $$
 \frac{1}{n}\sum_{i=1}^n \frac12\big(y_i-\hat y_i\big)^2 + \frac{\lambda}{2}\lVert\boldsymbol{\theta}\rVert_2^2,
@@ -1204,7 +1204,7 @@ the natural prior. A $\mathrm{Beta}(a,b)$ prior with $a,b>0$ has density
 proportional to $\theta^{a-1}(1-\theta)^{b-1}$. Multiplying by the coin
 likelihood :eqref:`eq_mdl-coin-like` simply adds the observed counts to the
 exponents, so the posterior remains in the Beta family, the conjugate update
-:eqref:`eq_mdl-beta_posterior` of :numref:`sec_mdl-exponential-family`:
+of :numref:`sec_mdl-exponential-family`:
 
 $$
 p(\theta\mid X) \;\propto\; \theta^{\,n_H + a - 1}\,(1-\theta)^{\,n_T + b - 1}.

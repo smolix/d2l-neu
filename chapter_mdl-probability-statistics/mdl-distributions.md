@@ -1848,8 +1848,8 @@ Test your intuition on three calculations from the distribution catalog:
 **Answers:**
 
 1. $P(N(1) = 0) = \mathbf{e^{-4} \approx 0.0183}$. Waiting more than $t = 0.5\text{ min}$ is the event $N(0.5) = 0$, which has probability $e^{-4(0.5)} = \mathbf{e^{-2} \approx 0.1353}$.
-2. Here $B = \Sigma_{12}\Sigma_{22}^{-1} = \rho$, so **$X_1 \mid X_2 = x_2 \sim \mathcal{N}(\rho x_2,\ 1 - \rho^2)$**. Notice that the conditional variance $1 - \rho^2$ never depends on the observed value $x_2$!
-3. $(Y, Z)$ is **not jointly Gaussian** (all mass sits on the two lines $y = \pm z$). Given $Z = 2$, $Y$ can only take values $+2$ or $-2$ with probability $1/2$ each!
+2. Here $B = \Sigma_{12}\Sigma_{22}^{-1} = \rho$, so **$X_1 \mid X_2 = x_2 \sim \mathcal{N}(\rho x_2,\ 1 - \rho^2)$**. Notice that the conditional variance $1 - \rho^2$ never depends on the observed value $x_2$.
+3. $(Y, Z)$ is **not jointly Gaussian** (all mass sits on the two lines $y = \pm z$). Given $Z = 2$, $Y$ can only take values $+2$ or $-2$ with probability $1/2$ each.
 :::
 :::
 

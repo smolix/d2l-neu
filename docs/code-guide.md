@@ -1,7 +1,8 @@
 # D2L Code Guide
 
-Scope: all code cells in Basics (ch. 1–8), Advanced (ch. 9–17), and Mathematics
-for Deep Learning (ch. 38–43), and the `d2l` library they build. Prose around
+Scope: all code cells in Basics (ch. 1–8), Advanced (ch. 9–17), Language
+Models (ch. 18–31), and Mathematics for Deep Learning (ch. 33–38), and the
+`d2l` library they build. Prose around
 code follows `writing-guide.md` (§9 there). The review that motivated this guide
 is `reviews/code-review-2026-10.md`.
 
@@ -263,6 +264,43 @@ The code teaches habits as much as algorithms. These habits are always kept:
   example, setting `XLA_PYTHON_CLIENT_MEM_FRACTION` in an imports cell).
 - Draft history, hardcoded section numbers, or narration of what one
   framework's stored run did (`writing-guide.md` §4.5).
+- Registry and artifact plumbing (§7.1).
+
+### 7.1 Registries, Artifacts and Regeneration (Language Models part)
+
+The Language Models part reads pinned datasets, checkpoints and its own
+committed results. A cell of `d2l.DATA_HUB[...] = (url, sha1)` entries, revision
+hashes, artifact version keys or `if RERUN:` branches teaches nothing; the
+reader skims it and loses the thread. Chapters 18–20 still carry such cells and
+will be cleaned up.
+
+- **Where it lives.** `DATA_HUB` registrations, revision pins, artifact names
+  and versions, the `D2L_RERUN` regeneration switch, cache paths, download
+  helpers, argument checks and retry logic go in the section's library-only
+  file `<chapter>/<section>-lib.md` (listed in `LIB_ONLY_FILES` in
+  `tools/build_lib.py`; its `#@save` blocks enter `d2l` but never appear on a
+  page or in a notebook).
+- **What the page shows.** One line with a name that reads as English, such as
+  `log = d2l.load_artifact('reference-run-log')` or
+  `model = d2l.load_reference_model(step=6000)`. If the prose needs the source,
+  it names it in a sentence ("the run's log, committed with the book").
+- **Expensive results.** The page shows the code that computes the result,
+  called on the full configuration. Choosing between recomputing and loading
+  the committed copy happens inside the library function, never in an
+  `if RERUN:` block on the page.
+
+### 7.2 Outputs
+
+An output is read by the sentence after it, so it shows only what that sentence
+needs.
+
+- A few labelled numbers, a small table, or a plot. At most about 15 lines,
+  and no line wider than the page (`make audit-outputs` reports wide lines).
+- Numbers at the precision the prose quotes, with units.
+- Never hashes, URLs, file paths, download or cache messages, progress bars,
+  warnings, raw dictionaries or JSON, object reprs, or tensors longer than one
+  line. Fix the cause of a warning; if it cannot be fixed, silence it in the
+  library function, not on the page.
 
 ## 8. Checklist
 
@@ -277,3 +315,6 @@ For each cell:
 7. Does each tab use its framework's idiom?
 8. Are there host syncs, Python loops over data, or recompilation in a hot path?
 9. Are names, shapes, and constants readable without the surrounding cells?
+10. Is all registry, pin and regeneration plumbing in the library (§7.1)?
+11. Does the output show only what the next sentence reads, in at most about
+    15 lines (§7.2)?

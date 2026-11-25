@@ -79,6 +79,13 @@ class ScheduleTest(unittest.TestCase):
         for a, b in zip(lr, ref):
             self.assertLess(abs(a - b), 1e-9)
 
+    def test_wsd_spec_fixture(self):
+        steps = (0, 1, 99, 100, 1000, 8499, 8500, 9999)
+        want = (1e-5, 2e-5, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3 / 1500)
+        for s, w in zip(steps, want):
+            self.assertLess(abs(d2l.wsd_lr(s, 10000, 100, 1500, 1e-3) - w),
+                            1e-9, s)
+
     def test_param_groups(self):
         m = toy_model()
         decay, rest = d2l.param_groups(m, 0.1)

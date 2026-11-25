@@ -22120,7 +22120,7 @@ def _launch_jobs(cfgs, n_gpus, max_restarts=3):
     logs, world = [], max(1, min(n_gpus, torch.cuda.device_count()))
     for cfg in cfgs:
         job = os.path.join(_job_root(), f'{cfg.preset}-s{cfg.seed}')
-        done = os.path.join(job, 'DONE')
+        done, bad = os.path.join(job, 'DONE'), os.path.join(job, 'NONFINITE')
         if not os.path.exists(done) and (not only or only in (
                 cfg.preset, os.path.basename(job))):
             os.makedirs(job, exist_ok=True)
@@ -22135,9 +22135,9 @@ def _launch_jobs(cfgs, n_gpus, max_restarts=3):
                 with open(os.path.join(job, 'train.log'), 'a') as out:
                     rc = subprocess.call(cmd, cwd=repo, stdout=out,
                                          stderr=subprocess.STDOUT)
-                if rc in (0, 3) or os.path.exists(done):
+                if rc == 0 or os.path.exists(done) or os.path.exists(bad):
                     break
-            if rc == 3:
+            if os.path.exists(bad):
                 raise FloatingPointError(f'{job}: non-finite loss')
             if not os.path.exists(done):
                 raise RuntimeError(f'{job}: failed {max_restarts + 1} times '

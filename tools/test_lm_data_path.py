@@ -88,6 +88,13 @@ class DocIdsTest(unittest.TestCase):
         self.assertEqual(p.tolist(), [[0, 1, 2, 0, 1, 0, 1, 2, 0]])
         self.assertEqual(d.dtype, t.dtype)
 
+    def test_spec_fixture(self):
+        t = torch.tensor([5, 6, 0, 7, 0, 0, 8], dtype=torch.int32)
+        d, p = d2l.doc_ids_from_eos(t)
+        self.assertEqual(d.tolist(), [0, 0, 0, 1, 1, 2, 3])
+        self.assertEqual(p.tolist(), [0, 1, 2, 0, 1, 0, 0])
+        self.assertEqual(d.dtype, torch.int32)
+
     def test_packing_fixtures(self):
         for lengths in ([5, 3, 9, 2], [20], [1, 1, 1, 30]):
             toks, docs, pos = pack(lengths, 8)

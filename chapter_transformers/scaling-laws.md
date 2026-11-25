@@ -285,7 +285,7 @@ for name, fit in fits.items():
 
 Why did Llama 3 8B (:numref:`fig_mdl-transformers-chinchilla`) train an 8B-parameter model on $15\textrm{T}$ tokens ($D / N \approx 1{,}875$ tokens per parameter, nearly $100\times$ the Chinchilla ratio) instead of training a Chinchilla-optimal $70\textrm{B}$ model on $1.4\textrm{T}$ tokens at the same pretraining compute $C \approx 7 \times 10^{23}$ FLOPs?
 
-Because Chinchilla minimizes **pretraining FLOPs $6 N D$ alone**, ignoring the $2 N D_{\textrm{inf}}$ inference FLOPs and KV-cache memory spent serving the model after deployment :cite:`Sardana.Portes.Doubov.ea.2024`! Traveling along a constant-loss contour $\mathcal{L}(N, D) = \mathcal{L}_{\textrm{target}}$ shows that an 8B model over-trained on $15\textrm{T}$ tokens reaches a loss close to a Chinchilla-allocated $30\textrm{B}\text{--}40\textrm{B}$ model while making every subsequent inference token $4\text{--}5\times$ cheaper to serve:
+Because Chinchilla minimizes **pretraining FLOPs $6 N D$ alone**, ignoring the $2 N D_{\textrm{inf}}$ inference FLOPs and KV-cache memory spent serving the model after deployment :cite:`Sardana.Portes.Doubov.ea.2024`. Traveling along a constant-loss contour $\mathcal{L}(N, D) = \mathcal{L}_{\textrm{target}}$ shows that an 8B model over-trained on $15\textrm{T}$ tokens reaches a loss close to a Chinchilla-allocated $30\textrm{B}\text{--}40\textrm{B}$ model while making every subsequent inference token $4\text{--}5\times$ cheaper to serve:
 
 ```{.python .input #scaling-laws-training-past-the-optimum}
 %%tab pytorch, jax
@@ -303,9 +303,7 @@ for name, (N, D) in reported.items():
 
 ## Summary
 
-* A dense $L$-layer Transformer of width $d$ with SwiGLU ($d_{\textrm{ff}} \approx \frac{8}{3}d$) contains **$N \approx 12 L d^2$** non-embedding matrix parameters ($4 L d^2$ in attention and $8 L d^2$ in the FFN) and consumes **$C \approx 6 N D$** training FLOPs over $D$ tokens ($2 N D$ forward and $4 N D$ backward, :eqref:`eq_six_nd`).
-* Under the **Chinchilla scaling law** $\mathcal{L}(N, D) = L_\infty + A N^{-\alpha} + B D^{-\beta}$ (:eqref:`eq_chinchilla_law`), minimizing validation loss at fixed pretraining compute $C = 6 N D$ scales parameters and tokens with exponents $a = \beta/(\alpha+\beta) \approx 0.5$ and $b = \alpha/(\alpha+\beta) \approx 0.5$ (:eqref:`eq_chinchilla_optimum`--:eqref:`eq_chinchilla_allocation`), yielding roughly $D^* / N^* \approx 20$ tokens per parameter.
-* Accounting for **lifetime inference compute** ($2 N D_{\textrm{inf}}$) and serving latency shifts the total-compute optimum along the constant-loss contour toward smaller models $N$ over-trained on hundreds or thousands of tokens per parameter.
+A dense $L$-layer Transformer of width $d$ with SwiGLU ($d_{\textrm{ff}} \approx \frac{8}{3}d$) contains **$N \approx 12 L d^2$** non-embedding matrix parameters ($4 L d^2$ in attention and $8 L d^2$ in the FFN) and consumes **$C \approx 6 N D$** training FLOPs over $D$ tokens ($2 N D$ forward and $4 N D$ backward, :eqref:`eq_six_nd`). Under the **Chinchilla scaling law** $\mathcal{L}(N, D) = L_\infty + A N^{-\alpha} + B D^{-\beta}$ (:eqref:`eq_chinchilla_law`), minimizing validation loss at fixed pretraining compute $C = 6 N D$ scales parameters and tokens with exponents $a = \beta/(\alpha+\beta) \approx 0.5$ and $b = \alpha/(\alpha+\beta) \approx 0.5$ (:eqref:`eq_chinchilla_optimum`--:eqref:`eq_chinchilla_allocation`), yielding roughly $D^* / N^* \approx 20$ tokens per parameter. Accounting for **lifetime inference compute** ($2 N D_{\textrm{inf}}$) and serving latency shifts the total-compute optimum along the constant-loss contour toward smaller models $N$ over-trained on hundreds or thousands of tokens per parameter.
 
 ## Exercises
 
@@ -417,7 +415,7 @@ Measuring a full forward + backward step of `gpt(256, act='gelu')` on batch $(64
 @!scaling-laws-checking-the-arithmetic
 
 ::: {.d2l-note .rule}
-The exact matrix-multiply FLOP count lands at **$1.082 \times 6 N D$**—matching $1 + \frac{4 L T d}{2 N} = 1.082$ to three decimal places—and the backward-to-forward ratio is **$\mathbf{2.00}$** ($4 N D$ vs. $2 N D$).
+The exact matrix-multiply FLOP count lands at **$1.082 \times 6 N D$**, matching $1 + \frac{4 L T d}{2 N} = 1.082$ to three decimal places, and the backward-to-forward ratio is **$\mathbf{2.00}$** ($4 N D$ vs. $2 N D$).
 :::
 :::
 
@@ -440,7 +438,7 @@ To observe neural scaling laws firsthand, we train a $5 \times 3$ grid of **15 b
 
 | Experimental Axis | Values in Our 15-Run Grid | Scope & Purpose |
 | :--- | :--- | :--- |
-| **5 Backbone Sizes `(d, L, H)`** | `(96, 3, 4)`, `(128, 3, 4)`, `(192, 4, 6)`, `(256, 6, 8)`, `(384, 8, 8)` | $N \in [0.33\text{M},\; 14.17\text{M}]$ non-embedding params ($43\times$ span) |
+| **5 Backbone Sizes `(d, L, H)`** | `(96, 3, 4)`, `(128, 3, 4)`, `(192, 4, 6)`, `(256, 6, 8)`, `(384, 8, 8)` | $N \in [0.33\text{M},\; 14.16\text{M}]$ non-embedding params ($43\times$ span) |
 | **3 Step Budgets ($s$ steps)** | $500$, $1{,}000$, $2{,}000$ steps ($8{,}192$ bytes/step) | $D \in \{4.1\text{M},\; 8.2\text{M},\; 16.4\text{M}\}$ bytes ($\le 6\%$ of $270\text{M}$ corpus) |
 | **Width-Scaled Peak LR** | $\eta_{\max}(d) = 2 \times 10^{-3} \cdot (256 / d)$ | Optimal AdamW learning rate scales inversely with width $d$ |
 | **Matched Cosine Horizon** | Warmup $\max(100, s/10)$, cosine decays to $0$ at step $s$ | Every run is evaluated at the end of its own annealed schedule |
@@ -466,7 +464,7 @@ To observe neural scaling laws firsthand, we train a $5 \times 3$ grid of **15 b
 
 ::: {.cols .vc}
 ::: {.col}
-- **Increasing $N$ at fixed tokens $D$:** Tripling model size from $0.59\text{M} \to 1.77\text{M}$ drops loss by $0.05\text{--}0.09\text{ nats}$, whereas tripling from $4.72\text{M} \to 14.17\text{M}$ gains only $0.02\text{--}0.04\text{ nats}$ because $500\text{--}2{,}000$ steps starve the $14.17\text{M}$ model of data.
+- **Increasing $N$ at fixed tokens $D$:** Tripling model size from $0.59\text{M} \to 1.77\text{M}$ drops loss by $0.05\text{--}0.09\text{ nats}$, whereas tripling from $4.72\text{M} \to 14.16\text{M}$ gains only $0.02\text{--}0.04\text{ nats}$ because $500\text{--}2{,}000$ steps starve the $14.16\text{M}$ model of data.
 - **Increasing $D$ at fixed size $N$:** Quadrupling tokens ($4.1\text{M} \to 16.4\text{M}$) lowers validation loss by **$0.20\text{--}0.27\text{ nats}$** across every model size.
 :::
 
@@ -481,11 +479,11 @@ To observe neural scaling laws firsthand, we train a $5 \times 3$ grid of **15 b
 
 ::: {.cols .vc}
 ::: {.col}
-- **Plotting all 15 runs against total FLOPs $C = 6 N D$:** Where curves for different model sizes overlap in compute $C$, the **smaller model trained on more tokens** consistently achieves lower validation loss!
+- **Plotting all 15 runs against total FLOPs $C = 6 N D$:** Where curves for different model sizes overlap in compute $C$, the **smaller model trained on more tokens** consistently achieves lower validation loss.
 - **Concrete IsoFLOP comparison:**
-  - $N = 14.17\text{M}$ on $D = 4.1\text{M}$ ($C = 3.5 \times 10^{14}$): **$1.48\text{ nats}$**
-  - $N = 4.72\text{M}$ on $D = 8.2\text{M}$ ($C = 2.3 \times 10^{14}$): **$1.35\text{ nats}$**
-  - $N = 1.77\text{M}$ on $D = 16.4\text{M}$ ($C = 1.7 \times 10^{14}$): **$1.28\text{ nats}$** (lowest loss at *half* the FLOPs!).
+  - $N = 14.16\text{M}$ on $D = 4.1\text{M}$ ($C = 3.5 \times 10^{14}$): **$1.42\text{ nats}$**
+  - $N = 4.72\text{M}$ on $D = 8.2\text{M}$ ($C = 2.3 \times 10^{14}$): **$1.34\text{ nats}$**
+  - $N = 1.77\text{M}$ on $D = 16.4\text{M}$ ($C = 1.7 \times 10^{14}$): **$1.29\text{ nats}$** (lowest loss at *half* the FLOPs).
 :::
 
 ::: {.col .fig}
@@ -521,7 +519,7 @@ $$\frac{d}{dN}\left(L_\infty + A N^{-\alpha} + B (C/6)^{-\beta} N^\beta\right) =
 - **Equating marginal returns ($\alpha A (N^*)^{-\alpha} = \beta B (D^*)^{-\beta}$):** At the compute optimum, the finite-model penalty and finite-data penalty shrink at proportional rates:
   $$N^*(C) = G\left(\frac{C}{6}\right)^a, \qquad D^*(C) = G^{-1}\left(\frac{C}{6}\right)^b$$
   where $a = \frac{\beta}{\alpha + \beta}$, $b = \frac{\alpha}{\alpha + \beta}$, and $G = \left(\frac{\alpha A}{\beta B}\right)^{\frac{1}{\alpha + \beta}}$.
-- **Equal scaling ($a \approx b \approx 0.5$):** Because $\alpha \approx \beta$, scaling compute $C$ by $100\times$ scales **both $N^*$ and $D^*$ by $\sim 10\times$**!
+- **Equal scaling ($a \approx b \approx 0.5$):** Because $\alpha \approx \beta$, scaling compute $C$ by $100\times$ scales **both $N^*$ and $D^*$ by $\sim 10\times$**.
 :::
 
 ::: {.slide title="IsoFLOP Contours and the Compute-Optimal Path"}
@@ -570,8 +568,8 @@ Look at where recent open-weights models sit relative to their Chinchilla pretra
 
 @!scaling-laws-training-past-the-optimum
 
-- **Chinchilla optimizes pretraining cost ($6 N D$) alone:** It assigns **zero cost** to the inference FLOPs ($2 N$ per generated token) and VRAM spent serving the model after release!
-- **Shallow loss contours near the optimum:** Training `Llama 3 8B` on $15\text{T}$ tokens ($1{,}875\text{ tokens/param}$, $0.11\times$ the Chinchilla-optimal size for that budget) pays only $+0.053\text{ nats}$ over a Chinchilla-optimal $73\text{B}$ model while making **every inference token $9\times$ cheaper** to generate.
+- **Chinchilla optimizes pretraining cost ($6 N D$) alone:** It assigns **zero cost** to the inference FLOPs ($2 N$ per generated token) and VRAM spent serving the model after release.
+- **Shallow loss contours near the optimum:** Training `Llama 3 8B` on $15\text{T}$ tokens ($1{,}875\text{ tokens/param}$, $0.10\times$ the Chinchilla-optimal size for that budget) pays only $+0.054\text{ nats}$ over a Chinchilla-optimal $\sim 80\text{B}$ model while making **every inference token $\sim 10\times$ cheaper** to generate.
 :::
 
 ::: {.slide title="Lifetime Compute: Balancing Pretraining and Serving"}
@@ -581,7 +579,7 @@ Look at where recent open-weights models sit relative to their Chinchilla pretra
 ::: {.col}
 - Total lifetime compute across $D$ training tokens and $D_{\text{inf}}$ generated inference tokens is:
   $$C_{\mathrm{lifetime}}(N, D) = 6 N D + 2 N D_{\mathrm{inf}}$$
-- **Payback threshold for Llama 3 8B ($D = 15\text{T}$) vs. an equal-loss 34B Chinchilla model:** The extra $5.9 \times 10^{23}$ upfront training FLOPs save $5.2 \times 10^{10}\text{ FLOPs}$ per generated token, paying for themselves after **$D_{\text{inf}} \approx 11.3\text{T}$ inference tokens**!
+- **Payback threshold for Llama 3 8B ($D = 15\text{T}$) vs. an equal-loss 34B Chinchilla model:** The extra $5.9 \times 10^{23}$ upfront training FLOPs save $5.2 \times 10^{10}\text{ FLOPs}$ per generated token, paying for themselves after **$D_{\text{inf}} \approx 11.3\text{T}$ inference tokens**.
 :::
 
 ::: {.col .fig}

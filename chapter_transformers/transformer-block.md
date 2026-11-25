@@ -517,11 +517,7 @@ for name, blk in blocks.items():
 
 ## Summary
 
-* A **Transformer block** separates **token mixing** (multi-head attention across sequence positions) from **channel mixing** (a position-wise FFN across the $d$ features), adding both updates to a shared residual stream.
-* **Pre-norm** (:eqref:`eq_preln-block`) normalizes only the input to each sublayer and leaves the residual stream an identity path, whereas **post-norm** (:eqref:`eq_postln-block`) normalizes the stream itself. At Xavier scale a deep post-norm stack loses the differences between tokens exponentially fast (:eqref:`eq_collapse-rate`), and with them the query and key gradients of its deep blocks. Pre-norm loses both slowly.
-* Scaling the initialization standard deviation of each block's two residual output projections (`W_o` and `W_2`) by **$1/\sqrt{2L}$** keeps pre-norm residual stream variance $O(1)$ across arbitrary depth $L$.
-* **RMSNorm** (:eqref:`eq_rmsnorm`) drops LayerNorm's mean subtraction and additive bias, while per-head **QK-Norm** bounds attention logits by Cauchy--Schwarz regardless of projection weight growth.
-* **SwiGLU** (:eqref:`eq_swiglu`) replaces the two-matrix $4d$ FFN with a three-matrix gated product at width $d_{\textrm{ff}} = \operatorname{round}(\frac{8}{3}d)$, matching the $8d^2$ parameter and FLOP budget of a standard FFN.
+A **Transformer block** separates **token mixing** (multi-head attention across sequence positions) from **channel mixing** (a position-wise feed-forward network across the $d$ features), adding both updates to a shared residual stream. **Pre-norm** (:eqref:`eq_preln-block`) normalizes only the input to each sublayer and leaves the residual stream an uninterrupted identity path, whereas **post-norm** (:eqref:`eq_postln-block`) normalizes the stream itself; at Xavier scale a deep post-norm stack loses inter-token differences exponentially fast (:eqref:`eq_collapse-rate`) and starves the query and key gradients of its upper blocks, whereas scaling each block's residual output projections (`W_o` and `W_2`) by $1/\sqrt{2L}$ keeps pre-norm stream variance $O(1)$ across arbitrary depth $L$. Modern blocks pair **RMSNorm** (:eqref:`eq_rmsnorm`), which drops LayerNorm's mean subtraction and additive bias, with per-head **QK-Norm** to bound attention logits via Cauchy--Schwarz regardless of projection weight growth. Finally, **SwiGLU** (:eqref:`eq_swiglu`) replaces the two-matrix $4d$ feed-forward network with a three-matrix gated product at width $d_{\textrm{ff}} = \operatorname{round}(\frac{8}{3}d)$, matching the $8d^2$ parameter and FLOP budget of a standard FFN.
 
 ## Exercises
 
@@ -679,7 +675,7 @@ Because an untrained $L$-block stack is a deterministic random function, we can 
 ::: {.col}
 - For $\mathbf{W} \in \mathbb{R}^{d \times d}$ with fixed entry variance $\sigma^2 = 0.02^2$, the per-projection variance gain grows linearly with width $d$:
   $$g^2 = d \sigma^2 = 0.0004\,d$$
-- A fixed $\sigma = 0.02$ is only small for $d \ll 2{,}500$; at frontier widths ($d = 4{,}096$), $g^2 = 1.64 > 1$ collapses post-norm stacks even faster than Xavier!
+- A fixed $\sigma = 0.02$ is only small for $d \ll 2{,}500$; at frontier widths ($d = 4{,}096$), $g^2 = 1.64 > 1$ collapses post-norm stacks even faster than Xavier.
 :::
 
 ::: {.col .fig}

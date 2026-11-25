@@ -1,7 +1,7 @@
 # Vision Transformer (ViT)
 :label:`sec_vision-transformer`
 
-Convolutional neural networks (:numref:`chap_cnn`, :numref:`chap_modern_cnn`) bake two geometric priors about images directly into their architecture: **spatial locality** (a $k \times k$ kernel couples only neighboring pixels) and **translation equivariance** (the same kernel weights slide across every $(r, c)$ location). Can a standard bidirectional Transformer encoder (:numref:`sec_transformer`)—which has *no* built-in notion of 2D grid neighbors or shift equivariance—classify images competitively?
+Convolutional neural networks (:numref:`chap_cnn`, :numref:`chap_modern_cnn`) bake two geometric priors about images directly into their architecture: **spatial locality** (a $k \times k$ kernel couples only neighboring pixels) and **translation equivariance** (the same kernel weights slide across every $(r, c)$ location). Can a standard bidirectional Transformer encoder (:numref:`sec_transformer`), which has *no* built-in notion of 2D grid neighbors or shift equivariance, classify images competitively?
 
 Applying self-attention directly to individual pixels is quadratic in pixel count: even a $96 \times 96$ image has $9{,}216$ pixels ($9216^2 \approx 8.5 \times 10^7$ attention pairs per head). :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` introduced the **Vision Transformer (ViT)** (:numref:`fig_vit`) by tokenizing an image into a grid of non-overlapping $p \times p$ **patches**: a $96 \times 96$ image with patch size $p = 16$ becomes a short sequence of $m = (96 / 16)^2 = 36$ patch tokens. Each patch is projected to width $d$, a learnable `<cls>` token is prepended, learned 1D positional embeddings are added, and the 37 tokens pass through $L$ bidirectional pre-norm Transformer blocks.
 
@@ -318,7 +318,7 @@ print(f'trained ViT: {vit_acc:.3f} as is, '
       f'{min(accs):.2f} to {max(accs):.2f} with its patches shuffled')
 ```
 
-Scrambling the $6 \times 6$ patch arrangement drops validation accuracy from about 0.89 to roughly 0.25–0.45, depending on the shuffle, so the trained `ViT` relies heavily on where each patch sits. It still stays far above the 0.1 of chance, because local $16 \times 16$ patch textures—like shoe heels or collar shapes—already identify many coarse garment classes as a "bag of patches".
+Scrambling the $6 \times 6$ patch arrangement drops validation accuracy from about 0.89 to roughly 0.25–0.45, depending on the shuffle, so the trained `ViT` relies heavily on where each patch sits. It still stays far above the 0.1 of chance, because local $16 \times 16$ patch textures, such as shoe heels or collar shapes, already identify many coarse garment classes as a "bag of patches".
 
 Does the unstructured 1D positional table `pos_embedding` ($36 \times d$) actually discover the 2D geometry of the $6 \times 6$ image grid? Computing the mean cosine similarity between patch position vectors as a function of their 2D grid distance $\max(|r - r'|, |c - c'|)$ on the $6 \times 6$ grid (`grid_similarity`) answers the question; for reference we compute the same curve for a 2D sinusoidal code, which encodes the grid by construction, and for random vectors, which do not:
 
@@ -498,9 +498,7 @@ On a small 60,000-image dataset without data augmentation or large-scale pretrai
 
 ## Summary
 
-* **Vision Transformers (ViT)** convert an image of shape $(C, H, W)$ into a sequence of $m = (H/p)(W/p)$ tokens via a stride-$p$ convolution (`PatchEmbedding`), prepend a `<cls>` token, add learned 1D positional embeddings, and apply a bidirectional pre-norm Transformer encoder (:numref:`fig_vit`).
-* Without positional embeddings, a ViT is permutation-invariant over its patches; with learned 1D positional embeddings, the trained model depends heavily on the patch layout, although after ten epochs on Fashion-MNIST its position table reflects the 2D grid only faintly.
-* Because ViT lacks the built-in 2D locality and translation equivariance of convolutions, a parameter-matched ResNet outperforms ViT when trained from scratch on small unaugmented datasets, while ViT excels at large pretraining scales and unified multimodal architectures.
+**Vision Transformers (ViT)** convert an image of shape $(C, H, W)$ into a sequence of $m = (H/p)(W/p)$ tokens via a stride-$p$ convolution (`PatchEmbedding`), prepend a `<cls>` token, add learned 1D positional embeddings, and apply a bidirectional pre-norm Transformer encoder (:numref:`fig_vit`). Without positional embeddings, a ViT is strictly permutation-invariant over its patches; with learned 1D positional embeddings, the trained model relies heavily on the patch layout, even though ten epochs on Fashion-MNIST imprint the 2D grid onto its position table only faintly. Because ViT lacks the built-in 2D locality and translation equivariance of convolutions, a parameter-matched ResNet outperforms it when trained from scratch on small unaugmented datasets, whereas ViT overtakes CNNs at large pretraining scales and provides a unified token interface for multimodal models.
 
 ## Exercises
 
@@ -511,7 +509,7 @@ On a small 60,000-image dataset without data augmentation or large-scale pretrai
 
 2. **`<cls>` readout vs. global average pooling.** Replace the `<cls>` token readout in `ViT` with global average pooling across the $m = 36$ patch tokens (`self.head(X[:, 1:].mean(1))`, or removing `cls_token` altogether and averaging all 36 tokens). Train for 10 epochs on Fashion-MNIST and compare validation accuracy against `<cls>` readout.
 
-3. **Exact permutation invariance without positional embeddings.** Set `model.pos_embedding` to all zeros and switch `model` to evaluation mode (disabling dropout). Prove algebraically—and verify numerically on a validation batch to within $10^{-6}$—that applying `shuffle_patches(X, perm)` for any permutation `perm` of $\{0, \dots, 35\}$ leaves the output logits `model(X)` completely unchanged.
+3. **Exact permutation invariance without positional embeddings.** Set `model.pos_embedding` to all zeros and switch `model` to evaluation mode (disabling dropout). Prove algebraically, and verify numerically on a validation batch to within $10^{-6}$, that applying `shuffle_patches(X, perm)` for any permutation `perm` of $\{0, \dots, 35\}$ leaves the output logits `model(X)` completely unchanged.
    :exlabel:`ex_vision-transformer-position-information`
 
 4. **Statistical permutation test for 2D grid discovery.** Let $\Delta$ be the difference in `grid_similarity` between adjacent patches (grid distance 1) and patches at grid distance $\ge 4$ for the trained `model.pos_embedding`. Compute the null distribution of $\Delta$ across 1,000 random permutations of the 36 rows of `pos_embedding`, and report the empirical $p$-value. Is the faint grid structure of the learned positional embeddings distinguishable from chance?
@@ -538,7 +536,7 @@ Transformers for Vision (ViT)<br>**patches as tokens · strided conv stem · `<c
 
 ::: {.cols .vc}
 ::: {.col}
-- **Pixel tokens ($96 \times 96$):** $m = 9{,}216$ tokens $\to$ $m^2 = 84.9\text{M}$ attention pairs per head and layer ($2.52\text{B}$ pairs on $224 \times 224$ ImageNet!).
+- **Pixel tokens ($96 \times 96$):** $m = 9{,}216$ tokens $\to$ $m^2 = 84.9\text{M}$ attention pairs per head and layer ($2.52\text{B}$ pairs on $224 \times 224$ ImageNet).
 - **$16 \times 16$ Patch tokens (`ViT`):** Partitioning an image into non-overlapping $p \times p$ patches reduces sequence length by $p^2$ ($256\times$) and attention scores by $p^4$ (**$65{,}536\times$ fewer pairs**).
 :::
 
@@ -794,7 +792,7 @@ Work through these three quantitative questions:
 ::: {.d2l-note}
 **Answers:**
 
-1. (a) Patch tokens quadruple: **$m = 36 \to 144$** ($12 \times 12$ grid). (b) `ViTBlock` parameter count ($12 L d^2$) is **completely unchanged** (and total parameters drop by $<1\%$ as the $16 \times 16$ conv stem shrinks to $8 \times 8$). (c) Forward FLOPs **quadruple** ($0.48 \to 1.92\text{ GFLOPs}$)!
+1. (a) Patch tokens quadruple: **$m = 36 \to 144$** ($12 \times 12$ grid). (b) `ViTBlock` parameter count ($12 L d^2$) is **completely unchanged** (and total parameters drop by $<1\%$ as the $16 \times 16$ conv stem shrinks to $8 \times 8$). (c) Forward FLOPs **quadruple** ($0.48 \to 1.92\text{ GFLOPs}$).
 2. At $p = 16$: **$m = 14^2 = 196$ tokens** ($38{,}416$ scores/head). At $p = 8$: **$m = 28^2 = 784$ tokens** ($614{,}656$ scores/head, **$16\times$ more attention scores**).
 3. **Zero difference (identical to within floating-point rounding):** without positional embeddings, self-attention is strictly permutation-equivariant and `<cls>` readout is strictly permutation-invariant.
 :::

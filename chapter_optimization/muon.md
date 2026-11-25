@@ -1,11 +1,11 @@
 # Muon
 :label:`sec_muon`
 
-Every optimizer examined so far—SGD, Momentum, and AdamW—treats the parameters of a neural network as an unstructured flat vector. Even AdamW maintains two scalar averages $(m_{t,ij}, v_{t,ij})$ independently for each entry $W_{ij}$ of a weight matrix $\mathbf{W}$: if the entries of $\mathbf{W}$ were arbitrarily permuted, AdamW would take the exact same steps.
+Every optimizer examined so far (SGD, Momentum, and AdamW) treats the parameters of a neural network as an unstructured flat vector. Even AdamW maintains two scalar averages $(m_{t,ij}, v_{t,ij})$ independently for each entry $W_{ij}$ of a weight matrix $\mathbf{W}$: if the entries of $\mathbf{W}$ were arbitrarily permuted, AdamW would take the exact same steps.
 
 Yet more than $80\%$ of the parameters in a Transformer reside in two-dimensional hidden projection matrices $\mathbf{W} \in \mathbb{R}^{m \times n}$ that act as linear operators mapping layer activations $\mathbf{x} \in \mathbb{R}^n$ to $\mathbf{y} = \mathbf{W}\mathbf{x} \in \mathbb{R}^m$. What is the direction of steepest descent for a weight matrix *viewed as a linear operator*?
 
-As :citet:`Bernstein.Newhouse.2024` emphasize, steepest descent is defined relative to the norm chosen to bound the update step. Measuring the step in the Euclidean ($\ell_2$) norm yields the raw gradient direction of SGD; measuring it in the coordinate-wise $\ell_\infty$ box norm yields sign descent, the memoryless limit of Adam. If instead we bound the maximum change that an update $\Delta\mathbf{W}$ can induce in the layer output $\|\Delta\mathbf{W}\mathbf{x}\|_2 / \|\mathbf{x}\|_2$—which is the **spectral norm** $\|\Delta\mathbf{W}\|_2$—the direction of steepest descent replaces every nonzero singular value of the gradient matrix with $1$, yielding the **orthogonalized gradient** $\mathbf{U}\mathbf{V}^\top$.
+As :citet:`Bernstein.Newhouse.2024` emphasize, steepest descent is defined relative to the norm chosen to bound the update step. Measuring the step in the Euclidean ($\ell_2$) norm yields the raw gradient direction of SGD; measuring it in the coordinate-wise $\ell_\infty$ box norm yields sign descent, the memoryless limit of Adam. If instead we bound the maximum change that an update $\Delta\mathbf{W}$ can induce in the layer output $\|\Delta\mathbf{W}\mathbf{x}\|_2 / \|\mathbf{x}\|_2$, namely the **spectral norm** $\|\Delta\mathbf{W}\|_2$, the direction of steepest descent replaces every nonzero singular value of the gradient matrix with $1$, yielding the **orthogonalized gradient** $\mathbf{U}\mathbf{V}^\top$.
 
 Computing an exact Singular Value Decomposition (SVD) at every step is too slow for GPUs, but a five-step odd matrix polynomial (**Newton–Schulz iteration**) approximates $\mathbf{U}\mathbf{V}^\top$ using only matrix multiplications. Applied to Nesterov momentum buffers on hidden 2D weight matrices (while leaving embeddings, 1D parameters, and the output head to AdamW), this yields **Muon** (*Momentum Orthogonalized by Newton–Schulz*, :citet:`Jordan.Jin.Boza.ea.2024`). In this section, we derive steepest descent across the Euclidean, $\ell_\infty$, and spectral norm balls, analyze the tuned quintic Newton–Schulz iteration, implement the hybrid Muon+AdamW optimizer from scratch, and benchmark it against AdamW on `TinyLM`.
 
@@ -116,7 +116,7 @@ p(\mathbf{X}) = a\mathbf{X} + b\,(\mathbf{X}\mathbf{X}^\top)\mathbf{X} + c\,(\ma
 $$
 :eqlabel:`eq_muon-odd-poly`
 
-since $\mathbf{X}\mathbf{X}^\top = \mathbf{U}\boldsymbol{\Sigma}^2\mathbf{U}^\top$. Normalizing $\mathbf{X} \leftarrow \mathbf{X} / \|\mathbf{X}\|_F$ first ensures that all singular values lie in $[0, 1]$. Iterating an odd scalar polynomial $p(x)$ that maps $(0, 1]$ toward $1$—a **Newton–Schulz iteration** (:numref:`subsec_mdl-orthogonalized-updates`)—therefore orthogonalizes $\mathbf{X}$ using only fast matrix multiplications.
+since $\mathbf{X}\mathbf{X}^\top = \mathbf{U}\boldsymbol{\Sigma}^2\mathbf{U}^\top$. Normalizing $\mathbf{X} \leftarrow \mathbf{X} / \|\mathbf{X}\|_F$ first ensures that all singular values lie in $[0, 1]$. Iterating an odd scalar polynomial $p(x)$ that maps $(0, 1]$ toward $1$ (**Newton–Schulz iteration**, :numref:`subsec_mdl-orthogonalized-updates`) therefore orthogonalizes $\mathbf{X}$ using only fast matrix multiplications.
 
 Rather than the classical cubic $p(x) = \frac{3}{2}x - \frac{1}{2}x^3$ (whose small slope $p'(0) = 1.5$ lifts small singular values too slowly over $5$ steps), :citet:`Jordan.Jin.Boza.ea.2024` use a tuned quintic polynomial with a steep initial slope $p'(0) = 3.4445$:
 
@@ -462,9 +462,7 @@ At larger scale the advantage is smaller and less well documented. With full lea
 
 ## Summary
 
-* Steepest descent depends on the norm ball bounding the update: the $\ell_2$ ball gives SGD, the $\ell_\infty$ box gives sign descent (smoothed by Adam), and the spectral norm ball $\|\Delta\mathbf{W}\|_2 \le \eta$ gives the orthogonalized gradient $-\eta\mathbf{U}\mathbf{V}^\top$.
-* **Muon** approximates $\mathbf{U}\mathbf{V}^\top$ on the Nesterov momentum buffer of each hidden 2D weight matrix via $5$ iterations of a tuned quintic Newton–Schulz polynomial :eqref:`eq_muon-quintic`, scales the update by $0.2\sqrt{\max(m, n)}$ to match AdamW's entrywise RMS step size, and applies decoupled weight decay while leaving embeddings, 1D vectors, and the readout head to AdamW.
-* On `TinyLM`, the Muon+AdamW hybrid accelerates early convergence, remains stable at $3\times$ higher learning rates than AdamW, and reduces optimizer-state memory by $42\%$.
+Steepest descent is defined relative to the norm ball bounding the update: the Euclidean $\ell_2$ ball yields SGD, the coordinate $\ell_\infty$ box yields sign descent (smoothed by Adam), and the spectral norm ball $\|\Delta\mathbf{W}\|_2 \le \eta$ yields the orthogonalized gradient $-\eta\mathbf{U}\mathbf{V}^\top$, which steps equally along every active singular direction of a matrix operator. **Muon** approximates $\mathbf{U}\mathbf{V}^\top$ on the Nesterov momentum buffer of each hidden 2D weight matrix via five iterations of a tuned quintic Newton–Schulz polynomial :eqref:`eq_muon-quintic`, scales the update by $0.2\sqrt{\max(m, n)}$ to match AdamW's entrywise RMS step size, and applies decoupled weight decay while leaving embeddings, 1D vectors, and the readout head to AdamW. On `TinyLM`, this Muon+AdamW hybrid accelerates early convergence, remains stable at $3\times$ higher learning rates than AdamW, and reduces optimizer-state memory by $42\%$.
 
 ## Exercises
 
@@ -499,7 +497,7 @@ Matrix Preconditioning and Muon<br>**steepest descent under norm balls · spectr
 
 ::: {.cols .vc}
 ::: {.col}
-- **Permutation blindness of entrywise methods:** SGD, Momentum, and AdamW treat $\mathbf{W} \in \mathbb{R}^{m \times n}$ as $mn$ independent coordinates—shuffling entries of $\mathbf{W}$ leaves AdamW's steps unchanged!
+- **Permutation blindness of entrywise methods:** SGD, Momentum, and AdamW treat $\mathbf{W} \in \mathbb{R}^{m \times n}$ as $mn$ independent coordinates—shuffling entries of $\mathbf{W}$ leaves AdamW's steps unchanged.
 - **Operator geometry ($83.5\%$ of `TinyLM`):** Internal 2D weight matrices map layer activations $\mathbf{x} \in \mathbb{R}^n \mapsto \mathbf{y} = \mathbf{W}\mathbf{x} \in \mathbb{R}^m$.
 - **Central question:** What is the steepest descent direction when we bound the activation shift $\Delta\mathbf{y} = \Delta\mathbf{W}\,\mathbf{x}$?
 :::
@@ -536,7 +534,7 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \le \eta}\; \langle\
 ::: {.col}
 - **Spectral norm bounds activation shift:**
   $$\|\Delta\mathbf{W}\,\mathbf{x}\|_2 \le \|\Delta\mathbf{W}\|_2\,\|\mathbf{x}\|_2, \quad \|\Delta\mathbf{W}\|_2 = \sigma_1(\Delta\mathbf{W})$$
-- **SVD vs. Frobenius norm:** For $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top = \sum_{i=1}^r \sigma_i\mathbf{u}_i\mathbf{v}_i^\top$, $\|\mathbf{G}\|_2 = \sigma_1$ measures the max directional stretch, whereas $\|\mathbf{G}\|_F = \sqrt{\sum_i \sigma_i^2}$ overstates an orthogonal $r=128$ update by $\sqrt{128} \approx 11.3\times$!
+- **SVD vs. Frobenius norm:** For $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top = \sum_{i=1}^r \sigma_i\mathbf{u}_i\mathbf{v}_i^\top$, $\|\mathbf{G}\|_2 = \sigma_1$ measures the max directional stretch, whereas $\|\mathbf{G}\|_F = \sqrt{\sum_i \sigma_i^2}$ overstates an orthogonal $r=128$ update by $\sqrt{128} \approx 11.3\times$.
 :::
 
 ::: {.col .fig}
@@ -568,7 +566,7 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \le \eta}\; \langle\
 ::: {.col}
 - Consider $\mathbf{G} = \begin{bmatrix}3 & 1\\ 1 & 1\end{bmatrix}$ ($\sigma_1 \approx 3.41, \sigma_2 \approx 0.59$):
   - **Euclidean ($-\mathbf{G}/\|\mathbf{G}\|_F$):** Singular values $(0.99, 0.17)$ starve the second direction.
-  - **Coordinate box ($-\operatorname{sign}(\mathbf{G}) = -\mathbf{1}\mathbf{1}^\top$):** Singular values $(2.00, 0.00)$ **collapse to rank 1**!
+  - **Coordinate box ($-\operatorname{sign}(\mathbf{G}) = -\mathbf{1}\mathbf{1}^\top$):** Singular values $(2.00, 0.00)$ **collapse to rank 1**.
   - **Spectral ($-\mathbf{U}\mathbf{V}^\top = -\mathbf{I}_2$):** Singular values **$(1.00, 1.00)$** take a full step along every orthogonal feature mode.
 :::
 
@@ -617,7 +615,7 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \le \eta}\; \langle\
 - The classical cubic $p(x) = 1.5x - 0.5x^3$ converges to $1$ asymptotically, but its small slope at the origin ($p'(0) = 1.5$, so $1.5^5 \approx 7.6$) lifts small singular values far too slowly over $5$ iterations.
 - **Muon's tuned quintic** (Jordan et al., 2024) maximizes initial slope $p'(0) = 3.4445$ ($3.4445^5 \approx 485\times$ amplification):
   $$p(x) = 3.4445\,x - 4.7750\,x^3 + 2.0315\,x^5$$
-- After $5$ iterations, every singular value in $[0.0015, 1]$ lands inside the band **$[0.68, 1.13]$**!
+- After $5$ iterations, every singular value in $[0.0015, 1]$ lands inside the band **$[0.68, 1.13]$**.
 :::
 
 ::: {.col .fig}
@@ -669,7 +667,7 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \le \eta}\; \langle\
 - **Muon update ($\beta = 0.95$, Liu et al., 2025):**
   $$\mathbf{W}_{t+1} = (1-\eta\lambda)\mathbf{W}_t - 0.2\eta\sqrt{\max(m,n)}\;\mathrm{NS}_5(\mathbf{G}_t + \beta\mathbf{M}_t)$$
 - **Why average before $\mathrm{NS}_5$?** Extracts persistent singular directions over $20$ steps before applying nonlinear orthogonalization.
-- **Why $0.2\sqrt{\max(m, n)}$?** Since $\text{RMS}(\mathbf{U}\mathbf{V}^\top) = 1/\sqrt{\max(m,n)}$, this multiplier sets the entrywise step RMS to **$0.2\,\eta$**, matching AdamW so both share a single $\eta$ and $\lambda$!
+- **Why $0.2\sqrt{\max(m, n)}$?** Since $\text{RMS}(\mathbf{U}\mathbf{V}^\top) = 1/\sqrt{\max(m,n)}$, this multiplier sets the entrywise step RMS to **$0.2\,\eta$**, matching AdamW so both share a single $\eta$ and $\lambda$.
 :::
 
 ::: {.col .fig}

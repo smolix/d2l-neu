@@ -3,7 +3,7 @@
 
 In our small experiments so far, training took a few seconds per run, allowing us to sweep grids of learning rates and repeat runs whenever an update diverged. Production training runs are different: when a single training run takes days or weeks, most settings must be fixed in advance, a single unguarded gradient spike can corrupt hours of progress, and the final checkpoint must not depend on the luck of the last minibatch draw.
 
-Even at extreme scale—such as the $540$-billion-parameter PaLM model trained across $6{,}144$ TPU chips, which experienced roughly $20$ sudden loss spikes despite active gradient clipping :cite:`chowdhery2022palm`—reliable training rests on three operational pillars:
+Even at extreme scale (such as the $540$-billion-parameter PaLM model trained across $6{,}144$ TPU chips, which experienced roughly $20$ sudden loss spikes despite active gradient clipping :cite:`chowdhery2022palm`), reliable training rests on three operational pillars:
 
 1. **Guards against transient instabilities:** Global-norm **gradient clipping** (:numref:`sec_rnn-scratch`) caps anomalous steps under SGD and protects AdamW's second-moment accumulator $\mathbf{v}_t$ from transient gradient spikes, paired with checkpoint-and-rewind recovery.
 2. **Iterate smoothing:** Maintaining an **exponential moving average (EMA)** of model weights eliminates high-frequency noise-ball fluctuations without requiring a full learning-rate decay to zero.
@@ -450,9 +450,7 @@ print(f'spread between the seeds: configured {abs(c1 - c2):.3f}, '
 
 ## Summary
 
-* **Global-norm gradient clipping** ($\mathbf{g} \leftarrow \min(1, \theta/\|\mathbf{g}\|_2)\mathbf{g}$) acts as a **guard** when it fires on a small fraction ($<5\%$) of early or anomalous steps—preventing initial blow-up under SGD and protecting AdamW's second-moment buffer $\mathbf{v}_t$ from gradient spikes—and as a **brake** when it fires continuously (indicating that $\eta$ is too high).
-* **Exponential moving averaging (EMA)** of model weights ($\bar{\mathbf{x}}_t = \alpha\bar{\mathbf{x}}_{t-1} + (1-\alpha)\mathbf{x}_t$) smooths out stationary noise-ball fluctuations, matching the accuracy of a full cosine decay on constant-rate trajectories.
-* Production training runs combine hardware-saturated batch sizes below or near $b_{\text{noise}}$, AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$ and weight decay $\lambda = 0.1$ on the weight matrices (never on biases or normalization parameters), clipping at $\theta = 1.0$, short-horizon peak-LR calibration, and linear warmup followed by cosine or WSD cooldown.
+**Global-norm gradient clipping** ($\mathbf{g} \leftarrow \min(1, \theta/\|\mathbf{g}\|_2)\mathbf{g}$) acts as a **guard** when it fires on a small fraction ($<5\%$) of early or anomalous steps, preventing initial blow-up under SGD and protecting AdamW's second-moment buffer $\mathbf{v}_t$ from gradient spikes, whereas continuous firing signals that $\eta$ is too large and clipping has become a **brake**. **Exponential moving averaging (EMA)** of model weights ($\bar{\mathbf{x}}_t = \alpha\bar{\mathbf{x}}_{t-1} + (1-\alpha)\mathbf{x}_t$) smooths out stationary noise-ball fluctuations without modifying the live trajectory, matching the accuracy of a full cosine decay on constant-rate runs. Reliable large-scale training combines hardware-saturated batch sizes positioned near $b_{\text{noise}}$, AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$ and decoupled weight decay $\lambda = 0.1$ restricted to 2D weight matrices, global-norm clipping at $\theta = 1.0$, short-horizon peak-LR calibration, and linear warmup followed by cosine or WSD cooldown.
 
 ## Exercises
 
@@ -536,7 +534,7 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 
 - Running $2{,}000$ steps across $(\eta, \theta) \in \{(1.0, \infty), (1.0, 1.0), (0.3, \infty), (3.0, 1.0)\}$ over two seeds confirms **Hypothesis A** at $\eta = 1.0$:
   - **At $\eta = 1.0, \theta = \infty$:** Diverges to `inf` within $20$ steps.
-  - **At $\eta = 1.0, \theta = 1.0$ (Guard):** Clipping fires on only **$15\text{--}35$ steps (all before step $50$)**, never fires again over the remaining $1{,}950$ steps (median $\|\mathbf{g}_t\|_2 \approx 0.25$), and reaches **$1.61\text{--}1.64$ nats** (beating unclipped $\eta = 0.3$)!
+  - **At $\eta = 1.0, \theta = 1.0$ (Guard):** Clipping fires on only **$14\text{--}17$ steps (all before step $30$)**, never fires again over the remaining $1{,}970$ steps (median $\|\mathbf{g}_t\|_2 \approx 0.25$), and reaches **$1.61\text{--}1.63$ nats** (beating unclipped $\eta = 0.3$).
   - **At $\eta = 3.0, \theta = 1.0$ (Brake):** Fires on **every single step** until overflowing or stalling above $100$ nats.
 
 @!practice-a-nan-averted-2
@@ -551,7 +549,7 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
   - Fires on **$<2\%\text{--}5\%$ of steps** (opening transient or rare spikes); steady-state median $\|\mathbf{g}_t\|_2 \approx 0.25 \approx \theta/4$.
 - **Constant Brake ($\eta = 3.0, \theta = 1.0$):**
   - Fires on **$>50\%\text{--}100\%$ of steps**, turning the optimizer into fixed-step normalized descent.
-- **Engineering rule:** When clipping fires on $>20\%\text{--}50\%$ of steps, **lower the learning rate $\eta$ first** before tuning $\theta$!
+- **Engineering rule:** When clipping fires on $>20\%\text{--}50\%$ of steps, **lower the learning rate $\eta$ first** before tuning $\theta$.
 :::
 
 ::: {.col .fig .big}
@@ -567,7 +565,7 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 ::: {.col}
 - **Immediate step is already bounded:** In AdamW, a spike $g_t \gg \sqrt{v_{t-1}}$ appears in both $\mathbf{m}_t$ and $\sqrt{\mathbf{v}_t}$, bounding $|\Delta x_t| \approx \eta\frac{1-\beta_1}{\sqrt{1-\beta_2}} \le 3.16\eta$.
 - **Clipping protects the denominator state $\mathbf{v}_t$:**
-  - An unclipped $100\times$ spike injects $(1-\beta_2)10^4$ into $v_t$: at $\beta_2 = 0.999$, $v_t$ jumps $11\times$, shrinking subsequent effective LRs to $30\%$ for **$2{,}300$ steps**!
+  - An unclipped $100\times$ spike injects $(1-\beta_2)10^4$ into $v_t$: at $\beta_2 = 0.999$, $v_t$ jumps $11\times$, shrinking subsequent effective LRs to $30\%$ for **$2{,}300$ steps**.
   - Clipping at $\theta = 4\times$ median norm caps injection below $2\%$, and **$\beta_2 = 0.95$** cuts recovery time $20\times$ ($\sim 120$ steps).
 :::
 
@@ -619,8 +617,8 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 ::: {.cols .vc}
 ::: {.col}
 - Training `FashionCNN` for $15$ epochs ($235$ steps/epoch $= 3{,}525$ steps) with plain SGD at a constant learning rate $\eta = 0.3$:
-  - **Live weights (blue):** Bounce wildly inside the noise ball, jittering across a **test-accuracy band of several percentage points** below $\approx 91\%$ over the last five epochs, with an occasional much deeper single-epoch drop!
-  - **Weight EMA ($\alpha = 0.999$, started at epoch 5, orange):** Rises smoothly along the top of the band to **about $91\%$ test accuracy**, matching the full cosine-decayed trajectory (green)!
+  - **Live weights (blue):** Bounce inside the noise ball, jittering across a **test-accuracy band of several percentage points** below $\approx 91\%$ over the last five epochs, with an occasional deeper single-epoch drop.
+  - **Weight EMA ($\alpha = 0.999$, started at epoch 5, orange):** Rises smoothly along the top of the band to **about $91\%$ test accuracy**, matching the full cosine-decayed trajectory (green).
 :::
 
 ::: {.col .fig}
@@ -635,7 +633,7 @@ $$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\
 ::: {.cols .vc}
 ::: {.col}
 - Comparing constant-rate SGD ($\eta = 0.3$) against cosine decay ($\eta: 0.3 \to 0$) across two seeds on `FashionCNN`:
-  - **At a constant learning rate:** The EMA improves final test accuracy by about $0.5\text{--}2$ percentage points over the noisy live checkpoint, matching the **$\approx 91\%$** accuracy of a full cosine decay!
+  - **At a constant learning rate:** The EMA improves final test accuracy by about $0.5\text{--}2$ percentage points over the noisy live checkpoint, matching the **$\approx 91\%$** accuracy of a full cosine decay.
   - **After cosine decay to zero:** The live weights have already settled at the center of the noise ball ($\eta_T = 0$), so taking an EMA on top of a fully decayed run adds nothing (or lags by a few tenths of a point).
 - **When to use Weight EMA:** During constant-rate / WSD plateau training to obtain a usable model at any step without waiting for a cooldown branch (on language models it recovers part, not all, of the cooldown gain; Hägele et al., 2024).
 :::
@@ -708,7 +706,7 @@ We configure a $3{,}000$-step training run for a new $4$-block, width-$256$, $4$
 ::: {.col}
 - Before launching the $3{,}000$-step run, we execute three $300$-step trial runs ($900$ steps total, $<30\%$ of one full run) across $\eta \in \{10^{-3}, 3{\times}10^{-3}, 10^{-2}\}$:
   - **$\eta = 10^{-3}$:** Slow ($\approx 1.88$ nats, $2\text{--}3\%$ clipped).
-  - **$\eta = 3 \times 10^{-3}$:** **Optimal ($\approx 1.75$ nats, $3\%$ of steps clipped—a healthy guard!)**.
+  - **$\eta = 3 \times 10^{-3}$:** **Optimal ($\approx 1.75$ nats, $3\%$ of steps clipped, a healthy guard)**.
   - **$\eta = 10^{-2}$:** Stalls at $\approx 2.5$ nats ($6\%$ clipped).
 - **Noise-scale check:** $b_{\text{noise}}$ grows from $\approx 2$ sequences at step 0 to $\sim 150$ sequences at step 300, confirming that $b = 256$ sits near the critical batch size knee.
 :::
@@ -725,7 +723,7 @@ We configure a $3{,}000$-step training run for a new $4$-block, width-$256$, $4$
 ::: {.cols .vc}
 ::: {.col}
 - Running the full $3{,}000$-step warmup + cosine schedule at the calibrated peak rate $\eta_0 = 3 \times 10^{-3}$ across two independent seeds:
-  - **Configured recipe:** Reaches **$\approx 1.25$ validation nats**, beating the constant-rate baseline ($\approx 1.30$) by **$0.05\text{--}0.06$ nats** (several times the $<0.01$-nat inter-seed spread!).
+  - **Configured recipe:** Reaches **$\approx 1.25$ validation nats**, beating the constant-rate baseline ($\approx 1.30$) by **$0.05\text{--}0.06$ nats** (several times the $<0.01$-nat inter-seed spread).
   - **Guard verification:** Clipping fires on only **$0.5\text{--}0.6\%$ of steps** ($\sim 15\text{--}18$ steps out of $3{,}000$).
   - **Post-decay EMA:** Matches the live weights to within $0.001$ nats because cosine decay already reduced $\eta_T \to 0$.
 :::
@@ -752,8 +750,8 @@ Diagnose and solve each practical training scenario:
 ::: {.d2l-note}
 **Answers:**
 
-1. **No!** Because AdamW divides $\hat{\mathbf{m}}_t$ by $\sqrt{\hat{\mathbf{v}}_t}$, rescaling $\mathbf{g}_t$ by a tighter global clipping threshold $\theta = 0.2$ rescales both numerator and denominator and leaves the steady-state coordinate step length $\approx \eta$ unchanged! You must **lower the learning rate $\eta$** (e.g., to $3 \times 10^{-3}$).
-2. Decay by $e^{-3}$ takes $3\,\tau_2 = \frac{3}{1 - \beta_2}$ steps: **$3{,}000$ steps at $\beta_2 = 0.999$** versus only **$60$ steps at $\beta_2 = 0.95$** ($20\times$ faster recovery!).
+1. **No.** Because AdamW divides $\hat{\mathbf{m}}_t$ by $\sqrt{\hat{\mathbf{v}}_t}$, rescaling $\mathbf{g}_t$ by a tighter global clipping threshold $\theta = 0.2$ rescales both numerator and denominator and leaves the steady-state coordinate step length $\approx \eta$ unchanged. You must **lower the learning rate $\eta$** (e.g., to $3 \times 10^{-3}$).
+2. Decay by $e^{-3}$ takes $3\,\tau_2 = \frac{3}{1 - \beta_2}$ steps: **$3{,}000$ steps at $\beta_2 = 0.999$** versus only **$60$ steps at $\beta_2 = 0.95$** ($50\times$ faster recovery).
 3. Because the configured run ended with **cosine decay to $\eta_T = 0$**, the noise ball had already shrunk to zero during the final steps; weight EMA shines when evaluating **uncooled constant-rate or WSD-plateau checkpoints**.
 :::
 :::

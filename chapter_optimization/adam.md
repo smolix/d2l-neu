@@ -3,7 +3,7 @@
 
 In :numref:`sec_test_models`, plain minibatch SGD required a learning rate of $\eta = 0.5$ on `TinyLM` to reach a loss of about $2.1$ nats/byte. Adam with $\eta = 3 \times 10^{-3}$, a learning rate more than a hundred times smaller, reaches $1.59$ nats/byte in the same $2{,}000$ steps, as we will measure below. Why does an optimizer with a hundredfold smaller nominal learning rate train faster, and why is it the universal default for Transformers?
 
-Momentum (:numref:`sec_momentum`) averages gradients over time but still applies a single scalar step size to every parameter. Yet in deep networks—and especially Transformers—gradient magnitudes vary by orders of magnitude across embeddings, attention projections, MLP layers, and normalization parameters. **Adam** (*Adaptive Moment Estimation*, :citet:`Kingma.Ba.2014`) combines momentum with a per-coordinate root-mean-square (RMS) gradient preconditioner developed through **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` and **RMSProp** :cite:`Tieleman.Hinton.2012`. Dividing each coordinate's update by its own historical gradient scale makes the learning rate $\eta$ a direct step length in parameter space rather than a multiplier on raw gradients.
+Momentum (:numref:`sec_momentum`) averages gradients over time but still applies a single scalar step size to every parameter. Yet in deep networks, and especially in Transformers, gradient magnitudes vary by orders of magnitude across embeddings, attention projections, MLP layers, and normalization parameters. **Adam** (*Adaptive Moment Estimation*, :citet:`Kingma.Ba.2014`) combines momentum with a per-coordinate root-mean-square (RMS) gradient preconditioner developed through **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` and **RMSProp** :cite:`Tieleman.Hinton.2012`. Dividing each coordinate's update by its own historical gradient scale makes the learning rate $\eta$ a direct step length in parameter space rather than a multiplier on raw gradients.
 
 That same per-coordinate division, however, breaks standard $\ell_2$ regularization: adding $\frac{\lambda}{2}\|\mathbf{x}\|^2$ to the loss rescales each weight's decay rate by the inverse of its gradient scale. :citet:`Loshchilov.Hutter.2019` resolved this by decoupling weight decay from the adaptive preconditioner, creating **AdamW**. In this section, we trace the progression from AdaGrad and RMSProp to Adam, measure coordinate gradient scales and compare Adam against SGD with momentum on `TinyLM`, derive AdamW and its weight-decay timescale $\tau = 1/(\eta\lambda)$ and equilibrium norm, and detail which parameter groups must be exempt from weight decay.
 
@@ -38,7 +38,7 @@ import random
 
 ### AdaGrad and RMSProp
 
-In models with sparse or heterogeneous features—such as token embeddings where common tokens appear in every minibatch and rare tokens appear only occasionally—a single global learning rate cannot serve all coordinates. **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` accumulates the running sum of squared gradients $\mathbf{s}_t$ elementwise and scales each coordinate's step inversely by $\sqrt{\mathbf{s}_t + \epsilon}$:
+In models with sparse or heterogeneous features (such as token embeddings where common tokens appear in every minibatch and rare tokens appear only occasionally), a single global learning rate cannot serve all coordinates. **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` accumulates the running sum of squared gradients $\mathbf{s}_t$ elementwise and scales each coordinate's step inversely by $\sqrt{\mathbf{s}_t + \epsilon}$:
 
 $$
 \mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{g}_t^2,
@@ -525,7 +525,7 @@ $$\tau = \frac{1}{\eta\lambda}$$
 
 steps :cite:`Wang.Aitchison.2025`. At $\eta = 3 \times 10^{-3}$ and $\lambda = 0.1$, the decay timescale is $\tau = 1 / 0.0003 \approx 3{,}333$ steps. Over a $T$-step run, weight decay acts across $T / \tau = T\eta\lambda$ timescales.
 
-Over runs longer than $\tau = 1/(\eta\lambda)$, the initial weights decay away and each coordinate $x_{t,i}$ reaches a stochastic **equilibrium norm** where per-step shrinkage $\eta\lambda x_{t,i}$ balances the injection of normalized updates $-\eta n_{t,i}$ (with $n_{t,i} = g_{t,i}/\sqrt{\hat{v}_{t,i}}$ of unit mean square $\sigma^2 \approx 1$). By the exact same variance recursion as the SGD noise ball :eqref:`eq_sgd-noise-ball` with $\lambda_{\text{decay}}$ in place of curvature:
+Over runs longer than $\tau = 1/(\eta\lambda)$, the initial weights decay away and each coordinate $x_{t,i}$ reaches a stochastic **equilibrium norm** where per-step shrinkage $\eta\lambda x_{t,i}$ balances the injection of normalized updates $-\eta n_{t,i}$ (with $n_{t,i} = g_{t,i}/\sqrt{\hat{v}_{t,i}}$ of unit mean square $\sigma^2 \approx 1$). By the exact same variance recursion as the SGD noise ball (:numref:`sec_sgd`) with $\lambda_{\text{decay}}$ in place of curvature:
 
 $$
 \begin{aligned}
@@ -587,10 +587,7 @@ While AdamW normalizes each weight entry independently, 2D weight matrices act a
 
 ## Summary
 
-* **AdaGrad** scales each coordinate by the inverse root of its cumulative squared gradients, **RMSProp** replaces the cumulative sum with an EMA $\mathbf{v}_t$, and **Adam** adds first-moment momentum $\mathbf{m}_t$ and bias corrections $1 - \beta_1^t, 1 - \beta_2^t$.
-* Because Adam divides $\hat{\mathbf{m}}_t$ by $\sqrt{\hat{\mathbf{v}}_t}$, its update is invariant to diagonal rescaling of the gradient, making the learning rate $\eta$ a direct step length in parameter space and equalizing update magnitudes across Transformer parameter groups whose raw gradients differ by $15\text{--}40\times$.
-* **AdamW** decouples weight decay $\mathbf{x}_{t+1} = (1 - \eta\lambda)\mathbf{x}_t - \eta\hat{\mathbf{m}}_t/(\sqrt{\hat{\mathbf{v}}_t}+\epsilon)$ from the adaptive preconditioner, establishing a uniform decay timescale $\tau = 1/(\eta\lambda)$, an equilibrium weight RMS $\propto \sqrt{\eta/(2\lambda)}$, and a steady relative angular step $\propto \sqrt{2\eta\lambda}$.
-* Standard recipes decay the 2D weight matrices and exempt 1D biases and normalization parameters; following OLMo 2, we also exempt the embedding tables. Storing $(\mathbf{m}_t, \mathbf{v}_t)$ in fp32 accounts for $8$ of the $16$ bytes per trainable parameter.
+**AdaGrad** scales each coordinate inversely by the root of its cumulative squared gradients, **RMSProp** replaces that unbounded sum with a leaky exponential moving average $\mathbf{v}_t$, and **Adam** adds first-moment momentum $\mathbf{m}_t$ together with bias corrections $1 - \beta_1^t$ and $1 - \beta_2^t$. Dividing $\hat{\mathbf{m}}_t$ by $\sqrt{\hat{\mathbf{v}}_t}$ makes Adam invariant to diagonal rescaling of the gradient, turning $\eta$ into a direct coordinate step length in parameter space and equalizing update magnitudes across Transformer parameter groups whose raw gradients differ by $15\text{--}40\times$. **AdamW** decouples weight decay $\mathbf{x}_{t+1} = (1 - \eta\lambda)\mathbf{x}_t - \eta\hat{\mathbf{m}}_t/(\sqrt{\hat{\mathbf{v}}_t}+\epsilon)$ from the adaptive preconditioner, establishing a uniform decay timescale $\tau = 1/(\eta\lambda)$, an equilibrium weight RMS proportional to $\sqrt{\eta/(2\lambda)}$, and a steady relative angular step proportional to $\sqrt{2\eta\lambda}$. Standard recipes decay only 2D weight matrices while exempting 1D biases and normalization parameters (and, following OLMo 2, embedding tables), with $(\mathbf{m}_t, \mathbf{v}_t)$ accounting for $8$ of the $16$ bytes per trainable parameter in `float32`.
 
 ## Exercises
 
@@ -667,7 +664,7 @@ Adaptive Learning-Rate Methods: AdaGrad, RMSProp, Adam, and AdamW<br>**per-coord
 $$\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t$$
 
 - **Rare vs. frequent features:** Infrequently updated coordinates (e.g., rare token embeddings) keep a small denominator $\sqrt{s_{t,i}}$ and take full steps whenever their feature appears.
-- **Automatic axis-aligned preconditioning:** Because $|g_i| = \lambda_i |x_i|$ is proportional to curvature, dividing by $\sqrt{s_{t,i}}$ cancels the $\kappa = 20$ disparity between $x_1$ and $x_2$ on the valley!
+- **Automatic axis-aligned preconditioning:** Because $|g_i| = \lambda_i |x_i|$ is proportional to curvature, dividing by $\sqrt{s_{t,i}}$ cancels the $\kappa = 20$ disparity between $x_1$ and $x_2$ on the valley.
 
 @!adam-per-coordinate-learning-rates-1[out=1]
 :::
@@ -737,8 +734,8 @@ $$\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} 
 ::: {.col}
 - **Exact step-1 magnitude:** At $t = 1$, $\hat{\mathbf{m}}_1 = \mathbf{g}_1$ and $\hat{\mathbf{v}}_1 = \mathbf{g}_1^2$, so for $\sqrt{\hat{v}_{1,i}} \gg \epsilon$:
   $$\Delta x_{1,i} = -\eta\,\frac{g_{1,i}}{|g_{1,i}|} = -\eta\,\operatorname{sign}(g_{1,i})$$
-  Every coordinate moves by **$\pm\eta$** on step 1 ($45^\circ$ diagonal on the valley!).
-- **Diagonal scale invariance:** Multiplying the loss or rescaling coordinate $i$ by $c > 0$ scales $g_{t,i} \to c\,g_{t,i}$, $\hat{m}_{t,i} \to c\,\hat{m}_{t,i}$, and $\sqrt{\hat{v}_{t,i}} \to c\sqrt{\hat{v}_{t,i}}$, canceling $c$ from the ratio!
+  Every coordinate moves by **$\pm\eta$** on step 1 ($45^\circ$ diagonal on the valley).
+- **Diagonal scale invariance:** Multiplying the loss or rescaling coordinate $i$ by $c > 0$ scales $g_{t,i} \to c\,g_{t,i}$, $\hat{m}_{t,i} \to c\,\hat{m}_{t,i}$, and $\sqrt{\hat{v}_{t,i}} \to c\sqrt{\hat{v}_{t,i}}$, canceling $c$ from the ratio.
 - **Step-length bounds:** Persistent gradients step by $\approx \eta$; zero-mean noise steps by $\approx \eta\sqrt{\frac{1-\beta_1}{1+\beta_1}} \approx 0.23\,\eta$.
 :::
 
@@ -762,7 +759,7 @@ Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\math
 - Measuring the RMS gradient magnitude across $10$ minibatches for all $8$ functional parameter groups of `TinyLM` reveals why scalar-LR SGD struggles:
   - **At step 0:** Raw gradient RMS spans a **$40\times$ range** (from $2 \times 10^{-4}$ on `token_emb` to $7 \times 10^{-3}$ on `biases`).
   - **At step 500:** Gradient RMS still spans a **$15\times$ range**.
-- **Adam's equalization:** Dividing by $\sqrt{\hat{\mathbf{v}}_t}$ compresses the actual RMS parameter update $\|\Delta\mathbf{x}\|_{\text{RMS}}/\eta$ across all $8$ groups into a tight **$2\times$ band ($0.12\text{--}0.28\,\eta$)**!
+- **Adam's equalization:** Dividing by $\sqrt{\hat{\mathbf{v}}_t}$ compresses the actual RMS parameter update $\|\Delta\mathbf{x}\|_{\text{RMS}}/\eta$ across all $8$ groups into a tight **$2\times$ band ($0.12\text{--}0.28\,\eta$)**.
 
 @!adam-gradient-scales-in-a-network-2
 :::
@@ -819,7 +816,7 @@ Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\math
 ::: {.col}
 - **Coupled $\ell_2$ penalty inside Adam ($\mathbf{g}_t \leftarrow \mathbf{g}_t + \lambda\mathbf{x}_t$):** Divides the decay penalty by each coordinate's preconditioner:
   $$\Delta x_{t,i}^{\text{decay}} = -\frac{\eta\,\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\; x_{t,i}$$
-- **Pathology:** Weights with small loss gradients are decayed up to $10^3\times$ more harshly than active weights—or normalize the penalty by itself to collapse $x_{t,i} \to 0$ at speed $\eta$/step!
+- **Pathology:** Weights with small loss gradients are decayed up to $10^3\times$ more harshly than active weights—or normalize the penalty by itself to collapse $x_{t,i} \to 0$ at speed $\eta$/step.
 :::
 
 ::: {.col .fig}
@@ -843,10 +840,10 @@ $$\mathbf{x}_{t+1} = (1 - \eta\lambda)\,\mathbf{x}_t - \eta\,\frac{\hat{\mathbf{
 
 ::: {.cols .vc}
 ::: {.col}
-- Training `TinyLM` for $1{,}000$ steps at $\eta = 3 \times 10^{-3}$ and $\lambda = 0.1$ from identical initial weights (initial matrix RMS $= 0.0450$):
-  - **No decay ($\lambda = 0$):** Final loss **$1.68$ nats**; matrix RMS grows to $0.111$.
-  - **Decoupled `AdamW` ($\lambda = 0.1$):** Final loss **$1.67$ nats**; matrix RMS bounded at $0.097$.
-  - **Coupled `Adam + ℓ2` ($\lambda = 0.1$):** Collapses matrix RMS $40\times$ down to **$0.0029$**, erasing internal representations so the model stalls at **$3.20$ nats** (unigram byte frequency entropy $3.17$)!
+- Training `TinyLM` for $1{,}000$ steps at $\eta = 3 \times 10^{-3}$ and $\lambda = 0.1$ from identical initial weights (initial matrix RMS $= 0.0447$):
+  - **No decay ($\lambda = 0$):** Final loss **$\approx 1.74$ nats**; matrix RMS grows to $0.108\text{--}0.110$.
+  - **Decoupled `AdamW` ($\lambda = 0.1$):** Final loss **$1.72\text{--}1.74$ nats**; matrix RMS bounded at $0.097\text{--}0.100$.
+  - **Coupled `Adam + ℓ2` ($\lambda = 0.1$):** Collapses matrix RMS $16\times$ down to **$0.0027\text{--}0.0028$**, erasing internal representations so the model stalls at **$3.15\text{--}3.16$ nats** (unigram byte frequency entropy $3.18$).
 :::
 
 ::: {.col .fig}

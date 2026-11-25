@@ -61,6 +61,11 @@ LADDER_SIZES = ('ladder-25m', 'ladder-54m', 'ladder-88m', 'r2')
 
 #@save
 HOFFMANN_FIT = (1.69, 406.4, 410.7, 0.34, 0.28)  # E, A, B, alpha, beta
+# Hoffmann et al. (2022), as in sec_scaling-laws; budgets.md's FITS too
+
+#@save
+SIMULATED_LADDER = ('ladder pending (campaign C1); '
+                    'simulated at the Hoffmann fit')
 
 #@save
 SIM_SEED_SD = 0.01  # nats, while the t1 seeds are not committed
@@ -128,14 +133,24 @@ def ladder_points():
     elif ({'ladder', 'ladder-evals', 'reference-run'} & d2l.PRETRAIN_PENDING
           or d2l._regenerating()):
         pts = _simulated_ladder()
-        label = 'ladder pending (campaign C1); simulated at the Hoffmann fit'
+        label = SIMULATED_LADDER
     else:
         raise KeyError('ladder-evals is not committed yet')
+    if label != SIMULATED_LADDER and pts['finished'].all():
+        raise ValueError('the ladder has no plateau points')
     pts = pts.assign(tokens_per_param=pts['tokens'] / pts['N'],
                      rank=pts['size'].map(LADDER_SIZES.index))
     pts = pts.sort_values(['finished', 'rank', 'tokens'], ascending=[
         False, True, True]).reset_index(drop=True)[_LADDER_COLUMNS]
     return d2l._show_label(d2l._with_label(pts, label))
+
+#@save
+def show_ladder_label(points):
+    """Print the label of a stand-in ladder (the simulated one while the
+    ladder campaign is pending, or a smoke run), so that no number fitted
+    to it passes for the campaign's; return whether it is simulated."""
+    d2l._show_label(points)
+    return d2l._label_of(points) == SIMULATED_LADDER
 ```
 
 ## The Training Rate
@@ -191,7 +206,10 @@ of milliseconds per step over three timed repeats after one warm-up; peak
 memory from `torch.cuda.max_memory_reserved`; a configuration whose
 estimate or peak exceeds `DECODE_LIMIT_GIB` is infeasible. For the Qwen3
 rows, `d2l.hf_decode_ms` on the Hugging Face model at batch 1 is recorded
-as a cross-check (not printed).
+for reference (not printed): the Hugging Face eager rate, which the
+harness must beat, or the run stops. The page compares the rates with the
+roofline of the bytes a step reads, the whole buffer of `ctx + new_tokens`
+slots.
 
 ```{.python .input #budgets-lib-decode}
 %%tab pytorch
@@ -205,9 +223,15 @@ def _decode_config(name):
             model = d2l.PackedGPT.from_arch(arch)
         return arch.L, arch.H_kv, arch.d_h, model
     import huggingface_hub
+    def get(**kwargs):
+        return huggingface_hub.hf_hub_download(
+            name, 'config.json', revision=d2l.HF_REVISIONS[name], **kwargs)
+
     with d2l._quiet():
-        path = huggingface_hub.hf_hub_download(
-            name, 'config.json', revision=d2l.HF_REVISIONS[name])
+        try:  # the cached copy first: a build host may be offline
+            path = get(local_files_only=True)
+        except Exception:  # noqa: BLE001 (not cached yet)
+            path = get()
     with open(path) as f:
         cfg = json.load(f)
     with torch.device('meta'):
@@ -364,8 +388,14 @@ def _decode_rates(models, batches, ctx, new_tokens):
             rows.append(row)
         del model
         d2l.lm_free()
-        if name != 'r2':  # the Hugging Face cross-check at batch 1
-            rows[first]['hf_ms'] = _hf_check_ms(name, ctx, new_tokens)
+        if name != 'r2':  # the Hugging Face eager rate at batch 1
+            hf_ms = _hf_check_ms(name, ctx, new_tokens)
+            rows[first]['hf_ms'] = hf_ms
+            ms = rows[first]['ms']
+            if not ms < hf_ms:  # NaN (a failed measurement) fails too
+                raise RuntimeError(
+                    f'{name}: the harness ({ms:.1f} ms/step) is not faster '
+                    f'than Hugging Face eager decode ({hf_ms:.1f} ms/step)')
     table = pd.DataFrame(rows)
     table['tok_s'] = np.where(table['feasible'],
                               1e3 * table['batch'] / table['ms'], np.nan)
@@ -398,14 +428,63 @@ def decode_rates(models, batches, ctx, new_tokens):
 
 ## Displays
 
-The decode table and plot, and the ladder-fit plot of the page: formatting
-only; the page computes every number they show.
+The lifetime-cost and ratio-band plots, the decode table and plot, and the
+ladder-fit plot of the page: formatting only; the page computes every
+number they show.
 
 ```{.python .input #budgets-lib-displays}
 %%tab pytorch
 #@save
 def _short(model):
     return model.split('/')[-1]
+
+#@save
+def fmt_power(x, digits=1, tex=False):
+    """x as '10^9' or '7×10^11' at digits significant digits (tex=True:
+    '10^{9}', '7\\times10^{11}' for math text); 0 as '0'."""
+    if x == 0:
+        return '0'
+    mantissa, exponent = f'{x:.{digits - 1}e}'.split('e')
+    power = f'10^{{{int(exponent)}}}' if tex else f'10^{int(exponent)}'
+    if float(mantissa) == 1:
+        return power
+    return mantissa + (r'\times' if tex else '×') + power
+
+#@save
+def fmt_sig(x):
+    """x (positive) with thousands separated, or at two significant digits
+    below 10: '4,368', '28', '0.37'."""
+    return f'{x:,.0f}' if x >= 10 else f'{x:.2g}'
+
+#@save
+def plot_lifetime_cost(N, costs, dots, crosses):
+    """Lifetime FLOPs against N, one curve per demand in costs (demand ->
+    costs at N; the last, the break-even demand, dotted black), a dot at
+    each demand's optimum (dots: (N, cost) per curve) and a cross at the
+    two models of equal cost (crosses: (N, cost) pairs)."""
+    demands = list(costs)
+    D = r'D_{\mathrm{inf}}'
+    legend = [f'${D} = {fmt_power(x, tex=True)}$' for x in demands[:-1]]
+    legend.append(f'break-even ${fmt_power(demands[-1], 2, tex=True)}$')
+    d2l.plot(N, list(costs.values()), 'parameters N', 'lifetime FLOPs',
+             xscale='log', yscale='log', legend=legend,
+             fmts=('-',) * len(dots) + ('k:',), figsize=(4.5, 3),
+             legend_loc='outside')
+    ax = d2l.plt.gca()
+    for i, (n, c) in enumerate(dots):
+        ax.plot(n, c, 'o', color=f'C{i}')
+    ax.plot(*zip(*crosses), 'kx')
+
+#@save
+def plot_ratio_band(demand, ratio):
+    """The optimal D*/N* against demand under each fit (ratio: fit name ->
+    values), with the band between the first two shaded."""
+    d2l.plot(demand, list(ratio.values()),
+             r'generated tokens $D_{\mathrm{inf}}$', 'optimal D*/N*',
+             legend=list(ratio), xscale='log', yscale='log',
+             figsize=(4.5, 3))
+    d2l.plt.gca().fill_between(demand, *list(ratio.values())[:2],
+                               color='gray', alpha=0.2)
 
 #@save
 def show_decode_table(rates):

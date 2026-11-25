@@ -7,14 +7,22 @@ parameter; the lifetime-optimal ratio grows with demand under both fits);
 `lifetime_cost` at no demand is 6ND; the roofline at batch 1 equals
 W / (N w + c k); `effective_tokens` at one epoch and its derivative;
 `fit_law` recovers noiseless exponents, and a warm-started refit reaches
-the minimum of the full search (the L-BFGS-B tolerance regression); the
+the minimum of the full search (the L-BFGS-B tolerance regression);
+`huber_objective`'s gradient against finite differences; the optimum of a
+fit with a tiny exponent raises no overflow, and the ladder-optimum cell's
+feasibility test; the ladder label (`show_ladder_label`, the "no verdict"
+and plateau lines of a simulated ladder; a committed ladder without plateau
+points is refused); `fmt_power` and `fmt_sig`; the decode harness stops
+when it is not faster than Hugging Face eager decode; the
 static decode step equals `forward_cached` (PackedGPT and Qwen3GPT with
 QK-norm); `decode_shapes` (r2's 18,432 cache bytes per token and
 138,440,448 parameters); the pending `decode_rates` table; the simulated
 ladder (the twelve planned points) and a committed ladder table;
 `training_rate` from a log and while pending; the regeneration job
-against the page's literals; and the whole page on the pending path
-(output at most 15 lines per cell and 100 columns).
+against the page's literals; the whole page on the pending path (output
+at most 15 lines per cell and 100 columns, cells 12-17 under 90 s); and
+the fit cells on an ill-identified ladder (like the smoke run's) under
+90 s at the spec's fallback of 500 resamples.
 """
 import contextlib
 import io
@@ -62,10 +70,16 @@ def math_ns():
     return ns
 
 
+FIT_FIRST = 'budgets-fitting-the-chinchilla-form-1'  # law, huber_objective
+FIT_CELLS = [FIT_FIRST, 'budgets-fit-law',
+             'budgets-fitting-the-chinchilla-form-2', 'budgets-recovery',
+             'budgets-intervals', 'budgets-withheld', 'budgets-plateau',
+             'budgets-ladder-optimum']  # spec cells 12-17
+
+
 def fit_ns():
     ns = math_ns()
-    code = page_cells()['budgets-fit-law']
-    exec(code[:code.index('N, D, L =')], ns)  # fit_law and law only
+    run_cells([FIT_FIRST, 'budgets-fit-law'], ns)  # law, fit_law
     return ns
 
 
@@ -146,7 +160,7 @@ class OptimumTest(unittest.TestCase):
         ns = math_ns()
         out = run_cells(['budgets-optimum-checks', 'budgets-ratio-band'], ns)
         self.assertIn('N* decreasing in demand: True', out)
-        self.assertRegex(out, r'D_inf from 1e\+09 to \de\+1\d')
+        self.assertRegex(out, r'every D_inf up to \d×10\^1\d$')
         d2l.plt.close('all')
 
 
@@ -169,8 +183,8 @@ class RooflineAndRepeatTest(unittest.TestCase):
         np.testing.assert_allclose(fd, np.exp(-(E - 1) / 15.4), atol=1e-6)
         out = run_cells(['budgets-imports', 'budgets-imports-extra',
                          'budgets-repeated-data'], {})
-        self.assertIn('marginal value of epoch 4 / 16 / 40: 0.85 / 0.39 / '
-                      '0.08 of a fresh epoch', out)
+        self.assertIn("marginal value dD'/dE at epoch 4 / 16 / 40: 0.82 / "
+                      '0.38 / 0.08 of a fresh epoch', out)
         d2l.plt.close('all')
 
 
@@ -207,6 +221,54 @@ class FitLawTest(unittest.TestCase):
                             self.huber(ns, self.truth, L) * 0.95)
             self.assertLess(abs(self.huber(ns, warm, L)
                                 / self.huber(ns, full, L) - 1), 0.01)
+
+    def test_gradient(self):
+        ns = fit_ns()
+        L = ns['law'](self.N, self.D, *self.truth) + np.random.default_rng(
+            1).normal(0, 0.01, len(self.N))
+        data = np.log(self.N), np.log(self.D), np.log(L)
+        p, h = np.array([0.4, 6.0, 6.2, 0.3, 0.25]), 1e-6
+        f, g = ns['huber_objective'](p, *data)
+        fd = [(ns['huber_objective'](p + h * e, *data)[0]
+               - ns['huber_objective'](p - h * e, *data)[0]) / (2 * h)
+              for e in np.eye(5)]
+        np.testing.assert_allclose(g, fd, rtol=1e-4, atol=1e-10)
+
+
+class FeasibilityTest(unittest.TestCase):
+    def test_tiny_exponent_no_overflow(self):
+        """foc reads 1/D = (b/B)^(1/β), which underflows to 0 near N_min
+        where D overflows; a fit with β = 0.02 solves without warnings."""
+        ns = math_ns()
+        fit = tuple(np.float64(x) for x in (1.07, 54.7, 8.94, 0.22, 0.02))
+        with np.errstate(over='raise', invalid='raise', divide='raise'):
+            N, D = ns['solve_optimum'](np.float64(2.55), 1e11, *fit)
+        self.assertTrue(np.isfinite(N) and np.isfinite(D))
+
+    def test_reaches(self):
+        code = page_cells()['budgets-ladder-optimum']
+        ns = math_ns()
+        exec(code[code.index('MAX_LOG ='):code.index('usable =')], ns)
+        reaches = ns['reaches']
+        self.assertTrue(reaches(3.27, *d2l.HOFFMANN_FIT))
+        self.assertFalse(reaches(1.6, *d2l.HOFFMANN_FIT))  # E above it
+        self.assertFalse(reaches(3.27, 1.69, 406.4, 410.7, 0.0, 0.28))
+        self.assertFalse(reaches(3.27, 1.69, 406.4, 410.7, 0.05, 0.28))
+        self.assertFalse(reaches(3.27, 1.69, 406.4, 0.5, 0.34, 0.28))  # D<1
+
+
+class FormatTest(unittest.TestCase):
+    def test_fmt_power(self):
+        self.assertEqual(d2l.fmt_power(1e9), '10^9')
+        self.assertEqual(d2l.fmt_power(7.2e11), '7×10^11')
+        self.assertEqual(d2l.fmt_power(0), '0')
+        self.assertEqual(d2l.fmt_power(2.34e12, 2, tex=True),
+                         r'2.3\times10^{12}')
+        self.assertEqual(d2l.fmt_power(1e11, tex=True), '10^{11}')
+
+    def test_fmt_sig(self):
+        self.assertEqual([d2l.fmt_sig(x) for x in (4367.6, 28.2, 0.374)],
+                         ['4,368', '28', '0.37'])
 
 
 def toy_packed():
@@ -311,6 +373,27 @@ class ShapesAndPendingTest(unittest.TestCase):
         self._tmp.cleanup()
 
 
+class HarnessCheckTest(unittest.TestCase):
+    def test_slower_than_hf_stops(self):
+        shapes = pd.DataFrame([dict(model='Qwen/Qwen3-0.6B', params=10,
+                                    kv_bytes=4)])
+        model = mock.Mock()
+        model.token_emb.weight.shape = (97, 8)
+        with mock.patch.object(d2l, 'decode_shapes', return_value=shapes), \
+                mock.patch.object(d2l, '_decode_model', return_value=model), \
+                mock.patch.object(d2l, '_time_decode',
+                                  return_value=(30.0, 29.0, 31.0)), \
+                mock.patch.object(d2l, '_hf_check_ms', return_value=25.0), \
+                mock.patch.object(torch.cuda, 'reset_peak_memory_stats'), \
+                mock.patch.object(torch.cuda, 'max_memory_reserved',
+                                  return_value=2**30):
+            with self.assertRaises(RuntimeError):
+                d2l._decode_rates(['Qwen/Qwen3-0.6B'], (1,), 16, 4)
+            d2l._hf_check_ms.return_value = 60.0
+            table = d2l._decode_rates(['Qwen/Qwen3-0.6B'], (1,), 16, 4)
+        self.assertEqual(float(table['hf_ms'][0]), 60.0)
+
+
 class LadderTest(unittest.TestCase):
     def test_plan(self):
         plan = d2l._ladder_plan()
@@ -330,6 +413,10 @@ class LadderTest(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()) as out:
             a, b = d2l.ladder_points(), d2l.ladder_points()
         self.assertIn('simulated at the Hoffmann fit', out.getvalue())
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertTrue(d2l.show_ladder_label(a))
+        self.assertEqual(out.getvalue().strip(),
+                         f'[{d2l.SIMULATED_LADDER}]')
         self.assertEqual(len(a), 12)
         self.assertTrue(a['finished'].all())
         pd.testing.assert_frame_equal(a, b)
@@ -361,6 +448,16 @@ class LadderTest(unittest.TestCase):
         self.assertFalse(pts['finished'][12:].any())
         np.testing.assert_allclose(pts['tokens_per_param'],
                                    pts['tokens'] / pts['N'])
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertFalse(d2l.show_ladder_label(pts))
+        self.assertEqual(out.getvalue().strip(), '[smoke]')
+        finished = Evals(pd.DataFrame([r for r in rows if r['finished']]),
+                         pd.DataFrame(), '')
+        with mock.patch.dict(d2l.DATA_HUB, hub), mock.patch.object(
+                d2l, 'load_artifact', return_value=finished), \
+                contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(ValueError):  # no plateau points
+                d2l.ladder_points()
 
 
 class TrainingRateTest(unittest.TestCase):
@@ -391,9 +488,10 @@ class JobsTest(unittest.TestCase):
         self.assertEqual(eval(m.group(1)), call['models'])
         self.assertIn('CTX = 1024', code)
         self.assertEqual(call['ctx'], 1024)
+        self.assertIn('NEW_TOKENS = 128', cells['budgets-decode-rates'])
         self.assertIn("d2l.decode_rates(MODELS, batches=(1, 8, 32, 128), "
-                      "ctx=CTX,\n                         new_tokens=128)",
-                      cells['budgets-decode-rates'])
+                      "ctx=CTX,\n                         "
+                      "new_tokens=NEW_TOKENS)", cells['budgets-decode-rates'])
         self.assertEqual(call['batches'], (1, 8, 32, 128))
         self.assertEqual(call['new_tokens'], 128)
         self.assertEqual(d2l.PRETRAIN_JOBS['decode-rates'][0], 'decode_rates')
@@ -408,16 +506,17 @@ class PageTest(unittest.TestCase):
     def test_pending_page(self):
         if not qwen_configs_cached():
             self.skipTest('Qwen3 configs not cached')
-        ns, fit_cells, t_fit = {}, False, 0.0
+        ns, fit_cells, t_fit, outs = {}, False, 0.0, {}
         with in_chapter(), mock.patch.object(
                 d2l, 'PRETRAIN_PENDING', d2l.PRETRAIN_PENDING | C1), \
                 mock.patch.dict(os.environ, {'D2L_RERUN': ''}):
             for name, code in page_cells().items():
-                fit_cells |= name == 'budgets-fit-law'
+                fit_cells |= name == FIT_FIRST
                 t = time.time()
                 with contextlib.redirect_stdout(io.StringIO()) as out:
                     exec(code, ns)
                 t_fit += (time.time() - t) if fit_cells else 0.0
+                outs[name] = out.getvalue()
                 lines = out.getvalue().splitlines()
                 self.assertLessEqual(len(lines), 15, name)
                 for line in lines:
@@ -425,6 +524,40 @@ class PageTest(unittest.TestCase):
                 d2l.plt.close('all')
         self.assertLess(t_fit, 90)
         self.assertEqual(ns['dof'], 7)
+        label = f'[{d2l.SIMULATED_LADDER}]'
+        for name in FIT_CELLS[2:]:  # every fit cell's output carries it
+            self.assertTrue(outs[name].startswith(label), name)
+        self.assertIn('no verdict', outs['budgets-intervals'])
+        self.assertNotIn('inside the 95% interval', outs['budgets-intervals'])
+        self.assertIn('simulated ladder: no plateau points to add',
+                      outs['budgets-plateau'])
+        self.assertIn('roofline × 1 (rates pending)',
+                      outs['budgets-measured-optimum'])
+
+    def test_ill_identified_ladder_time(self):
+        """A ladder like the smoke run's (exponents poorly pinned, so the
+        refits run long): fit, recovery and bootstrap at the spec's fallback
+        of 500 resamples take under 90 s."""
+        plan = d2l._ladder_plan()
+        fin = plan[plan['finished']].reset_index(drop=True)
+        N, D = fin['N'].to_numpy(float), fin['tokens'].to_numpy(float)
+        smoke_fit = (1.07, 54.7, 8.94, 0.22, 0.12)  # the smoke ladder's fit
+        E, A, B, alpha, beta = smoke_fit
+        fin['val_loss'] = (E + A / N ** alpha + B / D ** beta
+                           + np.random.default_rng(0).normal(0, 0.06, len(N)))
+        ns = math_ns()
+        ns['fin'] = d2l._with_label(fin, 'smoke')
+        cells = page_cells()
+        t = time.time()
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            for name in FIT_CELLS[:5]:
+                code = cells[name].replace('RESAMPLES = 1000',
+                                           'RESAMPLES = 500')
+                exec(code, ns)
+        t = time.time() - t
+        self.assertIn('500 resamples', out.getvalue())
+        self.assertIn('cannot pin', out.getvalue())
+        self.assertLess(t, 90)
 
 
 if __name__ == '__main__':

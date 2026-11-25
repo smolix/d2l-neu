@@ -897,7 +897,7 @@ To eliminate the exponential horizon growth, we drop the historical product $\rh
 
 $$\rho_t(\theta) = \frac{\pi_\theta(a_t \mid s_t)}{\pi_{\theta_{\textrm{old}}}(a_t \mid s_t)}, \qquad \hat{L}(\theta) = \frac{1}{N} \sum_{i=1}^n \sum_{t=0}^{T_i-1} \rho_t^i(\theta)\, \hat{A}_t^i$$
 
-- **First-Order Consistency:** At $\theta = \theta_{\textrm{old}}$, every ratio is $\rho_t(\theta_{\textrm{old}}) = 1$ and $\nabla_\theta \rho_t(\theta_{\textrm{old}}) = \nabla_\theta \log \pi_\theta(a_t \mid s_t)$, so $\nabla_\theta \hat{L}(\theta_{\textrm{old}})$ equals the standard policy gradient!
+- **First-Order Consistency:** At $\theta = \theta_{\textrm{old}}$, every ratio is $\rho_t(\theta_{\textrm{old}}) = 1$ and $\nabla_\theta \rho_t(\theta_{\textrm{old}}) = \nabla_\theta \log \pi_\theta(a_t \mid s_t)$, so $\nabla_\theta \hat{L}(\theta_{\textrm{old}})$ equals the standard policy gradient.
 - **What Was Dropped:** The surrogate $\hat{L}(\theta)$ evaluates the *new* policy's action probabilities at the *old* policy's state visitation distribution.
 :::
 
@@ -1065,7 +1065,7 @@ Each iteration: roll out, freeze advantages and old log-probabilities, refit the
 ::: {.cols .vc}
 ::: {.col}
 - Because policy-gradient loss stays near zero regardless of performance, we monitor the **clip fraction** and **approximate KL** across the 20 epochs inside a batch.
-- At epoch 1, $\rho_t = 1$ so both are $0$. In clipped PPO, the out-of-band fraction peaks around epoch 5–6 ($\sim 7\%$) and **falls back by half** by epoch 20!
+- At epoch 1, $\rho_t = 1$ so both are $0$. In clipped PPO, the out-of-band fraction peaks around epoch 5–6 ($\sim 7\%$) and **falls back by half** by epoch 20.
 - **Why does it fall?** Samples that cross the band on the *losing* side ($\rho < 0.8$ for $\hat{A} > 0$) retain their unclipped gradient and are pulled back inside.
 :::
 
@@ -1109,7 +1109,7 @@ Each iteration: roll out, freeze advantages and old log-probabilities, refit the
 
 ::: {.cols .vc}
 ::: {.col}
-- **Effective Sample Size ($N_{\textrm{eff}} = 1 / \sum_j \bar{w}_j^2$):** Clipped PPO retains **$N_{\textrm{eff}}/N \approx 98\%$** of the batch at epoch 20, while unclipped saturation halves $N_{\textrm{eff}}/N$ to the harmonic mean of $\pi_{\theta_{\textrm{old}}}(a^* \mid s) \approx 50\%$!
+- **Effective Sample Size ($N_{\textrm{eff}} = 1 / \sum_j \bar{w}_j^2$):** Clipped PPO retains **$N_{\textrm{eff}}/N \approx 96\%$–$97\%$** of the batch at epoch 20, while unclipped saturation cuts $N_{\textrm{eff}}/N$ to roughly half ($\approx 47\%$–$55\%$, near the harmonic mean of $\pi_{\theta_{\textrm{old}}}(a^* \mid s)$).
 :::
 
 ::: {.col .fig}
@@ -1143,7 +1143,7 @@ Test your intuition on three concrete calculations:
 **Answers:**
 
 1. Every $\rho_t = 1$, so $L^{\textrm{CLIP}}(\theta_{\textrm{old}}) = \frac{1}{N}\sum \hat{A}_t = 0$, and $\nabla_\theta L^{\textrm{CLIP}}(\theta_{\textrm{old}}) = \frac{1}{N}\sum \hat{A}_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)$ (the exact single-step policy gradient).
-2. Up to $1.2 \times 0.01 = \mathbf{0.012}$ ($+0.002$ absolute gain) for the rare action, versus $1.2 \times 0.60 = \mathbf{0.72}$ ($+0.12$ gain) for the common action!
+2. Up to $1.2 \times 0.01 = \mathbf{0.012}$ ($+0.002$ absolute gain) for the rare action, versus $1.2 \times 0.60 = \mathbf{0.72}$ ($+0.12$ gain) for the common action.
 3. At step $T-1$ it drops by $\gamma \hat{V}(s_T) = \mathbf{99}$; ten steps earlier ($T-11$) it drops by $(\gamma\lambda)^{10} \cdot 99 \approx \mathbf{54}$, falsely punishing good actions before the cut.
 :::
 :::

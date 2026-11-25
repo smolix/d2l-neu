@@ -819,7 +819,7 @@ Fitting `DynamicsModel` for $1{,}000$ Adam steps on just **one random episode ($
 @!model-based-one-step-by-hand-2
 
 ::: {.d2l-note}
-At step 100 ($\vartheta = -160.2^\circ$, $\dot\vartheta = 5.69\text{ rad/s}$), the pendulum rotates by $15.6^\circ$ in $0.05\text{ s}$; the learned model predicts the next angle to within **$0.06^\circ$** and the reward ($-11.05$) to within $0.25$!
+At step 100 ($\vartheta = -160.2^\circ$, $\dot\vartheta = 5.69\text{ rad/s}$), the pendulum rotates by $15.6^\circ$ in $0.05\text{ s}$; the learned model predicts the next angle to within **$0.4^\circ$** ($0.30^\circ$–$0.39^\circ$) and the reward ($-11.05$) to within $0.25$.
 :::
 :::
 
@@ -849,7 +849,7 @@ At state $s$, **random shooting** draws $J$ candidate action sequences $A^{(j)} 
 @!model-based-random-shooting-1
 
 ::: {.d2l-note}
-**Ranking vs. Calibration:** From the resting bottom state ($\vartheta = \pi$, where hanging still for 25 steps loses $-247$), the model overestimates every sequence by $40$–$70$ points because the random training episode swept past the bottom rapidly—yet the model still **ranks the best real sequence first**!
+**Ranking vs. Calibration:** From the resting bottom state ($\vartheta = \pi$, where hanging still for 25 steps loses $-247$), the model overestimates every sequence by $40$–$70$ points because the random training episode swept past the bottom rapidly—yet the model still **ranks the best real sequence first**.
 :::
 :::
 
@@ -895,7 +895,7 @@ Starting from 1 random episode (200 steps), `mpc_run` alternates refitting the m
 
 @!model-based-swing-up-from-a-few-episodes-2
 
-- **10-Start Benchmark ($\approx -170$ ceiling):** By **600 real steps (3 episodes)**, every seed scores between $-165$ and $-215$—and 3 of the 5 seeds already swing up after the **single random episode (200 steps)**!
+- **10-Start Benchmark ($\approx -170$ ceiling):** By **600 real steps (3 episodes)**, every seed scores between $-165$ and $-215$—and 3 of the 5 seeds already swing up after the **single random episode (200 steps)**.
 :::
 
 ::: {.slide title="Out-of-Support Extrapolation and Self-Correction"}
@@ -906,7 +906,7 @@ Why did seeds 3 and 4 score $\sim -1{,}500$ after the first random episode (200 
 @!model-based-coverage
 
 ::: {.d2l-note}
-**Implicit Exploration via Model Optimism:** On seeds 3 and 4, the initial random episode never lifted the pendulum above horizontal, so the 200-step model had **$20^\circ$–$40^\circ$ errors within 5 steps** in the upper half-plane. Yet even a failed MPC swing-up pushes the pendulum into those unvisited upper angles, recording the true physics there so the next refit succeeds!
+**Implicit Exploration via Model Optimism:** On seeds 3 and 4, the initial random episode never lifted the pendulum above horizontal, so the 200-step model had **$40^\circ$–$72^\circ$ errors within 5 steps** in the upper half-plane. Yet even a failed MPC swing-up pushes the pendulum into those unvisited upper angles, recording the true physics there so the next refit succeeds.
 :::
 :::
 
@@ -1008,7 +1008,7 @@ Reason through these three model-based design questions:
 
 1. At **$n = 5$ ($0.25\text{ s}$)**, the planner is too myopic to see that pumping energy at the bottom pays off $20$ steps later near upright; at **$n = 100$ ($5.0\text{ s}$)**, compounding open-loop errors render the late predicted rewards pure noise.
 2. When $\Delta t = 0.05\text{ s}$, $s' \approx s$, so direct prediction spends most of its capacity learning the identity map $s' = s$, and unstandardized MSE is dominated by the reward $r \in [-16, 0]$ ($\text{var} \sim 20$) over $\Delta\cos\vartheta$ ($\text{var} \sim 0.01$).
-3. The 5 networks agree closely in the lower half-circle (where training data lie) and **disagree strongly in the unvisited upper half-circle**—making ensemble variance an effective epistemic uncertainty signal (PETS; Chua et al., 2018)!
+3. The 5 networks agree closely in the lower half-circle (where training data lie) and **disagree strongly in the unvisited upper half-circle**—making ensemble variance an effective epistemic uncertainty signal (PETS; Chua et al., 2018).
 :::
 :::
 

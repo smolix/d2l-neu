@@ -85,7 +85,7 @@ def td_target(self, bootstrap, gamma):
     return self.rew + gamma * (1 - self.term) * bootstrap(self.next_obs)
 ```
 
-As in the reward-to-go estimator :eqref:`eq_rtg` of :numref:`sec_baselines`, the actor's update omits the factor $\gamma^t$ that would discount late steps of an episode relative to early ones.
+As in the reward-to-go estimator of :numref:`sec_baselines`, the actor's update omits the factor $\gamma^t$ that would discount late steps of an episode relative to early ones.
 
 ### One Transition by Hand
 
@@ -106,7 +106,7 @@ $$
 
 The right-hand side is the advantage $A^\pi(s_t, a_t)$, how much better the action taken is than the policy's average at that state. The learned baseline of :numref:`sec_baselines` estimated it with $\hat{G}_t - \hat{V}(s_t)$. One transition, with one reward and two critic evaluations, gives an unbiased sample of the advantage, where the Monte Carlo weight needed the entire rest of the episode.
 
-During training $\hat{V}$ is not equal to $V^\pi$, and then $\delta_t$ is a biased estimate of the advantage. The zero-mean identity of :numref:`sec_baselines` says that anything fixed before the action may be subtracted from the weight without moving the gradient's mean. It covers $\hat{V}(s_t)$, which depends on the current state only. It does not cover $\hat{V}(s_{t+1})$, which depends on the action through the next state, so the critic's error at the states the actions lead to enters the update as bias (exercise :exref:`ex_actor-critic-why-baseline-argument-does`). This bias comes on top of the tilt that dropping $\gamma^t$ already gives :eqref:`eq_rtg`.
+During training $\hat{V}$ is not equal to $V^\pi$, and then $\delta_t$ is a biased estimate of the advantage. The zero-mean identity of :numref:`sec_baselines` says that anything fixed before the action may be subtracted from the weight without moving the gradient's mean. It covers $\hat{V}(s_t)$, which depends on the current state only. It does not cover $\hat{V}(s_{t+1})$, which depends on the action through the next state, so the critic's error at the states the actions lead to enters the update as bias (exercise :exref:`ex_actor-critic-why-baseline-argument-does`). This bias comes on top of the tilt that dropping $\gamma^t$ already introduces (:numref:`sec_baselines`).
 
 The critic's own update is sampled policy evaluation. Policy evaluation in :numref:`sec_valueiter` applied the Bellman expectation backup, whose fixed point is $V^\pi$. Regressing $\hat{V}(s_t)$ toward $r_t + \gamma \hat{V}(s_{t+1})$ replaces that expectation by one sampled transition, just as Q-learning replaced the optimality backup by a sample. The critic estimates the value of the current policy and the actor improves the policy against that estimate, so actor-critic is an approximate form of the generalized policy iteration of :numref:`sec_valueiter`. Because the regression target contains $\hat{V}$ itself, the gradient is taken through the prediction $\hat{V}(s_t)$ and not through the target. Such an update is called a *semi-gradient* step: its expected update is not the gradient of any fixed objective.
 
@@ -485,7 +485,7 @@ def grad_vec(ac, b, w):
 ```
 
 Next, `freeze` trains a fresh agent with `td_weight` for `warmup=40`
-actor-critic updates—about a quarter of a full run—so we can inspect its
+actor-critic updates (about a quarter of a full run) so we can inspect its
 policy-gradient estimates while its critic is still inaccurate:
 
 ```{.python .input #actor-critic-a-frozen-policy-probe-2}
@@ -897,7 +897,7 @@ We step the actor on raw (unnormalized) TD errors while capping the gradient nor
 @actor-critic-a2c-by-name-1
 
 ::: {.d2l-note}
-**Why raw $\delta_t$ with Adam?** As the critic converges, $\textrm{std}(\delta_t)$ shrinks from $\sim 3.0$ to $\le 0.1$ (mostly critic noise). Because Adam divides by a long running average of squared gradients ($\beta_2 = 0.999$), shrinking raw TD errors naturally anneal the effective step size $\sim 8\times$ near the ceiling, whereas batch-standardized TD errors would amplify late critic noise!
+**Why raw $\delta_t$ with Adam?** As the critic converges, $\textrm{std}(\delta_t)$ shrinks from $\sim 3.0$ to $\le 0.1$ (mostly critic noise). Because Adam divides by a long running average of squared gradients ($\beta_2 = 0.999$), shrinking raw TD errors naturally anneal the effective step size $\sim 8\times$ near the ceiling, whereas batch-standardized TD errors would amplify late critic noise.
 :::
 :::
 
@@ -917,7 +917,7 @@ We step the actor on raw (unnormalized) TD errors while capping the gradient nor
 @actor-critic-a2c-by-name-1[17-]
 
 ::: {.d2l-note}
-**Why raw $\delta_t$ with Adam?** As the critic converges, $\textrm{std}(\delta_t)$ shrinks from $\sim 3.0$ to $\le 0.1$ (mostly critic noise). Because Adam divides by a long running average of squared gradients ($\beta_2 = 0.999$), shrinking raw TD errors naturally anneal the effective step size $\sim 8\times$ near the ceiling, whereas batch-standardized TD errors would amplify late critic noise!
+**Why raw $\delta_t$ with Adam?** As the critic converges, $\textrm{std}(\delta_t)$ shrinks from $\sim 3.0$ to $\le 0.1$ (mostly critic noise). Because Adam divides by a long running average of squared gradients ($\beta_2 = 0.999$), shrinking raw TD errors naturally anneal the effective step size $\sim 8\times$ near the ceiling, whereas batch-standardized TD errors would amplify late critic noise.
 :::
 :::
 
@@ -968,7 +968,7 @@ Each update collects an 8-episode rollout, refits the critic for `critic_steps =
 
 ::: {.cols .vc}
 ::: {.col}
-- Measuring both weights on the exact same trajectories confirms that the TD error's variance is **$10\times$ to $50\times$ smaller** than the Monte Carlo advantage's variance.
+- Measuring both weights on the exact same trajectories confirms that the TD error's variance is **$25\times$ to $60\times$ smaller** than the Monte Carlo advantage's variance.
 - **Why doesn't lower variance win on CartPole?** CartPole's reward is a deterministic $+1$ per step, and bootstrapping at the 500-step truncation cut already removes the infinite tail variance.
 - With 8 episodes per batch, Monte Carlo variance is already manageable, whereas the young critic's **bias** misdirects early actor updates.
 :::
@@ -1059,7 +1059,7 @@ Across the 8 frozen agents, increasing $\lambda$ from $0$ to $1$ drives bias to 
 
 - **Proposition (Exact Critic $\hat{V} = V^\pi$):** Because $\mathbb{E}[\delta_{t+l} \mid s_t, a_t, \delta_t, \dots, \delta_{t+l-1}] = 0$ for all $l \ge 1$ by the Markov property, all cross terms vanish and:
   $$\mathbb{E}\big[(\hat{A}^{\textrm{GAE}}_t)^2 \mid s_t, a_t\big] = \sum_{l=0}^{\infty} (\gamma\lambda)^{2l}\, \mathbb{E}\big[\delta_{t+l}^2 \mid s_t, a_t\big]$$
-  which is strictly minimized at **$\lambda = 0$**. Thus an interior optimum ($\lambda \approx 0.95$) exists *solely* because the critic is imperfect!
+  which is strictly minimized at **$\lambda = 0$**. Thus an interior optimum ($\lambda \approx 0.95$) exists *solely* because the critic is imperfect.
 
 | Estimator Architecture | Reward Structure | Episode Horizon | Extra Cost | Canonical Use Case |
 | :--- | :--- | :--- | :--- | :--- |
@@ -1081,7 +1081,7 @@ Work out these three diagnostic questions:
 
 1. Half-life $l_{1/2} = \ln 2 / (-\ln(\gamma\lambda))$: for $\lambda = 0.95$ ($\gamma\lambda = 0.9405$), **$l_{1/2} \approx 11.3$ steps**; for $\lambda = 1.0$ ($\gamma\lambda = 0.99$), **$l_{1/2} \approx 69.0$ steps**.
 2. **Decrease $\lambda$ toward $0$:** once critic bias vanishes, future TD errors $\delta_{t+l}$ ($l \ge 1$) have zero conditional mean and only add variance.
-3. **Only on nonterminal transitions** where $\gamma c - c = (\gamma - 1)c$ is state-independent; at any state where one action risks termination ($e(s') = 0$), $+c$ biases the actor *against* terminating!
+3. **Only on nonterminal transitions** where $\gamma c - c = (\gamma - 1)c$ is state-independent; at any state where one action risks termination ($e(s') = 0$), $+c$ biases the actor *against* terminating.
 :::
 :::
 

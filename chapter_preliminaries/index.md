@@ -3,9 +3,9 @@
 
 To prepare for your dive into deep learning, you will need a few essential survival skills: (i) techniques for storing and manipulating multidimensional data in memory (:numref:`sec_ndarray`); (ii) tools for ingesting and cleaning tabular data from raw files, complete with missing entries and categorical text fields (:numref:`sec_pandas`); (iii) fluency in the linear-algebraic operations that transform high-dimensional representations and measure their size (:numref:`sec_linear-algebra`); (iv) differential calculus to determine which direction to adjust each parameter in order to decrease a loss function (:numref:`sec_calculus`); (v) automatic differentiation so that the framework handles the chain rule across millions of parameters for you (:numref:`sec_autograd`); and (vi) a working grasp of probability and statistics, our primary language for reasoning under uncertainty and distinguishing genuine signal from sampling noise (:numref:`sec_prob`).
 
-What deep learning adds to classical linear algebra, calculus, and probability is *scale*---applying them to millions or billions of variables where calculation by hand is out of the question. Doing so relies on two software pillars that every subsequent chapter takes for granted: *tensor libraries*, which apply compiled operations to entire arrays of numbers in parallel on CPUs and GPUs, and *automatic differentiation*, which differentiates arbitrary numerical programs mechanically.
+What deep learning adds to classical linear algebra, calculus, and probability is *scale*: we apply them to millions or billions of variables where calculation by hand is out of the question. Doing so relies on two software pillars that every subsequent chapter takes for granted: *tensor libraries*, which apply compiled operations to entire arrays of numbers in parallel on CPUs and GPUs, and *automatic differentiation*, which differentiates arbitrary numerical programs mechanically.
 
-This chapter provides a rapid, hands-on crash course in these prerequisites. If you are already comfortable with NumPy, linear algebra, and multivariable calculus, you can skim the familiar parts---though we still recommend reading :numref:`sec_autograd` on automatic differentiation and :numref:`sec_prob` on standard errors and statistical estimation, as later chapters rely on both constantly. For a deeper theoretical foundation with complete proofs and derivations, our *Mathematics for Deep Learning* appendix develops linear algebra (:numref:`chap_mdl-linear-algebra`), calculus (:numref:`chap_mdl-calculus`), and probability and statistics (:numref:`chap_mdl-probability-statistics`) in full detail.
+This chapter provides a rapid, hands-on crash course in these prerequisites. If you are already comfortable with NumPy, linear algebra, and multivariable calculus, you can skim the familiar parts, though we still recommend reading :numref:`sec_autograd` on automatic differentiation and :numref:`sec_prob` on standard errors and statistical estimation, as later chapters rely on both constantly. For a deeper theoretical foundation with complete proofs and derivations, our *Mathematics for Deep Learning* appendix develops linear algebra (:numref:`chap_mdl-linear-algebra`), calculus (:numref:`chap_mdl-calculus`), and probability and statistics (:numref:`chap_mdl-probability-statistics`) in full detail.
 
 ```toc
 :maxdepth: 2
@@ -34,8 +34,8 @@ Mathematical Foundations and Software Pillars of Deep Learning<br>**tensors · d
 ::: {.cols .vc}
 ::: {.col}
 - **Scale breaks scalar code:** One 256-image Fashion-MNIST batch holds $200{,}704$ pixels; foundation models update $10^9\text{--}10^{12}$ weights per step.
-- **Pillar 1 — Contiguous Tensor Kernels** Pack data into unboxed RAM/VRAM buffers and transform whole batches on SIMD/GPU lanes.
-- **Pillar 2 — Reverse-Mode Autograd** Record the execution DAG to obtain all parameter gradients $\nabla_{\mathbf{w}} L$ in a single backward sweep.
+- **Pillar 1 (Contiguous Tensor Kernels):** Pack data into unboxed RAM/VRAM buffers and transform whole batches on SIMD/GPU lanes.
+- **Pillar 2 (Reverse-Mode Autograd):** Record the execution DAG to obtain all parameter gradients $\nabla_{\mathbf{w}} L$ in a single backward sweep.
 - **Statistical Foundation:** Bound test-set uncertainty ($\sigma/\sqrt{n}$) and update beliefs via Bayes' rule.
 :::
 
@@ -86,7 +86,7 @@ Mathematical Foundations and Software Pillars of Deep Learning<br>**tensors · d
 ::: {.col}
 - **Hands-on systems focus:** Every concept pairs directly with executable framework code for shapes, dtypes, memory aliasing, and gradients.
 - **Must-read sections:** Even if you know NumPy and calculus, study **the autograd section** for DAG semantics (`detach`, in-place hazards) and **the probability section** for finite-sample standard errors.
-- **Deep theoretical proofs:** Jump to **Chapters §{num:chap_mdl-linear-algebra}–§{num:chap_mdl-probability-statistics} (Math Appendix)** for SVD, matrix calculus identities, and MLE asymptotics.
+- **Deep theoretical proofs:** Jump to **Chapters §{num:chap_mdl-linear-algebra}, §{num:chap_mdl-calculus}, and §{num:chap_mdl-probability-statistics} (Math Appendix)** for SVD, matrix calculus identities, and MLE asymptotics.
 :::
 
 ::: {.col .fig .big}

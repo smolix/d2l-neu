@@ -8,15 +8,13 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 So far, we have been working with synthetic data that arrived in ready-made tensors of whatever shape and data type we asked for. To apply deep learning in the wild, however, we must extract messy data stored in arbitrary file formats and preprocess it into clean numerical tensors. Turning a raw table of records into model-ready tensors involves more statistical judgment than the humble word *preprocessing* suggests.
 
-Consider our running example for this section: a small table of ten residential home sales, each recording the number of rooms (`NumRooms`), the roof material (`RoofType`), the floor area in square feet (`Area`), and the sale price in dollars (`Price`). Small as it is, this table exhibits the three headaches that make real-world tabular data awkward to feed directly into a neural network:
+Consider our running example for this section: a small table of ten residential home sales recording the number of rooms (`NumRooms`), roof material (`RoofType`), floor area in square feet (`Area`), and sale price in dollars (`Price`). Small as it is, this table exhibits the three obstacles that prevent feeding raw tabular data straight into a neural network:
 
 1. **Missing values:** three of the ten homes are missing a room count, and four are missing a roof type.
 2. **Categorical text fields:** the roof type is recorded as a word (`Slate` or `Tile`), whereas neural networks compute exclusively with numbers.
-3. **Incommensurate scales:** floor area is measured in thousands of square feet, making its numerical values roughly $500$ times larger than the number of rooms.
+3. **Incommensurate scales:** floor area in square feet is roughly $500$ times larger numerically than the room count.
 
-How we resolve each of these three issues directly shapes what a downstream model can learn. Simply discarding every incomplete row would throw away more than half of our dataset. Encoding `Slate`, `Tile`, and missing roof entries as the integers `0`, `1`, and `2` would fabricate a numerical ordering among unordered categories. And leaving floor area unscaled would allow square footage to dominate any distance calculation or gradient step, rendering the room count almost invisible.
-
-Fortunately, the [pandas](https://pandas.pydata.org/) library :cite:`McKinney.2010` is the standard Python workhorse for loading, inspecting, cleaning, and transforming tabular data. While no substitute for a complete pandas tutorial, this section walks through the core preprocessing pipeline shown in :numref:`fig_pandas_pipeline`, taking a raw CSV file on disk all the way to `float32` feature and target tensors.
+Each obstacle demands a statistical choice: discarding incomplete rows would throw away most of the table, encoding unordered roof types as `0, 1, 2` would invent a false ordering, and leaving square footage unscaled would let it dominate distances and gradients. The [pandas](https://pandas.pydata.org/) library :cite:`McKinney.2010` is Python's standard tool for tabular data; below we walk through the preprocessing pipeline in :numref:`fig_pandas_pipeline`, taking a raw CSV file to `float32` feature and target tensors.
 
 ![From a file to tensors. `read_csv` loads the text file into a DataFrame with gaps and text columns; imputation, encoding, and scaling make every entry a number; `to_numpy` hands the result to the framework as the tensors `X` and `y`.](../img/pandas-pipeline.svg)
 :label:`fig_pandas_pipeline`
@@ -60,9 +58,7 @@ from jax import numpy as jnp
 
 ### CSV Files
 
-*Comma-separated values* (CSV) files are ubiquitous for storing tabular, spreadsheet-like data in plain text. Each line in a CSV file represents one record (row), with its first line typically listing the column headers and commas separating consecutive fields within each line---for example, `"Albert Einstein,March 14 1879,Ulm,Federal polytechnic school,field of gravitational physics"`.
-
-To demonstrate how to load and inspect CSV files with `pandas`, let us write our ten-home dataset to `../data/house_tiny.csv`. Notice that several fields are left blank between consecutive commas (such as `,Tile,2100,290000`), indicating unrecorded values:
+*Comma-separated values* (CSV) files store tabular data in plain text, with column headers on the first line and one comma-delimited record per subsequent line. We write our ten-home dataset to `../data/house_tiny.csv`, where empty fields between consecutive commas (such as `,Tile,2100,290000`) denote unrecorded values:
 
 ```{.python .input #pandas-reading-the-dataset-1}
 os.makedirs(os.path.join('..', 'data'), exist_ok=True)
@@ -81,7 +77,7 @@ with open(data_file, 'w') as f:
 4,,2050,295000''')
 ```
 
-Calling `pd.read_csv` parses the text file into a pandas *DataFrame*---a two-dimensional table of named, typed columns along with an index labeling the rows ($0$ through $9$ along the left margin):
+Calling `pd.read_csv` parses the file into a pandas *DataFrame*, a two-dimensional table of named, typed columns with a row index ($0$ through $9$) along the left margin:
 
 ```{.python .input #pandas-reading-the-dataset-2}
 data = pd.read_csv(data_file)
@@ -92,95 +88,91 @@ Notice that `pandas` automatically replaced every empty field (as well as standa
 
 ### Data Types and Summaries
 
-Before modifying a newly loaded dataset, it is good practice to inspect what `pandas` inferred: how many rows and columns are present, how many non-missing entries each column contains, and what data type was assigned to each column. Calling `data.info()` summarizes all three in a single glance:
+Before modifying a newly loaded dataset, inspect its row and column counts, non-missing entries, and inferred types with `data.info()`:
 
 ```{.python .input #pandas-knowing-your-data-1}
 data.info()
 ```
 
-We see $10$ rows and $4$ columns. While `Area` and `Price` have all $10$ non-null values present, `NumRooms` has only $7$ (so $3$ are missing) and `RoofType` has only $6$ (so $4$ are missing). Look closely at the inferred column data types (`Dtype`): `Area` and `Price` are stored as 64-bit integers (`int64`), yet `NumRooms`---which also counts whole rooms!---was promoted to 64-bit floating point (`float64`). The culprit is the missing data: under the IEEE 754 standard, `NaN` is a special floating-point bit pattern, so standard integer arrays cannot hold it. Meanwhile, `RoofType` has type `str` (or `object` in older pandas releases), indicating a text column that will need to be encoded numerically before any model can ingest it.
+Of the $10$ rows, `Area` and `Price` are complete (`int64`), `NumRooms` has $7$ observed entries (`float64`), and `RoofType` has $6$ (`str`, or `object` in older pandas releases). Notice that `NumRooms` counts whole rooms yet was promoted to `float64`: under IEEE 754, `NaN` is a floating-point bit pattern, so standard integer arrays cannot represent missing entries.
 
-For the numerical columns, calling `data.describe()` computes summary statistics across the observed (non-missing) entries: the count, mean, sample standard deviation (`std`), minimum, quartiles ($25\%$, $50\%$ median, $75\%$), and maximum:
+For the numerical columns, `data.describe()` reports the count, mean, sample standard deviation (`std`), minimum, quartiles, and maximum across observed entries:
 
 ```{.python .input #pandas-knowing-your-data-2}
 data.describe()
 ```
 
-These summary statistics immediately highlight the scale mismatch across columns: `NumRooms` ranges from $2$ to $5$ (with a mean of $3.29$), `Area` ranges from $850$ to $2{,}600$ square feet (with a mean of $1{,}654$, roughly $500$ times the mean room count), and `Price` ranges from $\$127{,}500$ to $\$375{,}000$. We will address this scale disparity shortly when we standardize the numerical features.
+`NumRooms` ranges from $2$ to $5$ (mean $3.29$), whereas `Area` ranges from $850$ to $2{,}600$ square feet (mean $1{,}654$) and `Price` from $\$127{,}500$ to $\$375{,}000$.
 
 ### Separating Inputs and Targets
 
-In supervised learning, our goal is to predict a designated *target* (or *label*) column---here, `Price`---from the remaining *input* (or *feature*) columns (`NumRooms`, `RoofType`, and `Area`). We separate the input features from the target column right at the start so that our subsequent feature transformations never accidentally alter or incorporate the target price. We can slice rows and columns by integer position using `.iloc` (which follows the exact same $0$-based slicing rules as tensors): `data.iloc[:, :3]` selects all rows and the first three columns, while `data.iloc[:, 3]` selects the fourth column:
+In supervised learning, we predict a designated *target* (or *label*) column, here `Price`, from the remaining *input* (*feature*) columns (`NumRooms`, `RoofType`, `Area`). Separating features from the target up front prevents subsequent feature transformations from touching or leaking the target. Using $0$-based positional slicing via `.iloc`, `data.iloc[:, :3]` selects the first three columns and `data.iloc[:, 3]` selects the fourth:
 
 ```{.python .input #pandas-separating-inputs-and-targets-1}
 inputs, targets = data.iloc[:, :3], data.iloc[:, 3]
 list(inputs.columns), targets.name
 ```
 
-While positional slicing with `.iloc` is compact, it is fragile in production pipelines: if an upstream data engineer inserts a new column or reorders the CSV headers, `data.iloc[:, 3]` will silently grab the wrong column without raising an error. Selecting columns explicitly by name---such as `targets = data['Price']` and `inputs = data.drop(columns='Price')`---guards against schema shifts, as you will verify in Exercise 1.
+Positional slicing is compact, but in production pipelines an inserted or reordered CSV column would cause `data.iloc[:, 3]` to grab the wrong target silently; selecting by name (`targets = data['Price']` and `inputs = data.drop(columns='Price')`) avoids this risk (Exercise 1).
 
 ## Cleaning and Encoding
 
 ### Missing Values
 
-Missing values are the "bed bugs" of data science---a persistent nuisance that you will confront throughout your career because sensor readings drop out, survey respondents skip questions, or historical records were never digitized. We can count how many entries are missing in each input column by chaining `.isna()` (which returns a Boolean DataFrame marking missing entries as `True`) with `.sum()` (which sums each column, treating `True` as $1$):
+Missing values arise routinely when sensors drop out, survey respondents skip questions, or historical records go unrecorded. Chaining `.isna()` with `.sum()` counts the missing entries in each column (`True` counts as $1$):
 
 ```{.python .input #pandas-handling-missing-values-1}
 inputs.isna().sum()
 ```
 
-Practitioners handle missing values using three main strategies, each carrying a distinct statistical trade-off (:numref:`fig_pandas_missing`):
+Three strategies are standard, each with a distinct statistical trade-off (:numref:`fig_pandas_missing`):
 
-* **Deletion** simply discards every row (or column) containing a missing value. While effortless to implement, deletion throws away valuable data---and whenever values are not missing completely at random (for instance, if owners of studio apartments disproportionately omit the room count), deleting incomplete rows biases the surviving sample.
-* **Imputation** replaces each `NaN` with an estimated value, such as the column mean or median. Imputation preserves every row in the dataset, though the substituted values are only approximations and artificially reduce the apparent variance of the column.
-* **Missingness indicators** augment imputation with an extra binary ($0/1$) column recording *whether* each entry was originally missing. This allows the model to learn whether the very fact that a value went unrecorded carries predictive signal (for example, if missing room counts occur predominantly on luxury estates). The trade-off is adding an extra feature column for every imputed variable.
+* **Deletion** discards every row (or column) containing a missing value. It is effortless to implement, but it sacrifices data and biases the surviving sample whenever values are not missing completely at random (for instance, if studio apartments disproportionately omit room counts).
+* **Imputation** replaces each `NaN` with an estimate such as the column mean or median, preserving every row at the cost of substituting approximations that reduce the column's apparent spread.
+* **Missingness indicators** pair imputation with an extra binary ($0/1$) column recording *whether* each entry was originally missing, allowing the model to exploit informative missingness (for example, if unreported room counts occur mainly on luxury estates) at the cost of one extra feature per imputed column.
 
 ![Three treatments of a missing room count, on the first four rows of `NumRooms`. Deletion drops the row. Imputation fills in the mean of the seven observed counts, $23/7 \approx 3.29$. A missingness indicator fills in the same mean and adds a column that records where the gap was.](../img/pandas-missing.svg)
 :label:`fig_pandas_missing`
 
-To see why row deletion is untenable on our ten-home table, let us check how many rows survive `inputs.dropna()`:
+On our ten-home table, row deletion (`inputs.dropna()`) leaves very little data:
 
 ```{.python .input #pandas-handling-missing-values-2}
 len(inputs.dropna()), len(inputs)
 ```
 
-Dropping incomplete rows leaves only $4$ of our $10$ homes---discarding $60\%$ of the dataset! We therefore turn to imputation. For numerical features, the most common heuristic is to replace missing entries with the mean of the observed values in that column (or the median, which is more robust when extreme outliers skew the mean). Calling `inputs.fillna(inputs.mean(numeric_only=True))` computes the mean of each numerical column across its observed entries and substitutes that mean wherever `NaN` appears. Because `RoofType` is a text column, it has no numerical mean and its missing entries remain `NaN` until we encode the categorical features in the next step:
+Dropping incomplete rows discards $6$ of our $10$ homes ($60\%$ of the dataset), so we impute instead. Calling `inputs.fillna(inputs.mean(numeric_only=True))` replaces each numerical `NaN` with the mean of that column's observed entries (the median is preferable when outliers skew the mean), while leaving the text column `RoofType` for the categorical step next:
 
 ```{.python .input #pandas-handling-missing-values-3}
 inputs = inputs.fillna(inputs.mean(numeric_only=True))
 inputs
 ```
 
-The three missing room counts in rows $1$, $4$, and $8$ have now been filled with $23/7 \approx 3.285714$, the exact average of the seven observed room counts. Of course, no physical house has $3.29$ rooms; an imputed mean is a statistical placeholder representing an average-sized house with respect to room count.
+Rows $1$, $4$, and $8$ now hold $23/7 \approx 3.285714$, the average of the seven observed room counts. No physical house has $3.29$ rooms; the imputed mean serves as a neutral statistical placeholder.
 
 ### Categorical Features
 
-Next, let us turn to the categorical text column `RoofType`. Including missing values as a distinct state, each home falls into one of three unordered categories: `Slate`, `Tile`, or missing (`NaN`). Because neural networks require numerical inputs, a tempting shortcut is to assign arbitrary integer codes such as $\textrm{Slate} = 0$, $\textrm{Tile} = 1$, and $\textrm{missing} = 2$. For unordered categories, however, single-integer coding is a conceptual trap: it forces any linear combination of the features to treat `Tile` as halfway between `Slate` and an unrecorded roof, inventing an algebraic ordering and distance ratio that do not exist in reality.
+Including missing entries as a distinct state, `RoofType` falls into three unordered categories: `Slate`, `Tile`, or `NaN`. Assigning single integer codes such as $\textrm{Slate} = 0$, $\textrm{Tile} = 1$, and $\textrm{missing} = 2$ would force any linear combination of features to treat `Tile` as halfway between `Slate` and an unrecorded roof, imposing an artificial metric and ordering.
 
-The standard solution is *one-hot encoding* (also called *dummy variable encoding*), which replaces a categorical column having $k$ distinct categories with $k$ separate binary ($0/1$) indicator columns---one per category. For any given row, the indicator column corresponding to that home's category is set to $1.0$ and the remaining $k - 1$ indicator columns are set to $0.0$, placing all categories on an equal, symmetric footing.
-
-In `pandas`, `pd.get_dummies` performs one-hot encoding automatically across all string/categorical columns while leaving numerical columns untouched. Passing `dummy_na=True` instructs `pandas` to create an explicit indicator column (`RoofType_nan`) for missing entries---applying the missingness-indicator strategy directly to the categorical feature---and passing `dtype=float` stores the indicators as floating-point numbers ($0.0$ and $1.0$) rather than Booleans:
+*One-hot encoding* (*dummy variable encoding*) avoids this trap by replacing a $k$-category column with $k$ binary ($0/1$) indicator columns, setting the active category's entry to $1.0$ and the other $k - 1$ entries to $0.0$. In `pandas`, `pd.get_dummies` encodes all string/categorical columns while leaving numerical columns intact; `dummy_na=True` adds an explicit `RoofType_nan` missingness indicator, and `dtype=float` stores $0.0/1.0$ floats rather than Booleans:
 
 ```{.python .input #pandas-encoding-categorical-features-1}
 inputs = pd.get_dummies(inputs, dummy_na=True, dtype=float)
 inputs
 ```
 
-As shown above, `RoofType` has been expanded into three binary columns: `RoofType_Slate`, `RoofType_Tile`, and `RoofType_nan`. Notice that in every row, exactly one of those three columns equals $1.0$ and the other two equal $0.0$ (so the three columns sum identically to $1$, making one of them algebraically redundant if a model already includes an intercept bias; similarly, a strictly binary feature with no missing values requires only a single $0/1$ column). Every entry in `inputs` is now a valid floating-point or integer number.
-
-Keep in mind that one-hot encoding is ideal when a categorical feature has a modest number of distinct values (say, a few dozen). When a categorical column has tens of thousands of distinct values---such as postal ZIP codes, user IDs, or words in a natural-language vocabulary---one-hot encoding would create thousands of sparse columns filled almost entirely with zeros. For high-cardinality categories, deep learning models instead map each category ID to a compact, dense vector of learnable parameters called an *embedding*, which we will introduce in :numref:`sec_rnn`.
+In every row, `RoofType_Slate`, `RoofType_Tile`, and `RoofType_nan` sum to $1.0$ (making one column redundant alongside an intercept bias; likewise, a two-state column with no missing values needs only one $0/1$ indicator). One-hot encoding suits modest category counts, whereas columns with tens of thousands of categories (such as postal codes, user IDs, or vocabulary words) are mapped instead to compact learnable *embeddings* (:numref:`sec_rnn`).
 
 ## Scaling and Converting
 
 ### Standardization
 
-Although every column in `inputs` is now numerical, our two continuous features---`NumRooms` and `Area`---still live on vastly different measurement scales. In raw units, a difference of $2$ rooms is numerically smaller than a difference of $3$ square feet! If we compute the Euclidean distance between two homes or apply weight decay equally across parameters, the floor area in square feet will completely overwhelm the room count. Even worse, as we will see when we train linear regression from scratch (:numref:`sec_linear_scratch`) and study curvature in optimization (:numref:`chap_optimization`), features whose scales differ by orders of magnitude create elongated, ill-conditioned loss surfaces that force gradient descent to crawl at a tiny learning rate.
+Although every column in `inputs` is now numerical, `NumRooms` and `Area` live on incompatible measurement scales: in raw units, a difference of $2$ rooms is numerically smaller than $3$ square feet. Unscaled square footage would dominate Euclidean distances and weight penalties, and as we will see in :numref:`sec_linear_scratch` and :numref:`chap_optimization`, multi-order scale gaps stretch the loss surface into narrow valleys that slow gradient descent.
 
-To put all continuous features on an equal footing, we apply *standardization* (also called *z-score normalization*), transforming each entry $x$ of a numerical column according to
+*Standardization* (*z-score normalization*) puts continuous features on a common scale by mapping each entry $x$ to
 
 $$\frac{x - \mu}{\sigma},$$
 
-where $\mu$ is the column's sample mean and $\sigma = \sqrt{\frac{1}{n-1}\sum_{i=1}^n (x_i - \mu)^2}$ is its sample standard deviation (we explain Bessel's $n - 1$ denominator correction in :numref:`sec_prob`). After standardization, every transformed numerical column has a mean of $0$ and a standard deviation of $1$, and each entry simply expresses how many standard deviations above or below the column average that observation lies---making the representation completely invariant to whether floor area was originally recorded in square feet, square meters, or acres. Because our one-hot indicator columns already live on $[0, 1]$, we standardize only the continuous columns `['NumRooms', 'Area']`:
+where $\mu$ is the column's sample mean and $\sigma = \sqrt{\frac{1}{n-1}\sum_{i=1}^n (x_i - \mu)^2}$ is its sample standard deviation (Bessel's $n - 1$ denominator is derived in :numref:`sec_prob`). Every standardized column has mean $0$ and standard deviation $1$, measuring observations in unitless standard deviations regardless of whether area was recorded in square feet or square meters. Because our one-hot indicators already lie in $\{0, 1\}$, we standardize only `['NumRooms', 'Area']`:
 
 ```{.python .input #pandas-numerical-features-1}
 numerical = ['NumRooms', 'Area']
@@ -189,19 +181,19 @@ inputs[numerical] = (inputs[numerical] - mu) / sigma
 inputs
 ```
 
-Look at row $6$, the largest home in the table ($5$ rooms and $2{,}600$ square feet): its standardized values are $1.89$ for `NumRooms` and $1.70$ for `Area`, immediately revealing that the house lies roughly $1.7$ to $1.9$ standard deviations above average on both dimensions. Meanwhile, the three imputed room counts in rows $1$, $4$, and $8$ have become $0.000000$, because mean imputation placed them at the exact column mean $\mu$. Notice, however, a subtle side effect of mean imputation (:numref:`fig_pandas_imputation_spread`): inserting three artificial observations at $\mu$ contributed zero squared deviation to the numerator of $\sigma$ while increasing the sample count $n$ from $7$ to $10$, shrinking the standard deviation of `NumRooms` from $1.11$ (across the $7$ observed homes) to $0.91$ (across all $10$ rows) and thereby inflating the standardized $z$-scores of the non-missing rooms (from $1.54$ to $1.89$ for the 5-room house).
+Row $6$ ($5$ rooms, $2{,}600$ square feet) now reads $(1.89, 1.70)$, about $1.7$ to $1.9$ standard deviations above average on both dimensions, while the three mean-imputed room counts in rows $1$, $4$, and $8$ sit at $0.0$. Notice the side effect shown in :numref:`fig_pandas_imputation_spread`: placing three imputed rows at $\mu$ adds zero to the numerator of $\sigma$ while raising $n$ from $7$ to $10$, shrinking the room-count standard deviation from $1.11$ to $0.91$ and inflating the observed $z$-scores (from $1.54$ to $1.89$ on row $6$).
 
 ![The room counts before and after mean imputation. The three imputed counts (orange) all land on the mean $\mu$ of the seven observed ones, so the column is less spread out than the data it came from: its standard deviation falls from $1.11$ to $0.91$.](../img/pandas-imputation-spread.svg)
 :label:`fig_pandas_imputation_spread`
 
-Before moving on, we must highlight one critical methodological rule. In our ten-row illustration above, we computed the imputation means and the standardization parameters ($\mu$ and $\sigma$) across the entire table at once. In any real machine learning workflow where the dataset is split into a *training set* and a *test set*, **all preprocessing statistics---imputation means, medians, category vocabularies, and standardization $\mu$ and $\sigma$---must be computed exclusively on the training set**, and then applied unchanged to transform the test set (:numref:`fig_pandas_leakage`). Computing preprocessing statistics across the combined dataset allows information from the held-out test set to *leak* into the training pipeline (a pitfall known as *data leakage*), which can lead to overly optimistic test scores. We enforce this training-only rule rigorously when we tackle a full real-estate benchmark in :numref:`sec_kaggle_house`, and you will quantify the effect of leakage first-hand in Exercise 4.
+One methodological rule is paramount whenever a dataset is split into a *training set* and a *test set*: **all preprocessing statistics, including imputation means or medians, category vocabularies, and standardization $(\mu, \sigma)$, must be fitted exclusively on the training set** and applied unchanged to the test set (:numref:`fig_pandas_leakage`). Fitting statistics on the combined dataset leaks information from the held-out test split into training (*data leakage*) and inflates test scores; we enforce this rule on a full real-estate benchmark in :numref:`sec_kaggle_house` (see also Exercise 4).
 
 ![The order of fitting and splitting. (a) Statistics fitted on all rows have already seen the test set, so the test score comes out too optimistic. (b) Statistics fitted on the training split alone are applied unchanged to both splits, and the test set stays unseen.](../img/pandas-leakage-split.svg)
 :label:`fig_pandas_leakage`
 
 ### Conversion to Tensors
 
-Now that every entry in `inputs` and `targets` is a clean, properly scaled floating-point number, the final step is converting our pandas DataFrame and Series into framework tensors (recall :numref:`sec_ndarray`). Calling `.to_numpy(dtype='float32')` extracts the underlying table values as a contiguous 32-bit floating-point NumPy array (converting from pandas' default 64-bit `float64`), which we then pass directly to our framework's tensor constructor:
+Finally, `.to_numpy(dtype='float32')` extracts the cleaned columns as contiguous 32-bit floating-point NumPy arrays (downcasting from pandas' default `float64`), ready for our framework's tensor constructor (:numref:`sec_ndarray`):
 
 ```{.python .input #pandas-conversion-to-tensor-format}
 %%tab mxnet
@@ -231,9 +223,7 @@ y = jnp.array(targets.to_numpy(dtype='float32'))
 X.shape, X.dtype, y.shape, y.dtype
 ```
 
-Our feature matrix `X` has shape `(10, 5)`---one row for each of the $10$ homes and one column for each of the $5$ processed features ($2$ standardized numerical columns plus $3$ one-hot roof-type indicators)---and our target vector `y` has shape `(10,)`, both stored in `float32`.
-
-While our ten-home table kept the mechanics transparent, data preprocessing in production systems can get considerably more involved. Rather than residing in a single flat CSV file, enterprise data are often distributed across multiple tables in a relational database or data warehouse (for example, customer profiles in one table, product catalogs in a second, and timestamped transaction logs in a third) that must be joined and aggregated before modeling. Furthermore, real-world datasets are frequently plagued by sensor glitches, corrupted records, and non-standard sentinel values (such as recording an unknown latitude as `-9999`), making exploratory data analysis and visualization tools such as [Matplotlib](https://matplotlib.org/) and [seaborn](https://seaborn.pydata.org/) invaluable before fitting any model. Now that our data are assembled into a clean design matrix $\mathbf{X}$ with one example per row, the next section introduces the linear-algebraic operations that models apply to such matrices.
+The feature matrix `X` has shape `(10, 5)` ($10$ homes by $2$ standardized numerical features plus $3$ roof-type indicators) and the target vector `y` has shape `(10,)`, both in `float32`. Production pipelines often join multiple relational tables and screen for corrupted records or sentinel codes (such as `-9999` for an unknown coordinate) before reaching this stage; once assembled into a design matrix $\mathbf{X}$, data flow into the linear-algebraic operations of the next section.
 
 ## Summary
 
@@ -296,12 +286,12 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 
 ::: {.cols}
 ::: {.col}
-- **Heterogeneous types & gaps:** Real-world CSV logs mix numerical columns (`int64`, `float64`), free-text categorical strings (`"Slate"`, `"Tile"`), and unrecorded `NaN` entries—whereas tensor kernels require dense, homogeneous floating-point buffers.
+- **Heterogeneous types & gaps:** Real-world CSV logs mix numerical columns (`int64`, `float64`), free-text categorical strings (`"Slate"`, `"Tile"`), and unrecorded `NaN` entries, whereas tensor kernels require dense, homogeneous floating-point buffers.
 - **Incommensurate scales:** In our house-price dataset, `Area` ($\sim 10^3\text{ sq ft}$) is roughly $500\times$ larger than `NumRooms` ($\sim 10^0$), skewing distances and gradients if left unscaled.
 :::
 
 ::: {.col}
-- **Statistical judgment, not boilerplate:** Every preprocessing choice—dropping vs. imputing `NaN`s, integer vs. one-hot encoding, whole-table vs. training-split scaling—imposes an explicit statistical assumption on what the downstream model can learn.
+- **Statistical judgment, not boilerplate:** Every preprocessing choice (dropping vs. imputing `NaN`s, integer vs. one-hot encoding, whole-table vs. training-split scaling) imposes an explicit statistical assumption on what the downstream model can learn.
 :::
 :::
 :::
@@ -371,7 +361,7 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 ::: {.col}
 - **Counting gaps (`isna().sum()`):** Sums the Boolean missingness mask per column (`NumRooms`: 3 missing, `RoofType`: 4 missing).
 - **Why `dropna()` fails in practice:**
-  1. **Sample destruction:** Dropping incomplete rows (`inputs.dropna()`) keeps only **4 of 10 homes**, destroying $60\%$ of our dataset!
+  1. **Sample destruction:** Dropping incomplete rows (`inputs.dropna()`) keeps only **4 of 10 homes**, discarding $60\%$ of our dataset.
   2. **Selection bias:** Whenever values are *not* missing completely at random (e.g., studio apartments or luxury estates disproportionately omitting room counts), row deletion biases the surviving sample.
 
 @pandas-handling-missing-values-1
@@ -407,7 +397,7 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why integer IDs fail on unordered categories:** Assigning $\textrm{Slate}=0, \textrm{Tile}=1, \textrm{missing}=2$ forces any linear layer $\mathbf{x}^\top \mathbf{w}$ to treat `Tile` as halfway between `Slate` and an unrecorded roof—inventing a false ordering and metric distance.
+- **Why integer IDs fail on unordered categories:** Assigning $\textrm{Slate}=0, \textrm{Tile}=1, \textrm{missing}=2$ forces any linear layer $\mathbf{x}^\top \mathbf{w}$ to treat `Tile` as halfway between `Slate` and an unrecorded roof, inventing a false ordering and metric distance.
 - **One-hot basis vectors in $\mathbb{R}^K$:** `pd.get_dummies(..., dummy_na=True, dtype=float)` expands $K$ categories into $K$ orthogonal $0/1$ columns (including `RoofType_nan` as a dedicated missingness channel), placing every category at equal Euclidean distance $\sqrt{2}$.
 :::
 
@@ -423,7 +413,7 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 ::: {.cols .vc}
 ::: {.col}
 - **Row-sum invariant:** In every row, `Slate + Tile + nan = 1.0`, placing categories at orthogonal corners of $\mathbb{R}^K$.
-- **High-cardinality limit:** For $K = 50{,}000$ ZIP codes or tokens, one-hot vectors are $99.99\%$ zeros—use learned **embeddings** $\mathbf{E} \in \mathbb{R}^{K \times d}$ ($d \ll K$) instead.
+- **High-cardinality limit:** For $K = 50{,}000$ ZIP codes or tokens, one-hot vectors are $99.99\%$ zeros; use learned **embeddings** $\mathbf{E} \in \mathbb{R}^{K \times d}$ ($d \ll K$) instead.
 :::
 
 ::: {.col .fig}
@@ -463,7 +453,7 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 ::: {.cols .vc}
 ::: {.col}
 - **Scale continuous features only:** We standardize `['NumRooms', 'Area']` while leaving the one-hot columns `RoofType_*` untouched on $\{0.0, 1.0\}$ so binary presence/absence semantics remain intact.
-- **Interpreting $z$-scores:** Row 6 (5 rooms, $2{,}600\text{ sq ft}$) maps to $(+1.89, +1.70)$—immediately revealing that the home sits $\approx 1.7\text{--}1.9\sigma$ above average on both dimensions.
+- **Interpreting $z$-scores:** Row 6 (5 rooms, $2{,}600\text{ sq ft}$) maps to $(+1.89, +1.70)$, showing that the home sits $\approx 1.7\text{--}1.9\sigma$ above average on both dimensions.
 - **Imputed entries map to $0$:** Rows 1, 4, and 8 were filled with $\mu_{\text{Rooms}}$, so their standardized room count is identically $0.0$.
 :::
 
@@ -511,7 +501,7 @@ Identify the statistical or systems bug in each preprocessing snippet:
 
 1. **Data leakage:** Test rows $800\ldots N$ influenced $\mu$ and $\sigma$. Compute `mu, sigma` on `train` only, then transform both `train` and `test` with those training parameters.
 2. **False metric ordering:** A single weight $w_{\text{neigh}}$ forces $\hat{y}(\text{Suburb}) - \hat{y}(\text{Downtown}) = \hat{y}(\text{Rural}) - \hat{y}(\text{Suburb})$. Use one-hot encoding instead.
-3. **Feature-dimension mismatch:** `test_df` will lack the `RoofType_Slate` column, causing a shape mismatch (or misaligned weights!) at matrix multiplication time. Align `test_df` to `train_df`'s columns.
+3. **Feature-dimension mismatch:** `test_df` will lack the `RoofType_Slate` column, causing a shape mismatch (or misaligned weights) at matrix multiplication time. Align `test_df` to `train_df`'s columns.
 :::
 :::
 

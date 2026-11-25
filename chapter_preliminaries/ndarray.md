@@ -90,7 +90,7 @@ x = jnp.arange(12, dtype=jnp.float32)
 x
 ```
 
-Each value in a tensor is an *element*. We can query the total number of elements in `x`---its *size*:
+Each value in a tensor is an *element*. We can query the total number of elements in `x` (its *size*):
 
 :begin_tab:`pytorch`
 In PyTorch, the total element count is returned by `numel()`.
@@ -324,7 +324,7 @@ X = tf.reshape(x, (3, 4))
 X
 ```
 
-Because the total size is fixed, passing `-1` for one dimension lets the framework infer its length automatically—for example, flattening our $(256, 1, 28, 28)$ image minibatch into a $(256, 784)$ matrix with one image per row:
+Because the total size is fixed, passing `-1` for one dimension lets the framework infer its length automatically; for example, we can flatten our $(256, 1, 28, 28)$ image minibatch into a $(256, 784)$ matrix with one image per row:
 
 :begin_tab:`tensorflow`
 In TensorFlow, `reshape` is a function `tf.reshape(x, (-1, 4))`.
@@ -478,7 +478,7 @@ jnp.where(mask, X, 0)
 
 ### Writing Elements
 
-Whether a tensor can be overwritten in place depends on the framework; the tab note shows how yours updates an entry:
+Whether a tensor can be overwritten in place depends on the framework's design:
 
 :begin_tab:`mxnet`
 MXNet tensors are *mutable*: `X[i, j] = val` overwrites memory in place. We assign `17` to `X[1, 2]` (flat index $6$) and inspect both `X` and `x`:
@@ -705,7 +705,7 @@ Adding `a + b` virtually replicates `a` across two columns and `b` across three 
 a + b
 ```
 
-If any pair of aligned dimensions differs and neither is $1$---such as `(3, 2)` and `(2, 3)`---broadcasting raises an error:
+If any pair of aligned dimensions differs and neither is $1$ (such as `(3, 2)` and `(2, 3)`), broadcasting raises an error:
 
 :begin_tab:`mxnet`
 We print the final summary line of MXNet's exception:
@@ -884,7 +884,7 @@ Converting between framework tensors and NumPy arrays is routine at the boundary
 :end_tab:
 
 :begin_tab:`pytorch`
-On the CPU, `X.numpy()` and `torch.from_numpy(A)` **share the exact same underlying memory buffer**, so mutating one in place immediately modifies the other! After the write below, both `X[0, 0]` and `B[0, 0]` change to `100.`
+On the CPU, `X.numpy()` and `torch.from_numpy(A)` **share the exact same underlying memory buffer**, so mutating one in place immediately modifies the other: after the write below, both `X[0, 0]` and `B[0, 0]` change to `100.0`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -951,10 +951,12 @@ except ValueError as e:
     print(e)
 ```
 
-To extract a single-element ($0^\textrm{th}$-order) tensor into a Python `float` or `int` (for example, when logging the scalar loss), call `.item()` or `float()`/`int()` (which forces the CPU to synchronize with any pending GPU kernels):
+:begin_tab:`mxnet, pytorch, jax`
+To extract a single-element ($0^\textrm{th}$-order) tensor into a Python `float` or `int` (for example, when logging the scalar loss), call `.item()`, `float()`, or `int()`, noting that doing so forces the CPU to synchronize with any pending GPU kernels:
+:end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow tensors use `.numpy()`, `float()`, or `int()` instead of `.item()`.
+To extract a single-element ($0^\textrm{th}$-order) tensor into a Python `float` or `int` (for example, when logging the scalar loss), call `.numpy()`, `float()`, or `int()`, noting that doing so forces the CPU to synchronize with any pending GPU kernels:
 :end_tab:
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-2}
@@ -985,7 +987,7 @@ a, a.item(), float(a), int(a)
 
 ## Summary
 
-Tensors store inputs, parameters, activations, and gradients as $n$-dimensional arrays characterized by a `shape` and a `dtype`. Deep learning code expresses computations over whole tensors at once—rescaling all $200{,}704$ pixels of a minibatch in a single compiled operation (`images / 255`). We reconfigure axes with `reshape`, extract or modify subsets with integer indices, slices, and Boolean masks (`where`), join tensors with `concatenate` and `stack`, and combine differently shaped tensors via *broadcasting* (aligning shapes from the right and stretching singleton axes). Finally, where tensors are mutable, in-place updates (`Z[:] = ...`, `X += Y`) reuse memory; otherwise mutable containers or the compiler take over that role.
+Tensors store inputs, parameters, activations, and gradients as $n$-dimensional arrays characterized by a `shape` and a `dtype`. Deep learning code expresses computations over whole tensors at once, rescaling all $200{,}704$ pixels of a minibatch in a single compiled operation (`images / 255`). We reconfigure axes with `reshape`, extract or modify subsets with integer indices, slices, and Boolean masks (`where`), join tensors with `concatenate` and `stack`, and combine differently shaped tensors via *broadcasting* (aligning shapes from the right and stretching singleton axes). Finally, where tensors are mutable, in-place updates (`Z[:] = ...`, `X += Y`) reuse memory; otherwise mutable containers or the compiler take over that role.
 
 ## Exercises
 
@@ -993,11 +995,19 @@ Tensors store inputs, parameters, activations, and gradients as $n$-dimensional 
     1. Predict the output shape of reshaping the minibatch to `(-1, 784)` versus `(256, -1)`, first for a full minibatch of $n = 256$ images and then for the final, smaller minibatch of an epoch with $n = 100$ images. Which of the two target shapes works reliably for *any* batch size $n$?
     1. Suppose the images were accidentally loaded in 3-channel RGB format of shape $(n, 3, 28, 28)$. What happens when you reshape that tensor to `(-1, 784)`? Does `reshape(-1, 784)` catch the channel-count mistake, or does it silently scramble the batch dimension?
 
-1. [code] **Broadcasting shapes and silent bugs.** Broadcasting aligns two shape tuples from the right.
+:begin_tab:`mxnet, pytorch, jax`
+2. [code] **Broadcasting shapes and silent bugs.** Broadcasting aligns two shape tuples from the right.
     1. Construct two $3^\textrm{rd}$-order tensors `a` and `b` whose shapes differ along every single axis yet are broadcast-compatible. Predict the shape of `a + b` by hand, then run the code to verify your prediction.
     1. A regression model outputs a column of predictions `y_hat` of shape $(5, 1)$ for five examples whose ground-truth targets `y` are stored as a 1D vector of shape $(5,)$. Predict the shape of the residual `y_hat - y`. Next, let `y` hold `[0.0, 1.0, 2.0, 3.0, 4.0]` and set `y_hat = y.reshape(5, 1)` so that every prediction equals its true label identically. Compute the mean of the squared entries of `y_hat - y`, explain why this "mean squared error" is nonzero even though the predictions are perfect, and show how to reshape `y` (or `y_hat`) so that each prediction is compared only against its own label.
+:end_tab:
 
-1. [code] **Arithmetic limits of data types.** Raw pixels in `images` are stored as 8-bit unsigned integers (`uint8`), whereas neural network layers compute in floating point (`float32`).
+:begin_tab:`tensorflow`
+2. [code] **Broadcasting shapes and silent bugs.** Broadcasting aligns two shape tuples from the right.
+    1. Construct two $3^\textrm{rd}$-order tensors `a` and `b` whose shapes differ along every single axis yet are broadcast-compatible. Predict the shape of `a + b` by hand, then run the code to verify your prediction.
+    1. A regression model outputs a column of predictions `y_hat` of shape $(5, 1)$ for five examples whose ground-truth targets `y` are stored as a 1D vector of shape $(5,)$. Predict the shape of the residual `y_hat - y`. Next, let `y` hold `[0.0, 1.0, 2.0, 3.0, 4.0]` and set `y_hat = tf.reshape(y, (5, 1))` so that every prediction equals its true label identically. Compute the mean of the squared entries of `y_hat - y`, explain why this "mean squared error" is nonzero even though the predictions are perfect, and show how to reshape `y` (or `y_hat`) so that each prediction is compared only against its own label.
+:end_tab:
+
+3. [code] **Arithmetic limits of data types.** Raw pixels in `images` are stored as 8-bit unsigned integers (`uint8`), whereas neural network layers compute in floating point (`float32`).
     1. Predict the numerical result of adding `100` to a `uint8` tensor entry holding the value `200`, and verify your prediction in code. Explain why this wrap-around occurs, and show how to brighten the first image of `images` by $100$ intensity levels (clamped or promoted) without integer overflow.
     1. An IEEE 754 `float32` number allocates $24$ bits of significand (mantissa) precision. Explain why `float32` can represent every consecutive integer up to $2^{24} = 16{,}777{,}216$ exactly, and verify in code that evaluating `float32(2**24) + float32(1)` leaves the number unchanged at $16{,}777{,}216$. If a training loop accumulates the total number of examples or tokens processed in a `float32` scalar counter (incrementing by $1$ each time), after how many examples will the counter freeze completely, and what data type should be used instead?
 
@@ -1080,7 +1090,7 @@ Every tensor pairs a **1D contiguous storage buffer** with a small **metadata he
 
 $$\textrm{index}(i_0, \ldots, i_{k-1}) = \textrm{offset} + \sum_{r=0}^{k-1} i_r s_r$$
 
-- **$O(1)$ zero-copy views** (`reshape`, slices `X[1:3]`, transpose, broadcasting $s_r = 0$) create a new header pointing to the *same* buffer.
+- **$O(1)$ strided views** (slices `X[1:3]`, transpose, broadcasting $s_r = 0$, and contiguous `reshape` where views are supported) create a new header over the *same* buffer.
 - **$O(N)$ allocations** (`X + Y`, gather, mask, `cat`) write a brand-new buffer.
 :::
 
@@ -1125,7 +1135,7 @@ $$\textrm{index}(i_0, \ldots, i_{k-1}) = \textrm{offset} + \sum_{r=0}^{k-1} i_r 
 ::: {.cols .vc}
 ::: {.col}
 - **`float32` (4 B):** Default for master weights, gradients, and loss reductions ($4\text{ GB} / 10^9$ params).
-- **`bfloat16` (2 B):** Keeps `float32`'s 8-bit exponent (**same dynamic range**, no overflow!) while halving HBM traffic for Tensor Core matmuls.
+- **`bfloat16` (2 B):** Keeps `float32`'s 8-bit exponent (**same dynamic range**, avoiding overflow) while halving HBM traffic for Tensor Core matmuls.
 - **`uint8` (1 B) & `int64` (8 B):** Compact raw image pixels ($0\ldots 255$) and exact class/token indices.
 
 @ndarray-initial-values-2
@@ -1192,7 +1202,7 @@ $$\textrm{index}(i_0, \ldots, i_{k-1}) = \textrm{offset} + \sum_{r=0}^{k-1} i_r 
 ::: {.cols .vc}
 ::: {.col}
 - `x.reshape(3, 4)` replaces shape `(12,)` with `(3, 4)` without moving the 12 elements (**row-major order**: column stride $1$, row stride $4$).
-- For contiguous memory, `reshape` is an $O(1)$ metadata operation returning a **view** over the same buffer.
+- On contiguous mutable tensors, `reshape` updates only shape/stride metadata in $O(1)$ time (allocating a copy only when strides are non-contiguous or the backend copies).
 
 @ndarray-getting-started-5
 :::
@@ -1250,7 +1260,7 @@ Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory 
 **Answers:**
 
 1. `images[5]` has shape **`(1, 28, 28)`** (axis 0 removed); `images[5:6]` has shape **`(1, 1, 28, 28)`** (axis 0 kept with length 1). Both are $O(1)$ zero-copy views.
-2. **`(64, 1, 14, 14)`**: takes 64 images and every second row/column by doubling spatial strides—still a zero-copy view!
+2. **`(64, 1, 14, 14)`**: takes 64 images and every second row/column by doubling spatial strides, still a strided slice.
 3. `reshape(256, -1)` **raises an error** ($96 \times 784$ is not divisible by 256); `reshape(-1, 784)` safely infers **`(96, 784)`**.
 :::
 :::
@@ -1260,7 +1270,7 @@ Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Integer gather:** Pairs row and column indices—used in cross-entropy to pluck the true-class score per example.
+- **Integer gather:** Pairs row and column indices, used in cross-entropy to pluck the true-class score per example.
 - **Mask vs. `where`:** Masking collapses matches to a **1D vector**, whereas `where(mask, X, 0)` preserves the 2D shape for ReLU and attention masks.
 
 @ndarray-indexing-and-slicing-5
@@ -1277,7 +1287,7 @@ Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory 
 
 ::: {.cols .vc}
 ::: {.col}
-- Because `X = x.reshape(3, 4)` is a **view** sharing `x`'s storage buffer, `X[1, 2] = 17` writes to offset $1 \times 4 + 2 = 6$ in place—mutating `x[6]` to `17` as well!
+- Because `X = x.reshape(3, 4)` is a **view** sharing `x`'s storage buffer, `X[1, 2] = 17` writes to offset $1 \times 4 + 2 = 6$ in place, mutating `x[6]` to `17` as well.
 
 @ndarray-indexing-and-slicing-2
 :::
@@ -1405,7 +1415,7 @@ When two shapes differ, **broadcasting** aligns and virtually expands length-1 a
 2. **Match or stretch:** At each axis, lengths must match or one must be `1`.
 
 ::: {.d2l-note}
-**Zero-copy trick:** Stretching a length-1 axis to length $n$ sets its **stride to `0`**—the kernel reads the same memory address $n$ times without copying data!
+**Zero-copy trick:** Stretching a length-1 axis to length $n$ sets its **stride to `0`**, so the kernel reads the same memory address $n$ times without copying data.
 :::
 :::
 
@@ -1417,13 +1427,13 @@ When two shapes differ, **broadcasting** aligns and virtually expands length-1 a
 :::
 :::
 
-::: {.slide title="When Broadcasting Fails—and When It Silently Bugs!"}
+::: {.slide title="When Broadcasting Fails and When It Creates Silent Bugs"}
 [Broadcasting Pitfalls]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **Loud error (`(3, 2)` + `(2, 3)`):** Trailing axes $2 \neq 3$ neither match nor equal `1`.
-- **Silent bug (`(B, 1)` − `(B,)` $\to$ `(B, B)`):** Right-alignment treats `y: (B,)` as `(1, B)`, turning `y_hat - y` into all $B^2$ pairwise differences!
+- **Silent bug (`(B, 1)` − `(B,)` $\to$ `(B, B)`):** Right-alignment treats `y: (B,)` as `(1, B)`, turning `y_hat - y` into all $B^2$ pairwise differences.
 
 @ndarray-broadcasting-3
 :::
@@ -1509,7 +1519,7 @@ When two shapes differ, **broadcasting** aligns and virtually expands length-1 a
 
 ::: {.cols .vc}
 ::: {.col}
-- **Shared CPU buffer (`X.numpy()` / `torch.from_numpy(A)`):** Shares the same contiguous RAM buffer (**zero copy**)—mutating `A` mutates `X` and `B`!
+- **Shared CPU buffer (`X.numpy()` / `torch.from_numpy(A)`):** Shares the same contiguous RAM buffer (**zero copy**), so mutating `A` mutates `X` and `B`.
 - **Scalar extraction (`.item()`, `float()`):** Converts a 1-element tensor to a Python number (triggers a GPU–CPU sync barrier, so log periodically).
 
 @ndarray-conversion-to-other-python-objects-3
@@ -1566,7 +1576,7 @@ When two shapes differ, **broadcasting** aligns and virtually expands length-1 a
 
 | Operation | Example | Output Shape | Memory Behavior | Primary Deep Learning Role |
 | :--- | :--- | :--- | :--- | :--- |
-| **Reshape / Flatten** | `images.reshape(-1, 784)` | `(256, 784)` | **Zero-copy view** ($O(1)$) | Bridge 4D spatial tensors to 2D linear layers |
+| **Reshape / Flatten** | `images.reshape(-1, 784)` | `(256, 784)` | **View** ($O(1)$ if contiguous) or copy | Bridge 4D spatial tensors to 2D linear layers |
 | **Slice / Stride** | `images[:32]`, `X[1:3]` | `(32, 1, 28, 28)` | **Zero-copy view** ($O(1)$) | Micro-batching, cropping, strided subsampling |
 | **Broadcasting** | `X + b` (`(3, 4) + (4,)`) | `(3, 4)` | **Virtual stride $= 0$** | Per-channel biases, batch normalization |
 | **Gather / Mask** | `X[rows, cols]`, `X[mask]` | `(3,)`, `(k,)` | **New buffer** ($O(k)$ copy) | Cross-entropy target log-probs, filtering |

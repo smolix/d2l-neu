@@ -23899,6 +23899,10 @@ def _inst_t1_job():
                 seeds=(0, 1), steps=400,
                 tau=d2l.tau_rule(t1[t1['seed'] == 0], 76, 400))
 
+d2l.DATA_HUB['lm-lowp-runs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lowp-runs-v1.json.gz',
+    '4954512fee110cd470d3888a497aa68732336892')
+
 d2l.PRETRAIN_ARTIFACTS['gemm-sweep'] = (
     'lm-fp8-gemm-sweep-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['lowp-runs'] = (
@@ -25840,8 +25844,11 @@ d2l.DATA_HUB['lm-lc-long-60m-v1'] = (
 d2l.DATA_HUB['lm-pg19-test-v1'] = (
     d2l.LM_DATA_URL + 'lm-pg19-test-v1.tar',
     'a92784936e0d0da6a0623c0b9bd22d335b3a39df')
+d2l.DATA_HUB['lm-lc-t1-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lc-t1-v1.json.gz',
+    '05a0b45828fbfe613d5b63e0eaa3e275b618f0c2')
 
-_LC_PENDING = {'lc-t1', 'lc-zeroshot', 'lc-t2-evals'}
+_LC_PENDING = {'lc-zeroshot', 'lc-t2-evals'}
 d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _LC_PENDING
 
 d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'] = (  # the zero-shot part

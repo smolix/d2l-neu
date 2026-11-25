@@ -49,6 +49,9 @@ d2l.DATA_HUB['lm-lc-long-60m-v1'] = (
 d2l.DATA_HUB['lm-pg19-test-v1'] = (
     d2l.LM_DATA_URL + 'lm-pg19-test-v1.tar',
     'a92784936e0d0da6a0623c0b9bd22d335b3a39df')
+d2l.DATA_HUB['lm-lc-t1-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lc-t1-v1.json.gz',
+    '05a0b45828fbfe613d5b63e0eaa3e275b618f0c2')
 ```
 
 The section's results and inputs. Until a campaign's result is committed
@@ -58,7 +61,7 @@ stand-in) instead of failing.
 ```{.python .input #long-context-lib-artifacts}
 %%tab pytorch
 #@save
-_LC_PENDING = {'lc-t1', 'lc-zeroshot', 'lc-t2-evals'}
+_LC_PENDING = {'lc-zeroshot', 'lc-t2-evals'}
 d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _LC_PENDING
 
 #@save

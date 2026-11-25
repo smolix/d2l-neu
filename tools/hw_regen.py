@@ -2,7 +2,7 @@
 """Run one regeneration of chapter 22 (Hardware for Training and Inference)
 without a notebook.
 
-    python tools/hw_regen.py <name> [--processes 3] [--replace]
+    python tools/hw_regen.py <name> [--processes 3] [--replace] [--config C]
     python tools/hw_regen.py --prefetch
 
 `<name>` is a key of `d2l.HW_ARTIFACTS` (box-microbench, box-workloads,
@@ -29,6 +29,11 @@ was contended (re-run on a quiet box), 1 failure.
 `--prefetch` downloads every registered chapter-22 artifact and the pinned
 model configurations quietly, so a capture run never downloads. `--out DIR`
 writes under DIR instead of ../data/lm/rerun/ch22 (the campaign launcher).
+`--config C` runs the driver with config=C for a campaign elsewhere: the
+output is the campaign log that `d2l.HW_CONFIG_LOGS[(name, C)]` names (for
+example `box-microbench --config t2` writes `lm-hw-a100-microbench-v1`), its
+records carry that configuration's tier, and the driver refuses a GPU that
+is not the campaign's chip-table row.
 """
 import argparse
 import hashlib
@@ -70,7 +75,10 @@ def prefetch(d2l):
 
 def child(d2l, name):
     driver, kwargs = d2l.HW_JOBS[name]
-    getattr(d2l, driver)(**kwargs())
+    kw = kwargs()
+    if os.environ.get('D2L_HW_CONFIG'):
+        kw['config'] = os.environ['D2L_HW_CONFIG']
+    getattr(d2l, driver)(**kw)
     return 0
 
 
@@ -107,11 +115,16 @@ def main():
                    help='delete an earlier unregistered regeneration folder')
     p.add_argument('--prefetch', action='store_true')
     p.add_argument('--out')
+    p.add_argument('--config', help='a campaign configuration of the driver')
     p.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
     a = p.parse_args()
     os.chdir(CHAPTER)
     if a.out:
         os.environ['D2L_HW_OUT'] = os.path.abspath(os.path.join(REPO, a.out))
+    if a.config:
+        os.environ['D2L_HW_CONFIG'] = a.config
+    elif not a.child:
+        os.environ.pop('D2L_HW_CONFIG', None)
     if a.prefetch:
         os.environ.pop('D2L_RERUN', None)
         from d2l import torch as d2l
@@ -129,9 +142,13 @@ def main():
         print(f'{a.name}: driver d2l.{driver} is not defined yet',
               file=sys.stderr)
         return 2
+    if a.config and (a.name, a.config) not in d2l.HW_CONFIG_LOGS:
+        print(f'{a.name} has no campaign configuration {a.config!r}',
+              file=sys.stderr)
+        return 2
     if a.child:
         return child(d2l, a.name)
-    key, kind = d2l.HW_ARTIFACTS[a.name]
+    key, kind = d2l._hw_regen_key(a.name)
     os.environ.pop('D2L_HW_PROC', None)
     folder = d2l._hw_regen_dir(a.name)
     out = folder + d2l._HW_EXT[kind]

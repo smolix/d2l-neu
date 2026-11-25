@@ -167,6 +167,36 @@ class TestResult(Registry):
         r = d2l.hw_box_log('t-multi', 'ladder')
         self.assertEqual(list(r.n), [1, 2, 3])
 
+    def test_regeneration_refuses_unregistered_dependency(self):
+        """A tools/hw_regen.py process of one name never reads another
+        name's unregistered folder (a notebook rerun still may)."""
+        self.regenerate('t-multi', entry='ladder')
+        os.environ['D2L_RERUN'] = 't-table'
+        with mock.patch.dict(os.environ, {'D2L_HW_PROC': '0'}):
+            with self.assertRaisesRegex(RuntimeError, 'not registered'):
+                d2l.hw_box_log('t-multi', 'ladder')
+            with mock.patch.object(d2l, 'HW_PENDING',
+                                   frozenset({'t-multi'})):
+                self.assertIsNotNone(d2l._hw_folder('t-multi'))
+
+    def test_config_writes_campaign_log(self):
+        with mock.patch.dict(d2l.HW_CAMPAIGNS, {
+                't-camp': ('lm-hw-t-camp-v1', 'tar', 'C-T9', 'A100 PCIe 40 GB')}), \
+                mock.patch.dict(d2l.HW_CONFIG_LOGS,
+                                {('t-multi', 't9'): 't-camp'}, clear=True):
+            self.assertEqual(d2l._hw_regen_key('t-multi'),
+                             ('lm-hw-test-multi-v1', 'tar'))
+            with mock.patch.dict(os.environ, {'D2L_HW_CONFIG': 't9'}):
+                self.assertEqual(os.path.basename(
+                    d2l._hw_regen_dir('t-multi')), 'lm-hw-t-camp-v1')
+                r = self.regenerate('t-multi', entry='ladder')
+                _, meta = d2l._hw_read(os.path.join(
+                    self.out, 'lm-hw-t-camp-v1', 'ladder.json.gz'))
+                self.assertEqual(meta['run'], 't9')
+            with mock.patch.dict(os.environ, {'D2L_HW_CONFIG': 'nope'}):
+                with self.assertRaisesRegex(KeyError, 'nope'):
+                    d2l._hw_regen_dir('t-multi')
+
     def test_process_folders(self):
         os.environ['D2L_HW_PROC'] = '1'
         try:
@@ -195,6 +225,17 @@ class TestResult(Registry):
         self.assertEqual(buf.getvalue().splitlines(),
                          ['shown', 'live values on RTX 9999: not run '
                           '(RuntimeError)'])
+        buf = io.StringIO()
+        with mock.patch.object(d2l, 'download_keyed', return_value=packed), \
+                mock.patch.object(torch.cuda, 'is_available',
+                                  return_value=True), \
+                mock.patch.object(torch.cuda, 'get_device_name',
+                                  return_value='NVIDIA GeForce RTX 9999'), \
+                contextlib.redirect_stdout(buf):
+            d2l._hw_result('t-multi', self.compute, dict(n=3),
+                           entry='ladder', live_check=lambda r, s: 'ok',
+                           live_label='L1')
+        self.assertEqual(buf.getvalue(), 'live values (L1) on RTX 9999: ok\n')
 
     def test_box_log_entries(self):
         self.regenerate('t-multi', entry='a')
@@ -251,6 +292,10 @@ class TestRegistries(unittest.TestCase):
             'chip-specs', 'links', 'tiers', 'systems', 'prices',
             'inferencex-snapshot'})
         self.assertEqual(d2l.HW_PENDING, frozenset())
+        for (name, config), log in d2l.HW_CONFIG_LOGS.items():
+            self.assertIn(name, d2l.HW_JOBS)
+            self.assertIn(config, d2l._HW_TIERS)
+            self.assertIn(log, d2l.HW_CAMPAIGNS)
 
     def test_chapter_blocks(self):
         """One statement per registry entry, no definitions in a registry
@@ -344,6 +389,9 @@ class TestCombine(unittest.TestCase):
         np.testing.assert_array_equal(nested['arr'], [3.0, 6.0])
         with self.assertRaisesRegex(ValueError, 'kind'):
             d2l._hw_combine([frames[0], frames[1].assign(kind=['a', 'c'])])
+        # spread (max - min) / median per row of each column that differs
+        np.testing.assert_allclose(out.attrs['spread']['ms'], [1.0, 2.0])
+        self.assertNotIn('n', out.attrs['spread'])
 
 
 class TestConfigs(unittest.TestCase):
@@ -402,6 +450,14 @@ class TestTable(unittest.TestCase):
         self.assertEqual(buf.getvalue().splitlines()[-1], '... 5 more rows')
         with self.assertRaisesRegex(ValueError, 'wide'):
             d2l.show_table(pd.DataFrame({'x' * 120: [1]}))
+
+    def test_fmt_significant_digits(self):
+        self.assertEqual(d2l._hw_fmt(533907.3), '534,000')
+        self.assertEqual(d2l._hw_fmt(1234.5), '1,230')
+        self.assertEqual(d2l._hw_fmt(912.345), '912')
+        self.assertEqual(d2l._hw_fmt(128256), '128,256')  # an exact count
+        self.assertEqual(d2l._hw_fmt(1800.0), '1,800')  # a whole figure
+        self.assertEqual(d2l._hw_fmt(np.nan), '')
 
 
 class TestTriton(unittest.TestCase):
@@ -580,8 +636,14 @@ def synthetic_ladder():
     rows += [dict(bytes=s, kind='copy', gbs=3000.0 if s <= 2**25 else 850.0,
                   ms=1.0, mad=0.01) for s in sizes]
     df = pd.DataFrame(rows)
-    df.attrs.update(gpu='RTX 4090', l2_bytes=72 * 2**20)
+    df.attrs.update(gpu='RTX 4090', l2_bytes=72 * 2**20,
+                    mem_bytes=25386352640)
     return df
+
+
+def specs_patch():
+    """d2l.chip_specs() as the committed CSV (no download)."""
+    return mock.patch.object(d2l, 'chip_specs', committed_specs)
 
 
 class TestDisplays(unittest.TestCase):
@@ -594,28 +656,68 @@ class TestDisplays(unittest.TestCase):
         dtypes = pd.DataFrame({'format': ['fp32', 'tf32', 'bf16', 'fp16',
                                           'fp8'],
                                'tflops': [60.0, 80.0, 150.0, 150.0, 300.0]})
-        smem = dict(tbs=30.0, peak_tbs=45.0)
-        with quiet() as buf:
-            t = d2l.datasheet_vs_measured(specs.loc['RTX 4090'],
-                                          synthetic_ladder(), dtypes, smem)
+        dtypes.attrs.update(gpu='RTX 4090', mem_bytes=25386352640)
+        smem = dict(tbs=30.0, peak_tbs=45.0, n_sm=128, sm_mhz=2750.0,
+                    gpu='RTX 4090')
+        entries = dict(ladder=synthetic_ladder(), dtypes=dtypes, smem=smem)
+        t = d2l._hw_sheet_table(specs.loc['RTX 4090'], entries)
         self.assertEqual(len(t), 8)
         self.assertAlmostEqual(t.loc['DRAM read (GB/s)', 'fraction'],
                                900 / 1008)
         self.assertAlmostEqual(t.loc['BF16 (TFLOP/s)', 'fraction'],
                                150 / 165.2)
-        self.assertAlmostEqual(t.loc['shared memory (TB/s)', 'fraction'],
-                               30 / 45)
+        self.assertAlmostEqual(t.loc['L1 loads (TB/s)*', 'fraction'], 30 / 45)
         self.assertTrue(np.isnan(t.loc['L2 read (GB/s)', 'datasheet']))
-        text = buf.getvalue()
-        self.assertLessEqual(len(text.splitlines()), 15)
-        self.assertLessEqual(max(map(len, text.splitlines())), 100)
+        with specs_patch(), quiet() as buf:
+            out = d2l.datasheet_vs_measured(specs.loc['RTX 4090'],
+                                            synthetic_ladder(), dtypes, smem)
+        self.assertIsNone(out)  # prints only
+        lines = buf.getvalue().splitlines()
+        self.assertLessEqual(len(lines), 15)
+        self.assertLessEqual(max(map(len, lines)), 79)
+        self.assertEqual(lines[-1], '* bound, not a datasheet figure: 128 '
+                         'SMs x 128 B/clk x 2.75 GHz')
+        # a log measured on another GPU is refused, not compared
+        other = synthetic_ladder()
+        other.attrs.update(gpu='A100-SXM4-80GB', mem_bytes=80 * 2**30)
+        with specs_patch(), quiet() as buf:
+            d2l.datasheet_vs_measured(specs.loc['A100 PCIe 40 GB'],
+                                      dict(ladder=other))
+        self.assertEqual(buf.getvalue(), 'measured on A100-SXM4-80GB (80 GiB)'
+                         ', not the A100 PCIe 40 GB: no datasheet comparison\n')
         pending = d2l.hw_campaign_log('a100-microbench')
-        with quiet() as buf:
-            t = d2l.datasheet_vs_measured(specs.loc['A100 PCIe 40 GB'],
-                                          pending)
+        with specs_patch(), quiet() as buf:
+            d2l.datasheet_vs_measured(specs.loc['A100 PCIe 40 GB'], pending)
         self.assertTrue(buf.getvalue().startswith(
             'A100 PCIe 40 GB: campaign C-T2 not run yet'))
-        self.assertTrue(t.measured.isna().all())
+
+    def test_chip_row(self):
+        specs = committed_specs()
+        row = lambda gpu, mem: d2l._hw_chip_row(gpu, mem, specs)
+        self.assertEqual(row('RTX 4090', 25386352640), 'RTX 4090')
+        self.assertEqual(row('A100-PCIE-40GB', 42505273344),
+                         'A100 PCIe 40 GB')
+        self.assertIsNone(row('A100-SXM4-80GB', 85899345920))
+        self.assertIsNone(row('A100-PCIE-40GB', 85899345920))  # memory
+        self.assertEqual(row('A100-PCIE-40GB', None), 'A100 PCIe 40 GB')
+        self.assertIsNone(row(None, None))
+
+    def test_show_dtypes(self):
+        r = pd.DataFrame({'format': ['bf16', 'fp8'], 'tflops': [175.0, 350.0],
+                          'sm_mhz': [2790.0, 2805.0],
+                          'power_w': [431.0, 445.0]})
+        r.attrs.update(gpu='RTX 4090', mem_bytes=25386352640,
+                       spread={'tflops': [0.012, 0.004]})
+        with specs_patch(), quiet() as buf:
+            d2l._show_dtypes(r)
+        lines = buf.getvalue().splitlines()
+        self.assertEqual(lines[0].split(), ['format', 'TFLOP/s', 'spread',
+                                            'datasheet', 'fraction', 'SM',
+                                            'GHz', 'W'])
+        self.assertEqual(lines[1].split(), ['bf16', '180', '1.2%', '165',
+                                            '106%', '2.79', '431'])
+        self.assertEqual(lines[-1],
+                         'datasheet peaks assume the 2.52 GHz boost clock')
 
     def test_show_env(self):
         env = dict(gpu='NVIDIA GeForce RTX 4090', n_gpu=1, n_host=4, n_sm=128,
@@ -624,13 +726,24 @@ class TestDisplays(unittest.TestCase):
                    pcie_link_gen_max=4, pcie_link_width_max=16,
                    pcie_link_gen_current=1, pcie_link_width_current=16,
                    driver='595.71.05', cuda='12.8', torch='2.11.0',
-                   nccl='2.28.9', toolchain='triton 3.6.0')
+                   nccl='2.28.9', triton='3.6.0')
         with quiet() as buf:
             d2l.show_env(env)
         lines = buf.getvalue().splitlines()
         self.assertEqual(len(lines), 6)
         self.assertEqual(lines[0], 'GPU: RTX 4090 (1 visible, 4 on the host)')
         self.assertIn('Gen 4 x16 (max)', lines[4])
+        self.assertEqual(lines[5], 'driver 595.71.05, NCCL 2.28.9, CUDA 12.8, '
+                         'torch 2.11.0, Triton 3.6.0')
+        partial = dict(env, clocks_max_sm=None, power_limit=None)  # no smi
+        with quiet() as buf:
+            d2l.show_env(partial)
+        self.assertIn('max SM clock: n/a MHz', buf.getvalue())
+        with quiet() as buf:  # a reader without a GPU
+            d2l.show_env(dict(gpu=None, n_gpu=0, cuda=None, torch='2.11.0',
+                              triton=None))
+        self.assertEqual(buf.getvalue(), 'no CUDA GPU visible; CUDA None, '
+                         'torch 2.11.0, Triton absent\n')
 
     def test_show_table_no_index_name(self):
         with quiet() as buf:
@@ -645,14 +758,34 @@ class TestDisplays(unittest.TestCase):
         with quiet() as buf:
             d2l.plot_ladder(synthetic_ladder(), committed_specs(),
                             reference=d2l.hw_campaign_log('a100-microbench'))
+        self.assertEqual(buf.getvalue(),
+                         'A100 PCIe 40 GB: campaign C-T2 pending\n')
+        labels = [t.get_text() for t in
+                  d2l.plt.gca().get_legend().get_texts()]
+        self.assertEqual(labels, ['read', 'copy (read + write)',
+                                  'datasheet 1,008 GB/s',
+                                  'L2 edge (36-72 MiB)'])
+        other = synthetic_ladder()
+        other.attrs.update(gpu='A100-SXM4-80GB', mem_bytes=80 * 2**30)
+        with quiet() as buf:
+            d2l.plot_ladder(synthetic_ladder(), committed_specs(),
+                            reference=dict(ladder=other))
+        self.assertIn('not plotted', buf.getvalue())
+        with specs_patch(), quiet() as buf:
+            d2l._show_ladder(synthetic_ladder())
         lines = buf.getvalue().splitlines()
-        self.assertEqual(len(lines), 4)
+        self.assertEqual(len(lines), 3)
         self.assertIn('4.4x the DRAM read', lines[0])
         self.assertIn('89% of the datasheet 1,008 GB/s', lines[1])
-        self.assertEqual(lines[3], 'A100 PCIe 40 GB: campaign C-T2 pending')
-        lat = pd.DataFrame({'bytes': [4096, 2**20, 2**30],
-                            'ns_per_load': [30.0, 200.0, 600.0]})
-        lat.attrs.update(l2_bytes=72 * 2**20, smem_per_sm=100 * 2**10)
+        lat = pd.DataFrame({'bytes': [2**k for k in range(12, 31)],
+                            'ns_per_load': [17.0] * 4 + [60.0] * 4
+                            + [97.0] * 5 + [150.0] * 3 + [220.0] * 3})
+        lat.attrs.update(l2_bytes=72 * 2**20, l1_bytes=128 * 2**10)
+        self.assertEqual(d2l._latency_plateaus(lat), (17.0, 97.0, 220.0))
+        with quiet() as buf:
+            d2l._show_latency(lat)
+        self.assertEqual(buf.getvalue(), 'latency per dependent load: L1 17 '
+                         'ns, L2 97 ns, DRAM 220 ns\n')
         d2l.plot_latency(lat)
         d2l.plt.close('all')
 
@@ -688,6 +821,24 @@ class TestBenchLog(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'CUDA'):
                 d2l.regen_microbench()
         self.assertEqual(d2l.HW_JOBS['box-microbench'][0], 'regen_microbench')
+        with mock.patch.object(torch.cuda, 'is_available', return_value=True), \
+                mock.patch.dict(os.environ, {'D2L_HW_CONFIG': ''}):
+            with self.assertRaisesRegex(ValueError, 'D2L_HW_CONFIG=t2'):
+                d2l.regen_microbench('t2')
+
+
+class TestCommittedClaims(unittest.TestCase):
+    """Claims C1 and C2 on the committed box result: the DRAM read within
+    15% of the datasheet, the L2 read at least twice the DRAM read."""
+
+    def test_c1_c2(self):
+        if not d2l.hw_registered('box-microbench'):
+            self.skipTest('box-microbench is not registered yet')
+        logs = d2l.hw_box_log('box-microbench')
+        t = d2l._hw_sheet_table(committed_specs().loc['RTX 4090'], logs)
+        self.assertGreaterEqual(t.loc['DRAM read (GB/s)', 'fraction'], 0.85)
+        self.assertGreaterEqual(t.loc['L2 read (GB/s)', 'measured'],
+                                2 * t.loc['DRAM read (GB/s)', 'measured'])
 
 
 if __name__ == '__main__':

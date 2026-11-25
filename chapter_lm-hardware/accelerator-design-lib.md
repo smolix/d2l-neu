@@ -14,7 +14,9 @@ in a sentence but does not show (docs/code-guide.md 7.1):
   section that owns the entry: box regenerations (`HW_ARTIFACTS`, keyed),
   campaign logs produced elsewhere (`HW_CAMPAIGNS`, keyed), static tables
   (`HW_STATIC`, keyed), the regeneration jobs (`HW_JOBS`, one shard, read
-  only by `tools/hw_regen.py`), the results the author declared pending
+  only by `tools/hw_regen.py`), the campaign configurations of a
+  regeneration (`HW_CONFIG_LOGS`, the log a `--config` run writes), the
+  results the author declared pending
   (`HW_PENDING`), the chapter's new Hub pins (`HW_REVISIONS`) and the
   configurations built in code (`HW_SHAPES`);
 - the one place that decides between measuring and loading a result
@@ -26,7 +28,7 @@ in a sentence but does not show (docs/code-guide.md 7.1):
 - the tool runner (`hw_bin`, `hw_run`, with per-call timeouts), the model
   configurations at their pins (`hw_config`) and the table display
   (`show_table`);
-- 22.1's registry entries.
+- the accelerator-design section's registry entries.
 
 Every block is tagged `%%tab pytorch` and imports what it needs beyond the
 library preamble inside its functions. No function body names an artifact
@@ -52,6 +54,9 @@ HW_STATIC = {}  # static table name: (DATA_HUB key, kind)
 
 #@save
 HW_JOBS = {}  # regeneration name: (driver name in d2l, zero-argument kwargs)
+
+#@save
+HW_CONFIG_LOGS = {}  # (regeneration name, config): the campaign log it writes
 
 #@save
 HW_PENDING = frozenset()  # box results the author declared pending
@@ -108,8 +113,8 @@ d2l.HW_SHAPES['dense-70b'] = d2l.HWShape(
     torch_dtype='bfloat16')
 ```
 
-22.1's entries: its regeneration, its static table and the A100 campaign
-(C-T2) logs. The `DATA_HUB` entries follow the uploads.
+The accelerator-design section's entries: its regeneration, its static table
+and the A100 campaign (C-T2) logs. The `DATA_HUB` entries follow the uploads.
 
 ```{.python .input #accelerator-design-lib-entries}
 %%tab pytorch
@@ -127,6 +132,16 @@ d2l.HW_CAMPAIGNS['a100-clocksweep'] = (
 #@save
 d2l.HW_JOBS['box-microbench'] = (
     'regen_microbench', lambda: dict(config='box'))
+```
+
+The same driver on the A100 of campaign C-T2 (`tools/hw_regen.py
+box-microbench --config t2`) writes the campaign's log instead of the box
+result.
+
+```{.python .input #accelerator-design-lib-config-logs}
+%%tab pytorch
+#@save
+d2l.HW_CONFIG_LOGS[('box-microbench', 't2')] = 'a100-microbench'
 ```
 
 ## Storage of Committed Results
@@ -289,7 +304,9 @@ def _hw_pack(folder, kind, out):
 
 A regeneration runs its driver in three processes, one after the other
 (`tools/hw_regen.py`); the headline of every measured number is the median of
-the per-process medians.
+the per-process medians, and a table keeps the spread between the processes
+(`attrs['spread']`), the run-to-run noise that a gap between two measured
+numbers has to exceed.
 
 ```{.python .input #accelerator-design-lib-combine}
 %%tab pytorch
@@ -297,7 +314,9 @@ the per-process medians.
 def _hw_combine(results):
     """One result from the same result of several processes: numbers that
     differ become their median (elementwise in tables, arrays, lists and
-    the fields of dicts and namedtuples); everything else must agree."""
+    the fields of dicts and namedtuples); everything else must agree. A
+    table records, per numeric column that differs, the relative spread
+    (max - min) / median of each row in attrs['spread']."""
     first = results[0]
     if isinstance(first, pd.DataFrame):
         for r in results[1:]:
@@ -305,17 +324,20 @@ def _hw_combine(results):
                     and list(r.columns) == list(first.columns)
                     and r.index.equals(first.index)):
                 raise ValueError('tables differ in shape between processes')
-        out = first.copy()
+        out, spread = first.copy(), {}
         for c in first.columns:
             cols = [r[c].to_numpy() for r in results]
             if all(pd.Series(x).equals(pd.Series(cols[0])) for x in cols):
                 continue
             if (pd.api.types.is_numeric_dtype(first[c])
                     and not pd.api.types.is_bool_dtype(first[c])):
-                out[c] = np.median(np.stack(cols).astype(float), axis=0)
+                x = np.stack(cols).astype(float)
+                out[c] = med = np.median(x, axis=0)
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    spread[c] = ((x.max(0) - x.min(0)) / np.abs(med)).tolist()
             else:
                 raise ValueError(f'column {c} differs between processes')
-        out.attrs = dict(first.attrs, n_proc=len(results))
+        out.attrs = dict(first.attrs, n_proc=len(results), spread=spread)
         return out
     if hasattr(first, '_fields'):
         return type(first)(*[_hw_combine([getattr(r, f) for r in results])
@@ -446,11 +468,24 @@ def _hw_regenerating():
     return d2l.lm_rerun(tuple(d2l.HW_ARTIFACTS))
 
 #@save
+def _hw_regen_key(name):
+    """(key, kind) a regeneration of name writes: its box artifact, or with
+    D2L_HW_CONFIG (tools/hw_regen.py --config) the campaign log that
+    HW_CONFIG_LOGS names for that configuration."""
+    config = os.environ.get('D2L_HW_CONFIG')
+    if not config:
+        return d2l.HW_ARTIFACTS[name]
+    log = d2l.HW_CONFIG_LOGS.get((name, config))
+    if log is None:
+        raise KeyError(f'{name} has no campaign configuration {config!r}')
+    return d2l.HW_CAMPAIGNS[log][:2]
+
+#@save
 def _hw_regen_dir(name):
     """The folder a regeneration of name writes (the next version of its
-    key); D2L_HW_PROC (set by tools/hw_regen.py) selects a process's own
-    subfolder."""
-    key, _ = d2l.HW_ARTIFACTS[name]
+    key, _hw_regen_key); D2L_HW_PROC (set by tools/hw_regen.py) selects a
+    process's own subfolder."""
+    key, _ = _hw_regen_key(name)
     folder = os.path.join(_hw_rerun_root(), d2l._next_key(key))
     proc = os.environ.get('D2L_HW_PROC')
     return os.path.join(folder, f'proc{proc}') if proc else folder
@@ -459,13 +494,20 @@ def _hw_regen_dir(name):
 def _hw_folder(name):
     """The folder holding name's committed entries: the registered
     artifact, else (in a regeneration run) the folder an earlier
-    regeneration wrote, else None."""
+    regeneration wrote, else None. A tools/hw_regen.py process
+    (D2L_HW_PROC set) that reads another, unregistered result raises: an
+    unchecked or stale folder must not end up inside a new artifact."""
     key, kind = d2l.HW_ARTIFACTS[name]
     if key in d2l.DATA_HUB:
         with d2l._quiet():
             path = d2l.download_keyed(key)
         return _hw_unpack(path, kind)
-    if _hw_regenerating():
+    regen = _hw_regenerating()
+    if (os.environ.get('D2L_HW_PROC') is not None and name not in regen
+            and name not in d2l.HW_PENDING):
+        raise RuntimeError(f'{name} is not registered; register it before a '
+                           'regeneration that reads it')
+    if regen:
         folder = os.path.join(_hw_rerun_root(), d2l._next_key(key))
         if os.path.isdir(folder):
             return folder
@@ -492,10 +534,11 @@ def _hw_load(name, entry=None):
     return _hw_read(path)
 
 #@save
-def _hw_live(live_check, result, meta):
-    """Print the one agreement line of a live check: compared when this GPU
-    is the committed run's GPU, else this GPU's values uncompared. A live
-    check never fails a run and never changes the committed numbers."""
+def _hw_live(live_check, result, meta, label=''):
+    """Print the one agreement line of a live check, naming what it checks
+    (label): compared when this GPU is the committed run's GPU, else this
+    GPU's values uncompared. A live check never fails a run and never
+    changes the committed numbers."""
     if live_check is None or not torch.cuda.is_available():
         return
     gpu = torch.cuda.get_device_name(0)
@@ -505,12 +548,13 @@ def _hw_live(live_check, result, meta):
             text = live_check(result, same)
     except Exception as e:  # report, never fail the page
         text = f'not run ({type(e).__name__})'
-    print(f'live {"check" if same else "values"} on {_gpu_short(gpu)}: '
+    what = f' ({label})' if label else ''
+    print(f'live {"check" if same else "values"}{what} on {_gpu_short(gpu)}: '
           f'{text}')
 
 #@save
 def _hw_result(name, compute, config, *, entry=None, live_check=None,
-               show=None, empty=None):
+               show=None, empty=None, live_label=''):
     """The result of regeneration name (an HW_ARTIFACTS name; entry names
     one part of a multi-part result) for the call's configuration (a
     JSON-able dict of its arguments).
@@ -520,7 +564,8 @@ def _hw_result(name, compute, config, *, entry=None, live_check=None,
       key (tools/hw_regen.py runs this; never a notebook).
     - Else the committed entry, whose stored configuration must equal
       config (ValueError naming the first difference), then show(result)
-      and the one line of live_check(result, same_gpu).
+      and the one line of live_check(result, same_gpu), headed by
+      live_label.
     - Else, in a regeneration run or when the author declared name pending
       (HW_PENDING), the labelled pending result (_hw_pending); else
       KeyError."""
@@ -535,6 +580,7 @@ def _hw_result(name, compute, config, *, entry=None, live_check=None,
                    neighbours_busy=bool(n0 or n1),
                    seconds=round(time.time() - t, 1))
         meta = dict(name=name, entry=entry, config=config, env=env,
+                    run=os.environ.get('D2L_HW_CONFIG') or 'box',
                     label=getattr(result, 'attrs', {}).get('label', ''))
         _hw_write(os.path.join(_hw_regen_dir(name), _hw_entry_file(entry)),
                   result, meta)
@@ -551,7 +597,7 @@ def _hw_result(name, compute, config, *, entry=None, live_check=None,
                              f'run {key}: {d[0]} {d[1]!r} != {d[2]!r}')
         if show is not None:
             show(result)
-        _hw_live(live_check, result, meta)
+        _hw_live(live_check, result, meta, live_label)
         return result
     if rerun or name in d2l.HW_PENDING:
         return _hw_pending(name, empty)
@@ -742,7 +788,8 @@ def hw_run(cmd, timeout_s, env=None):
 #@save
 def _hw_fmt(x, digits=None):
     """A number as the prose quotes it: digits decimals if given, else 3
-    significant digits, thousands separated; NaN as an empty cell."""
+    significant digits, thousands separated (integers, and whole floats
+    from 100 up, exact); NaN as an empty cell."""
     if isinstance(x, (bool, np.bool_)) or not isinstance(
             x, (int, float, np.integer, np.floating)):
         return str(x)
@@ -754,6 +801,8 @@ def _hw_fmt(x, digits=None):
                                             and math.fabs(x) >= 100):
         return f'{int(round(x)):,}'
     mag = math.floor(math.log10(math.fabs(x))) if x else 0
+    if mag >= 3:  # 533,907.3 -> 534,000
+        return f'{int(round(x, 2 - mag)):,}'
     return f'{x:,.{max(0, 2 - mag)}f}'
 
 #@save
@@ -850,7 +899,7 @@ def _check_specs(df):
         assert _book_round(row.scaleup_gbs / 2, book['link']), f'{chip} link'
 ```
 
-22.1's static table (transcribed 2026-11-25; `tools/lm_data/hw/chip_specs.csv`).
+The section's static table (transcribed 2026-11-25; `tools/lm_data/hw/chip_specs.csv`).
 
 ```{.python .input #accelerator-design-lib-data-hub}
 %%tab pytorch
@@ -933,14 +982,45 @@ def _hw_fits(nbytes, fraction=0.5):
     return nbytes <= fraction * torch.cuda.get_device_properties(0).total_memory
 
 #@save
+_HW_L1_KIB = {  # unified L1/shared-memory SRAM per SM by compute capability
+    (8, 0): 192, (8, 6): 128, (8, 9): 128, (9, 0): 256, (10, 0): 256,
+    (12, 0): 128}  # NVIDIA Ampere, Ada, Hopper and Blackwell tuning guides
+
+#@save
 def _hw_frame(rows):
-    """A result table with the GPU it was measured on in its attrs."""
+    """A result table with the GPU it was measured on in its attrs: name,
+    memory, L2, SMs, shared memory and the unified L1/shared SRAM per SM."""
     df = pd.DataFrame(rows)
     p = torch.cuda.get_device_properties(0)
-    df.attrs.update(gpu=_gpu_short(p.name), l2_bytes=int(p.L2_cache_size),
+    l1 = _HW_L1_KIB.get((p.major, p.minor))
+    df.attrs.update(gpu=_gpu_short(p.name), mem_bytes=int(p.total_memory),
+                    l2_bytes=int(p.L2_cache_size),
                     n_sm=int(p.multi_processor_count),
-                    smem_per_sm=int(p.shared_memory_per_multiprocessor))
+                    smem_per_sm=int(p.shared_memory_per_multiprocessor),
+                    l1_bytes=l1 * 2**10 if l1 else None)
     return df
+
+#@save
+def _hw_steady(bench, warm_s=0.5, hz=100):
+    """bench() (a dict) repeated for warm_s seconds, then once more for the
+    result under a power trace: that result plus the median SM clock (MHz)
+    and board power (W) sampled while it ran (NaN without samples; NVML
+    averages power over about a second, which the warm-up fills with the
+    same load). The warm-up brings the card to the clock and power it holds
+    under this load, so the timing and its clock come from one state."""
+    t = time.time()
+    while time.time() - t < warm_s:
+        bench()
+    with _hw_power_trace(hz) as samples:
+        r = bench()
+    return dict(r, sm_mhz=_hw_median(samples, 'sm_mhz'),
+                power_w=_hw_median(samples, 'power_w'))
+
+#@save
+def _hw_median(samples, key):
+    """Median of key over the trace samples that have it (NaN if none)."""
+    values = [x[key] for x in samples if x.get(key) is not None]
+    return float(np.median(values)) if values else math.nan
 ```
 
 ## The Measurement Environment, Logs and Power Traces
@@ -975,13 +1055,12 @@ def _hw_gpu_limits():
            for f, v in zip(_HW_GPU_FIELDS, vals)}
     out['n_sm'] = torch.cuda.get_device_properties(0).multi_processor_count
     out['n_host'] = len(_hw_smi('--query-gpu=uuid'))
-    out['toolchain'] = (f'triton {triton.__version__}'
-                        if hasattr(triton, '__version__') else None)
     return out
 
 #@save
 def _hw_pack_raw(raw):
-    """Raw tool output as gzip + base64 text (contract rule 2)."""
+    """Raw tool output as gzip + base64 text, so a parser can be fixed and
+    rerun on the stored output later."""
     import base64
     data = raw.encode() if isinstance(raw, str) else bytes(raw)
     return base64.b64encode(gzip.compress(data, mtime=0)).decode('ascii')
@@ -1059,20 +1138,6 @@ def _hw_power_trace(hz=10):
                         sm_mhz=_hw_number(v[1]), mem_mhz=_hw_number(v[2]),
                         temp_c=_hw_number(v[3]), throttle=int(v[4], 16)
                         if v[4].startswith('0x') else None))
-
-#@save
-def _hw_sm_clock_mhz():
-    """The first visible GPU's SM clock now, in MHz (NVML; nvidia-smi)."""
-    try:
-        import pynvml
-        pynvml.nvmlInit()
-        h = pynvml.nvmlDeviceGetHandleByUUID(_hw_visible_uuids()[0])
-        mhz = pynvml.nvmlDeviceGetClockInfo(h, pynvml.NVML_CLOCK_SM)
-        pynvml.nvmlShutdown()
-        return mhz
-    except Exception:
-        rows = _hw_smi('--query-gpu=clocks.sm', '-i', _hw_visible_uuids()[0])
-        return _hw_number(rows[0][0].split()[0]) if rows else None
 ```
 
 ## Two Kernels in Triton: L1/Shared-Memory Bandwidth and the Pointer Chase
@@ -1120,14 +1185,21 @@ def _read_kernel(x_ptr, out_ptr, n, passes, BLOCK: tl.constexpr):
     tl.store(out_ptr + pid * BLOCK + offs, acc)
 
 #@save
-def read_passes(x, passes, block=2048, programs_per_sm=4):
+def read_passes(x, passes, block=2048, programs_per_sm=4, min_block=128):
     """Read the fp32 tensor x passes times in one kernel (loads cached in
     L2, not L1), so a working set that fits L2 is served from L2 after the
-    first pass and launch cost is paid once; returns the per-program sums."""
+    first pass and launch cost is paid once; returns the per-program sums.
+    A small x gets smaller blocks (down to min_block elements), so that
+    every SM still runs programs_per_sm programs: the small end of the
+    ladder then measures the memory system, not a half-empty grid."""
     n_sm = torch.cuda.get_device_properties(x.device).multi_processor_count
-    grid = (max(1, min(n_sm * programs_per_sm, triton.cdiv(x.numel(), block))),)
+    programs = n_sm * programs_per_sm
+    while block > min_block and triton.cdiv(x.numel(), block) < programs:
+        block //= 2
+    grid = (max(1, min(programs, triton.cdiv(x.numel(), block))),)
     out = torch.empty(grid[0] * block, device=x.device)
-    _read_kernel[grid](x, out, x.numel(), passes, BLOCK=block, num_warps=8)
+    _read_kernel[grid](x, out, x.numel(), passes, BLOCK=block,
+                       num_warps=max(1, min(8, block // 256)))
     return out
 
 #@save
@@ -1143,23 +1215,24 @@ def _smem_compute(programs_per_sm=8, work=2048, block=1024, iters=8192,
     fn = lambda: _l1_read_kernel[grid](x, out, iters, WORK=work, BLOCK=block,
                                        num_warps=4)
     with d2l._quiet():  # the first call compiles
-        t = _hw_time(fn, repeats, graph=False, max_inner=1)
-    mhz = _hw_sm_clock_mhz()
-    ms, mad = _hw_stats(t)
-    n_sm = torch.cuda.get_device_properties(0).multi_processor_count
+        fn()
+    r = _hw_steady(lambda: dict(zip(('ms', 'mad'), _hw_stats(
+        _hw_time(fn, repeats, graph=False, max_inner=1)))))
+    p = torch.cuda.get_device_properties(0)
     moved = grid[0] * iters * block * 4
-    return dict(gpu=_gpu_short(torch.cuda.get_device_name(0)), tbs=moved / ms / 1e9,
-                ms=ms, mad=mad, n_sm=n_sm, sm_mhz=mhz,
-                peak_tbs=n_sm * _HW_L1_BYTES_PER_CLK * mhz * 1e6 / 1e12
-                if mhz else math.nan)
+    peak = p.multi_processor_count * _HW_L1_BYTES_PER_CLK * r['sm_mhz'] / 1e6
+    return dict(r, gpu=_gpu_short(p.name), mem_bytes=int(p.total_memory),
+                tbs=moved / r['ms'] / 1e9, n_sm=p.multi_processor_count,
+                peak_tbs=peak)
 
 #@save
 def _show_smem(r):
     if not r:
         return
-    print(f"L1/shared memory: {_hw_sig(r['tbs'])} TB/s measured; "
+    print(f"L1 loads: {_hw_sig(r['tbs'])} TB/s measured; bound "
           f"{r['n_sm']} SMs x {_HW_L1_BYTES_PER_CLK} B/clk x "
-          f"{r['sm_mhz'] / 1000:.2f} GHz = {_hw_sig(r['peak_tbs'])} TB/s")
+          f"{_hw_sig(r['sm_mhz'] / 1000, 3)} GHz = {_hw_sig(r['peak_tbs'])} "
+          'TB/s')
 
 #@save
 def _smem_live(r, same):
@@ -1169,11 +1242,11 @@ def _smem_live(r, same):
 
 #@save
 def hw_smem_bench():
-    """L1/shared-memory read bandwidth of every SM at once (TB/s), with the
-    bound n_SM x 128 B/clk x the SM clock measured during the run."""
+    """L1 load bandwidth of every SM at once (TB/s), with the bound
+    n_SM x 128 B/clk x the median SM clock sampled while the kernel ran."""
     return _hw_result('box-microbench', _smem_compute, dict(kernel='l1-read'),
                       entry='smem', live_check=_smem_live, show=_show_smem,
-                      empty=dict)
+                      empty=dict, live_label='L1')
 
 #@save
 def _chase_next(nbytes, line=128, seed=0):
@@ -1212,13 +1285,33 @@ def _latency_live(r, same):
     return _hw_agreement(pairs, same, 'ns')
 
 #@save
+def _latency_plateaus(lat):
+    """(L1, L2, DRAM) ns per dependent load: medians over working sets up to
+    a quarter of the L1, from 1 MiB to a quarter of the L2, and from four
+    times the L2 up."""
+    l1 = lat.attrs.get('l1_bytes') or 128 * 2**10
+    l2 = lat.attrs.get('l2_bytes') or 2**25
+    b, ns = lat.bytes, lat.ns_per_load
+    return tuple(float(ns[m].median()) if m.any() else math.nan for m in (
+        b <= l1 / 4, (b >= 2**20) & (b <= l2 / 4), b >= 4 * l2))
+
+#@save
+def _show_latency(lat):
+    if lat.empty:
+        return
+    l1, l2, dram = _latency_plateaus(lat)
+    print(f'latency per dependent load: L1 {_hw_sig(l1)} ns, '
+          f'L2 {_hw_sig(l2)} ns, DRAM {_hw_sig(dram)} ns')
+
+#@save
 def hw_latency_bench(sizes):
     """Nanoseconds per dependent load (one thread chasing a random cycle)
     for working sets of each size in bytes: L1, L2 and DRAM latency."""
     sizes = [int(s) for s in sizes]
     compute = lambda: _hw_frame([_chase_ns(s) for s in sizes if _hw_fits(s)])
     return _hw_result('box-microbench', compute, dict(sizes=sizes),
-                      entry='latency', live_check=_latency_live)
+                      entry='latency', live_check=_latency_live,
+                      show=_show_latency, live_label='latency')
 ```
 
 ## Displays and Live Checks
@@ -1247,9 +1340,9 @@ def _hw_bytes(n):
 #@save
 def _hw_agreement(points, same, unit, floor=0.1, k=5):
     """The live line: on the committed run's GPU, the largest relative
-    difference of (label, committed, live, committed relative MAD) points,
-    and 'differs' for any beyond max(k x MAD, floor): series not run back
-    to back with unlocked clocks (rule R4) move by several percent with the
+    difference of (label, committed, live, committed relative noise)
+    points, and 'differs' for any beyond max(k x noise, floor): series not
+    run back to back with unlocked clocks move by several percent with the
     card's temperature; on another GPU, the live values."""
     if not same:
         return ', '.join(f'{p[0]} {_hw_sig(p[2])}' for p in points) + f' {unit}'
@@ -1264,25 +1357,36 @@ def _hw_agreement(points, same, unit, floor=0.1, k=5):
     return text
 
 #@save
+def _hw_noise(df, i, col):
+    """Relative noise of row i's col in a committed table: the larger of
+    its within-process MAD (over the timed repeats) and its spread between
+    the regeneration's processes."""
+    row = df.iloc[i]
+    spread = df.attrs.get('spread', {}).get(col)
+    return max(row.mad / row.ms, spread[i] if spread else 0.0)
+
+#@save
 def _ladder_live(r, same):
     picks = [s for s in (2**26, 2**30, 2**32) if _hw_fits(s)]
-    reads = r[r.kind == 'read'].set_index('bytes')
     pts = []
     for s in picks:
-        if s in reads.index:
-            row = reads.loc[s]
-            pts.append((_hw_bytes(s), row.gbs, d2l.hw_copy_bench(
-                s, 'read', repeats=5)['gbs'], row.mad / row.ms))
+        hit = np.flatnonzero((r.kind == 'read').to_numpy()
+                             & (r.bytes == s).to_numpy())
+        if len(hit):
+            i = int(hit[0])
+            pts.append((_hw_bytes(s), r.gbs.iloc[i], d2l.hw_copy_bench(
+                s, 'read', repeats=5)['gbs'], _hw_noise(r, i, 'gbs')))
     return _hw_agreement(pts, same, 'GB/s')
 
 #@save
 def _dtype_live(r, same):
-    rows = r.set_index('format')
-    pts = [(f, rows.loc[f, 'tflops'], d2l.hw_matmul_bench(
-        int(r.attrs.get('n', 8192)), int(r.attrs.get('n', 8192)),
-        int(r.attrs.get('n', 8192)), f, repeats=5)['tflops'],
-        rows.loc[f, 'mad'] / rows.loc[f, 'ms'])
-           for f in ('bf16', 'fp8') if f in rows.index]
+    n = int(r.attrs.get('n', 8192))
+    fp8 = torch.cuda.get_device_capability() >= (8, 9)  # FP8 tensor cores
+    pts = [(f, r.tflops.iloc[i],
+            d2l.hw_matmul_bench(n, n, n, f, repeats=5)['tflops'],
+            _hw_noise(r, i, 'tflops'))
+           for i, f in enumerate(r.format)
+           if f == 'bf16' or (f == 'fp8' and fp8)]
     return _hw_agreement(pts, same, 'TFLOP/s')
 
 #@save
@@ -1291,19 +1395,49 @@ _HW_DATASHEET = {'fp32': 'fp32_tflops', 'tf32': 'tf32_tflops',
                  'fp8': 'p8_tflops'}
 
 #@save
+_HW_BOOST_MHZ = {  # the boost clock the vendor's peak figures assume
+    'RTX 4090': 2520,  # NVIDIA RTX 4090 product page
+    'A100 PCIe 40 GB': 1410}  # NVIDIA A100 datasheet
+
+#@save
+def _hw_chip_row(gpu, mem_bytes, specs):
+    """The chip-table row of a measured GPU: the longest row name inside
+    the device name (letters and digits, case ignored) whose capacity is
+    within 10% of the device's memory (mem_bytes, unchecked if None);
+    None when no row fits (an A100 SXM 80 GB is not the A100 PCIe 40 GB)."""
+    if not gpu:
+        return None
+    key = lambda name: re.sub(r'[^a-z0-9]', '', name.lower())
+    for chip in sorted((c for c in specs.index if key(c) in key(gpu)),
+                       key=len, reverse=True):
+        gib = specs.loc[chip, 'mem_gb']
+        if mem_bytes is None or math.fabs(mem_bytes / 2**30 / gib - 1) <= 0.1:
+            return chip
+    return None
+
+#@save
 def _show_dtypes(r):
+    """The format ladder against the datasheet, with the spread between
+    processes and the SM clock and board power while each format ran."""
     if r.empty:
         return
     specs = d2l.chip_specs()
-    gpu = r.attrs.get('gpu')
-    sheet = [specs.loc[gpu, _HW_DATASHEET[f]] if gpu in specs.index
-             else math.nan for f in r.format]
-    t = pd.DataFrame({'format': r.format,
-                      'TFLOP/s': [_hw_sig(x) for x in r.tflops],
-                      'datasheet': sheet,
-                      'fraction': [f'{m / s:.0%}' if s == s else ''
-                                   for m, s in zip(r.tflops, sheet)]})
-    show_table(t)
+    chip = _hw_chip_row(r.attrs.get('gpu'), r.attrs.get('mem_bytes'), specs)
+    sheet = [specs.loc[chip, _HW_DATASHEET[f]] if chip else math.nan
+             for f in r.format]
+    cols = {'format': r.format, 'TFLOP/s': [_hw_sig(x) for x in r.tflops]}
+    spread = r.attrs.get('spread', {}).get('tflops')
+    if spread:
+        cols['spread'] = [f'{100 * x:.1f}%' for x in spread]
+    cols.update({'datasheet': sheet, 'fraction': [
+        f'{m / s:.0%}' if s == s else '' for m, s in zip(r.tflops, sheet)]})
+    if 'sm_mhz' in r:
+        cols['SM GHz'] = [_hw_sig(x / 1000, 3) for x in r.sm_mhz]
+        cols['W'] = [_hw_sig(x, 3) for x in r.power_w]
+    show_table(pd.DataFrame(cols))
+    if chip in _HW_BOOST_MHZ:
+        print(f'datasheet peaks assume the {_HW_BOOST_MHZ[chip] / 1000:.2f} '
+              'GHz boost clock')
 
 #@save
 def _ladder_plateaus(ladder):
@@ -1317,57 +1451,87 @@ def _ladder_plateaus(ladder):
             float(copy[copy.bytes >= 2**30].gbs.median()))
 
 #@save
+def _show_ladder(ladder):
+    """The ladder's three plateaus, the DRAM read against the datasheet."""
+    if ladder.empty:
+        return
+    specs = d2l.chip_specs()
+    chip = _hw_chip_row(ladder.attrs.get('gpu'), ladder.attrs.get('mem_bytes'),
+                        specs)
+    l2 = ladder.attrs.get('l2_bytes', 0)
+    l2_gbs, dram, copy = _ladder_plateaus(ladder)
+    print(f'L2 read (4 MiB to {l2 / 2**21:g} MiB): {_hw_sig(l2_gbs)} GB/s, '
+          f'{l2_gbs / dram:.1f}x the DRAM read')
+    line = f'DRAM read (1-4 GiB): {_hw_sig(dram)} GB/s'
+    if chip:
+        sheet = specs.loc[chip, 'mem_bw_tbs'] * 1000
+        line += f', {dram / sheet:.0%} of the datasheet {sheet:,.0f} GB/s'
+    print(line)
+    print(f'DRAM copy (1-4 GiB, read + write counted): {_hw_sig(copy)} GB/s')
+
+#@save
 def plot_ladder(ladder, specs, reference=None):
     """Plot read and copy bandwidth against the working set (log2 x, log
-    y) with the datasheet DRAM line (dashed) and the L2 capacity (band),
-    the A100 campaign's series when committed; print the plateaus."""
-    gpu, l2 = ladder.attrs.get('gpu'), ladder.attrs.get('l2_bytes', 0)
-    X, Y, legend = [], [], []
-    logs = [(gpu, ladder)]
-    if reference:
-        logs.append((reference['ladder'].attrs.get('gpu'),
-                     reference['ladder']))
-    for name, df in logs:
-        for kind, label in (('read', 'read'), ('copy', 'copy (read + write)')):
+    y) with the datasheet DRAM line and the L2 edge (half to all of the L2,
+    shaded), plus the A100 campaign's series when its log is committed and
+    measured on the chip it names (else one line says why not)."""
+    logs, status = [ladder], ''
+    if isinstance(reference, CampaignPending):
+        status = hw_status_line(reference).replace('not run yet', 'pending')
+    elif reference:
+        ref = reference['ladder']
+        if _hw_chip_row(ref.attrs.get('gpu'), ref.attrs.get('mem_bytes'),
+                        specs):
+            logs.append(ref)
+        else:
+            status = (f"reference measured on {ref.attrs.get('gpu')}, a GPU "
+                      'without a chip-table row: not plotted')
+    X, Y, legend, fmts = [], [], [], []
+    for i, df in enumerate(logs):
+        for kind, label, colour in (('read', 'read', 'C0'),
+                                    ('copy', 'copy (read + write)', 'C1')):
             part = df[df.kind == kind]
             X.append(part.bytes.to_numpy())
             Y.append(part.gbs.to_numpy())
-            legend.append(f'{name}: {label}' if len(logs) > 1 else label)
-    d2l.plot(X, Y, 'working set (bytes)', 'bandwidth (GB/s)', legend=legend,
+            fmts.append(colour + ('-' if i == 0 else ':'))
+            gpu = df.attrs.get('gpu')
+            legend.append(f'{gpu}: {label}' if len(logs) > 1 else label)
+    d2l.plot(X, Y, 'working set (bytes)', 'bandwidth (GB/s)', fmts=fmts,
              xscale='log', yscale='log', figsize=(4.5, 3))
     ax = d2l.plt.gca()
     ax.set_xscale('log', base=2)
-    if gpu in specs.index:
-        ax.axhline(specs.loc[gpu, 'mem_bw_tbs'] * 1000, color='k', ls='--',
-                   lw=1)
+    handles = ax.get_lines()[:len(Y)]
+    chip = _hw_chip_row(ladder.attrs.get('gpu'), ladder.attrs.get('mem_bytes'),
+                        specs)
+    if chip:
+        sheet = specs.loc[chip, 'mem_bw_tbs'] * 1000
+        handles.append(ax.axhline(sheet, color='k', ls='--', lw=1))
+        legend.append(f'datasheet {sheet:,.0f} GB/s')
+    l2 = ladder.attrs.get('l2_bytes', 0)
     if l2:
-        ax.axvspan(l2 / 2, l2, color='0.9', zorder=0)
-    l2_gbs, dram, copy = _ladder_plateaus(ladder)
-    sheet = specs.loc[gpu, 'mem_bw_tbs'] * 1000 if gpu in specs.index else math.nan
-    print(f'L2 read (4 MiB to {l2 / 2**21:g} MiB): {_hw_sig(l2_gbs)} GB/s, '
-          f'{l2_gbs / dram:.1f}x the DRAM read')
-    print(f'DRAM read (1-4 GiB): {_hw_sig(dram)} GB/s, '
-          f'{dram / sheet:.0%} of the datasheet {sheet:,.0f} GB/s')
-    print(f'DRAM copy (1-4 GiB, read + write counted): {_hw_sig(copy)} GB/s')
-    status = hw_status_line(reference) if reference is not None else ''
+        handles.append(ax.axvspan(l2 / 2, l2, color='0.9', zorder=0))
+        legend.append(f'L2 edge ({l2 / 2**21:g}-{l2 / 2**20:g} MiB)')
+    ax.legend(handles, legend, fontsize=8, loc='center left',
+              bbox_to_anchor=(1.01, 0.5), frameon=False)
     if status:
-        print(status.replace('not run yet', 'pending'))
+        print(status)
 
 #@save
 def plot_latency(lat):
     """Nanoseconds per dependent load against the working set (log2 x, log
-    y), with the L1/shared size per SM and the L2 capacity marked."""
+    y), with the unified L1/shared SRAM per SM and the L2 capacity marked."""
     d2l.plot(lat.bytes.to_numpy(), lat.ns_per_load.to_numpy(),
              'working set (bytes)', 'latency (ns per load)', xscale='log',
              yscale='log', figsize=(4.5, 3))
     ax = d2l.plt.gca()
     ax.set_xscale('log', base=2)
-    for size, label in ((lat.attrs.get('smem_per_sm'), 'shared/L1 per SM'),
+    for size, label in ((lat.attrs.get('l1_bytes'), 'L1 per SM'),
                         (lat.attrs.get('l2_bytes'), 'L2')):
-        if size:
+        if size:  # labels at the bottom, clear of the plateaus
             ax.axvline(size, color='k', ls=':', lw=1)
-            ax.text(size, ax.get_ylim()[1], f' {label}', va='top',
-                    fontsize=9)
+            ax.text(size * 1.15, ax.get_ylim()[0] * 1.08,
+                    f'{label} ({_hw_bytes(size)})', va='bottom', fontsize=9,
+                    bbox=dict(fc='white', ec='none', pad=1))
 
 #@save
 def _place_labels(ax, points, names, radii, fontsize=7):
@@ -1448,22 +1612,25 @@ def plot_chip_plane(ratios):
 
 #@save
 def show_env(env):
-    """The fingerprint as six labelled lines."""
-    n_host = env.get('n_host') or env.get('n_gpu')
-    print(f"GPU: {_gpu_short(env.get('gpu'))} ({env.get('n_gpu')} visible, "
-          f"{n_host} on the host)")
-    print(f"SMs per GPU: {env.get('n_sm')}")
-    print(f"max SM clock: {env.get('clocks_max_sm'):,} MHz; memory clock "
-          f"{env.get('clocks_max_mem'):,} MHz")
-    print(f"power limit: {env.get('power_limit'):g} W (settable "
-          f"{env.get('power_min_limit'):g}-{env.get('power_max_limit'):g} W)")
-    print(f"PCIe: Gen {env.get('pcie_link_gen_max')} x"
-          f"{env.get('pcie_link_width_max')} (max); Gen "
-          f"{env.get('pcie_link_gen_current')} x"
-          f"{env.get('pcie_link_width_current')} now")
-    print(f"driver {env.get('driver')}, CUDA {env.get('cuda')}, torch "
-          f"{env.get('torch')}, NCCL {env.get('nccl')}, "
-          f"{env.get('toolchain')}")
+    """The fingerprint as six labelled lines; one line without a GPU."""
+    tools = (f"CUDA {env.get('cuda')}, torch {env.get('torch')}, Triton "
+             f"{env.get('triton') or 'absent'}")
+    if not env.get('gpu'):
+        print(f'no CUDA GPU visible; {tools}')
+        return
+    v = lambda k, spec='': 'n/a' if env.get(k) is None else format(env[k],
+                                                                    spec)
+    print(f"GPU: {_gpu_short(env['gpu'])} ({v('n_gpu')} visible, "
+          f"{env.get('n_host') or v('n_gpu')} on the host)")
+    print(f"SMs per GPU: {v('n_sm')}")
+    print(f"max SM clock: {v('clocks_max_sm', ',')} MHz; memory clock "
+          f"{v('clocks_max_mem', ',')} MHz")
+    print(f"power limit: {v('power_limit', 'g')} W (settable "
+          f"{v('power_min_limit', 'g')}-{v('power_max_limit', 'g')} W)")
+    print(f"PCIe: Gen {v('pcie_link_gen_max')} x{v('pcie_link_width_max')} "
+          f"(max); Gen {v('pcie_link_gen_current')} "
+          f"x{v('pcie_link_width_current')} now")
+    print(f"driver {v('driver')}, NCCL {v('nccl')}, {tools}")
 
 #@save
 _HW_SHEET_ROWS = (  # quantity, datasheet column, (entry, key) of the measurement
@@ -1474,7 +1641,7 @@ _HW_SHEET_ROWS = (  # quantity, datasheet column, (entry, key) of the measuremen
     ('FP8 (TFLOP/s)', 'p8_tflops', ('dtypes', 'fp8')),
     ('DRAM read (GB/s)', 'mem_bw_tbs', ('ladder', 'dram')),
     ('L2 read (GB/s)', None, ('ladder', 'l2')),
-    ('shared memory (TB/s)', None, ('smem', 'tbs')))
+    ('L1 loads (TB/s)*', None, ('smem', 'tbs')))
 
 #@save
 def _hw_measured(entries, entry, key):
@@ -1491,18 +1658,29 @@ def _hw_measured(entries, entry, key):
     return float(r.get(key, math.nan))
 
 #@save
-def datasheet_vs_measured(row, *measured):
-    """Print (and return) datasheet, measured and their fraction for the
-    eight quantities of the chip row: measured is (ladder, dtypes, smem)
-    or one committed campaign log (a dict of those entries); a pending
-    campaign log prints its status and the datasheet column only."""
-    pending = len(measured) == 1 and isinstance(measured[0], CampaignPending)
-    if len(measured) == 1 and not pending:
-        entries = dict(measured[0])
-    elif len(measured) == 3:
-        entries = dict(zip(('ladder', 'dtypes', 'smem'), measured))
-    else:
-        entries = {}
+def _hw_entries(measured):
+    """The {'ladder', 'dtypes', 'smem'} dict of datasheet_vs_measured's
+    arguments; {} for a pending campaign log."""
+    if len(measured) == 1:
+        return {} if isinstance(measured[0], CampaignPending) else dict(
+            measured[0])
+    return dict(zip(('ladder', 'dtypes', 'smem'), measured))
+
+#@save
+def _hw_measured_gpu(entries):
+    """(device name, memory in bytes) the entries were measured on."""
+    for name in ('ladder', 'dtypes'):
+        if name in entries and len(entries[name]):
+            a = entries[name].attrs
+            return a.get('gpu'), a.get('mem_bytes')
+    smem = entries.get('smem') or {}
+    return smem.get('gpu'), smem.get('mem_bytes')
+
+#@save
+def _hw_sheet_table(row, entries):
+    """Datasheet, measured and their fraction for the eight quantities of
+    the chip row; the L1 reference is the bound n_SM x 128 B/clk x the
+    measured SM clock, not a datasheet figure."""
     rows = []
     for quantity, column, (entry, key) in _HW_SHEET_ROWS:
         sheet = math.nan if column is None else float(row[column])
@@ -1514,36 +1692,179 @@ def datasheet_vs_measured(row, *measured):
     table = pd.DataFrame(rows, columns=['quantity', 'datasheet', 'measured']
                          ).set_index('quantity')
     table['fraction'] = table.measured / table.datasheet
-    if pending:
-        print(hw_status_line(measured[0]) + ' (datasheet values only)')
-        show_table(table[['datasheet']])
-    else:
-        show_table(pd.DataFrame({
-            'datasheet': table.datasheet,
-            'measured': [_hw_sig(x) for x in table.measured],
-            'fraction': [f'{f:.0%}' if f == f else '' for f in table.fraction]
-        }, index=table.index))
     return table
+
+#@save
+def datasheet_vs_measured(row, *measured):
+    """Print datasheet, measured and their fraction for the eight quantities
+    of the chip row: measured is (ladder, dtypes, smem) or one committed
+    campaign log (a dict of those entries). Measurements from a GPU that is
+    not this row print one line instead; a pending campaign log prints its
+    status and the datasheet column only."""
+    entries = _hw_entries(measured)
+    table = _hw_sheet_table(row, entries)
+    if not entries:
+        print(hw_status_line(measured[0]) + ' (datasheet values only)')
+        show_table(table[['datasheet']].dropna())
+        return
+    gpu, mem = _hw_measured_gpu(entries)
+    specs = d2l.chip_specs()
+    if _hw_chip_row(gpu, mem, specs) != row.name:
+        print(f'measured on {gpu} ({_hw_bytes(mem or 0)}), not the '
+              f'{row.name}: no datasheet comparison')
+        return
+    show_table(pd.DataFrame({
+        'datasheet': table.datasheet,
+        'measured': [_hw_sig(x) for x in table.measured],
+        'fraction': [f'{f:.0%}' if f == f else '' for f in table.fraction]
+    }, index=table.index))
+    smem = entries.get('smem') or {}
+    if smem.get('peak_tbs') is not None and np.isfinite(smem['peak_tbs']):
+        print(f"* bound, not a datasheet figure: {smem['n_sm']} SMs x "
+              f"{_HW_L1_BYTES_PER_CLK} B/clk x "
+              f"{_hw_sig(smem['sm_mhz'] / 1000, 3)} GHz")
+```
+
+## The Benchmark Log and the Two Ladders
+
+Every measured point also goes into a log of records: the command, its
+parameters and results, the raw tool output, the environment, and whether
+another user's process shared the card. The ladders run the page's
+`hw_copy_bench` and `hw_matmul_bench` over working sets and formats, each
+point after a warm-up under a power trace; whether they measure or load the
+committed run is `_hw_result`'s decision.
+
+```{.python .input #accelerator-design-lib-benchlog}
+%%tab pytorch
+#@save
+def env_fingerprint():
+    """What a measurement ran on: software versions, the GPU model, count,
+    SMs, clocks, power limits and PCIe link, sha1 prefixes of the host name
+    and of `nvidia-smi topo -m`, the git commit (no names, no paths)."""
+    env = _hw_env()
+    env.update(_hw_gpu_limits())
+    topo = hw_run(['nvidia-smi', 'topo', '-m'], timeout_s=60)
+    env['topo_sha1'] = (None if topo.refused else
+                        hashlib.sha1(topo.stdout.encode()).hexdigest()[:8])
+    return env
+
+#@save
+class BenchLog:
+    """An append-only JSONL log of microbenchmark records (tool, tier):
+    each record holds the command, its parameters and results, the raw
+    tool output (gzip + base64), the environment, and contended: a foreign
+    compute process on the GPU when the log opened or at the record."""
+    def __init__(self, path, tool, tier):
+        self.path, self.tool, self.tier = path, tool, tier
+
+    def __enter__(self):
+        os.makedirs(os.path.dirname(self.path) or '.', exist_ok=True)
+        self.env = d2l.env_fingerprint()
+        self.foreign = d2l._hw_contention()[0]
+        self.file = open(self.path, 'a', encoding='utf-8')
+        return self
+
+    def __exit__(self, *exc):
+        self.file.close()
+
+    def record(self, cmd, params, results, raw=''):
+        rec = dict(ts=round(time.time(), 3), tool=self.tool, tier=self.tier,
+                   cmd=cmd, params=params, results=results, env=self.env,
+                   contended=bool(self.foreign or d2l._hw_contention()[0]),
+                   raw=d2l._hw_pack_raw(raw))
+        self.file.write(json.dumps(d2l._hw_encode(rec)) + '\n')
+        self.file.flush()
+        return rec
+
+    @staticmethod
+    def read(path):
+        with open(path, encoding='utf-8') as f:
+            recs = [d2l._hw_decode(json.loads(l)) for l in f if l.strip()]
+        for r in recs:
+            r['raw'] = d2l._hw_unpack_raw(r['raw'])
+        return recs
+
+    def power_trace(self, hz=10):
+        """Samples (power, clocks, temperature, throttle reasons) at hz
+        while the block runs (pynvml, else nvidia-smi)."""
+        return d2l._hw_power_trace(hz)
+```
+
+```{.python .input #accelerator-design-lib-ladders}
+%%tab pytorch
+#@save
+def hw_bandwidth_ladder(sizes, kinds=('read', 'copy')):
+    """The bandwidth ladder: hw_copy_bench for each kind and working set
+    (bytes; sizes too large for this GPU skipped), each point after a short
+    warm-up, with the SM clock and board power while it ran."""
+    sizes, kinds = [int(s) for s in sizes], list(kinds)
+    def compute():  # largest first: a small point never starts on a cold card
+        rows = [dict(bytes=s, kind=k, **_hw_steady(
+                    lambda: d2l.hw_copy_bench(s, k)))
+                for k in kinds for s in sorted(sizes, reverse=True)
+                if _hw_fits(s * (2 if k == 'copy' else 1))]
+        rows.sort(key=lambda r: (kinds.index(r['kind']), r['bytes']))
+        return _hw_frame(rows)
+    return _hw_result('box-microbench', compute,
+                      dict(sizes=sizes, kinds=kinds), entry='ladder',
+                      live_check=_ladder_live, show=_show_ladder,
+                      live_label='read bandwidth')
+
+#@save
+def hw_dtype_ladder(n, formats):
+    """Measured TFLOP/s of an n x n x n product in each format
+    (hw_matmul_bench), each after a one-second warm-up, with the SM clock
+    and board power while it ran, against the datasheet of the GPU."""
+    formats = list(formats)
+    def compute():
+        df = _hw_frame([dict(format=f, **_hw_steady(
+            lambda: d2l.hw_matmul_bench(n, n, n, f), warm_s=1.0))
+            for f in formats])
+        df.attrs['n'] = n
+        return df
+    return _hw_result('box-microbench', compute,
+                      dict(n=n, formats=formats), entry='dtypes',
+                      live_check=_dtype_live, show=_show_dtypes,
+                      live_label='matmul')
 ```
 
 ## The Regeneration Driver
 
 `tools/hw_regen.py box-microbench` calls this in each of its three processes.
-It runs the page's calls on the full configuration (22.2 adds its entries
-here) and writes the fingerprint, `nvidia-smi topo -m` and one BenchLog record
-per measured point next to the entries.
+It runs the page's calls on the full configuration (the kernels section adds
+its entries here) and writes the fingerprint, `nvidia-smi topo -m` and one
+BenchLog record per measured point next to the entries. With `--config t2`
+the same calls run on the A100 of campaign C-T2 and write its log.
 
 ```{.python .input #accelerator-design-lib-driver}
 %%tab pytorch
 #@save
-_HW_TIERS = {'box': 'T1', 't1': 'T1', 't2': 'T2'}
+_HW_TIERS = {'box': 'T1', 't2': 'T2'}
+
+#@save
+def _hw_check_hardware(name, config):
+    """Raise unless this GPU is the chip-table row of the campaign log that
+    config writes (no check for the box run)."""
+    if config == 'box':
+        return
+    hardware = d2l.HW_CAMPAIGNS[d2l.HW_CONFIG_LOGS[(name, config)]][3]
+    p = torch.cuda.get_device_properties(0)
+    chip = _hw_chip_row(_gpu_short(p.name), p.total_memory, d2l.chip_specs())
+    if chip != hardware:
+        raise RuntimeError(f'config {config} measures the {hardware}, not '
+                           f'{p.name} ({p.total_memory / 2**30:.0f} GiB)')
 
 #@save
 def regen_microbench(config='box'):
-    """Driver of box-microbench: 22.1's page calls on the full
-    configuration, each point also recorded in a BenchLog."""
+    """Driver of box-microbench: the accelerator-design page's calls on the
+    full configuration, each point also recorded in a BenchLog; config
+    't2' is campaign C-T2 and runs only on the chip its log names."""
     if not torch.cuda.is_available():
         raise RuntimeError('box-microbench needs a CUDA GPU')
+    if (os.environ.get('D2L_HW_CONFIG') or 'box') != config:
+        raise ValueError(f'config {config!r} needs D2L_HW_CONFIG={config} '
+                         '(tools/hw_regen.py --config)')
+    _hw_check_hardware('box-microbench', config)
     folder = _hw_regen_dir('box-microbench')
     os.makedirs(folder, exist_ok=True)
     topo = hw_run(['nvidia-smi', 'topo', '-m'], timeout_s=60)
@@ -1559,7 +1880,7 @@ def regen_microbench(config='box'):
         dtypes = d2l.hw_dtype_ladder(  # no FP8 matrix units before Ada/Hopper
             n=8192, formats=('fp32', 'tf32', 'bf16', 'fp16') + fp8)
         smem = hw_smem_bench()
-        lat = hw_latency_bench(sizes=2**np.arange(12, 31, 2))
+        lat = hw_latency_bench(sizes=2**np.arange(12, 31))
         for cmd, df in (('hw_copy_bench', ladder), ('hw_matmul_bench', dtypes),
                         ('pointer chase', lat)):
             for rec in df.to_dict('records'):

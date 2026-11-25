@@ -3,7 +3,8 @@
 D2L_TEST_GPU=1 and a CUDA GPU, through the GPU-lock helper (they time
 nothing that is quoted): `hw_copy_bench` byte accounting (GB/s x ms equals
 the bytes moved: passes x nbytes for a read, twice nbytes for a copy),
-`read_passes` (the sum of every pass), `hw_matmul_bench` FLOP
+`read_passes` (the sum of every pass, also with the smaller blocks of a
+small working set), `_hw_steady` (a clock and a power sampled), `hw_matmul_bench` FLOP
 accounting (FlopCounterMode on the CUDA product equals 2 m n k, and
 TFLOP/s x ms equals it), the FP8 product against the bf16 product of the
 dequantized operands, the Triton L1 kernel's sum against torch, and the
@@ -69,6 +70,20 @@ class TestAcceleratorDesignGPU(unittest.TestCase):
         out = d2l.read_passes(x, passes=3, block=2048)
         torch.testing.assert_close(out.sum(), 3 * x.sum(), rtol=1e-4,
                                    atol=1e-3)
+        n_sm = torch.cuda.get_device_properties(0).multi_processor_count
+        x = torch.rand(2**16, device='cuda')  # 256 KiB: smaller blocks
+        out = d2l.read_passes(x, passes=3)
+        self.assertEqual(out.numel(), min(2**16, 4 * n_sm * 128))
+        torch.testing.assert_close(out.sum(), 3 * x.sum(), rtol=1e-4,
+                                   atol=1e-2)
+
+    def test_steady_clock(self):
+        r = d2l._hw_steady(lambda: d2l.hw_copy_bench(2**24, 'read',
+                                                     repeats=3),
+                           warm_s=0.2)
+        self.assertGreater(r['gbs'], 10)
+        self.assertGreater(r['sm_mhz'], 100)  # sampled while it ran
+        self.assertGreater(r['power_w'], 1)
 
     def test_chase_cycle(self):
         nbytes = 2**16

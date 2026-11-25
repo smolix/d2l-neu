@@ -8,8 +8,8 @@ the learned network used only the last few tokens of its 32-token context
 window. Both phenomena share the exact same mathematical root. Because a
 recurrent network applies the same weight matrix at every time step, any
 gradient propagating backward through a sequence is multiplied by a state
-Jacobian at each step. Over many steps these factors compound—much like
-compound interest—causing the gradient to grow or shrink geometrically.
+Jacobian at each step. Over many steps these factors compound, much like
+compound interest, causing the gradient to grow or shrink geometrically.
 
 Even a scalar recurrence $h_t = w_\textrm{h} h_{t-1} + x_t$ shows why:
 unrolling gives $h_t = \sum_{s \leq t} w_\textrm{h}^{t-s} x_s$, so
@@ -192,7 +192,7 @@ trainer.fit(model, data)
 ```
 
 To probe gradient flow over a longer horizon, we sample 256 random validation
-segments `seqs` of length $L = 64$—twice the training window—along with their
+segments `seqs` of length $L = 64$ (twice the training window) along with their
 following tokens `targets`.
 
 ```{.python .input #bptt-vanishing-and-exploding-gradients-4}
@@ -268,7 +268,7 @@ d2l.plot(np.arange(L), rel, 'lag $k$', 'relative gradient norm',
 ```
 
 Even though the trained $\mathbf{W}_\textrm{hh}$ has a spectral radius near
-$1.8$—which would explode in a purely linear recurrence—the actual gradient
+$1.8$, which would explode in a purely linear recurrence, the actual gradient
 vanishes rapidly: it drops below 1% of its initial norm within roughly eight
 steps and shrinks to a few billionths across 32 tokens. Each backward step
 retains a little over half of the gradient norm (the printed value at lag 8
@@ -288,7 +288,7 @@ learning from tokens much further back, whatever the data may hold.
 
 Exploding and vanishing gradients demand fundamentally different remedies.
 Because an exploding gradient threatens to corrupt the parameters in a single
-oversized update, global gradient clipping (:eqref:`eq_grad_clipping`) provides
+oversized update, global gradient clipping (:numref:`sec_rnn`) provides
 a simple safeguard—yet multiplying the entire gradient sum
 :eqref:`eq_bptt_partial_L_ht` by a scalar never changes the *relative* weight
 of distant versus recent lags. Overcoming vanishing gradients therefore
@@ -317,7 +317,7 @@ forward while *detaching* it from the computational graph (as in
 :numref:`fig_truncated_bptt`), no gradient ever crosses a segment boundary,
 imposing a hard learning horizon of at most $T_0$ steps :cite:`Jaeger.2002`. In
 a vanilla RNN, however, vanishing gradients already choke off the backward
-signal after roughly eight steps—well inside our 32-token window—so lengthening
+signal after roughly eight steps, well inside our 32-token window, so lengthening
 the window alone cannot extend the model's effective memory.
 
 ## Summary
@@ -326,8 +326,8 @@ Backpropagation through time applies ordinary backpropagation to an unrolled
 RNN, propagating loss sensitivities backward via
 :eqref:`eq_bptt_partial_L_ht_recur` and summing parameter gradients across time
 steps (:eqref:`eq_bptt_param_grads`). Because a gradient traveling back $k$
-steps multiplies $k$ state Jacobians—reducing in a linear RNN to
-$(\mathbf{W}_\textrm{hh}^\top)^k \sim \rho^k$—gradients explode when $\rho > 1$
+steps multiplies $k$ state Jacobians, which reduces in a linear RNN to
+$(\mathbf{W}_\textrm{hh}^\top)^k \sim \rho^k$, gradients explode when $\rho > 1$
 and vanish when $\rho < 1$. Including $\tanh$ multiplies each step by
 $1 - \mathbf{H}_t^2 \in (0, 1]$, causing gradients in our trained RNN to fall
 below 1% within roughly eight steps despite $\rho \approx 1.8$. Gradient
@@ -606,11 +606,11 @@ To measure how far gradients actually travel inside our trained language model f
 
 ::: {.cols .vc}
 ::: {.col}
-Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\mathbf{G}_L\|$ on a logarithmic axis against lag $k \in \{0, \ldots, 63\}$ resolves the puzzle from §{sec_rnn}:
+Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\mathbf{G}_L\|$ against lag $k \in \{0, \ldots, 63\}$ explains the short horizon from §{sec_rnn}:
 
-- **Large weights, yet fast vanishing:** The trained recurrent matrix has spectral radius $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$ (which would explode as $1.80^k$ in a linear RNN!), yet the mean $\tanh$ derivative is $\overline{1 - H^2} \approx 0.27$.
-- **About $0.55$ per step (measured):** The gradient norm keeps a little over half of its size at every step back in time (rough estimate: $1.80 \times 0.27 \approx 0.49$)—falling **below $1\%$ within $k = 8$ steps** and shrinking to $\sim 10^{-9}$ across 32 tokens.
-- **Consistent with the short context of §{sec_rnn}, not a proof:** At lags 2 and 4 the gradient still has $\approx 35\%$ and $\approx 10\%$ of its size, and Kneser–Ney counts saturate at the same context length without any gradients. Beyond lag 8, almost no gradient reaches $\mathbf{W}_{\textrm{hh}}$.
+- **Large weights, fast vanishing:** Although $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$, $\tanh$ saturation lowers the mean derivative to $\overline{1 - H^2} \approx 0.27$.
+- **$\approx 0.55\times$ per step:** Gradients shrink by nearly half per step ($1.80 \times 0.27 \approx 0.49$), falling **below $1\%$ by lag $k = 8$** and to $\sim 10^{-9}$ by lag 32.
+- **Short effective memory:** Lags 2–4 retain $10\text{--}35\%$ of the signal (where Kneser–Ney also saturates); beyond lag 8, almost no gradient reaches $\mathbf{W}_{\textrm{hh}}$.
 :::
 
 ::: {.col .fig}
@@ -627,7 +627,7 @@ Plotting the geometric-mean relative gradient norm $\|\mathbf{G}_{L-k}\| / \|\ma
 $$\mathbf{G}_t = \sum_{j=t}^T \frac{\partial L}{\partial \mathbf{O}_j}\mathbf{W}_{\textrm{hq}}^\top \prod_{i=t+1}^j \mathbf{J}_i$$
 
 - **What clipping fixes (Exploding spikes):** When an unsaturated trajectory causes $\|\mathbf{g}\| \gg \theta$, rescaling by $\theta/\|\mathbf{g}\|$ caps the step size at $\eta\theta$ so parameters cannot diverge.
-- **What clipping cannot fix (Vanishing ratios):** Multiplying the entire gradient sum $\mathbf{g}$ by a single scalar rescales lag-$0$ and lag-$20$ terms equally—leaving the $1 : 10^{-6}$ ratio between short-range and long-range signals unchanged!
+- **What clipping cannot fix (Vanishing ratios):** Multiplying the entire gradient sum $\mathbf{g}$ by a single scalar rescales lag-$0$ and lag-$20$ terms equally—leaving the $1 : 10^{-6}$ ratio between short-range and long-range signals unchanged.
 :::
 
 ::: {.col .fig}
@@ -654,7 +654,7 @@ Overcoming vanishing gradients requires redesigning the recurrent state transiti
 ::: {.cols .vc}
 ::: {.col}
 - **Activation memory grows linearly with $T$ ($O(Tbh)$):** Evaluating the backward pass at step $t$ requires both $\mathbf{H}_t$ (for $1 - \mathbf{H}_t^2$) and $\mathbf{H}_{t-1}$ (for $\mathbf{H}_{t-1}^\top \mathbf{G}_t$). Reverse-mode autodiff must retain all $T$ states in VRAM until the backward sweep finishes.
-- **Update latency scales as $O(T)$:** Full BPTT across *The Time Machine* ($T = 65{,}741$ tokens) would run $65{,}741$ forward and $65{,}741$ backward steps for **a single weight update**!
+- **Update latency scales as $O(T)$:** Full BPTT across *The Time Machine* ($T = 65{,}741$ tokens) would run $65{,}741$ forward and $65{,}741$ backward steps for **a single weight update**.
 :::
 
 ::: {.col .fig .big}
@@ -687,7 +687,7 @@ Truncating backpropagation to windows of length $T_0$ trades long-range gradient
 
 - **Hard credit-assignment horizon of $T_0$ steps:** Within a segment of length $T_0 = 32$, the loss at position $j \in \{1, \ldots, 32\}$ backpropagates through $j - 1$ steps within that segment (at most $31$ steps, $15.5$ steps on average) and **never sends gradient across the detached boundary** into the preceding segment.
 - **Zero-state windows vs. detached streaming:** In §{sec_rnn}, `d2l.TimeMachine` sampled shuffled 32-token windows starting from $\mathbf{H}_0 = \mathbf{0}$ so minibatches are i.i.d. for SGD; stateful streaming carries $\mathbf{H}_{T_0}$ across segments for inference context but still blocks gradients at $T_0$.
-- **Which horizon binds first?** In our vanilla $\tanh$ RNN, gradients already vanish below $1\%$ by lag $k = 8 \ll T_0 = 32$—so the cell's Jacobian decay, not the 32-token window, is the active bottleneck!
+- **Which horizon binds first?** In our vanilla $\tanh$ RNN, gradients already vanish below $1\%$ by lag $k = 8 \ll T_0 = 32$—so the cell's Jacobian decay, not the 32-token window, is the active bottleneck.
 :::
 
 ::: {.slide title="Concept Check: BPTT Jacobians, Clipping & Detach"}

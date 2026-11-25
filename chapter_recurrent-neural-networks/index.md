@@ -3,22 +3,23 @@
 
 Having spent two chapters on images, we close this part of the book by turning
 to sequential data. Every model we have built so far expects an input of fixed
-shape—a tabular vector of attributes or a $28 \times 28$ grid of pixels—and
-treats each example independently. A sentence, an audio recording, a video, or
-a stream of sensor measurements behaves quite differently: its length varies
-from one example to the next, and its entries depend strongly on one another
-and on the order in which they arrive. Consider the opening sentence of H. G.
-Wells' *The Time Machine*, which serves as our running dataset throughout this
-chapter: "The Time Traveller (for so it will be convenient to speak of him)
-was expounding a recondite matter to us." Guessing the final word requires
-reading the nineteen words before it in order. How can a single model make
-that prediction when the preceding text might be arbitrarily long?
+shape, such as a tabular vector of attributes or a $28 \times 28$ grid of
+pixels, and treats each example independently. A sentence, an audio recording,
+a video, or a stream of sensor measurements behaves quite differently: its
+length varies from one example to the next, and its entries depend strongly on
+one another and on the order in which they arrive. Consider the opening
+sentence of H. G. Wells' *The Time Machine*, which serves as our running
+dataset throughout this chapter: "The Time Traveller (for so it will be
+convenient to speak of him) was expounding a recondite matter to us." Guessing
+the final word requires reading the nineteen words before it in order. How can
+a single model make that prediction when the preceding text might be
+arbitrarily long?
 
 Claude Shannon framed this question as a guessing game :cite:`Shannon.1951`,
 estimating the predictability of printed English by asking human readers to
 guess a passage one character at a time. A *language model* plays the same
-game: it assigns a probability to the next *token*—whether a character, a
-subword, or a whole word—given the tokens that preceded it, and can generate
+game: it assigns a probability to the next *token* (whether a character, a
+subword, or a whole word) given the tokens that preceded it, and can generate
 new text by feeding each chosen token back in as its next input.
 
 Because the history already read grows with every step, restricting attention

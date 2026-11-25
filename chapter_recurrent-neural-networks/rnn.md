@@ -110,9 +110,9 @@ $$
 $$
 :eqlabel:`rnn_h_with_state`
 
-Because the same five parameter tensors—$\mathbf{W}_{\textrm{xh}}$,
+Because the same five parameter tensors ($\mathbf{W}_{\textrm{xh}}$,
 $\mathbf{W}_{\textrm{hh}}$, $\mathbf{b}_\textrm{h}$ in the recurrent layer and
-$\mathbf{W}_{\textrm{hq}}$, $\mathbf{b}_\textrm{q}$ in the output layer—are
+$\mathbf{W}_{\textrm{hq}}$, $\mathbf{b}_\textrm{q}$ in the output layer) are
 reused at every step (starting from $\mathbf{H}_0 = \mathbf{0}$), the parameter
 count is completely independent of sequence length (:numref:`fig_rnn`). Viewed
 in unrolled form, an RNN running over $T$ steps is a $T$-layer feedforward
@@ -164,7 +164,8 @@ multiplying a $b \times |\mathcal{V}|$ one-hot matrix by $\mathbf{E}$, without
 materializing or multiplying by zeros). The recurrent layer updates
 $\mathbf{H}_t$, and $\textrm{softmax}(\mathbf{O}_t)$ defines
 $P(x_{t+1} \mid x_{\leq t})$ in the chain-rule factorization
-:eqref:`eq_lm_factorization`.
+$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t})$
+(:numref:`sec_language-model`).
 
 ![An RNN language model trained by teacher forcing over BPE tokens of *The Time Machine*. The target sequence is the input shifted forward by one token, so each step is trained to predict the next token.](../img/mdl-rnn-lm-shift.svg)
 :label:`fig_rnn_train`
@@ -200,8 +201,8 @@ to its own errors just like our multistep sine-wave forecast in
 ## An RNN Language Model from Scratch
 :label:`sec_rnn-scratch`
 
-We now implement the three components of this language model—the recurrent
-cell, the embedding lookup, and the output layer—from scratch.
+We now implement the three components of this language model (the recurrent
+cell, the embedding lookup, and the output layer) from scratch.
 
 ### The Recurrent Cell
 
@@ -282,8 +283,8 @@ class RNNScratch(nnx.Module):  #@save
         self.b_h = nnx.Param(jnp.zeros(num_hiddens))
 ```
 
-The forward pass loops over the leading time axis of `inputs`—of shape
-(`num_steps`, `batch_size`, `num_inputs`)—initializing the hidden state to
+The forward pass loops over the leading time axis of `inputs` of shape
+(`num_steps`, `batch_size`, `num_inputs`), initializing the hidden state to
 zeros when none is supplied and returning the list of all per-step hidden
 states alongside the final state.
 
@@ -848,9 +849,9 @@ d2l.plot(list(range(1, 11)), [ppl_clipped] + ppl_runs, 'epoch',
 ```
 
 Without clipping, gradient spikes send validation perplexity
-jumping violently—sometimes far above the untrained baseline of 1,027—and most
+jumping violently, sometimes far above the untrained baseline of 1,027, and most
 runs finish at more than twice the clipped model's perplexity. Converting our
-clipped validation perplexity to bits per byte (:eqref:`eq_bpb`) divides
+clipped validation perplexity to bits per byte (:numref:`subsec_bits-per-byte`) divides
 $\log_2 \textrm{ppl}$ by the average UTF-8 bytes per BPE token ($\approx 2.8$):
 
 ```{.python .input #rnn-implementation-training-5}
@@ -1843,7 +1844,7 @@ Measuring the relative Euclidean distance $\|\mathbf{E}_{i,\textrm{final}} - \ma
 
 @!rnn-implementation-embeddings-under-sgd-2
 
-- **Sparse vs. dense gradient accumulation:** Dense weights $(\mathbf{W}_{\textrm{xh}}, \mathbf{W}_{\textrm{hh}}, \mathbf{W}_{\textrm{hq}})$ accumulate gradient contributions from all $b \times T = 1{,}024 \times 32 = 32{,}768$ token positions in a minibatch, whereas embedding row $\mathbf{E}_i$ receives gradient *only* from the few positions where token $i$ appears!
+- **Sparse vs. dense gradient accumulation:** Dense weights $(\mathbf{W}_{\textrm{xh}}, \mathbf{W}_{\textrm{hh}}, \mathbf{W}_{\textrm{hq}})$ accumulate gradient contributions from all $b \times T = 1{,}024 \times 32 = 32{,}768$ token positions in a minibatch, whereas embedding row $\mathbf{E}_i$ receives gradient *only* from the few positions where token $i$ appears.
 - **Why uniform-step SGD stalls on $\mathbf{E}$:** Dividing by $32{,}768$ leaves rare and medium-frequency token rows with tiny updates (the average row moves about $4\%$ of its length over 10 epochs), so $\mathbf{E}$ acts largely as a frozen random projection (adaptive optimizers like Adam rescale per-coordinate variance to move $\mathbf{E}$ rapidly).
 - **SGD remedy:** Widen the random embedding basis from $d = 64 \to 512$ so $\mathbf{W}_{\textrm{xh}}$ has $8\times$ richer features to read, and add dropout (`emb_dropout = 0.1`, `dropout = 0.5`) to curb overfitting.
 :::
@@ -1874,7 +1875,7 @@ How does our trained RNN ($\approx 2.1$ bpb) compare against interpolated Kneser
 
 @!rnn-implementation-training-6
 
-- **A virtual tie at $\approx 2.1$ bpb:** The 32-token-window RNN lands right alongside the Kneser–Ney trigram ($2.09$ bpb) and 4-gram ($2.08$ bpb) that look back only 2 or 3 tokens!
+- **A virtual tie at $\approx 2.1$ bpb:** The 32-token-window RNN lands right alongside the Kneser–Ney trigram ($2.09$ bpb) and 4-gram ($2.08$ bpb) that look back only 2 or 3 tokens.
 - **Complementary errors (Mikolov et al., 2011):** Even at nearly equal overall bpb, the RNN (continuous semantic representations) and Kneser–Ney (exact lexical specificity) each beat the other on $\approx 50\%$ of validation tokens; a $50/50$ mixture $0.5\,P_{\textrm{RNN}} + 0.5\,P_{\textrm{KN}}$ improves over the standalone trigram by $\approx 0.06$ bpb.
 :::
 
@@ -1885,8 +1886,8 @@ How does our trained RNN ($\approx 2.1$ bpb) compare against interpolated Kneser
 ::: {.col}
 To uncover why a recurrent network fed 32 tokens of history failed to pull ahead of a 3-gram, we plot validation bits per byte separately at each window position $k \in \{1, \ldots, 32\}$ (where position $k$ conditions on $k$ tokens of context):
 
-- **Sharp drop from $k = 1 \to 2$, then flat:** Validation loss drops from $\approx 2.3$ bpb at 1 token of context to $\approx 2.14$ bpb at 2 tokens, gains another $0.01$–$0.02$ at 3, and then **stays flat at $\approx 2.12$ bpb from position 4 through position 32**!
-- **Two candidate causes, not separated here:** *Optimization*—gradients fade with every step back (§{sec_bptt}); *data*—Kneser–Ney counts, which use no gradients, saturate at the same place ($2.24 \to 2.09 \to 2.08$ bpb for $n = 2, 3, 4$), so 50,000 tokens may hold little longer-range signal.
+- **Sharp drop from $k = 1 \to 2$, then flat:** Validation loss drops from $\approx 2.3$ bpb at 1 token of context to $\approx 2.14$ bpb at 2 tokens, gains another $0.01$–$0.02$ at 3, and then **stays flat at $\approx 2.12$ bpb from position 4 through position 32**.
+- **Two candidate causes, not separated here:** *Optimization*: gradients fade with every step back (§{sec_bptt}); *data*: Kneser–Ney counts, which use no gradients, saturate at the same place ($2.24 \to 2.09 \to 2.08$ bpb for $n = 2, 3, 4$), so 50,000 tokens may hold little longer-range signal.
 :::
 
 ::: {.col .fig}
@@ -1966,7 +1967,7 @@ Test your grasp of RNN parameter scaling, batched projections, and model ensembl
 
 1. **(a) $1\times$** ($\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ is independent of $h$); **(b) $2\times$** ($\mathbf{W}_{\textrm{xh}} \in \mathbb{R}^{d \times h}$ and $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times |\mathcal{V}|}$ scale linearly with $h$); **(c) $4\times$** ($\mathbf{W}_{\textrm{hh}} \in \mathbb{R}^{h \times h}$ scales quadratically as $h^2$: $16{,}384 \to 65{,}536$).
 2. **Sequential causal dependency:** During generation, input token $x_{t+1}$ is not known until step $t$ finishes computing $\mathbf{H}_t$, projecting $\mathbf{O}_t$, and sampling $x_{t+1}$.
-3. **Standalone:** $-\log_2(0.50) - \log_2(0.02) \approx 1.00 + 5.64 = 6.64\text{ bits}$ for each model. **Mixture:** $P_{\textrm{mix}}(A) = P_{\textrm{mix}}(B) = 0.26$, costing $2 \times (-\log_2 0.26) \approx 3.89\text{ bits}$ ($2.75$ bits saved, because $\frac{1}{2}(p+q) \ge \frac{1}{2}\max(p,q)$ never pays more than $1$ bit over the better expert!).
+3. **Standalone:** $-\log_2(0.50) - \log_2(0.02) \approx 1.00 + 5.64 = 6.64\text{ bits}$ for each model. **Mixture:** $P_{\textrm{mix}}(A) = P_{\textrm{mix}}(B) = 0.26$, costing $2 \times (-\log_2 0.26) \approx 3.89\text{ bits}$ ($2.75$ bits saved, because $\frac{1}{2}(p+q) \ge \frac{1}{2}\max(p,q)$ never pays more than $1$ bit over the better expert).
 :::
 :::
 

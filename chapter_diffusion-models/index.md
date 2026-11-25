@@ -1,7 +1,7 @@
 # Diffusion Models
 :label:`chap_diffusion`
 
-The adversarial generators of :numref:`chap_gans` required a second network—a discriminator or critic—because a generator mapping noise to data has no direct regression target. Diffusion and flow-matching models construct a regression target by progressively corrupting each training example with Gaussian noise. Reversing a small Gaussian noise step requires estimating the conditional expectation of the clean data given the noisy observation.
+The adversarial generators of :numref:`chap_gans` required a second network, a discriminator or critic, because a generator mapping noise to data has no direct regression target. Diffusion and flow-matching models construct a regression target by progressively corrupting each training example with Gaussian noise. Reversing a small Gaussian noise step requires estimating the conditional expectation of the clean data given the noisy observation.
 
 This perspective unites three lines of work: non-equilibrium thermodynamics and denoising diffusion probabilistic models (DDPM) :cite:`sohl2015deep,ho2020denoising`, score-based generative modeling :cite:`song2019generative,song2021score`, and flow matching or stochastic interpolants :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022,Albergo.Boffi.VandenEijnden.2023`. In all three formulations, a single neural network learns to predict the clean data (or equivalently the added noise, the score $\nabla_{\mathbf{x}} \log p_t(\mathbf{x})$, or the velocity along the path) at every noise level $t \in [0, 1]$, and a numerical sampler integrates those predictions from pure noise at $t = 1$ back to data at $t = 0$.
 

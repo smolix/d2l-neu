@@ -1243,10 +1243,7 @@ weighting change.
 
 ## Summary
 
-- Because training depends only on the marginal distribution of $\mathbf{x}_t$ at each time $t$, a single trained network supports the entire DDIM sampler family parameterized by the stochasticity strength $\eta \ge 0$.
-- At $\eta = 0$, DDIM is deterministic and coincides with Euler's method on the probability-flow ODE $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$ in rescaled coordinates $(\bar{\mathbf{x}}, \bar\sigma) = (\mathbf{x}/\alpha_t, \sigma_t/\alpha_t)$.
-- On our Fashion-MNIST model, deterministic ODE solvers consistently outperform stochastic samplers ($\eta = 1$ and the ancestral chain) at small and moderate budgets: Heun's second-order method on the linear grid reaches the model's FD plateau in $\approx 20$ evaluations, while the second-order Adams--Bashforth multistep solver reaches the guided plateau by 50 evaluations at one evaluation per step.
-- Running the deterministic ODE backward (`ddim_invert`) maps an image to a latent noise code, supporting spherical latent interpolation, partial-noising image edits, and replacement inpainting without retraining.
+Because training depends only on the marginal distribution of $\mathbf{x}_t$ at each time $t$, a single trained network supports the entire DDIM sampler family parameterized by the stochasticity strength $\eta \ge 0$. At $\eta = 0$, DDIM is deterministic and coincides with Euler's method on the probability-flow ODE $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$ in the rescaled coordinates $(\bar{\mathbf{x}}, \bar\sigma) = (\mathbf{x}/\alpha_t, \sigma_t/\alpha_t)$. On our Fashion-MNIST model, deterministic ODE solvers consistently outperform stochastic samplers ($\eta = 1$ and the ancestral chain) at small and moderate budgets: Heun's second-order method on the linear grid reaches the model's FD plateau in about 20 evaluations, while the second-order Adams–Bashforth multistep solver reaches the guided plateau by 50 evaluations at one evaluation per step. Running the deterministic ODE backward (`ddim_invert`) maps any image to a latent noise code, supporting spherical latent interpolation, partial-noising image edits, and replacement inpainting without retraining.
 
 ## Exercises
 
@@ -1448,7 +1445,7 @@ Setting $\eta = 0$, $\eta = 1$, or using Ho et al.'s ancestral variance defines 
 
 ::: {.cols .vc}
 ::: {.col}
-- **$\eta = 0$ (Deterministic DDIM = Euler ODE):** $\tilde\sigma = 0$, so $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sigma_s\hat{\boldsymbol\epsilon}$, or $\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\hat{\boldsymbol\epsilon}$—an exact Euler step of $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$!
+- **$\eta = 0$ (Deterministic DDIM = Euler ODE):** $\tilde\sigma = 0$, so $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sigma_s\hat{\boldsymbol\epsilon}$, or $\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\hat{\boldsymbol\epsilon}$—an exact Euler step of $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$.
 - **$\eta = 1$ (Posterior-variance DDIM):** $\tilde\sigma^2 = \sigma_s^2(1 - \kappa^2)$ is the exact conditional variance of $q(\mathbf{x}_s \mid \mathbf{x}_t, \mathbf{x}_0)$ (exact when data is a single point).
 - **Ancestral chain:** Uses the larger forward-step variance $\sigma_t^2(1 - \kappa^2) = (\sigma_t^2/\sigma_s^2)\tilde\sigma_{\eta=1}^2$ (exact for $\mathcal{N}(\mathbf{0}, \mathbf{I})$ data on VP).
 :::
@@ -1538,7 +1535,7 @@ On our trained class-conditional Fashion-MNIST U-Net, we evaluate 1,000-sample F
 @!samplers-quality-against-evaluations-on-images-3
 
 - **Deterministic DDIM ($\eta = 0$) dominates at every budget $\le 200$ steps:** Scores a third to nearly a half lower FD than $\eta = 1$ across $10$–$200$ steps, and at $50$ steps ($\approx 1.7$–$1.8$) already approaches the $1{,}000$-step plateau ($\approx 1.3$).
-- **Why the ancestral chain fails at $\le 100$ steps:** Its forward-step variance $\sigma_t^2(1 - \kappa^2)$ injects far too much noise for images on coarse grids, scoring $\mathrm{FD} \approx 8$–$11$ at $50$ steps (worse than 10-step DDIM at about $5.4$!) and only tying $\eta = 0$ at $1{,}000$ steps.
+- **Why the ancestral chain fails at $\le 100$ steps:** Its forward-step variance $\sigma_t^2(1 - \kappa^2)$ injects far too much noise for images on coarse grids, scoring $\mathrm{FD} \approx 8$–$11$ at $50$ steps (worse than 10-step DDIM at about $5.4$) and only tying $\eta = 0$ at $1{,}000$ steps.
 :::
 
 ::: {.slide title="Solver Order vs. Step Grid at Equal Evaluations"}
@@ -1556,7 +1553,7 @@ Plotting FD against total network evaluations on log–log axes shows how quickl
 
 ::: {.cols .vc}
 ::: {.col}
-- **20 evaluations suffice with 2nd-order Heun:** On the linear grid, Heun reaches $\mathrm{FD} \approx 1.2$–$1.3$ at just $20$ evaluations ($11$ steps)—matching $1{,}000$ ancestral steps at **$1/50\text{th}$ the compute**!
+- **20 evaluations suffice with 2nd-order Heun:** On the linear grid, Heun reaches $\mathrm{FD} \approx 1.2$–$1.3$ at just $20$ evaluations ($11$ steps)—matching $1{,}000$ ancestral steps at **$1/50\text{th}$ the compute**.
 - **50 evaluations for multistep, 50 to 100 for Euler:** The multistep solver reaches $\approx 1.2$–$1.3$ by $50$ evaluations on the linear grid; Euler is still at $\approx 1.4$–$1.5$ there.
 - **Why EDM grids trail at $10$–$20$ NFE here:** Spending $40\%$ of steps at $\bar\sigma > 4$ starves the middle regime where $28 \times 28$ garments form.
 :::
@@ -1574,7 +1571,7 @@ Does lower FD always mean smaller per-image ODE integration error? We measure pe
 
 @!samplers-quality-against-evaluations-on-images-7
 
-- **Distributional FD vs. pointwise trajectory accuracy:** At $10$ NFE ($\gamma = 1$), Heun has *larger* pointwise RMS error than Euler ($0.12$–$0.13$ vs. about $0.1$) yet **half the FD** (about $1.6$ vs. about $3.2$): Euler blurs images toward the mean, whereas Heun draws sharp garments that slightly overshoot the exact trajectory!
+- **Distributional FD vs. pointwise trajectory accuracy:** At $10$ NFE ($\gamma = 1$), Heun has *larger* pointwise RMS error than Euler ($0.12$–$0.13$ vs. about $0.1$) yet **half the FD** (about $1.6$ vs. about $3.2$): Euler blurs images toward the mean, whereas Heun draws sharp garments that slightly overshoot the exact trajectory.
 - **Under guidance ($\gamma = 2$), multistep wins:** Extrapolating $(1-\gamma)\mathbf{u}_\varnothing + \gamma\mathbf{u}_c$ stiffens the ODE; 2nd-order multistep achieves both the lowest RMS trajectory error and reaches the $\gamma = 2$ FD plateau by $50$ evaluations.
 :::
 
@@ -1587,7 +1584,7 @@ Generating eight garments from the exact same initial noise $\mathbf{z}$ and cla
 ::: {.col}
 - **Row 1 (Ancestral, 50 steps):** Excess forward-step variance leaves visible salt-and-pepper speckle across backgrounds and fabrics.
 - **Row 2 (DDIM, 10 steps):** Smooths away fine prints and collar edges.
-- **Rows 3 & 4 (DDIM 50 vs. Heun 20 NFE):** Match column-by-column in pose, shading, and sharp details—confirming both converge to the same deterministic ODE map!
+- **Rows 3 & 4 (DDIM 50 vs. Heun 20 NFE):** Match column-by-column in pose, shading, and sharp details—confirming both converge to the same deterministic ODE map.
 :::
 
 ::: {.col .fig}
@@ -1637,7 +1634,7 @@ $$\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar\sigma_{t'} - \bar\sigma_t)\
 
 Why can we not interpolate linearly ($(1 - u)\mathbf{z}_0 + u\mathbf{z}_1$) between two inverted noise codes $\mathbf{z}_0, \mathbf{z}_1 \in \mathbb{R}^{784}$?
 
-- **The high-dimensional norm-collapse hazard:** Two independent Gaussian vectors in $d = 784$ dimensions are nearly orthogonal ($\omega \approx \pi/2$) with norm $r \approx \sqrt{d}$. Their linear midpoint $\frac{1}{2}(\mathbf{z}_0 + \mathbf{z}_1)$ has norm $r / \sqrt{2} \approx 0.71\,r$—lying completely outside the $\mathcal{N}(\mathbf{0}, \mathbf{I})$ shell where the denoiser was trained!
+- **The high-dimensional norm-collapse hazard:** Two independent Gaussian vectors in $d = 784$ dimensions are nearly orthogonal ($\omega \approx \pi/2$) with norm $r \approx \sqrt{d}$. Their linear midpoint $\frac{1}{2}(\mathbf{z}_0 + \mathbf{z}_1)$ has norm $r / \sqrt{2} \approx 0.71\,r$—lying completely outside the $\mathcal{N}(\mathbf{0}, \mathbf{I})$ shell where the denoiser was trained.
 - **Spherical linear interpolation (Slerp):** Rotates along the great circle of constant radius $r$ connecting $\mathbf{z}_0$ and $\mathbf{z}_1$ at angle $\cos\omega = \frac{\mathbf{z}_0^\top \mathbf{z}_1}{\|\mathbf{z}_0\|\|\mathbf{z}_1\|}$:
   $$\mathbf{z}_u = \frac{\sin\big((1 - u)\omega\big)\,\mathbf{z}_0 + \sin(u\omega)\,\mathbf{z}_1}{\sin\omega}, \qquad u \in [0, 1]$$
 
@@ -1703,7 +1700,7 @@ Test your understanding of fast diffusion solvers and deterministic inversion:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. $\kappa^2 = \mathrm{SNR}_t / \mathrm{SNR}_s = (\bar\sigma_s / \bar\sigma_t)^2 = (59 / 152)^2 \approx 0.151$, so $f = 1 - \kappa^2 \approx \mathbf{84.9\%}$ of the noise variance is replaced by fresh noise!
+1. $\kappa^2 = \mathrm{SNR}_t / \mathrm{SNR}_s = (\bar\sigma_s / \bar\sigma_t)^2 = (59 / 152)^2 \approx 0.151$, so $f = 1 - \kappa^2 \approx \mathbf{84.9\%}$ of the noise variance is replaced by fresh noise.
 2. The ancestral chain injects the forward-step variance $\sigma_t^2(1 - \kappa^2) = (\sigma_t^2/\sigma_s^2)\tilde\sigma_{\eta=1}^2$. On a 50-step grid at low noise, $\sigma_t^2/\sigma_s^2 \gg 1$, injecting excessive noise when the garment is already nearly determined; at $1{,}000$ steps, $\sigma_t^2/\sigma_s^2 \approx 1$.
 3. Inversion is exact in 1 step when $\hat{\boldsymbol\epsilon}$ is constant along trajectories (a single data point). For two orthogonal codes of norm $r$, the linear midpoint $\frac{1}{2}(\mathbf{z}_0 + \mathbf{z}_1)$ shrinks in norm to $r/\sqrt{2} \approx 0.71r$, falling outside the unit Gaussian shell.
 :::

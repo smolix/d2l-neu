@@ -983,14 +983,11 @@ For a new model, three design rules emerge from our analysis:
 2. **Place training levels where spatial structure forms:** For $28 \times 28$ images, uniform $t$ or a logit-normal shifted toward low noise ($m < 0$) outperforms a $t = 0.5$-centered logit-normal; as image resolution increases by a factor $r$, shift log-SNR downward by $\log r^2$ (:numref:`subsec_diffusion-design-space-scales`).
 3. **Choose the loss weighting for the samples, not for the bound:** The weighting $w(\lambda) \equiv 1$ trains the likelihood bound and spends much of its effort on low-noise fine detail. Weightings that discount high log-SNR, such as $w(\lambda) = e^{-\lambda/2}$ (flow matching and $\mathbf{v}$-prediction), are the ones that have given good image samples in practice :cite:`Kingma.Gao.2023`. On our mixture the bound weighting did not even give the small network its best flow likelihood.
 
-The chapter's default—velocity regression on the linear path with uniform $t$, integrated on the linear grid—satisfies these criteria without extra hyperparameters. In :numref:`sec_diffusion-latent` we examine how to avoid spending network evaluations on high-frequency pixel detail by moving diffusion into a learned latent space.
+The chapter's default, velocity regression on the linear path with uniform $t$ integrated on the linear grid, satisfies these criteria without extra hyperparameters. In :numref:`sec_diffusion-latent` we examine how to avoid spending network evaluations on high-frequency pixel detail by moving diffusion into a learned latent space.
 
 ## Summary
 
-- Reversing the forward noising chain defines a latent-variable model whose negative log-likelihood is bounded by the ELBO, a sum of noise-prediction errors weighted by half the per-step log-SNR drop $\tfrac12(\lambda_{k-1} - \lambda_k)$ (or $\frac12 \int \mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}\|^2\, d\lambda$ in continuous time).
-- Every standard diffusion and flow-matching objective can be written in log-SNR coordinates as $\mathcal{L}_w = \frac12 \int w(\lambda)\, \mathbb{E}\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \boldsymbol\epsilon\|^2\, d\lambda$. Monotonically decreasing weightings $w(\lambda)$ correspond to likelihood bounds on noise-augmented data; in particular, flow matching on the linear path and $\mathbf{v}$-prediction on the cosine path share $w(\lambda) \propto e^{-\lambda/2}$.
-- On the three-mode mixture, a trained network matches the exact oracle's negative log-likelihood within $0.005$ nats under both the continuous ELBO and the probability-flow ODE change-of-variables formula. When capacity is constrained, $w(\lambda) \equiv 1$ yields a tighter ELBO whereas unweighted noise regression yields better flow likelihoods and fewer stray samples.
-- EDM preconditioning scales network inputs, skip connections, and targets to unit variance across all noise levels. Because white noise acts as a low-pass filter on natural images, higher image resolutions require shifting the log-SNR schedule toward higher noise by $2 \log r$.
+Reversing the forward noising chain defines a latent-variable model whose negative log-likelihood is bounded by the ELBO, a sum of noise-prediction errors weighted by half the per-step log-SNR drop $\tfrac12(\lambda_{k-1} - \lambda_k)$, with continuous-time limit $\frac12 \int \mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}\|^2\, d\lambda$. More generally, every standard diffusion and flow-matching objective can be written in log-SNR coordinates as $\mathcal{L}_w = \frac12 \int w(\lambda)\, \mathbb{E}\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \boldsymbol\epsilon\|^2\, d\lambda$, where monotonically decreasing weightings $w(\lambda)$ correspond to likelihood bounds on noise-augmented data; in particular, flow matching on the linear path and $\mathbf{v}$-prediction on the cosine path share $w(\lambda) \propto e^{-\lambda/2}$. On the three-mode mixture, a trained network matches the exact oracle's negative log-likelihood within $0.005$ nats under both the continuous ELBO and the probability-flow ODE change-of-variables formula, while under constrained capacity $w(\lambda) \equiv 1$ yields a tighter ELBO whereas unweighted noise regression yields better flow likelihoods and fewer stray samples. Finally, EDM preconditioning scales network inputs, skip connections, and targets to unit variance across noise levels, and because white noise acts as a low-pass filter on natural images, increasing image resolution by a factor $r$ requires shifting the log-SNR schedule downward by $2 \log r$.
 
 ## Exercises
 
@@ -1005,7 +1002,7 @@ The chapter's default—velocity regression on the linear path with uniform $t$,
     1. Which of these weightings are monotone in $\lambda$? Which noise levels does the noise loss on the VP path downweight relative to the $\mathbf{v}$-loss on the same path, and by what factor at its last step?
     1. (Code.) By the first part, the $\mathbf{v}$-loss on the cosine path and the velocity loss on the linear path are one objective, yet the comparison of the text trains two different networks with them. Evaluate the two first-seed models of the comparison at single noise levels, as the last cell of the comparison does, after converting both outputs to noise predictions at the same $\lambda$ with `make_pred`. At which levels do they differ? The two paths feed the network the same point at different scales: which scale does each path's input have at $t = 1/2$, and how could the difference explain what you see?
    :exlabel:`ex_design-space-implied-weighting`
-1. [code] **Likelihoods in many dimensions.** ● In $d$ dimensions the exact divergence in `pf_nll` takes $d$ forward-mode derivatives per evaluation. Replace it by the estimate $\mathbf{r}^\top (\partial \mathbf{u}/\partial \mathbf{x})\, \mathbf{r}$ of :eqref:`eq_mdl-ode-hutchinson` with one Rademacher vector $\mathbf{r}$ per step, which takes one derivative :cite:`Grathwohl.Chen.Bettencourt.ea.2018`.
+1. [code] **Likelihoods in many dimensions.** ● In $d$ dimensions the exact divergence in `pf_nll` takes $d$ forward-mode derivatives per evaluation. Replace it by the Hutchinson trace estimate $\mathbf{r}^\top (\partial \mathbf{u}/\partial \mathbf{x})\, \mathbf{r}$ of :numref:`sec_mdl-neural-odes-cnf` with one Rademacher vector $\mathbf{r}$ per step, which takes one derivative :cite:`Grathwohl.Chen.Bettencourt.ea.2018`.
     1. Show that the resulting estimate of $\log p$ is unbiased. The variance of one probe is derived in the first part of Exercise :exref:`ex_mdl-odes-solvers-hutchinson-variance` of :numref:`sec_mdl-neural-odes-cnf`; measure the standard deviation of the estimate per point on the mixture, and compare it with the gap of a few thousandths of a nat between the trained network and the exact field. How many probes per step, or how many points, does resolving that gap take?
     1. Apply the estimate to the base model of the comparison (the velocity on the linear path) on 100 test images, after adding uniform noise of the width of one gray level, $2/255$, to each pixel. Report the result in bits per dimension, $\big(-\log p(\mathbf{x})/d + \log 127.5\big)/\log 2$, which counts the bits per pixel of the 8-bit image. A density that is uniform over the 256 gray levels scores exactly 8 bits; a working model scores far less, a few bits or fewer, and a value near or above 8 usually means a missing $\log 127.5$ or a sign error. What would 15,000 updates change?
    :exlabel:`ex_design-space-hutchinson`
@@ -1100,7 +1097,7 @@ Consider $1\text{D}$ standard normal data $x_0 \sim \mathcal{N}(0, 1)$, a $T = 2
 
 $$\mathbb{E}_{x_0}[L(x_0)] = \underbrace{0.144}_{L_2 \text{ (prior)}} + \underbrace{0.203}_{L_1 \text{ (denoising)}} + \underbrace{1.072}_{L_0 \text{ (reconstruction)}} = \mathbf{1.419\text{ nats}} = \frac{1}{2}\log(2\pi e)$$
 
-- **Exactness in two steps:** Even with giant steps $\beta_k = 0.5$, the sum equals the exact differential entropy $\frac{1}{2}\log(2\pi e) \approx 1.419$ nats of $\mathcal{N}(0, 1)$!
+- **Exactness in two steps:** Even with giant steps $\beta_k = 0.5$, the sum equals the exact differential entropy $\frac{1}{2}\log(2\pi e) \approx 1.419$ nats of $\mathcal{N}(0, 1)$.
 - **Why $\nu_2 = \beta_2 = \frac{1}{2}$ beats $\nu_2 = \tilde\beta_2 = \frac{1}{3}$ here:** The forward posterior $q(x_1 \mid x_2, x_0)$ knows $x_0$ (so its conditional variance is $\tilde\beta_2 = \frac{1}{3}$), whereas the reverse step $p_{\boldsymbol\theta}(x_1 \mid x_2)$ does *not* know $x_0$—setting $\nu_2 = \tilde\beta_2$ underestimates the true reverse variance and inflates the bound to $1.466$ nats.
 :::
 
@@ -1144,7 +1141,7 @@ $$\log p_{\boldsymbol\theta}(\mathbf{x}_{t_{\min}}) = \log \mathcal{N}(\mathbf{x
 @!design-space-a-number-for-the-mixture-3
 
 ::: {.d2l-note}
-**Within $0.005$ nats of maximum likelihood:** Integrating `pf_nll` via 100-step RK4 and estimating the stratified continuous ELBO `bound` confirm that our trained MLP matches the exact analytical mixture field within **$0.002$–$0.005$ nats**!
+**Within $0.005$ nats of maximum likelihood:** Integrating `pf_nll` via 100-step RK4 and estimating the stratified continuous ELBO `bound` confirm that our trained MLP matches the exact analytical mixture field within **$0.002$–$0.005$ nats**.
 :::
 :::
 
@@ -1193,7 +1190,7 @@ Computing $w(\lambda) = 2\,c(t)\,|dt/d\lambda|$ numerically via forward-mode AD 
 ::: {.cols .vc}
 ::: {.col}
 - **Step-function basis:** A step weighting $w_\mu(\lambda) = \mathbf{1}\{\lambda \le \mu\}$ is the exact continuous ELBO for data pre-corrupted to log-SNR level $\mu$.
-- **Monotone decreasing $w(\lambda)$ = mixture of bounds (Kingma & Gao, 2023):** Any $w'(\lambda) \le 0$ decomposes as $\int w_\mu(\lambda)\,(-w'(\mu))\,d\mu$—an average of ELBOs over noise-augmented data!
+- **Monotone decreasing $w(\lambda)$ = mixture of bounds (Kingma & Gao, 2023):** Any $w'(\lambda) \le 0$ decomposes as $\int w_\mu(\lambda)\,(-w'(\mu))\,d\mu$—an average of ELBOs over noise-augmented data.
 - **Time sampling $p(t)$ as a multiplier:** Drawing $\operatorname{logit}(t) \sim \mathcal{N}(m, s^2)$ multiplies $w(\lambda)$ by a bell curve centered at $m$.
 :::
 
@@ -1263,9 +1260,9 @@ Because neighboring pixels are strongly correlated, increasing image resolution 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Block-averaging SNR boost ($r^2\times$):** Averaging an $r \times r$ pixel block preserves the coarse signal while dividing independent per-pixel noise variance by $r^2$—shifting the coarse log-SNR upward by $+2\log r$!
+- **Block-averaging SNR boost ($r^2\times$):** Averaging an $r \times r$ pixel block preserves the coarse signal while dividing independent per-pixel noise variance by $r^2$—shifting the coarse log-SNR upward by $+2\log r$.
 - **Resolution schedule shift (Hoogeboom et al., 2023):** To keep coarse structure forming at the same time $t$, shift the schedule downward by $\lambda_t^{(r)} = \lambda_t^{(1)} - 2\log r$ (e.g., $-\log 16 \approx -2.77$ for $4\times$ side length).
-- **Endpoint brightness leakage (Lin et al., 2024):** Stopping a schedule at $\lambda_1 = -5$ on a $64 \times 64$ grid leaves channel-mean $\mathrm{SNR} = 4096\,e^{-5} \approx 28$, preventing zero-mean noise starts from generating very dark or bright images!
+- **Endpoint brightness leakage (Lin et al., 2024):** Stopping a schedule at $\lambda_1 = -5$ on a $64 \times 64$ grid leaves channel-mean $\mathrm{SNR} = 4096\,e^{-5} \approx 28$, preventing zero-mean noise starts from generating very dark or bright images.
 :::
 
 ::: {.col .fig}
@@ -1291,7 +1288,7 @@ Why did centering logit-normal training times at $m = 0$ ($t = 0.5$) degrade FD 
 ::: {.col}
 @!design-space-a-recipe-ablation-4
 
-- **Starving the fine-detail regime ($t \le 0.03$):** A standard logit-normal ($m = 0, s = 1$) places $< 1/3000$ of its training draws below $t = 0.03$ (vs. $3\%$ for uniform $t$), inflating test velocity loss at $t = 0.01$ from **$430$ to $690$**!
+- **Starving the fine-detail regime ($t \le 0.03$):** A standard logit-normal ($m = 0, s = 1$) places $< 1/3000$ of its training draws below $t = 0.03$ (vs. $3\%$ for uniform $t$), inflating test velocity loss at $t = 0.01$ from **$430$ to $690$**.
 - **Resolution dependence:** Large $512^2$ latent models need $m = 0$ because high resolution boosts coarse SNR; small $28 \times 28$ images form structure at lower noise ($m < 0$).
 :::
 
@@ -1322,7 +1319,7 @@ Test your command of the diffusion likelihood bound and design space:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. $L_0 = \log(2\pi \times 10^{-4}) + \frac{1}{2}(2) \approx -7.37 + 1.00 = \mathbf{-6.37\text{ nats}}$ (a differential log-density term!). Added to the log-SNR integral ($\approx +8.84$ nats), the total bound is $\approx \mathbf{+2.47\text{ nats}}$.
+1. $L_0 = \log(2\pi \times 10^{-4}) + \frac{1}{2}(2) \approx -7.37 + 1.00 = \mathbf{-6.37\text{ nats}}$ (a differential log-density term). Added to the log-SNR integral ($\approx +8.84$ nats), the total bound is $\approx \mathbf{+2.47\text{ nats}}$.
 2. **The velocity loss ($w(\lambda) \propto e^{-\lambda/2}$):** Because $e^{-\lambda/2}$ is **monotonically decreasing** in $\lambda$, it is a positive mixture of step-function ELBOs on noise-augmented data; $\operatorname{sech}^2(\lambda/4)$ peaks at $\lambda = 0$.
 :::
 :::

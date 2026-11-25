@@ -1466,7 +1466,7 @@ Entropy, Cross-Entropy, and KL Divergence<br>**self-information · Shannon entro
 ::: {.col}
 - **Untrained 10-class baseline ($\ln 10 \approx 2.30$ nats):** Uniform guessing ($q_j = 1/10$) incurs $2.30$ nats of surprise per example.
 - **Clean vs. noisy floors ($0$ vs. $0.545$ nats):** Clean deterministic labels have floor $0$, whereas $10\%$ symmetric label noise creates an irreducible floor $H(Y \mid X) = 0.545$ nats.
-- **Diagnosing plateaus:** A plateau at $0.60$ nats is poor on clean labels, but within $0.055$ nats of Bayes-optimal under $10\%$ label noise!
+- **Diagnosing plateaus:** A plateau at $0.60$ nats is poor on clean labels, but within $0.055$ nats of Bayes-optimal under $10\%$ label noise.
 :::
 
 ::: {.col .fig .big}
@@ -1697,7 +1697,7 @@ With $k = 10$ classes and $\rho = 0.1$ label noise, the floor is $H_b(0.1) + 0.1
 @!mdl-information-theory-the-irreducible-loss
 
 ::: {.d2l-note .warn}
-**Why Overconfidence Hurts:** A classifier predicting $0.99$ on the clean class achieves the maximum possible $90\%$ accuracy, yet suffers $0.689$ nats loss because each $10\%$ flipped label inflicts $-\ln(0.01/9) = 6.80$ nats of surprise!
+**Why Overconfidence Hurts:** A classifier predicting $0.99$ on the clean class achieves the maximum possible $90\%$ accuracy, yet suffers $0.689$ nats loss because each $10\%$ flipped label inflicts $-\ln(0.01/9) = 6.80$ nats of surprise.
 :::
 :::
 
@@ -1762,7 +1762,7 @@ Without the $\tau^2$ factor, raising $\tau$ from $1$ to $20$ shrinks the distill
 
 For a continuous random variable $X$ with density $p(x)$, the **differential entropy** is $h(X) = -\int p(x)\log p(x)\,dx$. Unlike discrete entropy $H(X)$, differential entropy is neither non-negative nor scale-invariant:
 
-- **Negative values and unit sensitivity:** For $X \sim \mathrm{Unif}[0, a]$, $p(x) = 1/a$ gives $h(X) = \log a$. At $a = \tfrac12\text{ m}$, $h(X) = -\ln 2 \approx -0.693$ nats; recording the same length in centimetres ($a = 50\text{ cm}$) adds $\ln 100 \approx 4.61$ nats!
+- **Negative values and unit sensitivity:** For $X \sim \mathrm{Unif}[0, a]$, $p(x) = 1/a$ gives $h(X) = \log a$. At $a = \tfrac12\text{ m}$, $h(X) = -\ln 2 \approx -0.693$ nats; recording the same length in centimetres ($a = 50\text{ cm}$) adds $\ln 100 \approx 4.61$ nats.
 - **Change-of-variables law:** Under any smooth bijection $\mathbf{y} = g(\mathbf{x})$, the Jacobian shifts $h$:
   $$h(g(\mathbf{X})) = h(\mathbf{X}) + \mathbb{E}\big[\log |\det Dg(\mathbf{X})|\big]$$
 - **Quantization limit and KL invariance:** Binning $X$ into cells of width $\Delta$ gives $H(X_\Delta) + \log \Delta \to h(X)$ as $\Delta \to 0$. In $D_{\textrm{KL}}(P \| Q) = \int p(x)\log\frac{p(x)}{q(x)}\,dx$, the Jacobian factors cancel in the ratio $p/q$, so **KL divergence is completely invariant to coordinate rescaling**.

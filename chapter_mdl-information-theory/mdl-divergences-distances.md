@@ -1280,7 +1280,7 @@ f-Divergences and Variational Duals<br>**density ratios · forward vs. reverse K
 ::: {.col}
 Compare two point masses $P = \delta_0$ and $Q = \delta_d$ separated by distance $d > 0$:
 
-- **Frozen $f$-divergences ($u = p/q$):** For every $d > 0$, $D_{\textrm{KL}} = \infty$, $\textrm{JS} = \log 2 \approx 0.693$, and $\textrm{TV} = 1.000$—providing **zero gradient** to pull $Q$ toward $P$!
+- **Frozen $f$-divergences ($u = p/q$):** For every $d > 0$, $D_{\textrm{KL}} = \infty$, $\textrm{JS} = \log 2 \approx 0.693$, and $\textrm{TV} = 1.000$, providing **zero gradient** to pull $Q$ toward $P$.
 - **Geometry-aware metrics:** RBF $\textrm{MMD}^2 = 2(1 - e^{-d^2/(2\ell^2)})$ supplies local gradients, and Wasserstein $W_1(\delta_0, \delta_d) = |d|$ supplies unit gradient $\pm 1$ at all distances.
 :::
 
@@ -1567,7 +1567,7 @@ Training a $\chi^2$ critic by gradient ascent on $P = (0.6, 0.3, 0.1)$ vs. $Q = 
 ::: {.slide title="Practical Pitfalls of Adversarial Critic Bounds (cont.)"}
 [Underestimation & Vanishing Gradients]{.kicker}
 
-- **Downward bias & disjoint-support saturation:** Any suboptimal critic ($T \neq T^\star$, including $2T^\star$) underestimates $D_f$ by $\tfrac14\mathbb{E}_Q[(T - T^\star)^2]$; on disjoint supports, $T^\star$ is constant ($f'(\infty)$ on data, $f'(0)$ on model samples), giving the generator zero gradient!
+- **Downward bias & disjoint-support saturation:** Any suboptimal critic ($T \neq T^\star$, including $2T^\star$) underestimates $D_f$ by $\tfrac14\mathbb{E}_Q[(T - T^\star)^2]$; on disjoint supports, $T^\star$ is constant ($f'(\infty)$ on data, $f'(0)$ on model samples), giving the generator zero gradient.
 :::
 
 ::: {.slide title="Concept Check: f-Divergences, Pinsker, Critics"}

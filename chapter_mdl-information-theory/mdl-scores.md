@@ -624,7 +624,7 @@ densities under mild regularity conditions on the scores,
 $\mathrm{KSD}^2(P, Q) = 0$ if and only if $P = Q$
 :cite:`Liu.Lee.Jordan.2016,Chwialkowski.Strathmann.Gretton.2016`. Still, our
 two-mixture example is a useful caution: "nonzero in theory" does not prevent
-the value from being astronomically small for distributions that are genuinely
+the value from being astronomically small for distributions that are
 far apart.
 
 Extending KSD to $\mathbb{R}^n$ changes only the notation: $g$ becomes a vector
@@ -899,7 +899,7 @@ An **energy-based model (EBM)** defines $q_{\boldsymbol{\theta}}(\mathbf{x}) = e
 $$s_Q(\mathbf{x}) = \nabla_{\mathbf{x}}\log q_{\boldsymbol{\theta}}(\mathbf{x}) = -\nabla_{\mathbf{x}} E_{\boldsymbol{\theta}}(\mathbf{x})$$
 
 - **Why MLE & GANs struggle:** MLE needs intractable $\nabla_{\boldsymbol{\theta}}\log Z(\boldsymbol{\theta})$, while GANs/MMD/$W_1$ need expensive Langevin MCMC samples from $Q_{\boldsymbol{\theta}}$.
-- **Score escape hatch:** Differentiating wrt input $\mathbf{x}$ kills $\log Z(\boldsymbol{\theta})$ in one backward pass!
+- **Score escape hatch:** Differentiating wrt input $\mathbf{x}$ kills $\log Z(\boldsymbol{\theta})$ in one backward pass.
 :::
 
 ::: {.col .fig}
@@ -949,7 +949,7 @@ $$D_{\textrm{F}}(P \| Q) = \frac{1}{2}\mathbb{E}_{\mathbf{x} \sim P}\Big[\big\|s
 - **Coordinate scale dependence ($1/x^2$ units vs. dimensionless nats):**
   For two Gaussians $\mathcal{N}(\mu_1, \sigma^2)$ and $\mathcal{N}(\mu_2, \sigma^2)$ separated by $\Delta = |\mu_1 - \mu_2|$, the score difference is identically $\Delta/\sigma^2$, giving:
   $$D_{\textrm{F}}(P \| Q) = \frac{\Delta^2}{2\sigma^4} \qquad \text{whereas} \qquad D_{\textrm{KL}}(P \| Q) = \frac{\Delta^2}{2\sigma^2}$$
-  Doubling the coordinate scale ($x \mapsto 2x$) leaves $D_{\textrm{KL}}$ invariant but divides $D_{\textrm{F}}$ by $4$!
+  Doubling the coordinate scale ($x \mapsto 2x$) leaves $D_{\textrm{KL}}$ invariant but divides $D_{\textrm{F}}$ by $4$.
 :::
 
 ::: {.slide title="The Mode-Weight Blind Spot of Score Comparisons"}
@@ -962,7 +962,7 @@ Compare $P_{0.7}$ and $P_{0.3}$ for $P_w = w\,\mathcal{N}(-m, 1) + (1 - w)\,\mat
 $$s_w(x) = -x + m\tanh(mx - c_w), \qquad c_w = \tfrac12\log\frac{w}{1 - w}$$
 
 - **Identical inside both modes:** Near $x \approx \pm m$, $\tanh(\pm m^2 - c_w) \approx \pm 1$ for both $w = 0.7$ and $w = 0.3$, so $s_{0.7}(x) \approx s_{0.3}(x) \approx -(x \mp m)$.
-- **Disagreement hides in the empty valley:** At $x \approx 0$, $p(0) \approx 1.5 \times 10^{-6}$, collapsing $D_{\textrm{F}}(P_{0.7} \| P_{0.3}) \approx 4 \times 10^{-6} \approx 0$!
+- **Disagreement hides in the empty valley:** At $x \approx 0$, $p(0) \approx 1.5 \times 10^{-6}$, collapsing $D_{\textrm{F}}(P_{0.7} \| P_{0.3}) \approx 4 \times 10^{-6} \approx 0$.
 :::
 
 ::: {.col .fig}
@@ -985,7 +985,7 @@ As mode separation $m$ increases from $1$ to $5$, $D_{\textrm{KL}}(P_{0.7} \| P_
 ::: {.cols .vc}
 ::: {.col}
 - **Clean mixture ($\sigma_{\textrm{noise}} = 0$):** Modes at $\pm 5$ are $10\sigma$ apart with valley density $p(0) = 1.5 \times 10^{-6}$, making $D_{\textrm{F}}$ blind to mixing weights $w$.
-- **Noised mixture ($\sigma_{\textrm{noise}} = 2$):** Convolving with $\mathcal{N}(0, 2^2)$ widens variance to $\sigma_{\textrm{tot}}^2 = 5$ ($4.47\sigma$ separation) and boosts valley density $10{,}000\times$ to $1.5 \times 10^{-2}$!
+- **Noised mixture ($\sigma_{\textrm{noise}} = 2$):** Convolving with $\mathcal{N}(0, 2^2)$ widens variance to $\sigma_{\textrm{tot}}^2 = 5$ ($4.47\sigma$ separation) and boosts valley density $10{,}000\times$ to $1.5 \times 10^{-2}$.
 - **Multi-scale diffusion recipe (Song & Ermon, 2019):** High noise bridges valleys to learn global mode weights; low noise resolves local shapes.
 :::
 
@@ -1003,7 +1003,7 @@ Even on a single connected mode, how can we minimize $D_{\textrm{F}}(P \| Q)$ wh
 - **Expand the squared score gap in 1D:**
   $$D_{\textrm{F}}(P \| Q) = \underbrace{\frac{1}{2}\mathbb{E}_{x \sim P}\big[s_P(x)^2\big]}_{\text{constant independent of } Q} - \underbrace{\mathbb{E}_{x \sim P}\big[s_P(x)\,s_Q(x)\big]}_{\text{cross term containing unknown } s_P} + \underbrace{\frac{1}{2}\mathbb{E}_{x \sim P}\big[s_Q(x)^2\big]}_{\text{direct data average of model score}}$$
 - **Isolating the obstacle:** Only the middle cross term $-\mathbb{E}_P[s_P(x)s_Q(x)]$ involves both the unknown data slope $s_P(x) = p'(x)/p(x)$ and the model $Q$.
-- **Key insight:** Because $p(x) s_P(x) = p'(x)$, the cross term is the integral $-\int p'(x) s_Q(x)\,dx$, which cries out for integration by parts!
+- **Key insight:** Because $p(x) s_P(x) = p'(x)$, the cross term is the integral $-\int p'(x) s_Q(x)\,dx$, inviting integration by parts.
 :::
 
 ::: {.slide title="Stein's Identity: Integration by Parts on Densities"}
@@ -1053,7 +1053,7 @@ Consider fitting the unnormalized quartic density $\tilde{q}_\theta(x) = e^{-\th
   $$s_Q(x) = \frac{d}{dx}\!\left(-\frac{\theta x^4}{4}\right) = -\theta x^3, \qquad s_Q'(x) = -3\theta x^2$$
 - **Step 2 (Form the empirical score-matching objective):** Writing $\overline{f(x)} = \frac{1}{N}\sum_{i=1}^N f(x_i)$:
   $$\hat{J}(\theta) = \overline{\frac{1}{2}s_Q(x)^2 + s_Q'(x)} = \frac{1}{2}\theta^2\,\overline{x^6} - 3\theta\,\overline{x^2}$$
-- **Step 3 (Solve the quadratic in $\theta$):** Setting $\hat{J}'(\theta) = \theta\,\overline{x^6} - 3\overline{x^2} = 0$ yields the closed-form estimator $\hat{\theta}_{\textrm{SM}} = \frac{3\overline{x^2}}{\overline{x^6}}$ from two empirical moments!
+- **Step 3 (Solve the quadratic in $\theta$):** Setting $\hat{J}'(\theta) = \theta\,\overline{x^6} - 3\overline{x^2} = 0$ yields the closed-form estimator $\hat{\theta}_{\textrm{SM}} = \frac{3\overline{x^2}}{\overline{x^6}}$ from two empirical moments.
   *(Note: In $\mathbb{R}^n$, computing $\textrm{tr}(\nabla_{\mathbf{x}} s_Q(\mathbf{x})) = \sum_{i=1}^n \partial_{x_i} s_{Q,i}(\mathbf{x})$ requires $n$ backward passes, motivating sliced and denoising score matching in Chapter §{num:chap_diffusion} and §{sec_mdl-score-matching-diffusion-flow}.)*
 :::
 
@@ -1064,7 +1064,7 @@ What if we reverse the roles and apply Stein's identity to the *model* $Q$ inste
 
 $$(\mathcal{A}_Q g)(x) = g'(x) + s_Q(x)\,g(x) \implies \mathbb{E}_{x \sim Q}\big[(\mathcal{A}_Q g)(x)\big] = 0 \quad \text{for all test functions } g$$
 
-- **Goodness-of-fit testing without $Z$ or model samples:** Given data samples $x_1, \ldots, x_N \sim P$, if the empirical average $\frac{1}{N}\sum_{i=1}^N (\mathcal{A}_Q g)(x_i)$ deviates significantly from $0$, we can reject $P = Q$ using only $s_Q(x_i)$!
+- **Goodness-of-fit testing without $Z$ or model samples:** Given data samples $x_1, \ldots, x_N \sim P$, if the empirical average $\frac{1}{N}\sum_{i=1}^N (\mathcal{A}_Q g)(x_i)$ deviates significantly from $0$, we can reject $P = Q$ using only $s_Q(x_i)$.
 - **What $\mathbb{E}_P[\mathcal{A}_Q g]$ actually measures:** Because $P$ satisfies its own Stein identity $\mathbb{E}_P[g'(x)] = -\mathbb{E}_P[s_P(x)g(x)]$, substituting into $\mathbb{E}_P[g' + s_Q g]$ yields:
   $$\mathbb{E}_{x \sim P}\big[(\mathcal{A}_Q g)(x)\big] = \mathbb{E}_{x \sim P}\Big[\big(s_Q(x) - s_P(x)\big)\,g(x)\Big]$$
   Each test function $g(x)$ probes the projection of the score gap $s_Q - s_P$ onto $g$.
@@ -1077,7 +1077,7 @@ Testing $Q = \mathcal{N}(0, 1)$ ($s_Q(x) = -x$, so $(\mathcal{A}_Q g)(x) = g'(x)
 
 @!divergences-distances-stein
 
-- Because $P = \mathcal{N}(0, 4)$ has an odd score gap $s_Q(x) - s_P(x) = -x - (-x/4) = -\tfrac34 x$, the even function $g(x) = 1$ integrates to $0$ and completely misses a $4\times$ variance error!
+- Because $P = \mathcal{N}(0, 4)$ has an odd score gap $s_Q(x) - s_P(x) = -x - (-x/4) = -\tfrac34 x$, the even function $g(x) = 1$ integrates to $0$ and completely misses a $4\times$ variance error.
 :::
 
 ::: {.slide title="Kernel Stein Discrepancy (KSD) and Stein Kernel"}

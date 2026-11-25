@@ -1374,7 +1374,7 @@ $$\mathbb{E}_P[\ell] = H_2(P) + D_{\textrm{KL}}^{(2)}(P \| Q) + (-\log_2 Z) \ge 
 ::: {.cols .vc}
 ::: {.col}
 - **Huffman greedy merging:** Repeatedly merges the two rarest symbols so $Z = 1$, cutting expected length on $P = (0.6, 0.3, 0.1)$ from Shannon's $1.60$ bits to $1.40$ bits ($H_2 = 1.295$).
-- **The 1-bit symbol wall:** Because every symbol codeword has $\ell_i \ge 1$, *no symbol code* can beat $1.00$ bit/symbol—even when $P(\texttt{a}) = 0.9$ has $H_2(P) = 0.469$ bits!
+- **The 1-bit symbol wall:** Because every symbol codeword has $\ell_i \ge 1$, *no symbol code* can beat $1.00$ bit/symbol—even when $P(\texttt{a}) = 0.9$ has $H_2(P) = 0.469$ bits.
 :::
 
 ::: {.col .fig .big}
@@ -1436,7 +1436,7 @@ On the 10-symbol message `aaaaaaaaba` ($4.69$ bits surprisal under $q(\texttt{a}
 ::: {.slide title="Any Autoregressive Language Model Is a Compressor"}
 [Adaptive & Pretrained Models]{.kicker}
 
-Because arithmetic coding requires only next-symbol probabilities $q(\cdot \mid x_{<i})$, *any* causal predictor—from an n-gram table to a Transformer LLM—becomes a lossless compressor:
+Because arithmetic coding requires only next-symbol probabilities $q(\cdot \mid x_{<i})$, *any* causal predictor (from an n-gram table to a Transformer LLM) becomes a lossless compressor:
 
 - **Adaptive order-$m$ counting model:** Predicts character $x_i$ from the preceding $m$-character context $s = x_{i-m:i}$ using Laplace-smoothed running counts ($k = 27$):
   $$q(x \mid s) = \frac{c(s, x) + 1/2}{c(s) + k/2}$$
@@ -1465,7 +1465,7 @@ Evaluating adaptive context lengths $m \in \{0, 1, 2, 3, 4\}$ on *The Time Machi
 ::: {.cols .vc}
 ::: {.col}
 - **Frozen 70B LLM + arithmetic coder (Delétang et al., 2023):** Compresses raw ImageNet patches to **$43.4\%$** (beating PNG's $58.5\%$) and LibriSpeech audio to **$16.4\%$** (beating FLAC's $30.3\%$).
-- **Two-part MDL catch:** If the receiver does not already hold the $140\text{ GB}$ weights ($2$ bytes/param), transmitting the model inflates a $1\text{ GB}$ dataset to $>14{,}000\%$!
+- **Two-part MDL catch:** If the receiver does not already hold the $140\text{ GB}$ weights ($2$ bytes/param), transmitting the model inflates a $1\text{ GB}$ dataset to $>14{,}000\%$.
 :::
 
 ::: {.col .fig .big}
@@ -1593,7 +1593,7 @@ Because perplexity is defined *per token*, models with different vocabularies mu
 
 $$\textrm{bpc} = \frac{n_{\textrm{tok}}}{n_{\textrm{char}}}\log_2 \textrm{PPL}$$
 
-- **Coarse subwords vs. fine chars ($10^6$ chars):** Model A ($2 \times 10^5$ tokens, $\textrm{PPL} = 32$) achieves **$1.00\text{ bpc}$**, beating Model B ($5 \times 10^5$ tokens, $\textrm{PPL} = 8$, **$1.50\text{ bpc}$**) by $33\%$ despite $4\times$ higher token PPL!
+- **Coarse subwords vs. fine chars ($10^6$ chars):** Model A ($2 \times 10^5$ tokens, $\textrm{PPL} = 32$) achieves **$1.00\text{ bpc}$**, beating Model B ($5 \times 10^5$ tokens, $\textrm{PPL} = 8$, **$1.50\text{ bpc}$**) by $33\%$ despite $4\times$ higher token PPL.
 :::
 
 ::: {.col .fig}

@@ -694,15 +694,14 @@ ordering, so only this unsigned form generalizes.
 
 When $f$ is a probability density, :eqref:`eq_mdl-change_var_nd` tells us how
 a density transforms under a smooth invertible map, which is how a normalizing
-flow computes the density of its output (:eqref:`eq_mdl-cov_density` in
-:numref:`sec_mdl-joint-distributions`).
+flow computes the density of its output (:numref:`sec_mdl-joint-distributions`).
 
 ### The Gaussian Integral
 
 The normalizing constant $1/\sqrt{2\pi}$ of the bell curve comes from the
 one-dimensional integral $\int_{-\infty}^\infty e^{-x^2}\,dx$. Here the
 fundamental theorem cannot give us a closed form: an antiderivative certainly
-exists because $e^{-x^2}$ is continuous, but it is a genuinely new function
+exists because $e^{-x^2}$ is continuous, but it is a fundamentally new function
 that cannot be written in terms of elementary ones. Surprisingly, the integral
 over the entire real line can still be evaluated in closed form by taking a
 detour through two dimensions. The argument takes three steps and is the most
@@ -1174,7 +1173,7 @@ Increasing the cutoff $b$ from $1$ to $20$ drives the truncation error $e^{-b}$ 
 - **Fubini's theorem:** If $f$ is **absolutely integrable** on $R$ ($\iint_R |f| < \infty$), or if $f \ge 0$ everywhere (**Tonelli's theorem**), we can compute the double integral by slicing in either order:
   $$\iint_R f(x,y)\,dx\,dy = \int_a^b\!\left(\int_c^d f(x,y)\,dy\right)dx$$
 - **Product integrands split completely:** When $f(x, y) = g(x)h(y)$, the inner factor pulls out so $\iint_R g(x)h(y)\,dx\,dy = \bigl(\int_a^b g\,dx\bigr)\bigl(\int_c^d h\,dy\bigr)$.
-- **Why $\iint |f| < \infty$ matters:** For $f(x,y) = \frac{x^2-y^2}{(x^2+y^2)^2}$ on $[0,1]^2$, $\iint |f| = \infty$ and the two orders disagree ($+\frac{\pi}{4}$ vs. $-\frac{\pi}{4}$)!
+- **Why $\iint |f| < \infty$ matters:** For $f(x,y) = \frac{x^2-y^2}{(x^2+y^2)^2}$ on $[0,1]^2$, $\iint |f| = \infty$ and the two orders disagree ($+\frac{\pi}{4}$ vs. $-\frac{\pi}{4}$).
 :::
 
 ::: {.col .fig}
@@ -1244,7 +1243,7 @@ Substituting $z = \sqrt{2}\,x$ ($dz = \sqrt{2}\,dx$) into $\int_{-\infty}^\infty
 @!integral-gaussian
 
 ::: {.d2l-note}
-Why do the 2D grid sums on $[-b, b]^2$ at $\epsilon = 0.01$ match $\pi\operatorname{erf}(b)^2$ to 6 digits even though the left rule is normally $O(\epsilon)$? For an even integrand on a symmetric interval $[-b, b]$, the first-order bias $\tfrac{\epsilon}{2}(f(-b) - f(b))$ cancels identically to zero!
+Why do the 2D grid sums on $[-b, b]^2$ at $\epsilon = 0.01$ match $\pi\operatorname{erf}(b)^2$ to 6 digits even though the left rule is normally $O(\epsilon)$? For an even integrand on a symmetric interval $[-b, b]$, the first-order bias $\tfrac{\epsilon}{2}(f(-b) - f(b))$ cancels identically to zero.
 :::
 :::
 
@@ -1254,14 +1253,14 @@ Why do the 2D grid sums on $[-b, b]^2$ at $\epsilon = 0.01$ match $\pi\operatorn
 Test your understanding of the Fundamental Theorem, change of variables, and Gaussian moments:
 
 1. **GELU & ReLU as integrals:** Let $\phi(t) = \frac{1}{\sqrt{2\pi}}e^{-t^2/2}$ be the standard normal density and $\Phi(x) = \int_{-\infty}^x \phi(t)\,dt$ its CDF. Using the Fundamental Theorem and product rule, what is the derivative of the $\mathrm{GELU}$ activation $\mathrm{GELU}(x) = x\Phi(x)$?
-2. **Swapping integration order (Fubini):** The inner integral of $\int_0^1 \bigl(\int_y^1 e^{-x^2}\,dx\bigr)\,dy$ has no elementary antiderivative. Reverse the order of integration over the triangle $0 \le y \le x \le 1$ and evaluate it in closed form!
+2. **Swapping integration order (Fubini):** The inner integral of $\int_0^1 \bigl(\int_y^1 e^{-x^2}\,dx\bigr)\,dy$ has no elementary antiderivative. Reverse the order of integration over the triangle $0 \le y \le x \le 1$ and evaluate it in closed form.
 3. **Multivariate Gaussian normalizer:** For a $d$-dimensional covariance matrix $\boldsymbol{\Sigma} = \mathbf{L}\mathbf{L}^\top$ ($\det \mathbf{L} > 0$), use $\mathbf{x} = \mathbf{L}\mathbf{z}$ to evaluate $\int_{\mathbb{R}^d} \exp(-\tfrac{1}{2}\mathbf{x}^\top\boldsymbol{\Sigma}^{-1}\mathbf{x})\,d\mathbf{x}$.
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. By the Fundamental Theorem, $\Phi'(x) = \phi(x)$, so the product rule gives $\mathrm{GELU}'(x) = \Phi(x) + x\phi(x)$.
-2. The triangle $0 \le y \le x \le 1$ slices vertically as $0 \le x \le 1$ and $0 \le y \le x$: $\int_0^1 \bigl(\int_0^x e^{-x^2}\,dy\bigr)\,dx = \int_0^1 x e^{-x^2}\,dx = \tfrac{1}{2}(1 - e^{-1})$—the inner $y$-integral supplies the exact missing factor $x$!
+2. The triangle $0 \le y \le x \le 1$ slices vertically as $0 \le x \le 1$ and $0 \le y \le x$: $\int_0^1 \bigl(\int_0^x e^{-x^2}\,dy\bigr)\,dx = \int_0^1 x e^{-x^2}\,dx = \tfrac{1}{2}(1 - e^{-1})$, as the inner $y$-integral supplies the exact missing factor $x$.
 3. Under $\mathbf{x} = \mathbf{L}\mathbf{z}$, $|\det \mathbf{J}| = |\det \mathbf{L}| = (\det \boldsymbol{\Sigma})^{1/2}$ and $\mathbf{x}^\top\boldsymbol{\Sigma}^{-1}\mathbf{x} = \|\mathbf{z}\|_2^2$, so Fubini factors the integral into $(\det \boldsymbol{\Sigma})^{1/2}\prod_{i=1}^d \int_{-\infty}^\infty e^{-z_i^2/2}\,dz_i = (2\pi)^{d/2}(\det \boldsymbol{\Sigma})^{1/2}$.
 :::
 :::

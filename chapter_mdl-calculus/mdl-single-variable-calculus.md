@@ -311,7 +311,7 @@ turns rise over run upside down.
 
 Since the logarithm undoes $e^x$, this rule gives
 $\log'(y)=1/e^{\log y}=1/y$, the fifth entry in our table. Notice that the
-condition $f'(x)\neq0$ is genuinely necessary. For $f(x)=x^3$ we have
+condition $f'(x)\neq0$ is strictly necessary. For $f(x)=x^3$ we have
 $f'(0)=0$, so the formula breaks down at $y=0$; indeed, its inverse $x^{1/3}$
 is not differentiable at $0$, because the difference quotient
 $\epsilon^{1/3}/\epsilon=\epsilon^{-2/3}$ grows without bound and the graph has
@@ -817,7 +817,7 @@ This bound is the workhorse of smooth optimization :cite:`Nesterov.2018`. In
 fact, it does not even require a second derivative: it holds whenever $f'$ is
 *$L$-Lipschitz*, meaning that slopes at any two points differ by at most $L$
 times their distance, $|f'(u)-f'(v)|\le L|u-v|$. That is the form used in
-multivariable optimization (:eqref:`eq_mdl-opt-descent-lemma`), and exercise
+multivariable optimization (:numref:`sec_mdl-gradient-based-optimization`), and exercise
 :exref:`ex_mdl-single-variable-calculus-logistic-smoothness` proves it in one
 variable.
 
@@ -916,7 +916,7 @@ $f'''(1)/(2f''(1))=6/(2\cdot3)=1$, and the printed errors indeed yield
 $e_{t+1}/e_t^2\approx0.42$, $0.64$, $0.87$, and $0.99$. The general
 multivariable theorem, giving quadratic convergence from any starting point
 close enough to a minimizer with positive curvature, appears in
-:eqref:`eq_mdl-opt-newton-error`.
+:numref:`sec_mdl-curvature-methods`.
 
 That qualification "close enough" is essential, even for a strictly convex
 function. Consider $f(x)=x\arctan x-\tfrac12\log(1+x^2)$, which has
@@ -1797,7 +1797,7 @@ Work out these three questions using the Taylor remainder, descent lemma, and su
 
 1. By the Lagrange remainder, $|R_3(x)| \le \frac{\max|f^{(4)}|}{4!}h^4$, so dividing $h$ by $3$ shrinks the error bound by $3^4 = 81$.
 2. Every step size $0 < \eta < 2/L = 0.2$ is guaranteed to decrease $\ell$, and $\eta^\star = 1/L = 0.1$ maximizes the guaranteed decrease $\ell'(w)^2 / (2L) = \ell'(w)^2 / 20$.
-3. At $x = 0$, $\partial F(0) = [-1, 1] - 1 = [-2, 0]$. Since $0 \in [-2, 0]$, the optimality condition $0 \in \partial F(0)$ holds and $x = 0$ is the unique global minimizer!
+3. At $x = 0$, $\partial F(0) = [-1, 1] - 1 = [-2, 0]$. Since $0 \in [-2, 0]$, the optimality condition $0 \in \partial F(0)$ holds and $x = 0$ is the unique global minimizer.
 :::
 :::
 

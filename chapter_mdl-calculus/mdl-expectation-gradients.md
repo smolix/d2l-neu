@@ -98,7 +98,7 @@ $$
 
 The probability that a random variable $X$ with density $p$ lands in an
 interval $[a, b]$ is the area under $p$ over that interval,
-$P(a\le X\le b)=\int_a^b p(x)\,dx$ (:eqref:`eq_mdl-pdf_int_int`). Because a
+$P(a\le X\le b)=\int_a^b p(x)\,dx$ (:numref:`sec_mdl-random_variables`). Because a
 density measures probability per unit length rather than probability itself,
 its value can exceed $1$; for example, the uniform density on $[0,\tfrac12]$
 equals $2$ everywhere on its support. Our main running example is the
@@ -141,7 +141,7 @@ yardstick for comparing them.
 Our toy loss $\ell(\theta)=\mathbb{E}[X^2]$ is an integral that varies with a
 parameter $\theta$. In general, a parameter can affect an integral in two
 places: through the limits of integration, which the fundamental theorem of
-calculus :eqref:`eq_mdl-ftc` handles, or through the integrand itself.
+calculus (:numref:`sec_mdl-integral_calculus`) handles, or through the integrand itself.
 
 When the limits of integration are fixed and only the integrand depends on
 $\theta$, we differentiate by passing the derivative inside the integral:
@@ -743,7 +743,7 @@ $$\frac{d}{d\theta}\int_{a(\theta)}^{b(\theta)} f(x, \theta)\,dx = \int_{a(\thet
 - **Exact Variances on $\ell(\theta) = \mathbb{E}[X^2]$ at $\theta = 1.5$:**
   - *Pathwise ($2X$):* $\operatorname{Var} = 4 \implies \sigma = 2.000$.
   - *Score + Baseline ($b^\star = \theta^2+3$):* $\operatorname{Var} = 8\theta^2+6 \implies \sigma = 4.899$.
-  - *Plain REINFORCE ($X^2 Z$):* $\operatorname{Var} = \theta^4+14\theta^2+15 \implies \sigma = 7.181$ ($12.9\times$ higher variance!).
+  - *Plain REINFORCE ($X^2 Z$):* $\operatorname{Var} = \theta^4+14\theta^2+15 \implies \sigma = 7.181$ ($12.9\times$ higher variance).
 :::
 
 ::: {.col .fig .big}
@@ -763,10 +763,10 @@ Drawing $n = 200{,}000$ samples at $\theta = 1.5$ confirms that all three estima
 ::: {.slide title="When Score Beats Pathwise: Rapidly Oscillating Losses"}
 [High-Frequency Regime]{.kicker}
 
-Does the pathwise estimator always have lower variance than the score-function estimator? **No!** Consider the oscillating loss $g(x) = \sin(\omega x)$, where $\frac{d}{d\theta}\mathbb{E}[\sin(\omega X)] = \omega\cos(\omega\theta)e^{-\omega^2/2}$:
+Does the pathwise estimator always have lower variance than the score-function estimator? **No.** Consider the oscillating loss $g(x) = \sin(\omega x)$, where $\frac{d}{d\theta}\mathbb{E}[\sin(\omega X)] = \omega\cos(\omega\theta)e^{-\omega^2/2}$:
 
 - **Pathwise variance scales with $|g'|^2 = O(\omega^2)$:** One pathwise sample is $\omega\cos(\omega X)$, whose standard deviation grows linearly with frequency as $\approx \omega/\sqrt{2}$.
-- **Score-function variance is bounded by $|g|^2 \le 1$:** One score sample is $\sin(\omega X)\,Z$; since $|\sin(\omega X)| \le 1$, its second moment is at most $\mathbb{E}[Z^2] = 1$ regardless of how large $\omega$ grows!
+- **Score-function variance is bounded by $|g|^2 \le 1$:** One score sample is $\sin(\omega X)\,Z$; since $|\sin(\omega X)| \le 1$, its second moment is at most $\mathbb{E}[Z^2] = 1$ regardless of how large $\omega$ grows.
 
 @!integral-score-wins
 :::
@@ -800,8 +800,8 @@ Work out these three questions on the Leibniz rule, score function, and pathwise
 **Answers:**
 
 1. $\mathbb{E}[X^2(-1/\theta)] = -\frac{1}{\theta}\frac{\theta^2}{3} = -\frac{\theta}{3}$—which equals the naive interior swap $\int_0^\theta x^2 \partial_\theta(1/\theta)\,dx$ and misses the Leibniz upper-boundary term $f(\theta, \theta)b'(\theta) = \theta^2(1/\theta)(1) = +\theta$ ($-\frac{\theta}{3} + \theta = +\frac{2\theta}{3}$).
-2. Write $X = T_\theta(U) = \theta U$ on fixed support $U \in [0, 1]$: the pathwise estimator is $\partial_\theta(\theta U)^2 = 2\theta U^2$, whose expectation is $2\theta\mathbb{E}[U^2] = 2\theta(\tfrac{1}{3}) = \frac{2\theta}{3}$!
-3. The scalar loss $g(\mathbf{X}) = \sum_{j=1}^d X_j^2 = O(d)$ multiplies all $d$ coordinates of the score vector, making REINFORCE variance grow as $O(d^2)$ (or $O(d)$ with a baseline), whereas the pathwise derivative of coordinate $k$ is simply $2X_k$ with $O(1)$ variance independent of $d$!
+2. Write $X = T_\theta(U) = \theta U$ on fixed support $U \in [0, 1]$: the pathwise estimator is $\partial_\theta(\theta U)^2 = 2\theta U^2$, whose expectation is $2\theta\mathbb{E}[U^2] = 2\theta(\tfrac{1}{3}) = \frac{2\theta}{3}$.
+3. The scalar loss $g(\mathbf{X}) = \sum_{j=1}^d X_j^2 = O(d)$ multiplies all $d$ coordinates of the score vector, making REINFORCE variance grow as $O(d^2)$ (or $O(d)$ with a baseline), whereas the pathwise derivative of coordinate $k$ is simply $2X_k$ with $O(1)$ variance independent of $d$.
 :::
 :::
 

@@ -15,7 +15,9 @@ configuration) in `--processes` separate processes, one after the other
 per-process medians). Each process writes its entries under
 `../data/lm/rerun/ch22/<next key>/proc<i>/`; the script then combines them
 (`d2l._hw_combine`) into `<next key>/<entry>.json.gz`, checks that no
-measurement saw a foreign process on its cards, and packs
+measurement saw a foreign process on its cards, runs the driver's
+`<driver>_finish(folder)` if the library defines one (files derived from
+the combined entries, such as box-p2p's `alpha_beta.json`), and packs
 `<next key>.tar` (or `.jsonl.gz`). It never executes a notebook and never
 edits a tracked file. Then: `make upload-data FILES=... PREFIX=lm/`, one
 `DATA_HUB` statement with the printed sha1 in the section's -lib.md file,
@@ -176,6 +178,9 @@ def main():
               'process on their cards; not packed: re-run on a quiet box',
               file=sys.stderr)
         return 3
+    finish = getattr(d2l, f'{driver}_finish', None)
+    if finish is not None:  # files written from the combined entries
+        finish(folder)
     d2l._hw_pack(folder, kind, out)
     print(f'{a.name}: {len(entries)} entries in {(time.time() - t) / 60:.1f} '
           f'min', flush=True)

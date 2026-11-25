@@ -6,7 +6,9 @@ record, reports a missing binary and a non-zero exit as refusals, and
 raises instead in a regeneration run; `hw_bin` finds a tool in D2L_HW_BIN;
 `tools/hw_regen.py` end to end on a toy regeneration (three processes, the
 median of the per-process values, the packed tar, refusal to overwrite).
-Later steps add `hier_allreduce` on a 4-rank gloo group (chapter spec part
+the driver's finish hook runs after the combine; the torch.distributed
+fallback sweep of sec_lm_server_paths on a 2-rank gloo group under its own
+timeout. Later steps add `hier_allreduce` on a 4-rank gloo group (chapter spec part
 1.9).
 """
 import os
@@ -89,8 +91,39 @@ TOY = textwrap.dedent("""
             {'n': [1, 2], 'ms': [10.0 + proc, 20.0 * (1 + proc)]}),
             dict(config=config), entry='a')
     d2l.regen_toy = regen_toy
+    def regen_toy_finish(folder):
+        with open(os.path.join(folder, 'finish.txt'), 'w') as f:
+            f.write(str(sorted(os.listdir(folder))))
+    d2l.regen_toy_finish = regen_toy_finish
     d2l.HW_JOBS['t-toy'] = ('regen_toy', lambda: dict(config='box'))
     """)
+
+
+class TestTorchrunSweep(unittest.TestCase):
+    def test_gloo(self):
+        rows, run = d2l._torchrun_sweep('all_reduce', 2, [8, 4096], 2, 1,
+                                        {}, 300, backend='gloo')
+        self.assertIsNone(run.refused, run.stderr[-2000:])
+        self.assertEqual([r['size'] for r in rows], [8, 4096])
+        self.assertTrue(all(r['time_us'] > 0 for r in rows))
+        df = d2l._rows_from_times(rows, 'all_reduce', 2)
+        self.assertEqual(list(df['size']), [8, 4096])
+
+    def test_timeout(self):
+        rows, run = d2l._torchrun_sweep('all_reduce', 2, [8] * 2000, 10**6,
+                                        1, {}, 5, backend='gloo')
+        self.assertEqual(run.refused, 'timeout after 5 s')
+        left = []  # torchrun's workers run in sessions of their own
+        for pid in filter(str.isdigit, os.listdir('/proc')):
+            try:
+                with open(f'/proc/{pid}/cmdline', 'rb') as f:
+                    args = f.read().split(b'\0')
+            except OSError:
+                continue
+            if any(a.endswith(b'/sweep.py') for a in args) and \
+                    b'1000000' in args:
+                left.append(pid)
+        self.assertEqual(left, [], 'a sweep worker survived the timeout')
 
 
 class TestRegenCLI(unittest.TestCase):
@@ -112,7 +145,10 @@ class TestRegenCLI(unittest.TestCase):
             with tarfile.open(tar) as t:
                 names = set(t.getnames())
             self.assertTrue({'a.json.gz', 'proc0/a.json.gz',
-                             'proc2/a.json.gz'} <= names, names)
+                             'proc2/a.json.gz', 'finish.txt'} <= names, names)
+            with open(os.path.join(out, 'lm-hw-test-toy-v1',
+                                   'finish.txt')) as f:
+                self.assertIn('a.json.gz', f.read())  # after the combine
             res, meta = d2l._hw_read(os.path.join(
                 out, 'lm-hw-test-toy-v1', 'a.json.gz'))
             self.assertEqual(list(res.ms), [11.0, 40.0])  # medians

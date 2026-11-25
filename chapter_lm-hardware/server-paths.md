@@ -34,3 +34,375 @@ when the section is written.
 - Code and documentation: [NCCL user guide](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/index.html) and its [environment variables](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html) (`NCCL_P2P_DISABLE`, `NCCL_ALGO`); [nccl-tests](https://github.com/NVIDIA/nccl-tests) (sweeps and the busbw convention); [cuda-samples](https://github.com/NVIDIA/cuda-samples) (`p2pBandwidthLatencyTest`); [nvbandwidth](https://github.com/NVIDIA/nvbandwidth) (device matrices).
 - Courses, tutorials and blogs: [Scaling Book: How to Think About GPUs](https://jax-ml.github.io/scaling-book/gpus/) (node networking levels); Stas Bekman, [Machine Learning Engineering Open Book](https://github.com/stas00/ml-engineering) (intra-node network chapter); [Modal GPU Glossary](https://modal.com/gpu-glossary) (NVLink, NVSwitch vocabulary).
 -->
+
+<!-- Placeholder (prose): opening. The reader met this box's PCIe tree in
+subsec_hw-interconnects (fig_pcie_topology) and NCCL's host-staged path in
+sec_multi_gpu_concise. The cell below reads the machine's own description:
+nvidia-smi topo -m (how each pair of devices is connected: PHB, both GPUs
+behind one PCIe host bridge; NODE, across two bridges of one CPU) and
+topo -p2p r (whether the driver lets one GPU read another's memory: CNS,
+"chipset not supported", everywhere on this box). Two committed samples of
+other machines, labelled as such: an 8-GPU A100 SXM node behind NVSwitch
+(every pair NV12) and a workstation with two NVLink-bridged pairs of A100
+PCIe cards. The question: how to read the matrix as a graph, measure each
+edge, and predict which collective suffers on which topology. Idea: a
+server is a graph whose edges are links with their own alpha and beta. -->
+
+```{.python .input #server-paths-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #server-paths-topology}
+%%tab pytorch
+topo = d2l.parse_topo_matrix(d2l.hw_capture('topo'))  # nvidia-smi topo -m
+p2p = d2l.parse_topo_matrix(d2l.hw_capture('topo-p2p'))  # topo -p2p r
+d2l.show_topo(topo, p2p, samples=('nvswitch-node', 'bridged-pair-node'))
+```
+
+## The Server as a Graph
+:label:`subsec_lm_hw_server_graph`
+
+<!-- Placeholder (prose): the devices of a server (GPUs, NVSwitches or
+NVLink bridges, PCIe switches, the CPU's root complexes and host bridges,
+CPU sockets, NICs, NVMe drives) and the links between them. SXM parts sit on
+a baseboard whose NVLinks run to NVSwitch chips; PCIe parts plug into slots
+and at most pair up over a bridge. The link table: PCIe per direction
+computed from lanes, rate and encoding (16 x 16 GT/s x 128/130 / 8 = 31.5
+GB/s for Gen 4, the A100 datasheet's 64 GB/s counts both directions);
+NVLink, NVLink-C2C and Infinity Fabric transcribed from the vendors' pages,
+which quote both directions together (the second column), so a
+per-direction measurement is half the headline. One sentence: links_table
+loads the sourced table and computes the PCIe rows. -->
+
+```{.python .input #server-paths-links-table}
+%%tab pytorch
+links = d2l.links_table()
+```
+
+<!-- Placeholder (prose): the matrix becomes a graph. Devices joined by PIX
+or PXB share a PCIe switch, by PHB a host bridge, by NODE a CPU socket, and
+SYS crosses sockets; a pair marked NV# has # NVLinks, and when every pair
+does, the GPUs hang off NVSwitch. One sentence: topo_graph infers the
+switch-class nodes from the codes and labels each edge with the table's
+rate; the links inside the CPU (host bridge to socket) have no datasheet
+rate and are left for the measurement. The figure draws the 8-GPU A100 node
+both ways, SXM with NVSwitch and bridged PCIe pairs, side by side; this box
+is fig_pcie_topology, cited, not redrawn. -->
+
+```{.python .input #server-paths-graph}
+%%tab pytorch
+g = d2l.topo_graph(topo, links)
+d2l.show_edges(g)
+```
+
+<!-- Figure: fig_lm_hw_server_graph (generator server-graph). -->
+
+### Peer-to-Peer, Copy Engines and NUMA
+:label:`subsec_lm_hw_p2p`
+
+<!-- Placeholder (prose): GPUDirect peer-to-peer (one GPU reads or writes
+another's memory across PCIe or NVLink without touching host memory) and
+GPUDirect RDMA (a NIC does the same); why the driver refuses peer access on
+this box (CNS: the GeForce driver does not enable it on this chipset) and
+what it does instead: stage every byte through a pinned buffer in host
+memory. Copy engines (DMA units that move bytes without SMs) against
+SM-driven copies (NCCL's kernels load and store across the link). One NIC
+per GPU on the same PCIe switch on training nodes; NUMA and CPU-NIC
+affinity (this box: one NUMA node, CPUs 0-63 for every GPU, a 10 GbE NIC,
+no RDMA). The latency floor of a small transfer. -->
+
+## Measuring Links
+:label:`subsec_lm_hw_measure_links`
+
+<!-- Placeholder (prose): the alpha-beta model as a model, t(m) = alpha +
+m / beta per link, fitted by weighted least squares with 22.4's
+fit_alpha_beta; the half-bandwidth size alpha beta, the message at which
+half the time is the fixed cost. The GPU-to-GPU matrix: every ordered pair
+copies 256 MiB (bandwidth) and 4 bytes (latency) with torch's copy_
+between devices, which the driver stages through host memory. Then
+concurrent pairs, to locate the shared resource: two pairs each behind its
+own bridge (0 to 1 with 2 to 3), two pairs that both cross the bridges (0
+to 2 with 1 to 3), one card sending to two (0 to 1 with 0 to 2). One
+sentence: hw_gpu_matrix shows the committed run of the whole box and
+re-measures two pairs. Claim S1: P2P refused, staged copies below one host
+link. -->
+
+```{.python .input #server-paths-gpu-matrix}
+%%tab pytorch
+mat = d2l.hw_gpu_matrix(nbytes=2**28)
+both = torch.tensor(np.stack([mat['gbs'], mat['lat_us']]))  # NaN diagonal
+gpus = [str(i) for i in range(len(mat['gbs']))]
+d2l.show_heatmaps(both[None], xlabel='to GPU', ylabel='from GPU',
+                  titles=['GB/s', 'latency (us)'], cbar='each',
+                  figsize=(5.5, 2.6), xticklabels=gpus, yticklabels=gpus)
+host = links.loc['PCIe Gen 4 x16', 'gbs_per_dir']  # one host link, GB/s
+assert not mat['peer'].any()  # S1: the driver refuses peer access
+assert np.nanmax(mat['gbs']) < host  # every copy crosses two host links
+```
+
+### Collectives on the Box
+:label:`subsec_lm_hw_box_collectives`
+
+<!-- Placeholder (prose): bus bandwidth in one sentence (eq_ring_traffic,
+subsec_mg-accounting): nccl-tests divides the message by the time
+(algorithm bandwidth) and multiplies by the bytes each GPU's link carries
+per message byte, 2(k-1)/k for a ring all-reduce and (k-1)/k for the
+others, so that a link-bound collective reads as the link's rate. The
+alpha-beta time of a ring, a binary tree and a direct all-to-all, with
+alpha per step. -->
+
+```{.python .input #server-paths-busbw-def}
+%%tab pytorch
+def nccl_busbw_factor(op, k):  #@save
+    """Bus bandwidth over algorithm bandwidth (nccl-tests' convention): the
+    bytes each GPU's link carries per byte of the message."""
+    op = op.replace('_', '')
+    if op == 'allreduce':
+        return 2 * (k - 1) / k  # reduce-scatter, then all-gather
+    if op in ('allgather', 'reducescatter', 'alltoall'):
+        return (k - 1) / k
+    if op in ('broadcast', 'reduce'):
+        return 1.0
+    raise ValueError(f'unknown collective {op!r}')
+
+def coll_time(op, S, k, alpha, beta, algo='ring'):  #@save
+    """Seconds for a collective of S bytes per GPU on k GPUs, alpha (s)
+    per step, beta (bytes/s) per link and direction: a ring (direct for
+    all-to-all on a crossbar), or algo='tree' for the binary-tree
+    all-reduce (reduce up, broadcast down, the whole message per hop)."""
+    op = op.replace('_', '')
+    if algo == 'tree' and op == 'allreduce':
+        return 2 * math.ceil(math.log2(k)) * (alpha + S / beta)
+    if algo != 'ring':
+        raise ValueError(f'no {algo} {op} in this model')
+    steps = 2 * (k - 1) if op == 'allreduce' else k - 1
+    return steps * (alpha + S / (k * beta))  # S / k bytes per step
+```
+
+<!-- Placeholder (prose): the sweeps, 8 B to 256 MiB, on a pair behind one
+host bridge (PHB), a pair across the bridges (NODE) and all cards;
+all-reduce and all-to-all on each, all-gather and reduce-scatter on all
+cards. NCCL's own account (NCCL_DEBUG=INFO, one line read): the transport
+between the cards is SHM, shared memory, since peer access is refused.
+Every curve tops out at 2 to 4 GB/s, an order of magnitude below the staged
+copies of the matrix and the pinned host link (dashed, 22.4's committed
+plateau): the link is not what limits NCCL here. One sentence:
+nccl_sweeps shows the committed run and re-runs the all-reduce on one pair
+and on all cards. -->
+
+```{.python .input #server-paths-nccl-sweeps}
+%%tab pytorch
+nccl = d2l.nccl_sweeps('box')
+d2l.plot_nccl(nccl, host_link=d2l.hw_box_log('box-storage'))
+```
+
+<!-- Placeholder (prose): one alpha and one beta per collective and
+placement, beta in the bus-bandwidth convention (the rate each GPU's link
+carries), with 95% intervals from a bootstrap over the message sizes, and
+n_1/2 = alpha beta. Claim S2: a few GB/s for a large all-reduce on two
+cards on either pair; the smoke run found the pair behind one host bridge
+(PHB) slower than the pair across the bridges (about 2.4 against 3.7 GB/s
+at 256 MiB, at every size from 1 MiB): if the three-process run confirms
+it, the prose says so and why (both cards' staged traffic shares one
+bridge). Claim S5: alpha is tens of microseconds on the
+shared-memory path. The fits are the box's alpha_beta.json, which 22.3,
+22.6 and 22.7 read through box_alpha_beta. -->
+
+```{.python .input #server-paths-fits}
+%%tab pytorch
+ab = d2l.fit_collectives(nccl)
+d2l.show_fits(ab)
+pairs = ab.loc[('all_reduce', 2)].beta / 1e9  # GB/s: PHB and NODE pairs
+assert ((pairs > 1) & (pairs < 5)).all()  # S2: a few GB/s on either pair
+assert ((ab.alpha > 1e-6) & (ab.alpha < 1e-3)).all()  # S5: microseconds
+```
+
+<!-- Placeholder (prose): NCCL_SHM_USE_CUDA_MEMCPY=1 makes the
+shared-memory transport move data with the copy engines instead of SM
+loads and stores across PCIe; in a bare all-reduce microbenchmark it
+multiplies the bandwidth (claim S3). It is a workaround to measure, never
+a setting for training: at the torch 2.11 pin it deadlocks DDP
+(sec_multi_gpu_concise). -->
+
+```{.python .input #server-paths-copy-engine}
+%%tab pytorch
+ce = d2l.copy_engine_effect(gpus=(0, 1), nbytes=2**28)
+assert ce['ratio'] > 2  # S3: the copy engines, not the link, set the rate
+```
+
+## Bisection and the All-to-All
+:label:`subsec_lm_hw_bisection`
+
+<!-- Placeholder (prose): derivation D2. On a crossbar of k GPUs with
+per-direction rate beta, an all-to-all of S bytes per GPU takes ((k-1)/k)
+S / beta and a ring all-reduce 2((k-1)/k) S / beta. Two groups of k/2 under
+one uplink each, rate beta_u: the ring crosses the uplink once per
+direction, so it is unchanged while beta_u >= beta; the all-to-all sends
+(k/2)(k/2) S / k = k S / 4 across it, so it takes at least k S / (4
+beta_u), (k^2 / (4 (k-1))) (beta / beta_u) times the crossbar's: 64/28
+for k = 8. tree_link_loads routes each pattern through the tree and
+returns every link's load exactly; the time is the busiest link's bytes
+over its rate. -->
+
+```{.python .input #server-paths-tree-loads-def}
+%%tab pytorch
+def tree_link_loads(k, groups, pattern, S=1.0, staged=False):  #@save
+    """Bytes on each link of a two-level tree, its busier direction, when
+    k GPUs (groups: the GPUs below each uplink) run pattern on S bytes per
+    GPU: 'alltoall' (S / k to every other GPU) or 'allreduce' (a ring in
+    the groups' order, 2 (k - 1) / k S over each ring edge). Keys 'GPU i'
+    and 'uplink g'. staged: every byte passes through host memory above
+    the uplinks, even between two GPUs of one group."""
+    group = {i: gi for gi, grp in enumerate(groups) for i in grp}
+    assert len(group) == k, 'groups must hold the k GPUs once each'
+    if pattern == 'alltoall':
+        flows = [(i, j, S / k) for i in group for j in group if i != j]
+    elif pattern == 'allreduce':
+        ring = [i for grp in groups for i in grp]
+        flows = [(i, j, 2 * (k - 1) / k * S)
+                 for i, j in zip(ring, ring[1:] + ring[:1])]
+    else:
+        raise ValueError(f'unknown pattern {pattern!r}')
+    load = {}  # (link, direction): bytes
+    for i, j, b in flows:
+        hops = [(f'GPU {i}', 'up'), (f'GPU {j}', 'down')]
+        if staged or group[i] != group[j]:
+            hops += [(f'uplink {group[i]}', 'up'),
+                     (f'uplink {group[j]}', 'down')]
+        for hop in hops:
+            load[hop] = load.get(hop, 0) + b
+    out = {}
+    for (link, _), b in load.items():
+        out[link] = max(out.get(link, 0), b)
+    return out
+
+def a2a_busbw_ratio(k, groups, beta, beta_u, staged=False):  #@save
+    """Predicted bus bandwidth of the all-to-all over the ring
+    all-reduce's on a two-level tree: each pattern's time is its busiest
+    link's bytes over that link's rate (beta for a GPU's link, beta_u for
+    an uplink)."""
+    busbw = {}
+    for p in ('alltoall', 'allreduce'):
+        loads = tree_link_loads(k, groups, p, staged=staged)
+        t = max(b / (beta_u if link.startswith('uplink') else beta)
+                for link, b in loads.items())
+        busbw[p] = nccl_busbw_factor(p, k) / t  # S = 1
+    return busbw['alltoall'] / busbw['allreduce']
+```
+
+<!-- Placeholder (prose): D2 in numbers, uplink as fast as a GPU's link:
+at k = 8 the all-to-all puts 2 S on the uplink and the ring 1.75 S, and
+the all-to-all's bus bandwidth is 28/64 of the ring's; at k = 4, 12/16. -->
+
+```{.python .input #server-paths-d2}
+%%tab pytorch
+for k in (4, 8):  # two groups of k / 2, one uplink each
+    halves = [tuple(range(k // 2)), tuple(range(k // 2, k))]
+    a2a = tree_link_loads(k, halves, 'alltoall')['uplink 0']
+    ring = tree_link_loads(k, halves, 'allreduce')['uplink 0']
+    print(f'k = {k}: uplink load {a2a:.2f} S (all-to-all), {ring:.2f} S '
+          f'(ring); busbw ratio {a2a_busbw_ratio(k, halves, 1, 1):.3f}')
+```
+
+<!-- Placeholder (prose): this box is not that tree. Its "uplinks" are the
+host bridges, and the concurrent pairs above showed that two copies
+crossing between the bridges together run as fast as two that stay behind
+their own (beta_u from the matrix). More to the point, every byte is
+staged through host memory, so even two GPUs behind one bridge talk over
+both uplinks: host memory is the hub of a star, and on a star the
+all-to-all and the ring all-reduce load every link in the same proportion
+(staged prediction: ratio 1). Claim S4: the measured ratio at 256 MiB is
+near 1. Why expert parallelism needs the switch and data parallelism
+tolerates the tree. -->
+
+```{.python .input #server-paths-bisection}
+%%tab pytorch
+groups = mat['groups']  # the GPUs behind each host bridge
+k = sum(len(grp) for grp in groups)
+beta = np.nanmedian(mat['gbs'])  # one staged copy, GB/s
+conc = mat['concurrent'].set_index('pattern').gbs
+beta_u = conc['two pairs across the bridges']  # both cross the bridges
+tree = a2a_busbw_ratio(k, groups, beta, beta_u)
+star = a2a_busbw_ratio(k, groups, beta, beta_u, staged=True)
+last = nccl[(nccl.path == 'all') & (nccl.algo == 'default')
+            & (nccl.env == '') & (nccl['size'] == nccl['size'].max())]
+busbw = last.set_index('op').oop_busbw
+measured = busbw['alltoall'] / busbw['all_reduce']
+print(f'k = {k}, beta {beta:.0f} GB/s, beta_u {beta_u:.0f} GB/s')
+print(f'all-to-all / all-reduce busbw, predicted: {tree:.2f} as a tree, '
+      f'{star:.2f} staged')
+print(f'measured at {last["size"].iloc[0] / 2**20:.0f} MiB: {measured:.2f}')
+assert abs(measured / star - 1) < 0.25  # S4: host memory is the hub
+```
+
+<!-- Figure: fig_lm_hw_bisection (generator bisection). -->
+
+<!-- Placeholder (prose): what the box's link costs one tensor-parallel
+all-reduce: 4,096 tokens of Qwen3-8B activations in bf16, with the fitted
+alpha per step and beta of each placement, against the bandwidth term
+alone at NVLink 3's per-direction rate (datasheet, quoted; alpha left
+out). -->
+
+```{.python .input #server-paths-tp-cost}
+%%tab pytorch
+cfg_8b = d2l.hw_config('Qwen/Qwen3-8B')
+S = 4096 * cfg_8b.hidden_size * 2  # 4,096 tokens of activations in bf16
+nv = links.loc['NVLink 3 (A100 SXM)', 'gbs_per_dir'] * 1e9
+print(f'one all-reduce of {S / 2**20:.0f} MiB per GPU:')
+for (op, k, path), fit in ab.loc[['all_reduce']].iterrows():
+    box = coll_time(op, S, k, fit.alpha_step, fit.beta)
+    print(f'  g = {k}, {path}: {box * 1e3:.1f} ms on the box, '
+          f'{coll_time(op, S, k, 0, nv) * 1e3:.2f} ms at NVLink 3 rates')
+```
+
+### Where the Parallel Axes Go
+:label:`subsec_lm_hw_axes_in_node`
+
+<!-- Placeholder (prose): one paragraph (Chapter 23 develops it): the axis
+with the most frequent and the largest collectives (tensor parallelism,
+an all-reduce per layer) goes on the fastest links, inside an NVLink
+domain; the expert axis needs the switch's bisection for its all-to-all;
+data parallelism, one all-reduce per step that overlaps the backward pass,
+tolerates the slowest path, across servers. On this box no axis has a fast
+link. -->
+
+<!-- Placeholder (prose): the node twins. The campaign logs C-T3 (one 8 x
+A100 node, NVSwitch or bridged pairs, decided by its committed topo.txt;
+NCCL_P2P_DISABLE=1 labelled an emulation of a PCIe-only node) and C-T2pair
+(two A100s with an NVLink bridge, with and without peer-to-peer) give the
+same fits; claim S6 (pending): NVLink beta within 20% of the per-direction
+datasheet rate, the all-to-all ratio near 1 on NVSwitch and below 1 with
+peer-to-peer disabled. Until they are committed the cell prints one status
+line each and the sentence says so. -->
+<!-- campaign: lm-hw-node-p2p-v1 -->
+<!-- campaign: lm-hw-t2pair-p2p-v1 -->
+
+```{.python .input #server-paths-node-twin}
+%%tab pytorch
+for log in ('node-p2p', 't2pair-p2p'):
+    d2l.show_fits(d2l.fit_collectives(d2l.hw_campaign_log(log)))
+```
+
+## Summary
+
+<!-- Placeholder (prose): 3-6 sentences; forward to sec_lm_networks (the
+network between servers) and sec_lm_collectives (which algorithm NCCL
+chose on this box). -->
+
+## Exercises
+
+<!-- Placeholder (prose): 6-8 exercises per S/spec/22.5.md part 9:
+closed-form alpha-beta estimates and the 1/t^2 weights (derive); a ring
+order crossing the uplink four times (derive); the GPU matrix with and
+without numactl CPU pinning (measure, 2 min; on this one-node box the
+expected answer is no difference, and the exercise says why); one process
+driving all GPUs against one process per GPU (measure, 2 min); check that
+ACS, the IOMMU or the driver (CNS) explains a slow pair before blaming the
+fabric (check); open: a topology-aware ring order for a bridged-pair
+node. -->

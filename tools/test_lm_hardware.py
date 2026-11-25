@@ -24,6 +24,14 @@ parser and the four-card groups, the fio command, fit_h2d, the offload
 thresholds and kv_load_vs_recompute, the measurements, displays and the
 shard rule on synthetic frames of known parameters, the offload crossover,
 _CPUAdam against torch's AdamW, the scratch-file disk check.
+Section 22.5: the link table (PCIe rows computed), the topology parser on
+the box's matrices and the two documentation samples (ANSI escapes, a
+header whose names run together), topo_graph and the displays, the
+p2pBandwidthLatencyTest and nccl-tests parsers on raw outputs, the busbw
+factors, coll_time, tree_link_loads exact for k = 4, 8, 16 and the D2
+ratio, the bridge groups and placements, fit_collectives on synthetic
+sweeps of known parameters, the pending campaign path, alpha_beta.json's
+records and box_alpha_beta, the scrubber.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -2057,6 +2065,300 @@ class TestMemoryTiers(unittest.TestCase):
                 self.assertIsNone(d2l._scratch(2**30, free_gb=1e9))
                 path = d2l._scratch(2**30, free_gb=0)
                 self.assertTrue(path.startswith(tmp))
+
+
+def committed_links():
+    return pd.read_csv(os.path.join(HW_DATA, 'links.csv'))
+
+
+def sample(name):
+    return read(os.path.join(HW_DATA, 'samples', name))
+
+
+def synthetic_sweep(op, g, path, alpha, B, seed=0, noise=0.01):
+    """A sweep table of t = alpha + S / B (B: algorithm bandwidth) with
+    1% multiplicative noise, 8 B to 256 MiB."""
+    rng = np.random.default_rng(seed)
+    s = 8 * 2.0 ** np.arange(26)
+    t = (alpha + s / B) * (1 + noise * rng.standard_normal(len(s)))
+    algbw = s / t / 1e9
+    return pd.DataFrame(dict(
+        size=s.astype(int), count=(s // 4).astype(int), dtype='float',
+        redop='sum', root=-1, oop_us=t * 1e6, oop_algbw=algbw,
+        oop_busbw=algbw * d2l.nccl_busbw_factor(op, g), op=op, g=g,
+        path=path, algo='default', env='', gpus='0,1'))
+
+
+class TestServerPaths(unittest.TestCase):
+    def setUp(self):
+        patcher = mock.patch.object(d2l, '_hw_static',
+                                    side_effect=lambda n: committed_links())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def box(self):
+        return (d2l.parse_topo_matrix(sample('box_topo_m.txt')),
+                d2l.parse_topo_matrix(sample('box_topo_p2p_r.txt')))
+
+    def test_links_table(self):
+        raw = committed_links()
+        self.assertTrue(raw.source_url.str.startswith('https://').all())
+        self.assertTrue(raw.retrieved.str.match(r'\d{4}-\d\d-\d\d$').all())
+        lines, links = lines_of(self, d2l.links_table)
+        self.assertLessEqual(len(lines), 13)
+        self.assertAlmostEqual(links.loc['PCIe Gen 4 x16', 'gbs_per_dir'],
+                               16 * 16 * 128 / 130 / 8)
+        self.assertAlmostEqual(links.loc['PCIe Gen 3 x16', 'gbs_bidir'],
+                               2 * 16 * 8 * 128 / 130 / 8)
+        self.assertEqual(links.loc['PCIe Gen 6 x16', 'gbs_per_dir'], 128)
+        self.assertEqual(links.loc['NVLink 3 (A100 SXM)', 'gbs_per_dir'], 300)
+        self.assertTrue((links.gbs_bidir == 2 * links.gbs_per_dir).all())
+        self.assertEqual(len(links), len(raw))
+
+    def test_topo_box(self):
+        topo, p2p = self.box()
+        self.assertEqual(topo.labels, ['GPU0', 'GPU1', 'GPU2', 'GPU3'])
+        self.assertEqual(topo.link[0], ['X', 'PHB', 'NODE', 'NODE'])
+        self.assertEqual(topo.link[3][2], 'PHB')
+        self.assertEqual(set(topo.cpu_affinity), {'0-63'})
+        self.assertEqual(set(topo.numa_affinity), {'0'})
+        self.assertIn('PHB', topo.legend)
+        self.assertEqual(p2p.labels, topo.labels)
+        off = {p2p.link[i][j] for i in range(4) for j in range(4) if i != j}
+        self.assertEqual(off, {'CNS'})
+
+    def test_topo_samples(self):
+        nvs = d2l.parse_topo_matrix(sample('doc_nvswitch_node_topo_m.txt'))
+        self.assertEqual(nvs.labels[-2:], ['NIC0', 'NIC1'])
+        self.assertEqual({nvs.link[i][j] for i in range(8) for j in range(8)
+                          if i != j}, {'NV12'})
+        self.assertIsNone(nvs.cpu_affinity[8])
+        self.assertEqual(nvs.numa_affinity[2], '1')
+        br = d2l.parse_topo_matrix(sample('doc_bridged_pair_topo_m.txt'))
+        self.assertEqual(len(br.labels), 5)
+        self.assertEqual((br.link[0][1], br.link[2][3], br.link[0][2],
+                          br.link[0][4]), ('NV12', 'NV12', 'PXB', 'SYS'))
+        self.assertEqual(br.cpu_affinity[4], '32-63')
+
+    def test_topo_broken_header(self):
+        text = ('\x1b[4m\tGPU0GPU1\tCPU Affinity\x1b[0m\r\n'
+                'GPU0\t X \tNV4\t0-7\t0\r\nGPU1\tNV4\t X \t0-7\t0\r\n')
+        topo = d2l.parse_topo_matrix(text)
+        self.assertEqual(topo.labels, ['GPU0', 'GPU1'])
+        self.assertEqual(topo.link[0][1], 'NV4')
+        with self.assertRaises(ValueError):
+            d2l.parse_topo_matrix('no matrix here\n')
+        with self.assertRaisesRegex(ValueError, 'link cells'):
+            d2l.parse_topo_matrix('GPU0\t X \tPHB\nGPU1\tPHB\n')
+
+    def test_topo_graph(self):
+        links = d2l.links_table(show=False)
+        g = d2l.topo_graph(self.box()[0], links)
+        self.assertEqual(len(g.edges), 6)
+        self.assertEqual(g.edges['GPU0', 'host bridge 0']['gbs'],
+                         links.loc['PCIe Gen 4 x16', 'gbs_per_dir'])
+        self.assertEqual(g.edges['GPU3', 'host bridge 1']['link'],
+                         'PCIe Gen 4 x16')
+        self.assertTrue(np.isnan(g.edges['host bridge 0', 'CPU 0']['gbs']))
+        nvs = d2l.topo_graph(d2l.parse_topo_matrix(
+            sample('doc_nvswitch_node_topo_m.txt')), links)
+        self.assertEqual(nvs.degree['NVSwitch'], 8)
+        self.assertEqual(nvs.edges['GPU5', 'NVSwitch']['gbs'], 300)
+        self.assertIn('PCIe switch 0', nvs['NIC1'])
+        br = d2l.topo_graph(d2l.parse_topo_matrix(
+            sample('doc_bridged_pair_topo_m.txt')), links)
+        self.assertNotIn('NVSwitch', br)
+        self.assertEqual(br.edges['GPU2', 'GPU3']['link'],
+                         'NVLink bridge 3 (A100 PCIe)')
+        self.assertIn(('CPU 0', 'CPU 1'), br.edges)
+        lines, _ = lines_of(self, d2l.show_edges, g)
+        self.assertEqual(len(lines), 7)
+
+    def test_show_topo(self):
+        topo, p2p = self.box()
+        samples = {'nvswitch-node': 'doc_nvswitch_node_topo_m.txt',
+                   'bridged-pair-node': 'doc_bridged_pair_topo_m.txt'}
+        with mock.patch.object(d2l, 'hw_capture',
+                               side_effect=lambda n: sample(samples[n])):
+            lines, _ = lines_of(self, d2l.show_topo, topo, p2p,
+                                samples=tuple(samples))
+        self.assertEqual(len(lines), 10)
+        self.assertIn('CNS', lines[2])
+        self.assertIn('not measured here', lines[-3])
+        self.assertIn('28 NV12', lines[-2])
+        self.assertIn('2 NV12', lines[-1])
+        with self.assertRaises(KeyError):
+            d2l.hw_capture('nvidia-smi -q')
+
+    def test_parse_p2p(self):
+        m = d2l.parse_p2p(sample('box_p2pBandwidthLatencyTest.txt'))
+        self.assertEqual(len(m), 8)
+        for v in m.values():
+            self.assertEqual(v.shape, (4, 4))
+        bw = m['Unidirectional P2P=Disabled Bandwidth Matrix (GB/s)']
+        off = bw[~np.eye(4, dtype=bool)]
+        self.assertTrue(((off > 5) & (off < 40)).all())
+        self.assertIn('P2P=Disabled Latency Matrix (us) CPU', m)
+
+    def test_parse_nccl_tests(self):
+        df = d2l.parse_nccl_tests(sample('box_all_reduce_perf_g4.txt'))
+        self.assertEqual(list(df.columns), list(d2l._NCCL_COLUMNS))
+        self.assertEqual((len(df), df['size'].iloc[0],
+                          df['size'].iloc[-1]), (26, 8, 2**28))
+        self.assertEqual(df.attrs['version'], '2.21.1')
+        self.assertGreater(df.attrs['avg_busbw'], 0)
+        big = df.iloc[-1]  # busbw = algbw x 2 (k - 1) / k, as printed
+        self.assertAlmostEqual(big.oop_busbw / big.oop_algbw,
+                               d2l.nccl_busbw_factor('all_reduce', 4),
+                               places=2)
+        a2a = d2l.parse_nccl_tests(sample('box_alltoall_perf_g4.txt'))
+        self.assertEqual(len(a2a), 26)
+        with self.assertRaisesRegex(ValueError, 'column layout'):
+            d2l.parse_nccl_tests('#  size  time  algbw\n 8  1.0  0.0\n')
+
+    def test_busbw_and_coll_time(self):
+        f = d2l.nccl_busbw_factor
+        self.assertEqual((f('all_reduce', 4), f('allgather', 4),
+                          f('alltoall', 8), f('broadcast', 8)),
+                         (1.5, 0.75, 7 / 8, 1.0))
+        with self.assertRaises(ValueError):
+            f('scan', 4)
+        S, beta = 2**28, 2e9
+        for k in (2, 4, 8):
+            self.assertAlmostEqual(d2l.coll_time('allreduce', S, k, 0, beta),
+                                   2 * (k - 1) / k * S / beta)
+            self.assertAlmostEqual(d2l.coll_time('all_to_all', S, k, 0,
+                                                 beta), (k - 1) / k * S / beta)
+            self.assertAlmostEqual(d2l.coll_time('allreduce', 8, k, 1e-5,
+                                                 beta) * 1e5,
+                                   2 * (k - 1), delta=0.01)
+        self.assertAlmostEqual(d2l.coll_time('allreduce', S, 8, 0, beta,
+                                             algo='tree'), 6 * S / beta)
+
+    def test_tree_link_loads(self):
+        S = 1.0
+        for k in (4, 8, 16):
+            halves = [tuple(range(k // 2)), tuple(range(k // 2, k))]
+            a2a = d2l.tree_link_loads(k, halves, 'alltoall', S)
+            ring = d2l.tree_link_loads(k, halves, 'allreduce', S)
+            self.assertAlmostEqual(a2a['uplink 0'], k * S / 4)
+            self.assertAlmostEqual(a2a['GPU 0'], (k - 1) / k * S)
+            self.assertEqual(set(ring.values()), {2 * (k - 1) / k * S})
+            # D2: the tree's all-to-all is k^2 / (4 (k - 1)) times slower
+            self.assertAlmostEqual(
+                1 / d2l.a2a_busbw_ratio(k, halves, 1.0, 1.0),
+                k**2 / (4 * (k - 1)))
+            self.assertAlmostEqual(d2l.a2a_busbw_ratio(
+                k, halves, 3.0, 0.5, staged=True), 1.0)
+            staged = d2l.tree_link_loads(k, halves, 'alltoall', staged=True)
+            self.assertAlmostEqual(staged['uplink 1'], (k - 1) * S / 2)
+        self.assertAlmostEqual(1 / d2l.a2a_busbw_ratio(
+            8, [tuple(range(4)), tuple(range(4, 8))], 1, 1), 64 / 28)
+        one = [tuple(range(8))]  # one switch: the crossbar
+        self.assertAlmostEqual(d2l.a2a_busbw_ratio(8, one, 1, 0.01), 1.0)
+        with self.assertRaises(AssertionError):
+            d2l.tree_link_loads(4, [(0, 1)], 'alltoall')
+        with self.assertRaises(ValueError):
+            d2l.tree_link_loads(4, [(0, 1), (2, 3)], 'scan')
+
+    def test_bridge_groups(self):
+        topo = self.box()[0]
+        rel = lambda i, j: topo.link[i][j]
+        groups, pats = d2l._bridge_pairs(rel, 4)
+        self.assertEqual(groups, [(0, 1), (2, 3)])
+        self.assertEqual(pats['two pairs across the bridges'],
+                         [(0, 2), (1, 3)])
+        self.assertEqual(d2l._placements(rel, 4),
+                         {'PHB': (0, 1), 'NODE': (0, 2), 'all': (0, 1, 2, 3)})
+        self.assertEqual(d2l._placements(rel, 2), {'PHB': (0, 1)})
+        self.assertEqual(d2l._bridge_pairs(rel, 2)[1], {})
+
+    def test_fit_collectives(self):
+        nccl = pd.concat([
+            synthetic_sweep('all_reduce', 2, 'PHB', 20e-6, 2e9, seed=0),
+            synthetic_sweep('alltoall', 4, 'all', 40e-6, 1e9, seed=1)],
+            ignore_index=True)
+        ab = d2l.fit_collectives(nccl)
+        r = ab.loc[('all_reduce', 2, 'PHB')]
+        self.assertAlmostEqual(r.alpha / 20e-6, 1, delta=0.05)
+        self.assertAlmostEqual(r.beta / (2e9 * 1.0), 1, delta=0.03)
+        self.assertLess(r.alpha_lo, r.alpha)
+        self.assertLess(r.alpha, r.alpha_hi)
+        self.assertLess(r.beta_lo, r.beta_hi)
+        self.assertAlmostEqual(r.n_half, r.alpha * 2e9, delta=0.1 * r.n_half)
+        self.assertAlmostEqual(r.alpha_step, r.alpha / 2)
+        self.assertLess(r.resid_rel, 0.02)
+        a = ab.loc[('alltoall', 4, 'all')]
+        self.assertAlmostEqual(a.beta / (0.75 * 1e9), 1, delta=0.03)
+        self.assertEqual(int(a.n_points), 26)
+        again = d2l.fit_collectives(nccl)
+        pd.testing.assert_frame_equal(ab, again)  # seeded
+        self.assertTrue(d2l.fit_collectives(nccl, algo='Ring').empty)
+        lines, _ = lines_of(self, d2l.show_fits, ab)
+        self.assertEqual(len(lines), 3)
+        self.assertIn('all-reduce', lines[1])
+
+    def test_fit_pending(self):
+        log = d2l.CampaignPending('node-p2p', 'C-T3', 'one 8 x A100 node')
+        ab = d2l.fit_collectives(log)
+        self.assertTrue(ab.empty)
+        lines, _ = lines_of(self, d2l.show_fits, ab)
+        self.assertEqual(lines, ['one 8 x A100 node: campaign C-T3 not run '
+                                 'yet'])
+
+    def test_alpha_beta_records(self):
+        nccl = pd.concat([
+            synthetic_sweep('all_reduce', 4, 'all', 25e-6, 1.5e9),
+            synthetic_sweep('alltoall', 4, 'all', 27e-6, 2.7e9)],
+            ignore_index=True)
+        info = {'all': dict(transports=['SHM/direct/direct'])}
+        recs = d2l.alpha_beta_records(d2l.fit_collectives(nccl), info=info)
+        fields = {'scope', 'link', 'op', 'g', 'algo', 'alpha_s', 'beta_Bps',
+                  'alpha_ci95', 'beta_ci95', 'n_half_bytes', 'resid_rel',
+                  'n_points', 'proto', 'transport'}
+        for r in recs:
+            self.assertTrue(fields <= set(r), r)
+            self.assertEqual((r['scope'], r['link'], r['transport'],
+                              r['algo']),
+                             ('intra_node', 'pcie_host_staged', 'shm', None))
+            json.dumps(r)
+        self.assertEqual({r['op'] for r in recs}, {'all_reduce',
+                                                   'all_to_all'})
+        self.assertEqual(d2l._transport({'transports': ['P2P/CUMEM']}),
+                         'p2p')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'alpha_beta.json')
+            two = dict(recs[0], g=2, path='PHB')
+            with open(path, 'w') as f:
+                json.dump([two] + recs, f)
+            with mock.patch.object(d2l, '_hw_box_file', return_value=path):
+                r = d2l.box_alpha_beta()
+                self.assertEqual((r['g'], r['op']), (4, 'all_reduce'))
+                self.assertEqual(r['alpha'], r['alpha_s'])
+                self.assertEqual(d2l.box_alpha_beta(g=2)['path'], 'PHB')
+                self.assertEqual(d2l.box_alpha_beta('alltoall')['op'],
+                                 'all_to_all')
+                with self.assertRaises(KeyError):
+                    d2l.box_alpha_beta(algo='Ring')
+            with mock.patch.object(d2l, '_hw_box_file', return_value=None):
+                with self.assertRaises(KeyError):
+                    d2l.box_alpha_beta()
+
+    def test_rows_from_times(self):
+        df = d2l._rows_from_times([dict(size=2**20, time_us=1000.0)],
+                                  'all_reduce', 4)
+        self.assertEqual(list(df.columns), list(d2l._NCCL_COLUMNS))
+        self.assertAlmostEqual(df.oop_algbw.iloc[0], 2**20 / 1e6)
+        self.assertAlmostEqual(df.oop_busbw.iloc[0],
+                               1.5 * df.oop_algbw.iloc[0])
+
+    def test_scrub(self):
+        with mock.patch('platform.node', return_value='boxname.lab.org'):
+            out = d2l._hw_scrub('boxname:123:9 NCCL INFO via 10.0.0.12 '
+                                '/home/someone/x boxname.lab.org boxnamex '
+                                'sum -1boxname:7:7')
+        self.assertEqual(out, '<host>:123:9 NCCL INFO via <ip> <path>/x '
+                         '<host> boxnamex sum -1<host>:7:7')
 
 
 if __name__ == '__main__':

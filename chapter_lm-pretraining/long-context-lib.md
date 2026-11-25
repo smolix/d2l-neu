@@ -34,11 +34,26 @@ library preamble inside its functions (`copy`, `itertools`, `tempfile`,
 
 ## Registries
 
+The hosted inputs (d2l-data R2, uploaded 2026-11-25): the long half
+(PG-19 train books and long peS2o papers) and the 64 PG-19 test books, both
+R2-tokenized shard sets built by `tools/build_pretraining_data.py --stage
+lc-long` and `--stage pg19-test` (PG-19: Apache-2.0, public-domain texts;
+peS2o: ODC-By 1.0; the attribution is in each manifest).
+
+```{.python .input #long-context-lib-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-lc-long-60m-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lc-long-60m-v1.tar',
+    '24ddc3182a630192b02dfaf9e8fb474f4554cd9f')
+d2l.DATA_HUB['lm-pg19-test-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pg19-test-v1.tar',
+    'a92784936e0d0da6a0623c0b9bd22d335b3a39df')
+```
+
 The section's results and inputs. Until a campaign's result is committed
 the page shows it as pending (the T2 cells with the T1 arms as their
-stand-in) instead of failing; the two shard sets are read from the
-builder's local output (`tools/build_pretraining_data.py --stage lc-long`,
-`--stage pg19-test`) until their upload.
+stand-in) instead of failing.
 
 ```{.python .input #long-context-lib-artifacts}
 %%tab pytorch

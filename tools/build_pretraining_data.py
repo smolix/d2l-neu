@@ -49,6 +49,19 @@ Stages:
                    16,385 tokens (one evaluation window of 16,384 targets):
                    data/lm/pg19-test-v1/ and data/lm/rerun/lm-pg19-test-v1.tar.
 
+  --stage domains  21.2's per-domain validation texts (lm-fwedu-val-domains-v1,
+                   jsonl.gz with doc_id, domain, url_host, text): FineWeb-Edu
+                   sample/10BT/012_00000.parquet (@87f09149; a file the
+                   reference model's shards never read) by URL host into
+                   wikipedia, edu (.edu, .edu.xx, .ac.xx), gov (.gov,
+                   .gov.xx), org and other, each filled to 2,000,000 R2 tokens
+                   in a fixed pseudo-random order (sha1 of the document id),
+                   plus the book's held-out sections (book_split(): every
+                   fifth section; CC BY-SA 4.0) as domain book:
+                   data/lm/rerun/lm-fwedu-val-domains-v1.jsonl.gz.
+                   --check: the token targets, no text shared with the
+                   general validation texts, every host in its domain.
+
 Deterministic: the same inputs give the same bytes (no timestamps, files read
 in order, one shard per stream). Run from the repository root:
 
@@ -343,6 +356,107 @@ def check_lc(stage):
     return ok
 
 
+FWEDU_DOMAINS = 'sample/10BT/012_00000.parquet'
+DOMAIN_TOKENS = 2_000_000
+DOMAINS_KEY = 'lm-fwedu-val-domains-v1'
+
+
+def url_domain(host):
+    """The domain class of a URL host."""
+    if host == 'wikipedia.org' or host.endswith('.wikipedia.org'):
+        return 'wikipedia'
+    if host.endswith('.edu') or '.edu.' in host or '.ac.' in host:
+        return 'edu'
+    if host.endswith('.gov') or '.gov.' in host:
+        return 'gov'
+    return 'org' if host.endswith('.org') else 'other'
+
+
+def domains_path(d2l):
+    return os.path.join(os.path.abspath(d2l._rerun_dir()),
+                        DOMAINS_KEY + '.jsonl.gz')
+
+
+def build_domains():
+    """FineWeb-Edu file 012 by URL host, 2M R2 tokens per domain, and the
+    book's held-out sections; one deterministic jsonl.gz."""
+    import urllib.parse
+    import pyarrow.parquet as pq
+    from huggingface_hub import hf_hub_download
+    d2l = d2l_module()
+    tok = tokenizer(d2l, 'cpt-t1')  # the reference tokenizer; chdir
+    _, repo, rev, _ = d2l.LM_DATA_SOURCES['fineweb-edu']
+    local = hf_hub_download(repo, FWEDU_DOMAINS, repo_type='dataset',
+                            revision=rev)
+    table = pq.read_table(local, columns=['id', 'url', 'text'])
+    ids = table.column('id').to_pylist()
+    order = sorted(range(len(ids)), key=lambda i: hashlib.sha1(
+        ids[i].encode()).hexdigest())
+    urls, texts = table.column('url').to_pylist(), table.column('text')
+    general = general_hashes(d2l)
+    rows, counts = [], {}
+    for i in order:
+        host = (urllib.parse.urlsplit(urls[i]).hostname or '').lower()
+        dom = url_domain(host)
+        if counts.get(dom, 0) >= DOMAIN_TOKENS:
+            if len(counts) == 5 and min(counts.values()) >= DOMAIN_TOKENS:
+                break
+            continue
+        text = texts[i].as_py()
+        if hashlib.sha1(text.encode()).hexdigest() in general:
+            continue
+        counts[dom] = counts.get(dom, 0) + len(tok.encode(text))
+        rows.append(dict(doc_id=f'fwedu:{ids[i]}', domain=dom,
+                         url_host=host, text=text))
+    rows.sort(key=lambda r: (r['domain'], r['doc_id']))
+    _, held = d2l.book_split()
+    book = 0
+    for doc_id, text in held:
+        if book >= DOMAIN_TOKENS:
+            break
+        book += len(tok.encode(text))
+        rows.append(dict(doc_id=f'book:{doc_id}', domain='book',
+                         url_host='d2l.ai', text=text))
+    counts['book'] = book
+    path = domains_path(d2l)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'wb') as raw:
+        with gzip.GzipFile(filename='', mode='wb', fileobj=raw,
+                           mtime=0) as f:
+            for r in rows:
+                f.write((json.dumps(r, ensure_ascii=False) + '\n').encode())
+    with open(path, 'rb') as f:
+        sha1 = hashlib.sha1(f.read()).hexdigest()
+    for dom in sorted(counts):
+        n = sum(r['domain'] == dom for r in rows)
+        print(f'{dom}: {n:,} documents, {counts[dom]:,} R2 tokens')
+    print(f"DATA_HUB['{DOMAINS_KEY}'] = ('{DOMAINS_KEY}.jsonl.gz', "
+          f"'{sha1}')  # {os.path.getsize(path) / 2**20:.1f} MB")
+
+
+def check_domains():
+    d2l = d2l_module()
+    tok = tokenizer(d2l, 'cpt-t1')
+    with gzip.open(domains_path(d2l), 'rt', encoding='utf-8') as f:
+        rows = [json.loads(line) for line in f]
+    general = general_hashes(d2l)
+    ok, counts = True, {}
+    for r in rows:
+        counts[r['domain']] = counts.get(r['domain'], 0) + len(
+            tok.encode(r['text']))
+        if r['domain'] != 'book':
+            ok &= url_domain(r['url_host']) == r['domain']
+        ok &= hashlib.sha1(r['text'].encode()).hexdigest() not in general
+    ids = [r['doc_id'] for r in rows]
+    ok &= len(ids) == len(set(ids))
+    for dom, n in sorted(counts.items()):
+        good = dom == 'book' or n >= DOMAIN_TOKENS
+        ok &= good
+        print(f'{dom}: {n:,} R2 tokens{"" if good else " < target"}')
+    print('check passed' if ok else 'CHECK FAILED')
+    return ok
+
+
 def build(stage):
     d2l = d2l_module()
     tok = tokenizer(d2l, stage)
@@ -413,14 +527,19 @@ def check(stage):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    p.add_argument('--stage', choices=sorted(TARGETS) + ['lc-long',
-                                                         'pg19-test'],
-                   required=True)
+    p.add_argument('--stage', choices=sorted(TARGETS) + [
+        'domains', 'lc-long', 'pg19-test'], required=True)
     p.add_argument('--check', action='store_true',
                    help='verify the built shards (after building, or alone '
                         'with --check-only)')
     p.add_argument('--check-only', action='store_true')
     a = p.parse_args()
+    if a.stage == 'domains':
+        if not a.check_only:
+            build_domains()
+        if a.check or a.check_only:
+            sys.exit(0 if check_domains() else 1)
+        sys.exit(0)
     lc = a.stage in ('lc-long', 'pg19-test')
     if not a.check_only:
         (build_lc if lc else build)(a.stage)

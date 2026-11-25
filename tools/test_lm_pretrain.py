@@ -930,5 +930,21 @@ class LibraryStructureTest(unittest.TestCase):
         self.assertEqual(bad, [])
 
 
+
+class DomainsStageTest(unittest.TestCase):
+    """The URL-host classes of build_pretraining_data.py --stage domains."""
+
+    def test_url_domain(self):
+        import build_pretraining_data as b
+        cases = {'en.wikipedia.org': 'wikipedia', 'wikipedia.org': 'wikipedia',
+                 'cs.stanford.edu': 'edu', 'www.ox.ac.uk': 'edu',
+                 'www.unsw.edu.au': 'edu', 'www.nasa.gov': 'gov',
+                 'www.gov.uk': 'gov', 'www.khanacademy.org': 'org',
+                 'notwikipedia.org': 'org', 'example.com': 'other',
+                 'education.com': 'other', '': 'other'}
+        for host, dom in cases.items():
+            self.assertEqual(b.url_domain(host), dom, host)
+
+
 if __name__ == '__main__':
     unittest.main()

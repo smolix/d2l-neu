@@ -22330,6 +22330,10 @@ def packing_comparison(cfg, tokens=25_000_000, seeds=(0, 1, 2),
     return PackingRuns(result.table, result.losses, result.leak,
                        result.label)
 
+d2l.DATA_HUB['lm-fwedu-val-domains-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fwedu-val-domains-v1.jsonl.gz',
+    '180e3865876bb019eea808b4222a090bedda9aaa')
+
 d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')
 d2l.PRETRAIN_ARTIFACTS['reference-evals'] = (
@@ -25790,6 +25794,13 @@ def plot_smollm3(traj):
         ax.set_ylabel(what)
         ax.legend(fontsize=7)
     fig.tight_layout()
+
+d2l.DATA_HUB['lm-lc-long-60m-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lc-long-60m-v1.tar',
+    '24ddc3182a630192b02dfaf9e8fb474f4554cd9f')
+d2l.DATA_HUB['lm-pg19-test-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pg19-test-v1.tar',
+    'a92784936e0d0da6a0623c0b9bd22d335b3a39df')
 
 _LC_PENDING = {'lc-t1', 'lc-zeroshot', 'lc-t2-evals'}
 d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _LC_PENDING

@@ -34,6 +34,20 @@ show (docs/code-guide.md 7.1):
 
 ## Registries
 
+The hosted inputs and results (d2l-data R2), one entry per upload. The
+per-domain validation texts (built by `tools/build_pretraining_data.py
+--stage domains`) are FineWeb-Edu file 012 by URL host, about 2M R2 tokens
+per domain (FineWeb-Edu: ODC-By 1.0, Hugging Face), and the book's held-out
+sections (CC BY-SA 4.0).
+
+```{.python .input #reference-model-lib-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-fwedu-val-domains-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fwedu-val-domains-v1.jsonl.gz',
+    '180e3865876bb019eea808b4222a090bedda9aaa')
+```
+
 ```{.python .input #reference-model-lib-artifacts}
 %%tab pytorch
 #@save

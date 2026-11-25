@@ -17,10 +17,19 @@ the decode-rate harness behind `d2l.decode_rates`.
 
 ## Registries
 
+The hosted results (d2l-data R2), one entry per upload.
+
+```{.python .input #budgets-lib-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-decode-rates-v1'] = (
+    d2l.LM_DATA_URL + 'lm-decode-rates-v1.json.gz',
+    '880e2466382e722c88cc880fb4cf2cf991cc62de')
+```
+
 The decode rates are measured on one whole RTX 4090 by
 `python tools/lm_regen.py decode-rates` (under the GPU-lock helper; about
-20 minutes). Until that result is registered the page shows the shapes and
-the roofline, labelled pending.
+3 minutes once the Qwen3 weights are cached).
 
 ```{.python .input #budgets-lib-artifacts}
 %%tab pytorch
@@ -30,7 +39,6 @@ d2l.PRETRAIN_ARTIFACTS['decode-rates'] = (
 
 #@save
 DECODE_LIMIT_GIB = 22.5  # a configuration above this is infeasible
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {'decode-rates'}
 
 #@save
 def _decode_call():

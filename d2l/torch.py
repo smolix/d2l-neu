@@ -27335,11 +27335,14 @@ def show_scheme_difference(runs, tier, a='YaRN', b='PI'):
     print(f'  NLL {last} (nats): ' + _interval(
         d['nll'], d['nll_lo'], d['nll_hi'], 3, sign=True))
 
+d2l.DATA_HUB['lm-decode-rates-v1'] = (
+    d2l.LM_DATA_URL + 'lm-decode-rates-v1.json.gz',
+    '880e2466382e722c88cc880fb4cf2cf991cc62de')
+
 d2l.PRETRAIN_ARTIFACTS['decode-rates'] = (
     'lm-decode-rates-v1', 'json-table')
 
 DECODE_LIMIT_GIB = 22.5  # a configuration above this is infeasible
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {'decode-rates'}
 
 def _decode_call():
     """The page's decode_rates call (budgets.md, 'Measured Decode Rates').

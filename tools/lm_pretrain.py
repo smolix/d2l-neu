@@ -12,9 +12,12 @@ The job runs `d2l.pretrain` on `d2l.PackedStream` over the preset's shards
 validation on rank 0, bf16 checkpoints, full states (resumable), and the
 preset's branches. `--branch FROM:DECAY` replaces the branches. A finished
 job writes `DONE` in its folder; a non-finite loss exits 3 (the launcher does
-not restart it; rank 0 writes `NONFINITE`). `--package` writes `<job>/package/` (the log as
-`log.jsonl.gz` with every branch's rows, the checkpoints, `config.json`) and
-prints each file's sha1 to stderr.
+not restart it; rank 0 writes `NONFINITE`). `--package` writes `<job>/package/` (the bf16
+checkpoints and `config.json`) and prints each file's sha1 to stderr. It
+packages no log: the run's log artifact (e.g. `lm-r2-train-log-v1`) is the
+file `tools/lm_regen.py <name>` writes under `data/lm/rerun/` (every job of
+the call merged, with the `job` column and the call's configuration that the
+page checks); upload that file, never a single job's log.
 
 Paths in the data folder resolve as in the notebooks, relative to the
 chapter folder (`../data/lm/...`), so the job changes into
@@ -22,7 +25,6 @@ chapter_lm-pretraining first.
 """
 import argparse
 import dataclasses
-import gzip
 import hashlib
 import json
 import os
@@ -63,18 +65,11 @@ def sha1(path):
 
 
 def package(job):
-    from d2l import torch as d2l
+    """The job's checkpoints and config.json in <job>/package/ (no log: see
+    the module docstring)."""
     out = os.path.join(job, 'package')
     os.makedirs(out, exist_ok=True)
-    log = d2l._read_job_logs(job)
-    path = os.path.join(out, 'log.jsonl.gz')
-    with open(os.path.join(job, 'config.json')) as f:
-        config = json.load(f)
-    with gzip.open(path, 'wt', encoding='utf-8') as f:
-        f.write(json.dumps({'_meta': dict(config=config, label='')}) + '\n')
-        for rec in log.to_dict('records'):
-            f.write(json.dumps(d2l._jsonable(rec)) + '\n')
-    files = [path]
+    files = []
     shutil.copy(os.path.join(job, 'config.json'), out)
     files.append(os.path.join(out, 'config.json'))
     ckpt = os.path.join(job, 'ckpt')
@@ -134,12 +129,8 @@ def main():
     stream = d2l.PackedStream(d2l._train_shards(cfg), cfg.arch.T,
                               cfg.global_batch, seed=cfg.data_seed,
                               rank=rank, world=world)
-    hooks = []
-    if a.qk_clip:
-        def clip(step, raw, opt, batch, row, tau=a.qk_clip):
-            if cfg.stats_every and (step + 1) % cfg.stats_every == 0:
-                d2l.qk_clip_(raw, d2l.attn_logit_stats(raw, batch), tau)
-        hooks.append(clip)
+    # QK-clip after every optimizer step, as the T1 arms do
+    hooks = [d2l._qk_clip_hook(a.qk_clip)] if a.qk_clip else []
     val = d2l._val_fn(cfg) if cfg.val_every else None
     log = d2l.pretrain(model, stream, cfg, val_fn=val, hooks=hooks,
                        resume=a.resume)

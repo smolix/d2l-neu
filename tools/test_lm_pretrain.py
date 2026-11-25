@@ -9,7 +9,7 @@ Qwen3-0.6B-Base config (6 N_mm = 3,575,906,304, F(T=2,048) =
 4,985,192,448), `causal_half`, `T=None`; `mfu` arithmetic; `r2_config`
 overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
 `_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
-chapter's 34 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
+chapter's 35 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
 vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
 (losses 1e-6) and a branch from a saved state; `attn_logit_stats` against
 the explicit softmax input; the `qk_clip_` contract; `softcap`;
@@ -22,6 +22,7 @@ refused); `t_interval` against `scipy.stats.t` (dof 1-10, 1e-4);
 `load_reference_model` before the checkpoints are registered; a 2-process
 gloo DDP `pretrain` equal to one process at the same global batch (1e-5).
 """
+import collections
 import contextlib
 import io
 import math
@@ -38,6 +39,15 @@ import torch
 
 from d2l import torch as d2l
 
+
+def uncommitted():
+    """d2l.DATA_HUB without chapter 21's results: the state before a
+    campaign's result is registered (the tests of pending and regeneration
+    paths must not depend on which results run A has committed)."""
+    keys = {key for key, _ in d2l.PRETRAIN_ARTIFACTS.values()}
+    return mock.patch.object(d2l, 'DATA_HUB', {
+        k: v for k, v in d2l.DATA_HUB.items() if k not in keys})
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import test_lm_data_path as dp  # noqa: E402
 
@@ -46,7 +56,8 @@ torch.set_num_threads(min(8, torch.get_num_threads()))
 RERUN_NAMES = (
     'pdp-throughput', 'pdp-mask-runs', 't1-runs', 'inst-t1-none',
     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'spike-replay',
-    'reference-run', 'ladder', 'inst-t2', 'reference-evals', 'ladder-evals',
+    'reference-run', 'ladder', 'inst-t2', 'reference-evals', 't1-evals',
+    'ladder-evals',
     'gemm-sweep', 'lowp-runs', 'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B',
     'cpt-qwen-C', 'cpt-qwen-A2', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1',
     'smollm3-2', 'smollm3-3', 'smollm3-4', 'smollm3-5', 'lc-t1',
@@ -128,6 +139,10 @@ class FlopsTest(unittest.TestCase):
         self.assertEqual(d2l.flops_per_token(cfg, T=2048), 4_985_192_448)
         self.assertEqual(d2l.flops_per_token(cfg.to_dict(), T=2048),
                          4_985_192_448)
+        # A raw config.json without the key is tied (Transformers' default)
+        raw = {k: v for k, v in cfg.to_dict().items()
+               if k != 'tie_word_embeddings'}
+        self.assertEqual(d2l.flops_per_token(raw), 3_575_906_304)
 
     def test_mfu(self):
         a = d2l.r2_config().arch
@@ -153,10 +168,34 @@ class ConfigTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             d2l.r2_config('r2', micro_batch=7).accum(1)
         r2 = d2l.r2_config()
+        # micro-batch 4: at 8, r2 ran out of memory in run A's D1 probe
         self.assertEqual((r2.steps, r2.global_batch, r2.micro_batch,
-                          r2.accum(4)), (6000, 128, 8, 4))
+                          r2.accum(4)), (6000, 128, 4, 8))
+        self.assertEqual(d2l.r2_config('ladder-88m').micro_batch, 8)
         self.assertEqual(r2.branches, ((2550, 450), (1275, 225)))
         self.assertIn(5100, r2.state_steps)
+        self.assertEqual(r2.stats_every, 10)
+        self.assertEqual(r2.ckpt_steps, d2l.REFERENCE_STEPS)
+        t1 = d2l.r2_config('t1')
+        self.assertEqual(t1.stats_every, 50)
+        # the t1 checkpoints sit at the reference run's fractions
+        self.assertEqual(t1.ckpt_steps, d2l.T1_STEPS)
+        for a, b in zip(d2l.REFERENCE_STEPS, d2l.T1_STEPS):
+            self.assertLessEqual(abs(a / r2.steps - b / t1.steps),
+                                 0.5 / t1.steps + 1e-12)  # rounded
+        self.assertIn(t1.steps - t1.decay, t1.state_steps)
+        self.assertEqual(d2l._reference_key('t1', 1297), 'lm-r2t1-s1297-v1')
+        with self.assertRaises(ValueError):
+            d2l._reference_key('t1', 1300)
+
+    def test_job_checkpoint_only_for_evals(self):
+        for rerun, want in (('spike-replay', None), ('reference-evals', 'r2'),
+                            ('t1-evals', 't1')):
+            with mock.patch.dict(os.environ, {'D2L_RERUN': rerun}):
+                for preset in ('r2', 't1'):
+                    path = d2l._job_checkpoint(preset, None)
+                    self.assertEqual(path is not None, preset == want,
+                                     (rerun, preset))
 
     def test_names(self):
         self.assertEqual(d2l.PRETRAIN_RERUN_NAMES, RERUN_NAMES)
@@ -166,9 +205,18 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(set(d2l._RERUN_ARTIFACT), names)
         self.assertLessEqual(set(d2l._RERUN_ARTIFACT.values()),
                              set(d2l.PRETRAIN_ARTIFACTS))
-        for name, (driver, kwargs) in d2l.PRETRAIN_JOBS.items():
-            self.assertTrue(callable(getattr(d2l, driver)), name)
-            kwargs()  # builds without error
+        needs_run = {'ladder-evals', 'inst-t2', 'inst-t1-none',
+                     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap'}
+        with mock.patch.object(d2l, '_rerun_dir', lambda: '/nonexistent'), \
+                uncommitted():
+            for name, (driver, kwargs) in d2l.PRETRAIN_JOBS.items():
+                self.assertTrue(callable(getattr(d2l, driver)), name)
+                if name in needs_run:  # reads an earlier job's result
+                    with self.assertRaisesRegex(FileNotFoundError,
+                                                'has not run yet'):
+                        kwargs()
+                else:
+                    kwargs()  # builds without error
         for key, kind in d2l.PRETRAIN_ARTIFACTS.values():
             self.assertRegex(key, r'^lm-[a-z0-9.-]+-v\d+$')
             self.assertIn(kind, d2l._ARTIFACT_EXT)
@@ -211,7 +259,8 @@ class PretrainTest(unittest.TestCase):
         self.assertLess(np.abs(a['loss'] - b['loss']).max(), 1e-5)
         self.assertLess(a['loss'].iloc[-1], a['loss'].iloc[0])
         self.assertTrue({'lr', 'grad_norm', 'clipped', 'tok_s', 'mfu',
-                         'run', 'seed', 'spike'} <= set(a.columns))
+                         'run', 'seed', 'spike', 'time', 'world', 'gpu',
+                         'job_start'} <= set(a.columns))
 
     def test_resume_and_branch(self):
         with tempfile.TemporaryDirectory() as out:
@@ -244,6 +293,32 @@ class PretrainTest(unittest.TestCase):
                                             's30.safetensors'),
                                dtype=torch.float32)
             self.assertEqual(m.config()['num_blks'], 2)
+
+    def test_resume_after_crash_in_branch(self):
+        class Crash(Exception):
+            pass
+
+        def crash(step, model, opt, batch, row):
+            if row['run'] == 'b26' and row['step'] == 23:
+                raise Crash
+        with tempfile.TemporaryDirectory() as out:
+            ref = self.run_toy(toy_config(
+                steps=30, decay=6, state_steps=(20,), ckpt_steps=(30,),
+                branches=((20, 6),), out_dir=os.path.join(out, 'ref')))
+            cfg = toy_config(steps=30, decay=6, state_steps=(20,),
+                             ckpt_steps=(30,), branches=((20, 6),),
+                             out_dir=os.path.join(out, 'job'))
+            with self.assertRaises(Crash), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                d2l.pretrain(toy_model(), self.stream(), cfg, hooks=[crash])
+            log = self.run_toy(cfg, resume='auto', seed=5)
+        b = log[log['run'] == 'b26']
+        self.assertEqual(b['step'].tolist(), list(range(21, 27)))
+        self.assertEqual(log[log['run'] == 'toy']['step'].tolist(),
+                         list(range(1, 31)))
+        r = ref[ref['run'] == 'b26']
+        self.assertLess(np.abs(b['loss'].values - r['loss'].values).max(),
+                        1e-6)
 
     @staticmethod
     def stop_at(n):
@@ -310,6 +385,16 @@ class PretrainTest(unittest.TestCase):
             self.assertTrue(torch.equal(q[~hit], q0[~hit]))
         again = {n: p.clone() for n, p in m.named_parameters()}
         d2l.qk_clip_(m, after, tau * (1 + 1e-4))
+        for n, p in m.named_parameters():
+            self.assertTrue(torch.equal(p, again[n]), n)
+        # a head whose largest logit is negative is left alone (run A: the
+        # factor (tau/S)^alpha was NaN there and the t1 qk_clip arm at lr
+        # 0.032 turned non-finite at step 18 with every logit below tau)
+        neg = {l: s._replace(max_logit=-s.max_logit.abs())
+               for l, s in after.items()}
+        f = d2l.qk_clip_(m, neg, tau)
+        self.assertTrue(all(torch.equal(v, torch.ones_like(v))
+                            for v in f.values()))
         for n, p in m.named_parameters():
             self.assertTrue(torch.equal(p, again[n]), n)
         torch.manual_seed(0)
@@ -402,6 +487,288 @@ class DDPTest(unittest.TestCase):
                         .max(), 1e-5)
 
 
+def toy_log(steps=600, every=10, layers=2, seed=0):
+    """A synthetic run log with the columns of pretrain's."""
+    rng = np.random.default_rng(seed)
+    step = np.arange(1, steps + 1)
+    df = pd.DataFrame(dict(step=step, loss=3 + 1 / np.sqrt(step),
+                           grad_norm=1 + 0.1 * rng.random(steps), run='toy',
+                           seed=0, job='toy-s0', tokens=step * 1000,
+                           mfu=0.3, time=step * 2.0))
+    for l in range(layers):
+        df[f'max_logit_{l}'] = np.where(step % every == 0, 10 + l + step / 50,
+                                        np.nan)
+    df['rms_W_q'] = np.where(step % every == 0, 0.2, np.nan)
+    df['val_loss'] = np.where(step % 100 == 0, 3.1, np.nan)
+    return df
+
+
+class MeasurementTest(unittest.TestCase):
+    """The section's drivers on CPU: tau_rule, the arm summaries, the
+    stand-in, the bad-batch stream, the T1 arms and the spike protocol on a
+    2-layer toy, the result tuples, the launcher's job names and arguments,
+    the ladder's points, the dashboard."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.shards = dp.fixture_shards(os.path.join(cls.tmp.name, 'set'),
+                                       n_docs=600)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_tau_rule(self):
+        log = toy_log()
+        # largest logit over steps 300-500: layer 1 at step 500 = 21
+        self.assertEqual(d2l.tau_rule(log, 300, 500), 30)
+        self.assertEqual(d2l.tau_rule(log, 10, 40), 20)  # 11.8 -> 20
+
+    def test_arm_summary_and_trace(self):
+        log = toy_log(100)
+        row = d2l._arm_summary(log, 'none', 1e-3, 0)
+        self.assertAlmostEqual(row['final_loss'], log['loss'].iloc[-20:].mean())
+        self.assertIsNone(row['first_nonfinite'])
+        self.assertAlmostEqual(row['max_logit'], 13.0)
+        self.assertEqual(row['val_loss'], 3.1)
+        log.loc[60:, 'loss'] = np.nan
+        row = d2l._arm_summary(log, 'none', 1e-3, 0)
+        self.assertEqual((row['final_loss'], row['first_nonfinite']),
+                         (math.inf, 61))
+        tr = d2l._arm_trace(log, 'none', 1e-3, 0)
+        self.assertIn('max_logit_1', tr.columns)
+        self.assertEqual(tr['max_logit'].dropna().iloc[0], 11.2)
+
+    def test_stand_in(self):
+        rows = [dict(variant=v, lr=lr, seed=s, final_loss=1.0)
+                for v in ('none', 'qk_clip', 'qk_norm') for lr in (1e-3, 1.6e-2)
+                for s in (0, 1)]
+        tab = pd.DataFrame(rows)
+        tr = tab.assign(step=1)
+        res = d2l.InstabilityRuns(tab, tr, 50, 'T2 run pending; showing the '
+                                               'T1 configuration')
+        out = d2l._t1_stand_in(res)
+        self.assertEqual(out.table[['variant', 'lr']].values.tolist(),
+                         [['baseline', 1e-3], ['none', 1.6e-2],
+                          ['qk_clip', 1.6e-2]])
+        self.assertTrue(out.label.startswith('T2 run pending'))
+
+    def test_as_tuple(self):
+        pending = pd.DataFrame()
+        pending.attrs['label'] = 'spike-replay pending'
+        r = d2l._as_tuple(d2l.SpikeReplay, pending, ('table', 'traces'))
+        self.assertEqual(r.label, 'spike-replay pending')
+        self.assertTrue(r.table.empty and r.floor is None)
+        r = d2l._as_tuple(d2l.SpikeReplay, pending, dict(
+            table=['run', 'max_dloss'], traces=[]), dict(floor=math.nan))
+        self.assertEqual(list(r.table.columns), ['run', 'max_dloss'])
+        self.assertTrue(math.isnan(r.floor))
+        R = collections.namedtuple('Tables', 'table traces floor label')
+        r = d2l._as_tuple(d2l.SpikeReplay, R(pd.DataFrame({'a': [1]}),
+                                             pd.DataFrame(), 0.5, 'x'),
+                          ('table', 'traces'))
+        self.assertEqual((r.floor, r.label, len(r.table)), (0.5, 'x', 1))
+
+    def test_bad_batch_stream(self):
+        s = d2l._BadBatchStream(self.shards, TOY.T, 8, 5, 'repeat', 512)
+        plain = d2l.PackedStream(self.shards, TOY.T, 8)
+        self.assertTrue(torch.equal(s.batch(3)['input_ids'],
+                                    plain.batch(3)['input_ids']))
+        bad = s.batch(4)['input_ids']  # log step 5 = stream step 4
+        self.assertEqual(len(set(bad.flatten().tolist())), 1)
+        skipped = d2l._BadBatchStream(self.shards, TOY.T, 8, 5, 'repeat', 512,
+                                      skip=[4])
+        self.assertTrue(torch.equal(skipped.batch(4)['input_ids'],
+                                    plain.batch(5)['input_ids']))
+        none = d2l._BadBatchStream(self.shards, TOY.T, 8, None, 'repeat', 512)
+        self.assertTrue(torch.equal(none.batch(4)['input_ids'],
+                                    plain.batch(4)['input_ids']))
+
+    def toy_cfg(self, **kw):
+        return toy_config(preset='t1', compile=False, warmup=2, **kw)
+
+    def test_inst_t1(self):
+        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards):
+            val = None
+            with mock.patch.object(d2l, '_val_fn', lambda c: (
+                    lambda m: 1.0)):
+                runs = {v: d2l._inst_t1(self.toy_cfg(clip=None), (1e-3, 1e-1),
+                                        v, (0, 1), 12, 0.5, device='cpu')
+                        for v in ('none', 'qk_clip', 'qk_norm')}
+        for r in runs.values():
+            self.assertEqual(len(r.table), 4)
+            self.assertEqual(set(r.traces['step']), set(range(1, 13)))
+            self.assertTrue(r.traces['max_logit'].notna().any())
+        # the clip pulls every head back to tau after each step
+        hi = {v: r.table[r.table['lr'] == 1e-1]['max_logit'].values
+              for v, r in runs.items()}
+        self.assertTrue((hi['qk_clip'] < 0.2 * hi['none']).all())
+        merged = d2l._merge_arms(runs)
+        self.assertEqual(len(merged.table), 12)
+        del val
+
+    def test_spike(self):
+        replays = (('from 6, same batches', 6, (), None),
+                   ('from 6, skip 8', 6, (8,), None),
+                   ('from 2, same batches', 2, (), None),
+                   ('clip 1.0', 0, (), 1.0))
+        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
+                mock.patch.object(d2l, '_job_root', lambda: self.tmp.name):
+            r = d2l._spike(self.toy_cfg(clip=None, z_loss=0.0), 8, 'random',
+                           replays, steps=14, window=(1, 14), device='cpu')
+        self.assertEqual(r.table['run'].tolist(), ['spiked run'] + [
+            x[0] for x in replays])
+        t = r.table.set_index('run')
+        # same state, same batches: equal up to the floor (CPU: exact)
+        self.assertLessEqual(t.loc['from 6, same batches', 'max_dloss'],
+                             2 * r.floor + 1e-6)
+        self.assertGreater(t.loc['from 6, skip 8', 'max_dloss'], 1e-4)
+        self.assertNotAlmostEqual(t.loc['spiked run', 'loss_at_bad'],
+                                  t.loc['from 6, skip 8', 'loss_at_bad'], 4)
+        self.assertAlmostEqual(t.loc['spiked run', 'loss_at_bad'],
+                               t.loc['from 2, same batches', 'loss_at_bad'], 4)
+        self.assertEqual(set(r.traces['run']), set(t.index))
+
+    def test_launch_jobs_arguments(self):
+        calls = []
+
+        def call(cmd, cwd, stdout, stderr):
+            calls.append(cmd)
+            job = os.path.dirname(cmd[cmd.index('--config') + 1])
+            with open(os.path.join(job, 'log.jsonl'), 'w') as f:
+                f.write('{"step": 1, "loss": 1.0}\n')
+            open(os.path.join(job, 'DONE'), 'w').close()
+            return 0
+        with tempfile.TemporaryDirectory() as root, \
+                mock.patch.object(d2l, '_job_root', lambda: root), \
+                mock.patch.object(d2l, '_train_shards', lambda c: None), \
+                mock.patch('subprocess.call', call):
+            cfgs = [d2l.r2_config('t1'), d2l.r2_config('t1', seed=1)]
+            df = d2l._launch_jobs(cfgs, 1, jobs=['a', 'b'],
+                                  extra=[['--qk-clip', 30], []])
+        self.assertEqual(df['job'].tolist(), ['a', 'b'])
+        self.assertEqual(calls[0][-2:], ['--qk-clip', '30'])
+        self.assertEqual(calls[1][-2:], ['--resume', 'auto'])
+
+    def test_ladder_points(self):
+        logs = pd.DataFrame(dict(job=['ladder-25m-s0', 'r2-s0']))
+        with mock.patch.object(d2l, '_job_root', lambda: '/r'):
+            pts = d2l._ladder_points(logs)
+        fin = [p for p in pts if p[3]]
+        self.assertEqual(len(fin), 6)
+        self.assertEqual(len(pts) - len(fin), 4)
+        self.assertIn(('r2-s0', 'b3000', 3000, True,
+                       '/r/r2-s0/ckpt/b3000-s3000.safetensors'), pts)
+        self.assertIn(('ladder-25m-s0', 'ladder-25m', 816, False,
+                       '/r/ladder-25m-s0/state/s816.pt'), pts)
+
+    def test_gradient_event(self):
+        log = toy_log(1000)
+        log.loc[log['step'] == 600, 'grad_norm'] = 20.0  # a 18x event
+        ev = d2l.gradient_event(log)
+        self.assertEqual((ev.step, ev.at, ev.mild), (600, 600, False))
+        self.assertEqual(ev.source, 'toy run')
+        self.assertGreater(ev.ratio, 15)
+        self.assertAlmostEqual(ev.hour, (1200 - 2) / 3600)
+        self.assertEqual(ev.layer, 2)  # layer 1 (0-based) is the larger
+        self.assertAlmostEqual(ev.max_logit, 11 + 600 / 50)
+        loss = log.set_index('step')['loss']
+        self.assertAlmostEqual(ev.dloss, loss.loc[601:800].mean()
+                               - loss.loc[401:600].mean())
+        self.assertIsNone(ev.nonfinite)
+        # mild: the 10x arm's first step above the baseline + delta
+        base, arm = toy_log(500), toy_log(500)
+        arm.loc[arm['step'] >= 300, 'loss'] += 0.5
+        arm.loc[arm['step'] >= 350, 'loss'] = np.nan
+        traces = pd.concat([d2l._arm_trace(base, 'baseline', 6e-4, 0),
+                            d2l._arm_trace(arm, 'none', 6e-3, 0)])
+        arms = d2l.InstabilityRuns(pd.DataFrame(), traces, 30, '')
+        with mock.patch.object(d2l, 'instability_arms',
+                               lambda *a, **k: arms):
+            ev = d2l.gradient_event(toy_log(1000))
+        self.assertTrue(ev.mild)
+        self.assertEqual((ev.at, ev.nonfinite), (300, 350))
+        self.assertEqual(ev.source, 'unclipped arm at lr 0.006')
+        empty = d2l.InstabilityRuns(pd.DataFrame(), pd.DataFrame(
+            columns=d2l._INST_TABLES['traces']), None, 'inst-t2 pending')
+        with mock.patch.object(d2l, 'instability_arms',
+                               lambda *a, **k: empty), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            ev = d2l.gradient_event(toy_log(1000))
+        self.assertTrue(ev.mild and ev.at is None)
+        self.assertEqual(out.getvalue(), '[inst-t2 pending]\n')
+
+    def test_reference_evals_stand_in(self):
+        tab = pd.DataFrame(dict(step=d2l.T1_STEPS, val_loss=1.0, bpb=1.0,
+                                piqa=0.5))
+        Tables = collections.namedtuple('Tables', 'table items domains '
+                                                  'chance label')
+        stored = Tables(tab, tab[['step']].assign(task='piqa', item_id=0,
+                                                  score=1),
+                        pd.DataFrame(), {'piqa': 0.5}, 'T2 run pending; '
+                        'showing the T1 configuration')
+        with mock.patch.object(d2l, '_pretrain_result',
+                               lambda *a, **k: stored), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            ev = d2l.reference_evals(d2l.REFERENCE_STEPS, ('piqa',))
+        self.assertEqual(ev.table['step'].tolist(), list(d2l.REFERENCE_STEPS))
+        self.assertEqual(ev.items['step'].iloc[-1], 6000)
+        self.assertEqual(ev.label, d2l.T1_STAND_IN)
+        self.assertIn(d2l.T1_STAND_IN, out.getvalue())
+        pending = pd.DataFrame()
+        pending.attrs['label'] = 'reference-evals pending'
+        with mock.patch.object(d2l, '_pretrain_result',
+                               lambda *a, **k: pending), \
+                contextlib.redirect_stdout(io.StringIO()):
+            ev = d2l.reference_evals(d2l.REFERENCE_STEPS, ('piqa',))
+        self.assertEqual(list(ev.table.columns), ['step', 'val_loss', 'bpb',
+                                                  'piqa'])
+        self.assertTrue(math.isnan(ev.chance['piqa']))
+
+    def test_load_reference_models_stand_in(self):
+        calls = []
+
+        def load(step, dtype, device, preset='r2'):
+            calls.append((step, preset))
+            return preset
+        with mock.patch.object(d2l, 'load_reference_model', load), \
+                mock.patch.object(d2l, 'PRETRAIN_PENDING',
+                                  frozenset({'reference-run'})), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            models = d2l.load_reference_models((5100, 6000))
+        self.assertEqual(calls, [(1297, 't1'), (1526, 't1')])
+        self.assertEqual(set(models), {5100, 6000})
+        self.assertIn('T2 run pending', out.getvalue())
+
+    def test_plot_traces_and_ladder(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        traces = pd.concat([d2l._arm_trace(toy_log(100), v, 1e-3, 0)
+                            for v in ('none', 'qk_clip')])
+        d2l.plot_traces(traces, ['max_logit', 'loss'], by=['lr', 'variant'],
+                        logy=['max_logit'], steps=(10, 90))
+        fig = d2l.plt.gcf()
+        self.assertEqual(len(fig.axes), 2)
+        labels = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
+        self.assertEqual(labels, ['0.001 none', '0.001 qk_clip'])
+        d2l.plt.close('all')
+        log = toy_log(200).assign(job='ladder-25m-s0')
+        log.loc[log['step'] > 150, 'run'] = 'b150'
+        empty = pd.DataFrame()
+        d2l.plot_ladder_runs(empty, log)
+        self.assertEqual(len(d2l.plt.gca().get_lines()), 2)
+        d2l.plt.close('all')
+
+    def test_plot_run_log(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        d2l.plot_run_log(toy_log(), ['loss', 'grad_norm', 'rms', 'max_logit',
+                                     'mfu'], marks=(30, 500))
+        fig = d2l.plt.gcf()
+        self.assertEqual(len(fig.axes), 5)
+        d2l.plt.close('all')
+
+
 class ResultTest(unittest.TestCase):
     """_pretrain_result and _pretrain_merged with a temporary registry."""
     def setUp(self):
@@ -411,7 +778,7 @@ class ResultTest(unittest.TestCase):
         self.cwd = os.getcwd()
         os.chdir(chapter)
         self.patches = [
-            mock.patch.object(d2l, 'DATA_HUB', dict(d2l.DATA_HUB)),
+            uncommitted(),
             mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset()),
             mock.patch.dict(os.environ, {'D2L_RERUN': ''})]
         for p in self.patches:
@@ -532,6 +899,108 @@ class ResultTest(unittest.TestCase):
         os.environ['D2L_RERUN'] = ''
         with self.assertRaises(KeyError):
             call()
+
+    def test_merged_last_part_merges(self):
+        """Parts run side by side: the one that finishes last merges, even
+        when the others' files appear while it computes (run A: smollm3-5
+        started before smollm3-4 finished and left the merge pending)."""
+        names = [f'smollm3-{i}' for i in range(3)]
+        d2l.DATA_HUB.pop('lm-smollm3-trajectory-v1', None)  # a copy
+
+        def call(compute):
+            parts = {n: (compute, dict(name=n)) for n in names}
+            with contextlib.redirect_stdout(io.StringIO()):
+                return d2l._pretrain_merged(
+                    None, parts, lambda r: pd.concat(r.values(),
+                                                     ignore_index=True),
+                    dict(names=names))
+        os.environ['D2L_RERUN'] = 'smollm3-0'
+        self.assertTrue(call(self.compute).attrs['label'].endswith('pending'))
+
+        def late():  # smollm3-1 finishes while smollm3-2 runs
+            os.environ['D2L_RERUN'] = 'smollm3-1'
+            call(self.compute)
+            os.environ['D2L_RERUN'] = 'smollm3-2'
+            return self.compute()
+        os.environ['D2L_RERUN'] = 'smollm3-2'
+        self.assertEqual(len(call(late)), 6)
+        merged = '../data/lm/rerun/lm-smollm3-trajectory-v1.json.gz'
+        self.assertTrue(os.path.exists(merged))
+        os.remove(merged)
+        # --merge: the named part's file exists, so nothing is computed
+        calls = self.calls
+        with mock.patch.dict(os.environ, {'D2L_PRETRAIN_MERGE': '1',
+                                          'D2L_RERUN': 'smollm3-0'}):
+            self.assertEqual(len(call(self.compute)), 6)
+        self.assertEqual(self.calls, calls)
+        self.assertTrue(os.path.exists(merged))
+
+
+class LibraryStructureTest(unittest.TestCase):
+    """The chapter's #@save blocks against two freshness hazards (lib
+    review findings 1 and 2): a block that defines no name and is no
+    registry entry lands in the `_preamble` shard, on which every notebook
+    of the book depends; and a name defined in two Language Models files
+    with different code keeps only the later one, silently."""
+
+    @staticmethod
+    def _blocks(pattern):
+        import glob
+        import build_lib
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        out = []
+        for path in sorted(glob.glob(os.path.join(root, pattern))):
+            with contextlib.redirect_stdout(io.StringIO()):
+                blocks = build_lib.extract_save_blocks(path, 'pytorch')
+            out += [(b[0], os.path.relpath(path, root)) for b in blocks]
+        return build_lib, out
+
+    def test_no_block_in_preamble_shard(self):
+        import re
+        build_lib, blocks = self._blocks('chapter_lm-pretraining/*.md')
+        self.assertGreater(len(blocks), 100)
+        bad = []
+        for code, path in blocks:
+            names = [n for n in build_lib._block_shard_names(code)
+                     if n != 'd2l']
+            entries, rest = build_lib.registry_entries(code)
+            if names or (entries and not rest):
+                continue
+            if not re.match(r'(?:d2l\.)?(\w+)\[', code.lstrip()):
+                bad.append(f'{path}: {code.splitlines()[0]}')
+        self.assertEqual(bad, [])
+
+    def test_no_name_redefined_across_files(self):
+        import re
+        build_lib, blocks = self._blocks('chapter_lm-*/*.md')
+        seen, bad = {}, []
+        for code, path in blocks:
+            names = re.findall(r'^(?:def|class)\s+(\w+)', code, re.MULTILINE)
+            if len(set(names)) != 1:
+                continue
+            # A method added to a class is keyed by its class
+            cls = re.match(r'@(?:d2l\.)?add_to_class\(([\w.]+)\)', code)
+            key = f'{cls.group(1)}.{names[0]}' if cls else names[0]
+            first = seen.setdefault(key, (path, code))
+            if first[0] != path and first[1] != code:
+                bad.append(f'{key}: {first[0]} and {path}')
+        self.assertEqual(bad, [])
+
+
+
+class DomainsStageTest(unittest.TestCase):
+    """The URL-host classes of build_pretraining_data.py --stage domains."""
+
+    def test_url_domain(self):
+        import build_pretraining_data as b
+        cases = {'en.wikipedia.org': 'wikipedia', 'wikipedia.org': 'wikipedia',
+                 'cs.stanford.edu': 'edu', 'www.ox.ac.uk': 'edu',
+                 'www.unsw.edu.au': 'edu', 'www.nasa.gov': 'gov',
+                 'www.gov.uk': 'gov', 'www.khanacademy.org': 'org',
+                 'notwikipedia.org': 'org', 'example.com': 'other',
+                 'education.com': 'other', '': 'other'}
+        for host, dom in cases.items():
+            self.assertEqual(b.url_domain(host), dom, host)
 
 
 if __name__ == '__main__':

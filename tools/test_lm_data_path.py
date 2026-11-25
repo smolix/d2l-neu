@@ -17,10 +17,14 @@ trip; `PackedGPT.from_arch` for every preset on the meta device (P exact);
 `set_rope(scale=4)` and `max_len`; `forward_cached(all_logits=True)` after
 a prefill equals `forward` (fp32 1e-5); `_quiet()`; the DDP identity on
 simulated ranks (global vs local denominators, 1e-6); `_rope_tables`
-equals `qwen3_rope_tables`; `reseeded_restart_overlap`.
+equals `qwen3_rope_tables`; `reseeded_restart_overlap`; the measurement
+drivers on the fixture (`_UnmaskedStream`, `_padded_batch`,
+`_foreign_mass` against an explicit softmax and uniform attention, the
+throughput table and the masked/unmasked runs on a tiny CPU model, and the
+`packing_comparison` load path with its configuration check).
 
 Gated (D2L_TEST_GPU=1 and CUDA, run through the GPU-lock helper): 'flex'
-vs 'sdpa' in bf16 (2e-2)."""
+vs 'sdpa' in bf16 (2e-2), logits and parameter gradients."""
 import contextlib
 import io
 import os
@@ -32,6 +36,16 @@ import torch
 from torch.nn import functional as F
 
 from d2l import torch as d2l
+
+
+def uncommitted():
+    """d2l.DATA_HUB without chapter 21's results: the state before a
+    campaign's result is registered (the tests of pending and regeneration
+    paths must not depend on which results run A has committed)."""
+    from unittest import mock
+    keys = {key for key, _ in d2l.PRETRAIN_ARTIFACTS.values()}
+    return mock.patch.object(d2l, 'DATA_HUB', {
+        k: v for k, v in d2l.DATA_HUB.items() if k not in keys})
 
 torch.set_num_threads(min(8, torch.get_num_threads()))
 
@@ -225,6 +239,19 @@ class PackedModelTest(unittest.TestCase):
         last, _, _ = m.forward_cached(X[:, 19:], ks, vs, 19)
         self.assertLess((last - full[:, 19]).abs().max(), 1e-5)
 
+    def test_forward_cached_learned_raises(self):
+        m = tiny_model(pos='learned')
+        ks, vs = m.init_cache(1, 8)
+        with self.assertRaises(NotImplementedError):
+            m.forward_cached(torch.zeros(1, 4, dtype=torch.long), ks, vs, 0)
+
+    def test_option_checks(self):
+        X = torch.randint(0, 64, (1, 6))
+        with self.assertRaises(ValueError):
+            tiny_model(backend='fast')(X)
+        with self.assertRaises(ValueError):
+            tiny_model(pos='alibi')(X)
+
     def test_return_hidden(self):
         m = tiny_model()
         X = torch.randint(0, 64, (1, 9))
@@ -280,8 +307,9 @@ class LossTest(unittest.TestCase):
         self.assertLess((gH - rH).abs().max(), 1e-6)
         self.assertLess((gW - rW).abs().max(), 1e-6)
         z = 1e-2
-        s3, _, nll = d2l.chunked_lm_loss(H, W, y, chunk=8, z_loss=z,
-                                         return_nll=True)
+        s3, _, nll = d2l.chunked_lm_loss_and_nll(H, W, y, chunk=8, z_loss=z)
+        s4, _ = d2l.chunked_lm_loss(H, W, y, chunk=8, z_loss=z)
+        self.assertLess(abs(s4 - s3), 1e-9)
         logits = F.linear(H, W)
         valid = y != -100
         lse = torch.logsumexp(logits, -1)
@@ -402,13 +430,24 @@ class StreamTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 s.load_state_dict(self.stream().state_dict())
         with self.assertRaises(ValueError):
-            d2l.PackedStream(self.shards, 32, 16, world=3)
+            d2l.PackedStream(self.shards, 32, 16, world=3).batch(0)
+
+    def test_skip_order_from_state(self):
+        s = self.stream()
+        s.load_state_dict(dict(self.stream().state_dict(), skip=[5, 3]))
+        self.assertEqual(s.physical_index(4), 6)
 
     def test_restart_overlap(self):
         r = d2l.reseeded_restart_overlap()
-        self.assertEqual((r.naive_match, r.stateless_match), (40, 50))
-        self.assertGreater(r.naive_repeats, 0)
-        self.assertEqual(r.stateless_repeats, 0)
+        self.assertEqual((r.steps, r.windows), (10, 640))
+        self.assertEqual((r.naive_match, r.stateless_match), (0, 10))
+        self.assertGreater(r.naive_seen, 0)
+        self.assertEqual(r.stateless_seen, 0)
+        # the windows seen before are the repeats over the whole run
+        perm = np.random.default_rng([0, 0]).permutation(10_000)
+        after = np.random.default_rng([1, 0]).permutation(10_000)
+        run = np.concatenate([perm[:40 * 64], after[40 * 64:50 * 64]])
+        self.assertEqual(r.naive_seen, len(run) - len(np.unique(run)))
 
 
 class QuietTest(unittest.TestCase):
@@ -424,6 +463,168 @@ class QuietTest(unittest.TestCase):
                 print('progress 50%')
                 raise RuntimeError('boom')
         self.assertIn('progress 50%', ''.join(cm.exception.__notes__))
+
+
+def tiny_cfg(**kw):
+    """A t1-shaped config small enough for CPU: one block, d = 32, T = 32,
+    vocabulary 512 (the fixture's ids), fp32, eager."""
+    arch = d2l.Arch(1, 32, 2, 1, 16, 64, 512, 32, 1e4, False, True)
+    return d2l.r2_config('t1', arch=arch, global_batch=8, micro_batch=4,
+                         compile=False, dtype='fp32', **kw)
+
+
+class MeasurementDriverTest(unittest.TestCase):
+    """The drivers behind packing_throughput and packing_comparison, on
+    the fixture shards (CPU, tiny model)."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.shards = fixture_shards(os.path.join(cls.tmp.name, 'set'))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_unmasked_stream(self):
+        a = d2l.PackedStream(self.shards, 32, 16, seed=2).batch(4)
+        b = d2l._UnmaskedStream(self.shards, 32, 16, seed=2).batch(4)
+        for k in ('input_ids', 'labels'):
+            self.assertTrue(torch.equal(a[k], b[k]))
+        self.assertTrue((b['doc_ids'] == 0).all())
+        self.assertTrue(torch.equal(b['pos_ids'][3], torch.arange(
+            32, dtype=torch.int32)))
+        self.assertGreater(int(a['doc_ids'].max()), 0)
+
+    def test_padded_batch(self):
+        b = d2l._padded_batch(self.shards, 64, 4, 2)
+        for r in range(4):
+            d = torch.from_numpy(self.shards.doc(8 + r)).long()
+            n = min(len(d) - 1, 64)
+            self.assertTrue(torch.equal(b['input_ids'][r, :n], d[:n]))
+            self.assertTrue(torch.equal(b['labels'][r, :n], d[1:n + 1]))
+            self.assertTrue((b['labels'][r, n:] == -100).all())
+            self.assertTrue((b['input_ids'][r, n:] == 0).all())
+        self.assertTrue((b['doc_ids'] == 0).all())
+
+    def test_foreign_mass(self):
+        B, H, T, d_h = 2, 2, 6, 4
+        q, k = torch.zeros(B, H, T, d_h), torch.randn(B, H, T, d_h)
+        doc_ids = torch.tensor([[0, 0, 1, 1, 1, 2], [0] * 6])
+        m, u = d2l._foreign_mass(q, k, doc_ids, chunk=4)
+        # uniform attention puts exactly the uniform share on other documents
+        self.assertAlmostEqual(m[0].item(), u[0].item(), places=6)
+        share = np.mean([2 / 3, 2 / 4, 2 / 5, 5 / 6])  # queries 2-5
+        self.assertAlmostEqual(u[0].item(), share, places=6)
+        self.assertTrue(torch.isnan(m[1]) and torch.isnan(u[1]))
+        q = torch.randn(B, H, T, d_h)
+        m2, _ = d2l._foreign_mass(q, k, doc_ids, chunk=6)
+        s = (q @ k.transpose(-2, -1) / 2).masked_fill(
+            ~torch.ones(T, T, dtype=torch.bool).tril(), float('-inf'))
+        p = torch.softmax(s, -1)[0]  # window 0, (H, T, T)
+        foreign = (doc_ids[0][:, None] != doc_ids[0][None, :]).tril()
+        ref = (p * foreign).sum(-1).mean(0)[2:].mean()
+        self.assertAlmostEqual(m2[0].item(), ref.item(), places=5)
+
+    def test_throughput_table_cpu(self):
+        cfg = tiny_cfg()
+        df = d2l._throughput_table(cfg, ('padded', 'packed', 'sdpa-mask'),
+                                   (32, 64), steps=3, warmup=1,
+                                   shards=self.shards,
+                                   device=torch.device('cpu'))
+        self.assertEqual(len(df), 6)
+        self.assertTrue((df.status == 'ok').all())
+        self.assertTrue((df.tok_s_q1 <= df.tok_s).all() and (
+            df.tok_s <= df.tok_s_q3).all())
+        self.assertTrue((df[df.pipeline == 'padded'].padding > 0).all())
+        self.assertTrue((df[df.pipeline != 'padded'].padding == 0).all())
+
+    def test_mask_runs_cpu(self):
+        cfg = d2l._mask_run_config(tiny_cfg(), tokens=8 * 32 * 10)
+        self.assertEqual((cfg.steps, cfg.warmup, cfg.decay), (10, 0, 1))
+        X = torch.from_numpy(np.stack([self.shards.read(i * 32, 32)
+                                       for i in range(6)]).astype(np.int64))
+
+        def val(model):  # the training targets of one fixed batch
+            b = d2l.PackedStream(self.shards, 32, 8, seed=9).batch(0)
+            with torch.no_grad():
+                H, W = model(b['input_ids'], d2l.PackCtx(b['doc_ids'],
+                                                         b['pos_ids']),
+                             return_hidden=True)
+                s, n = d2l.chunked_lm_loss(H, W, b['labels'])
+            return float(s / n)
+        runs = d2l._mask_runs(cfg, (0, 1), self.shards, val, X,
+                              torch.device('cpu'), every=5)
+        self.assertEqual(runs.table.seed.tolist(), [0, 1])
+        self.assertTrue(np.isfinite(runs.table[['masked', 'unmasked']]
+                                    .values).all())
+        self.assertNotEqual(runs.table.masked[0], runs.table.unmasked[0])
+        self.assertEqual(sorted(set(runs.losses.step)), [5, 10])
+        self.assertEqual(len(runs.losses), 2 * 2 * 2)
+        leak = runs.leak
+        self.assertEqual(leak.layer.tolist(), [0])
+        self.assertTrue((leak.lo <= leak.leak).all() and (
+            leak.leak <= leak.hi).all())
+        self.assertTrue(0 < leak.uniform[0] < 1 and (leak.leak > 0).all())
+
+    def test_stale_rerun_file(self):
+        """A next-version file in the rerun folder is read only by a run
+        whose D2L_RERUN names a campaign that writes it."""
+        from unittest import mock
+        import pandas as pd
+        with tempfile.TemporaryDirectory() as tmp:
+            d2l._write_result(os.path.join(tmp, 'lm-pdp-throughput-v1.parquet'),
+                              'parquet', pd.DataFrame(dict(T=[1024])),
+                              dict(config=None, label='smoke'))
+            with mock.patch.object(d2l, '_rerun_dir', lambda: tmp), \
+                    uncommitted():
+                with mock.patch.dict(os.environ,
+                                     {'D2L_RERUN': 'decode-rates'}):
+                    with self.assertRaises(KeyError):
+                        d2l.load_artifact('packing-throughput')
+                    out = io.StringIO()
+                    with contextlib.redirect_stdout(out):
+                        tp = d2l.packing_throughput(d2l.r2_config('t1'))
+                    self.assertTrue(tp.empty)  # pending, not the stale file
+                    self.assertEqual(out.getvalue(),
+                                     '[pdp-throughput pending]\n')
+                with mock.patch.dict(os.environ,
+                                     {'D2L_RERUN': 'pdp-throughput'}):
+                    got = d2l.load_artifact('packing-throughput')
+                    self.assertEqual(d2l._label_of(got), 'smoke')
+
+    def test_comparison_round_trip(self):
+        """packing_comparison loads a committed json-table result as
+        PackingRuns and refuses one stored under another configuration."""
+        from unittest import mock
+        import pandas as pd
+        cfg = d2l.r2_config('t1')
+        config = dict(cfg=d2l._cfg_json(d2l._mask_run_config(cfg, 1000)),
+                      tokens=1000, seeds=[0], leak_windows=4)
+        runs = d2l.PackingRuns(pd.DataFrame(dict(seed=[0], masked=[3.5],
+                                                 unmasked=[3.6])),
+                               pd.DataFrame(dict(arm=['masked'], seed=[0],
+                                                 step=[10], loss=[4.0])),
+                               pd.DataFrame(dict(layer=[0], leak=[0.1],
+                                                 lo=[0.05], hi=[0.2],
+                                                 uniform=[0.3],
+                                                 windows=[4])), '')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'lm-pdp-mask-runs-v1.json.gz')
+            d2l._write_result(path, 'json-table', runs,
+                              dict(config=d2l._jsonable(config), label=''))
+            with mock.patch.object(d2l, 'DATA_HUB', dict(
+                    d2l.DATA_HUB, **{'lm-pdp-mask-runs-v1': ('u', 's')})), \
+                    mock.patch.object(d2l, 'download_keyed',
+                                      lambda key: path), \
+                    mock.patch.dict(os.environ, {'D2L_RERUN': ''}):
+                got = d2l.packing_comparison(cfg, tokens=1000, seeds=(0,),
+                                             leak_windows=4)
+                self.assertIsInstance(got, d2l.PackingRuns)
+                self.assertEqual(got.table.unmasked.tolist(), [3.6])
+                self.assertEqual(got.leak.hi.tolist(), [0.2])
+                with self.assertRaises(ValueError):
+                    d2l.packing_comparison(cfg, tokens=2000, seeds=(0,),
+                                           leak_windows=4)
 
 
 @unittest.skipUnless(os.environ.get('D2L_TEST_GPU') == '1'
@@ -443,6 +644,34 @@ class FlexTest(unittest.TestCase):
                 blk.attention.backend = 'flex'
             y2 = m(X, ctx).float()
         self.assertLess((y1 - y2).abs().max().item(), 2e-2)
+
+    def test_flex_vs_sdpa_gradients(self):
+        """The masked training arm runs through flex forward and backward:
+        its parameter gradients match sdpa's in bf16 (2e-2 of the largest
+        gradient entry)."""
+        torch.manual_seed(0)
+        m = d2l.PackedGPT(256, 128, 4, 2, 2, head_dim=32, max_len=256,
+                          backend='sdpa').cuda()
+        X = torch.randint(1, 256, (2, 256), device='cuda')
+        X[0, [40, 100, 200]] = 0
+        X[1, [10, 128]] = 0
+        Y = torch.roll(X, -1, 1)
+        ctx = d2l.PackCtx(*d2l.doc_ids_from_eos(X))
+        grads = []
+        for backend in ('sdpa', 'flex'):
+            for blk in m.blks:
+                blk.attention.backend = backend
+            m.zero_grad(set_to_none=True)
+            with torch.autocast('cuda', torch.bfloat16):
+                H, W = m(X, ctx, return_hidden=True)
+                s, n = d2l.chunked_lm_loss(H, W, Y)
+            (s / n).backward()
+            grads.append({k: p.grad.float().clone()
+                          for k, p in m.named_parameters()})
+        for k in grads[0]:
+            scale = grads[0][k].abs().max().item()
+            gap = (grads[0][k] - grads[1][k]).abs().max().item()
+            self.assertLess(gap, 2e-2 * scale + 1e-6, k)
 
 
 if __name__ == '__main__':

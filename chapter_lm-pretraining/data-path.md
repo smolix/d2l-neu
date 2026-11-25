@@ -38,10 +38,6 @@ when the section is written.
 - Courses, tutorials and blogs: [FlexAttention blog](https://pytorch.org/blog/flexattention/) (why a Python mask can run at fused speed); [CS336 assignment 1](https://github.com/stanford-cs336/assignment1-basics) (the test discipline for the data path); [build-nanogpt](https://github.com/karpathy/build-nanogpt) (the incremental data-loader construction).
 -->
 
-<!-- Placeholder (stage 2, infra step): the cells below are the section's
-shared library, written before the section; the prose around them comes with
-the section. Cell ids follow the section specification (S/spec/21.1.md). -->
-
 ```{.python .input #data-path-imports}
 %%tab pytorch
 import math
@@ -51,13 +47,71 @@ from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 ```
-
 ```{.python .input #data-path-the-pretraining-data-path-1}
 %%tab pytorch
 import collections
 ```
+<!-- Placeholder (prose): opening: the afternoon run of sec_gpt sliced one text file; two silent failures of a real data path, one number each. -->
 
-<!-- Placeholder (cell 5): document ids and positions from the EOS that ends each document. -->
+```{.python .input #data-path-opening-leak}
+%%tab pytorch
+torch.manual_seed(0)
+vocab, lengths = 128, torch.tensor([5, 4, 3])  # three documents, one window
+T = int(lengths.sum())
+model = d2l.PackedGPT(vocab, num_hiddens=64, num_heads=4, num_kv_heads=2,
+                      num_blks=2, max_len=T, backend='sdpa').eval()
+X = torch.randint(1, vocab, (1, T))
+X[0, lengths.cumsum(0) - 1] = 0  # each document ends in EOS (id 0)
+doc = torch.repeat_interleave(torch.arange(len(lengths)), lengths)
+same = doc[:, None] == doc[None, :]  # query and key in the same document
+causal = torch.ones(T, T, dtype=torch.bool).tril()
+print('\n'.join(''.join('1' if m else '.' for m in row)
+                for row in same & causal))
+pos = torch.cat([torch.arange(n) for n in lengths.tolist()])
+doc2 = slice(int(lengths[0]), int(lengths[:2].sum()))  # second document
+with torch.no_grad():
+    alone = model(X[:, doc2])
+    masked = model(X, d2l.PackCtx(doc[None], pos[None]))[:, doc2]
+    unmasked = model(X)[:, doc2]  # causal attention across the window
+for name, logits in (('masked:  ', masked), ('unmasked:', unmasked)):
+    print(f'max |logit change| of doc 2, {name} '
+          f'{(logits - alone).abs().max():.1e}')
+```
+
+<!-- Placeholder (prose): the second failure: a restart that re-seeds its shuffle. -->
+
+```{.python .input #data-path-opening-restart}
+%%tab pytorch
+r = d2l.reseeded_restart_overlap(n_seq=10_000, batch=64, crash_step=40,
+                                 steps=50)
+print(f're-seeded restart: {r.naive_match} of {r.steps} later batches as '
+      f'planned, {r.naive_seen} of {r.windows} windows repeated')
+print(f'stateless cursor: {r.stateless_match} of {r.steps} later batches as '
+      f'planned, {r.stateless_seen} repeated')
+```
+
+<!-- Placeholder (prose): the contract: batch(step) is a pure function of (manifest, seed, epoch, step, skip); exactness levels L1-L3 (tab_lm_pdp_exactness); dataset reproducibility is not run reproducibility (sec_repro). -->
+
+## The Corpus as Shards
+
+<!-- Placeholder (prose): the d2l-corpus/1 layout of 20.6 (flat uint16 tokens, uint32 document offsets, meta.parquet, manifest with SHA-256 per file); uint16 wraps above 65,535; HF datasets streaming and torchdata named once. -->
+
+```{.python .input #data-path-shards}
+%%tab pytorch
+train, val = d2l.reference_shards('100m'), d2l.reference_shards('val')
+for name, shards in (('train', train), ('val', val)):
+    print(f'{name}: {shards.n_tokens:,} tokens in {shards.n_docs:,} '
+          f'documents ({shards.n_shards} shard, {shards.dtype.name})')
+ell = np.diff(train.offsets(0))  # document lengths, EOS included
+print(f'mean document length: {ell.mean():.0f} tokens '
+      f'(median {np.median(ell):.0f})')
+```
+
+## Packing with Document Masks
+
+### Document Ids and Positions
+
+<!-- Placeholder (prose): conventions (tab_lm_pdp_conventions): the EOS ends and belongs to its document and is a predicted target; doc_ids count the EOS strictly before t; pos_ids restart at each document start and at a fragment start; a literal <|endoftext|> in text is encoded as text by the R2 tokenizer (20.6). -->
 
 ```{.python .input #data-path-doc-ids}
 %%tab pytorch
@@ -72,9 +126,18 @@ def doc_ids_from_eos(tokens, eos_id=0):
     first = torch.cummax(starts, -1).values       # where t's document starts
     return doc_ids.to(tokens.dtype), (t - first).to(tokens.dtype)
 ```
+<!-- Placeholder (prose): the fixture of the plan. -->
 
-<!-- Placeholder (cell 7): attention over packed windows; the mask is the
-conjunction of the same-document test and the causal test. -->
+```{.python .input #data-path-doc-ids-fixture}
+%%tab pytorch
+doc_ids, pos_ids = doc_ids_from_eos(torch.tensor([5, 6, 0, 7, 0, 0, 8]))
+print('doc_ids:', doc_ids.tolist())
+print('pos_ids:', pos_ids.tolist())
+```
+
+### Packed Attention
+
+<!-- Placeholder (prose): restate in one sentence each: the mask as the conjunction of same-document and causal (sec_attention-scoring-functions); FlexAttention's mask_mod and create_block_mask (sec_windowed-linear-attention), with the SDPA boolean mask as the CPU path; fig_lm_packing_mask. FlexAttention retraces the block mask when B or T change (the library caches it per (B, T, device)). -->
 
 ```{.python .input #data-path-packed-attention}
 %%tab pytorch
@@ -92,31 +155,10 @@ class PackedAttention(d2l.Qwen3Attention):
     the earlier keys of its own document only. Backends: 'sdpa' (boolean
     mask), 'flex' (FlexAttention block mask, CUDA), 'math' (explicit scores,
     needed for an attention-logit softcap); 'auto' picks flex on CUDA."""
-    def __init__(self, num_hiddens, num_heads, num_kv_heads, *, head_dim=None,
-                 qk_norm=False, rope_theta=10000.0, norm_eps=1e-6, bias=False,
-                 rope=True, rope_inv_freq=None, rope_mscale=1.0, softcap=None,
-                 backend='auto'):
-        super().__init__(num_hiddens, num_heads, num_kv_heads,
-                         head_dim=head_dim, qk_norm=qk_norm,
-                         rope_theta=rope_theta, norm_eps=norm_eps, bias=bias,
-                         rope=rope)
-        assert backend in ('auto', 'sdpa', 'flex', 'math'), backend
-        self.softcap, self.backend = softcap, backend
-        self.set_rope(rope_inv_freq, rope_mscale)
-
-    def set_rope(self, inv_freq=None, mscale=1.0):
-        """RoPE frequencies (None: base rope_theta) and YaRN's scale m."""
-        self.rope_inv_freq = (None if inv_freq is None else
-                              torch.as_tensor(inv_freq, dtype=torch.float32))
-        self.rope_mscale = mscale
-
-    def qkv(self, X, offset=0, tables=None):
-        if self.rope and tables is None:  # positions offset, offset + 1, ...
-            tables = d2l._rope_tables(
-                torch.arange(X.shape[1], device=X.device) + offset,
-                self.head_dim, self.rope_theta, self.rope_inv_freq,
-                self.rope_mscale)
-        return super().qkv(X, offset, tables)
+    def __init__(self, num_hiddens, num_heads, num_kv_heads, *,
+                 backend='auto', softcap=None, **kwargs):
+        super().__init__(num_hiddens, num_heads, num_kv_heads, **kwargs)
+        self.backend, self.softcap = backend, softcap
 
     def forward(self, X, keys=None, values=None, mask=None, tables=None,
                 ctx=None):
@@ -137,35 +179,27 @@ class PackedAttention(d2l.Qwen3Attention):
             Y = d2l._math_attention(q, k, v, mask, self.softcap)
         return self.W_o(Y.transpose(1, 2).flatten(2))
 ```
-
-<!-- Placeholder (cell 8): the packed model; RoPE angles from per-document
-positions, conversions to and from the Qwen3 port, scaled RoPE for 21.5. -->
+<!-- Placeholder (prose): the packed model: RoPE angles from per-document positions, a learned table indexed by pos_ids for the reset check, the mask built once per forward; adopt/from_arch/set_rope/forward_cached named in a sentence each. -->
 
 ```{.python .input #data-path-packed-gpt}
 %%tab pytorch
 #@save
 class PackedGPT(d2l.Qwen3GPT):
     """Qwen3GPT for pretraining on packed windows: forward(X, ctx) with
-    per-document positions and masks, the final hidden states for a chunked
-    loss, scaled RoPE (set_rope) and a cached step that uses it."""
+    per-document positions and the document mask, and the final hidden
+    states for a chunked loss (return_hidden=True)."""
     def __init__(self, vocab_size, num_hiddens, num_heads, num_kv_heads,
-                 num_blks, *, head_dim=None, qk_norm=False, rope_theta=1e4,
-                 ffn_hidden=None, norm_eps=1e-6, tie_embeddings=True,
-                 max_len=4096, bias=False, pos='rope', rope_inv_freq=None,
-                 rope_mscale=1.0, softcap=None, backend='auto'):
-        assert pos in ('rope', 'learned'), pos
-        self.packed_options = dict(rope=pos == 'rope', softcap=softcap,
-                                   backend=backend)
+                 num_blks, *, pos='rope', backend='auto', softcap=None,
+                 qk_norm=False, rope_theta=1e4, max_len=4096, **kwargs):
+        self.packed_options = dict(rope=pos == 'rope', backend=backend,
+                                   softcap=softcap)
         super().__init__(vocab_size, num_hiddens, num_heads, num_kv_heads,
-                         num_blks, head_dim=head_dim, qk_norm=qk_norm,
-                         rope_theta=rope_theta, ffn_hidden=ffn_hidden,
-                         norm_eps=norm_eps, tie_embeddings=tie_embeddings,
-                         max_len=max_len, bias=bias)
-        self.pos, self.trained_len = pos, max_len
+                         num_blks, qk_norm=qk_norm, rope_theta=rope_theta,
+                         max_len=max_len, **kwargs)
+        self.pos = pos
         if pos == 'learned':  # an absolute table, indexed by pos_ids
             self.pos_emb = nn.Embedding(max_len, num_hiddens)
             nn.init.normal_(self.pos_emb.weight, std=0.02)
-        self.set_rope(rope_inv_freq, rope_mscale)
 
     def CausalAttention(self, d, H, *, bias, rope, num_kv_heads):
         return PackedAttention(d, H, num_kv_heads, bias=bias,
@@ -177,9 +211,8 @@ class PackedGPT(d2l.Qwen3GPT):
         H, tables = self.token_emb(X), None
         if self.pos == 'learned':
             H = H + self.pos_emb(pos.long())
-        else:  # angles of each token's position within its document
-            tables = d2l._rope_tables(pos, self.head_width, self.rope_theta,
-                                      self.rope_inv_freq, self.rope_mscale)
+        else:  # RoPE angles of each token's position within its document
+            tables = d2l._packed_rope_tables(self, pos)
         mask = d2l._packed_mask(self, ctx, X)  # once for every block
         for blk in self.blks:
             H = blk(H, mask, tables=tables, ctx=ctx)
@@ -189,59 +222,65 @@ class PackedGPT(d2l.Qwen3GPT):
         W = self.lm_head.weight if hasattr(self, 'lm_head') else \
             self.token_emb.weight
         return (H, W) if return_hidden else F.linear(H, W)
+```
+<!-- Placeholder (prose): predict before running: with RoPE, does resetting positions change the logits within a document? Derivation D1 (induction over layers) follows the check. -->
 
-    def set_rope(self, inv_freq=None, mscale=1.0, scheme='none', scale=1.0):
-        """Use RoPE frequencies inv_freq (None: base) and YaRN's scale m in
-        every block; the model then accepts scale times its trained length."""
-        self.rope_inv_freq = (None if inv_freq is None else
-                              torch.as_tensor(inv_freq, dtype=torch.float32))
-        self.rope_mscale, self.rope_scheme, self.rope_scale = (mscale, scheme,
-                                                               scale)
-        self.max_len = round(scale * self.trained_len)
-        for blk in self.blks:
-            blk.attention.set_rope(inv_freq, mscale)
-
-    @torch.inference_mode()
-    def forward_cached(self, X, ks, vs, t, all_logits=False):
-        """Qwen3GPT.forward_cached with this model's (possibly scaled) RoPE;
-        all_logits=True returns the logits of every new position."""
-        tables = d2l._rope_tables(
-            torch.arange(t, t + X.shape[1], device=X.device), self.head_width,
-            self.rope_theta, self.rope_inv_freq, self.rope_mscale)
-        H = self.token_emb(X)
-        for i, blk in enumerate(self.blks):
-            H = H + blk.attention.forward_step(blk.norm1(H),
-                                               (ks[i], vs[i], t), tables)
-            H = H + blk.ffn(blk.norm2(H))
-        H = self.norm(H if all_logits else H[:, -1])
-        W = self.lm_head.weight if hasattr(self, 'lm_head') else \
-            self.token_emb.weight
-        return F.linear(H, W), ks, vs
-
-    def config(self):
-        """Every constructor argument and the RoPE scaling, as JSON values."""
-        return d2l._packed_config(self)
-
-    @classmethod
-    def from_arch(cls, arch, **kw):
-        """A model of the shape d2l.r2_config(...).arch gives."""
-        kw = dict(dict(head_dim=arch.d_h, ffn_hidden=arch.f,
-                       qk_norm=arch.qk_norm, rope_theta=arch.rope_base,
-                       tie_embeddings=arch.tie, max_len=arch.T), **kw)
-        return cls(arch.vocab, arch.d, arch.H, arch.H_kv, arch.L, **kw)
-
-    @classmethod
-    def adopt(cls, model, backend='auto'):
-        """A PackedGPT holding the weights of a d2l.Qwen3GPT (no copy)."""
-        with torch.device('meta'):
-            new = cls(**d2l._qwen3_shape(model), backend=backend)
-        d2l._check_same_tensors(new.state_dict(), model.state_dict())
-        new.load_state_dict(model.state_dict(), assign=True)
-        return new
+```{.python .input #data-path-packed-equals-alone}
+%%tab pytorch
+vocab, lengths = 128, torch.tensor([5, 9])  # two documents, one window
+T, n_1 = int(lengths.sum()), int(lengths[0])
+torch.manual_seed(0)
+X = torch.randint(1, vocab, (1, T))
+X[0, lengths.cumsum(0) - 1] = 0  # EOS ends each document
+doc_ids = torch.repeat_interleave(torch.arange(2), lengths)[None]
+reset = torch.cat([torch.arange(n) for n in lengths.tolist()])[None]
+no_reset = torch.arange(T)[None]
+settings = {  # name: (position scheme, pos_ids, document mask)
+    'RoPE, reset': ('rope', reset, True),
+    'RoPE, no reset': ('rope', no_reset, True),
+    'RoPE, unmasked': ('rope', no_reset, False),
+    'learned, reset': ('learned', reset, True),
+    'learned, no reset': ('learned', no_reset, True)}
+delta = {}
+for name, (pos, pos_ids, masked) in settings.items():
+    torch.manual_seed(0)
+    net = PackedGPT(vocab, num_hiddens=64, num_heads=4, num_kv_heads=2,
+                    num_blks=2, max_len=T, pos=pos, backend='sdpa').eval()
+    one_doc = torch.zeros_like(doc_ids)  # unmasked: one document
+    ctx = PackCtx(doc_ids if masked else one_doc, pos_ids)
+    with torch.no_grad():
+        alone = torch.cat([net(X[:, :n_1]), net(X[:, n_1:])], 1)
+        delta[name] = (net(X, ctx) - alone).abs().max().item()
+print(f'{"setting":<18} max |Δ|')
+for name, value in delta.items():
+    print(f'{name:<18} {value:.1e}')
+exact = ('RoPE, reset', 'RoPE, no reset', 'learned, reset')
+assert max(delta[k] for k in exact) <= 1e-5
+assert min(delta['RoPE, unmasked'], delta['learned, no reset']) >= 1e-3
 ```
 
-<!-- Placeholder (cell 11): the token-weighted loss, and the chunked form
-that never holds the full (tokens x vocabulary) logits. -->
+### How Many Documents a Window Cuts
+
+<!-- Placeholder (prose): derivation D2: a document of length l is cut with probability min(1, (l-1)/T), so f_cut(T) = E[l min(1, (l-1)/T)] / E[l]; predicted from the histogram alone, measured from the real offsets of the training shard (the stream the run packs; on the 8.4M-token validation shard one layout at T = 8,192 misses by about 2%, which is sampling noise over window origins, not a flaw of the formula); best-fit packing as the alternative (an exercise). -->
+
+```{.python .input #data-path-window-cuts}
+%%tab pytorch
+offsets = train.offsets(0).astype(np.int64)  # the stream the run packs
+ell, starts = np.diff(offsets), offsets[:-1]  # document lengths and starts
+print(f'{"T":>5} {"predicted":>10} {"measured":>9}')
+for T in (256, 512, 1024, 2048, 4096, 8192):
+    predicted = (ell * np.minimum(1, (ell - 1) / T)).sum() / ell.sum()
+    cut = starts // T != (starts + ell - 1) // T  # a window boundary inside
+    print(f'{T:>5} {predicted:>10.3f} {ell[cut].sum() / ell.sum():>9.3f}')
+edges = np.logspace(np.log10(ell.min()), np.log10(ell.max()), 40)
+counts, _ = np.histogram(ell, edges)
+d2l.plot(np.sqrt(edges[:-1] * edges[1:]), [counts],
+         'document length (tokens)', 'documents', xscale='log')
+```
+
+## The Token-Weighted Loss
+
+<!-- Placeholder (prose): the loss is a sum over valid targets divided by the global count; masking attention but not the loss predicts the first token of a document from the previous one's EOS (the -100 rule); chunked_lm_loss keeps the [tokens, vocabulary] logits out of memory. -->
 
 ```{.python .input #data-path-losses}
 %%tab pytorch
@@ -255,46 +294,102 @@ def token_weighted_loss(logits, labels, ignore_index=-100):
     return sum_nll, (labels != ignore_index).sum()
 
 #@save
+def lm_loss_terms(h, W, y, ignore_index=-100):
+    """Summed NLL and summed logsumexp^2 over the valid targets y, from the
+    fp32 logits of hidden states h under output weights W."""
+    logits = F.linear(h, W)
+    logits = logits.to(torch.promote_types(logits.dtype, torch.float32))
+    lse, valid = torch.logsumexp(logits, -1), y != ignore_index
+    nll = lse - logits.gather(-1, y.clamp(min=0)[:, None])[:, 0]
+    return torch.stack([torch.where(valid, nll, 0.0).sum(),
+                        torch.where(valid, lse ** 2, 0.0).sum()])
+
+#@save
 def chunked_lm_loss(hidden, weight, labels, chunk=8192, z_loss=0.0,
-                    ignore_index=-100, *, return_nll=False):
-    """token_weighted_loss(F.linear(hidden, weight), labels), plus z_loss *
-    logsumexp^2 per valid target, computed chunk positions at a time; each
-    chunk's logits are recomputed in the backward pass instead of stored.
-    return_nll=True also returns the summed NLL without the z-loss term."""
+                    ignore_index=-100):
+    """token_weighted_loss(F.linear(hidden, weight), labels), chunk
+    positions at a time: each chunk's logits are recomputed in the backward
+    pass instead of stored. z_loss adds z_loss * logsumexp^2 per valid
+    target (the z-loss of a pretraining run)."""
     H, y = hidden.flatten(0, -2), labels.flatten()
+    nll, z = sum(torch.utils.checkpoint.checkpoint(
+        lm_loss_terms, H[i:i + chunk], weight, y[i:i + chunk], ignore_index,
+        use_reentrant=False) for i in range(0, len(y), chunk))
+    return nll + z_loss * z, (y != ignore_index).sum()
+```
+<!-- Placeholder (prose): derivation D3: mean of micro-batch means minus the token-weighted loss is -Cov(n_k / n-bar, l-bar_k); the two-micro-batch example, then the eight micro-batches of the plan. -->
 
-    def piece(h, W, y):  # (loss, nll) of one chunk, from fp32 logits
-        logits = F.linear(h, W)
-        logits = logits.to(torch.promote_types(logits.dtype, torch.float32))
-        lse, valid = torch.logsumexp(logits, -1), y != ignore_index
-        nll = lse - logits.gather(-1, y.clamp(min=0)[:, None])[:, 0]
-        nll = torch.where(valid, nll, 0.0).sum()
-        z = torch.where(valid, lse ** 2, 0.0).sum()
-        return torch.stack([nll + z_loss * z, nll])
-
-    total = sum(torch.utils.checkpoint.checkpoint(
-        piece, H[i:i + chunk], weight, y[i:i + chunk], use_reentrant=False)
-        for i in range(0, len(y), chunk))
-    n_valid = (y != ignore_index).sum()
-    return (total[0], n_valid, total[1]) if return_nll else (total[0],
-                                                             n_valid)
+```{.python .input #data-path-token-weighting}
+%%tab pytorch
+n_k, ell_k = torch.tensor([1024., 300.]), torch.tensor([3.0, 4.0])
+print(f'two batches: token-weighted {(n_k * ell_k).sum() / n_k.sum():.2f}, '
+      f'mean of means {ell_k.mean():.2f}')
+vocab = 128
+torch.manual_seed(0)
+counts = [1024, 900, 512, 1024, 300, 1000, 700, 1024]  # valid targets
+batches = [(torch.randn(n, vocab, dtype=torch.float64),  # fp64: exact checks
+            torch.randint(0, vocab, (n,))) for n in counts]
+N = sum(counts)
+sums = [token_weighted_loss(Z, y)[0] for Z, y in batches]
+single = token_weighted_loss(torch.cat([Z for Z, _ in batches]),
+                             torch.cat([y for _, y in batches]))[0] / N
+accumulated = sum(sums) / N
+ell_k = torch.stack(sums) / torch.tensor(counts)  # mean loss per batch
+w = torch.tensor(counts, dtype=torch.float64) / (N / len(counts))  # n/n̄
+cov = ((w - 1) * (ell_k - ell_k.mean())).mean()
+print(f'eight batches: accumulated − single pass = {accumulated - single:.1e}')
+print(f'mean of means − single pass = {ell_k.mean() - single:.4f}')
+print(f'predicted −Cov(n/n̄, l̄) = {-cov:.4f}')
+assert abs(accumulated - single) <= 1e-6
+assert abs(ell_k.mean() - single + cov) <= 1e-6
 ```
 
-<!-- Placeholder (cell 14): the resumable stream; the batch at step s is a
-pure function of the manifest, the seed and s. -->
+<!-- Placeholder (prose): what chunking saves, at the t1 widths (the t1 preset of the next section): one window of 8 x 1,024 positions against a 32,768-token vocabulary. -->
+
+```{.python .input #data-path-chunked-memory}
+%%tab pytorch
+B, T, d, vocab = 8, 1024, 384, 32768  # t1 widths, the R2 vocabulary
+if torch.cuda.is_available():
+    torch.manual_seed(0)
+    h = torch.randn(B, T, d, device='cuda', requires_grad=True)
+    W = (0.02 * torch.randn(vocab, d, device='cuda')).requires_grad_()
+    y = torch.randint(0, vocab, (B, T), device='cuda')
+    losses = {  # the mean NLL, computed both ways
+        'full logits': lambda: F.cross_entropy(F.linear(h, W).flatten(0, 1),
+                                               y.flatten()),
+        'chunked (1,024 positions)': lambda: chunked_lm_loss(
+            h, W, y, chunk=1024)[0] / y.numel()}
+    kept = {}
+
+    def forward_backward(name):  # keeps the loss and gradients to compare
+        loss = losses[name]()
+        kept[name] = (loss.detach(), torch.autograd.grad(loss, (h, W)))
+    for name in losses:  # memory above the inputs, forward and backward
+        gib = d2l.peak_memory(forward_backward, name) / 2**30
+        print(f'{name}: {gib:.1f} GiB peak')
+    (l_full, g_full), (l_chunk, g_chunk) = kept.values()
+    grad_gap = max((a - b).abs().max() for a, b in zip(g_full, g_chunk))
+    print(f'max |Δ| loss / grad: {(l_full - l_chunk).abs():.1e} / '
+          f'{grad_gap:.1e}')
+else:
+    print(f'GPU not available; the full logits alone take '
+          f'{B * T * vocab * 4 / 2**30:.1f} GiB (B·T·V·4 bytes)')
+```
+
+## A Stream That Names Its Batches
+
+<!-- Placeholder (prose): stateless addressing: perm = default_rng([seed, epoch]).permutation(n_seq), step s takes perm[sG:(s+1)G], rank r takes every world-th window; state_dict is the consumed count plus the layout hash; fig_lm_data_cursor. DataLoader workers that fork one RNG duplicate batches; the book's d2l.DataModule is the stack this replaces for pretraining. -->
 
 ```{.python .input #data-path-packed-stream}
 %%tab pytorch
 #@save
 class PackedStream:
     """Windows of seq_len + 1 tokens at offsets i * seq_len of a shard set.
-    Step s takes slice s of a permutation seeded by (seed, epoch); rank r
-    takes every world-th window of it. Targets after an EOS are -100."""
+    Step s takes slice s of a permutation seeded by (seed, epoch), with the
+    steps in skip removed; rank r takes every world-th window of it.
+    Targets after an EOS are -100."""
     def __init__(self, shards, seq_len, global_batch, seed=0, rank=0, world=1,
                  epoch=0, skip=()):
-        if global_batch % world:
-            raise ValueError(f'global_batch {global_batch} is not a multiple'
-                             f' of world {world}')
         self.shards, self.seq_len, self.global_batch = (shards, seq_len,
                                                         global_batch)
         self.seed, self.rank, self.world, self.epoch = seed, rank, world, epoch
@@ -304,27 +399,17 @@ class PackedStream:
         self.layout_hash, self.step = d2l._layout_hash(shards), 0
 
     def batch(self, step):
-        idx = d2l._window_indices(self, self.physical_index(step))
+        idx = d2l._window_indices(self, step)  # step's permutation slice
         W = torch.from_numpy(d2l._windows(self, idx[self.rank::self.world]))
         X, Y = W[:, :-1].contiguous(), W[:, 1:].clone()
         Y[X == self.shards.eos_id] = -100  # the next token starts a document
         doc_ids, pos_ids = doc_ids_from_eos(X.int(), self.shards.eos_id)
         return dict(input_ids=X, labels=Y, doc_ids=doc_ids, pos_ids=pos_ids)
 
-    def __iter__(self):
+    def __iter__(self):  # the cursor: step counts the batches consumed
         while True:
             self.step += 1
             yield self.batch(self.step - 1)
-
-    def physical_index(self, step):
-        """The step of the unskipped schedule that logical step uses."""
-        for k in self.skipped:
-            step += k <= step
-        return step
-
-    def skip(self, step):
-        """Drop physical step `step` (a bad batch); later steps move up."""
-        self.skipped = tuple(sorted(set(self.skipped) | {step}))
 
     def state_dict(self):
         return dict(version=1, seed=self.seed, epoch=self.epoch,
@@ -341,3 +426,153 @@ class PackedStream:
                                             state['step'])
         self.skipped = tuple(state['skip'])
 ```
+<!-- Placeholder (prose): resume, elasticity, skip and the layout check, on the training shard at the t1 window and batch. -->
+
+```{.python .input #data-path-resume}
+%%tab pytorch
+T, G = 1024, 64  # the t1 window and global batch (sequences)
+stream = PackedStream(train, T, G, seed=0)
+stream.step = 37  # the run dies here; a fresh process resumes
+resumed = PackedStream(train, T, G, seed=1)  # the state restores seed 0
+resumed.load_state_dict(stream.state_dict())
+identical = sum(torch.equal(stream.batch(37 + s)['input_ids'],
+                            b['input_ids'])
+                for s, b in zip(range(50), resumed))
+print(f'resume at 37: {identical} of 50 batches identical')
+
+def windows(world):  # the windows of steps 0-9 on all ranks, sorted
+    ranks = [PackedStream(train, T, G, rank=r, world=world)
+             for r in range(world)]
+    return sorted(row.numpy().tobytes() for s in range(10) for rank in ranks
+                  for row in rank.batch(s)['input_ids'])
+one, two, four = windows(1), windows(2), windows(4)
+print(f'world sizes 1, 2, 4: {"same" if one == two == four else "different"}'
+      f' {len(one)} windows at 10 steps')
+skipped = PackedStream(train, T, G, skip=(3,))
+physical = next(p for p in range(10) if torch.equal(
+    skipped.batch(3)['input_ids'], stream.batch(p)['input_ids']))
+print(f'skip=(3,): logical step 3 = physical step {physical}')
+try:
+    stream.load_state_dict(PackedStream(train, 2 * T, G).state_dict())
+except ValueError as e:
+    print(f'layout check: ValueError: {e}')
+assert identical == 50 and one == two == four and physical == 4
+```
+
+### Data Parallelism
+
+<!-- Placeholder (prose): the DDP form: the step's valid-target count is all-reduced before the backward pass, and each rank scales its summed loss by world / N; two simulated ranks with unequal counts. -->
+
+```{.python .input #data-path-ddp}
+%%tab pytorch
+def ddp_loss(sum_loss, n_valid_global, world):
+    """One rank's loss: DDP averages the ranks' gradients, so scaling by
+    world over the global count of valid targets yields the gradient of
+    the global token-weighted mean."""
+    return sum_loss * world / n_valid_global
+
+vocab = 128
+torch.manual_seed(0)
+W = torch.randn(vocab, 16, requires_grad=True)  # logits h W^T
+ranks = [(torch.randn(n_r, 16) + r, torch.randint(0, vocab, (n_r,)))
+         for r, n_r in enumerate((1000, 300))]  # unequal valid counts
+N, world = sum(len(y) for _, y in ranks), len(ranks)
+
+def ddp_grad(loss_of):  # DDP: the mean of the ranks' gradients
+    return torch.stack([torch.autograd.grad(loss_of(
+        *token_weighted_loss(h @ W.T, y)), W)[0]
+        for h, y in ranks]).mean(0)
+sum_all, n_all = token_weighted_loss(torch.cat([h for h, _ in ranks]) @ W.T,
+                                     torch.cat([y for _, y in ranks]))
+single = torch.autograd.grad(sum_all / n_all, W)[0]
+glob = ddp_grad(lambda s, n: ddp_loss(s, N, world))
+local = ddp_grad(lambda s, n: s / n)  # each rank divides by its own count
+print(f'global count: max |Δ grad| = {(glob - single).abs().max():.1e}')
+print(f'local count: max |Δ grad| = {(local - single).abs().max():.4f}')
+assert (glob - single).abs().max() <= 1e-6
+assert (local - single).abs().max() >= 1e-3
+```
+
+## Measurements
+
+### Four Pipelines
+
+<!-- Placeholder (prose): useful tokens per second of the t1 training step under four input pipelines (padded documents, packed without mask, SDPA mask, FlexAttention mask) at T = 1,024 and 4,096, the same tokens per step; a difference is stated only where the IQRs do not overlap; flash_attn_varlen_func with cu_seqlens named as the other production route. -->
+
+```{.python .input #data-path-throughput}
+%%tab pytorch
+tp = d2l.packing_throughput(
+    d2l.r2_config('t1'), pipelines=('padded', 'packed', 'sdpa-mask',
+                                    'flex-mask'),
+    seq_lens=(1024, 4096), steps=50)
+d2l.plot_intervals(
+    tp.pipeline.unique(),
+    {f'T = {T}': (g.tok_s / 1e3, g.tok_s_q1 / 1e3, g.tok_s_q3 / 1e3)
+     for T, g in tp.groupby('T')},
+    'pipeline', 'useful tokens/s (thousands)')
+print(f'{"pipeline":<10} {"T":>5} {"useful tok/s":>13} {"IQR":>10} '
+      f'{"padding":>8} {"peak GiB":>9}')
+for r in tp.itertuples():  # tokens/s in thousands: median, quartiles
+    iqr = f'{r.tok_s_q1 / 1e3:.0f}-{r.tok_s_q3 / 1e3:.0f}k'
+    row = (f'{r.tok_s / 1e3:>12.0f}k {iqr:>10} {r.padding:>8.0%} '
+           f'{r.peak_gib:>9.1f}' if r.status == 'ok' else f'{r.status:>13}')
+    print(f'{r.pipeline:<10} {r.T:>5} {row}')
+```
+
+### Data Wait
+
+<!-- Placeholder (prose): input starvation measured as the time to build one batch against the step it feeds (flex-mask, T = 1,024, from the table above); the cost, if any, is reading and the doc-id cumsum, not packing. -->
+
+```{.python .input #data-path-data-wait}
+%%tab pytorch
+batches = iter(PackedStream(train, 1024, 64))  # the t1 window, batch
+t_batch = d2l.Benchmark(lambda: next(batches), warmup=5, repeats=50).time
+t_step = tp.set_index(['pipeline', 'T']).step_ms[('flex-mask', 1024)] / 1e3
+print(f'stream: {1e3 * t_batch:.1f} ms per batch (64 × 1,024 tokens)')
+print(f't1 training step ({tp.gpu.iloc[0]}): {1e3 * t_step:.0f} ms; '
+      f'data wait {t_batch / t_step:.1%} of a step')
+```
+
+### Does the Mask Change the Model?
+
+<!-- Placeholder (prose): six runs of the t1 preset for 25M tokens: masked and unmasked, seeds 0-2, a pair sharing its batches; both validated document by document (with the mask), as at inference; paired differences with a t interval on two degrees of freedom, and how weak that is. -->
+
+```{.python .input #data-path-mask-runs}
+%%tab pytorch
+runs = d2l.packing_comparison(d2l.r2_config('t1'), tokens=25_000_000,
+                              seeds=(0, 1, 2))
+for r in runs.table.itertuples():
+    print(f'seed {r.seed}: masked {r.masked:.3f}, unmasked {r.unmasked:.3f}')
+diff = runs.table.unmasked - runs.table.masked
+mean, half = d2l.t_interval(diff)
+print(f'paired difference (unmasked − masked): {mean:.3f} ± {half:.3f} '
+      f'(95% t, {len(diff) - 1} dof)')
+print('no conclusion' if abs(mean) <= half else
+      f'unmasked {"higher" if mean > 0 else "lower"}: the interval excludes 0')
+```
+
+<!-- Placeholder (prose): the leak: attention mass a query of the unmasked model puts on earlier keys of other documents, per block, on 64 validation windows (seed 0); the dashed line is the share uniform attention would give. A softmax gives every visible key some mass, so the leak is positive in any model; what training changes is whether a block puts less than the uniform share there (it learns to look away from other documents) or not. -->
+
+```{.python .input #data-path-leak}
+%%tab pytorch
+leak = runs.leak
+axes = d2l.plot_intervals(leak.layer + 1,
+                          {'unmasked, seed 0': (leak.leak, leak.lo, leak.hi)},
+                          'block', 'attention mass on other documents',
+                          reference=leak.uniform.iloc[0])  # uniform attention
+axes.set_ylim(bottom=0)
+uniform = leak.uniform.iloc[0]
+below = (leak.layer[leak.hi < uniform] + 1).tolist()  # 95% interval below
+print(f'uniform-attention share {uniform:.2f}; leak below it in '
+      f'{len(below)} of {len(leak)} blocks {below}')
+print('leak / uniform share, block 1 to {}: {}'.format(
+    len(leak), ' '.join(f'{x:.2f}' for x in leak.leak / uniform)))
+```
+
+## Summary
+
+<!-- Placeholder (prose): 3-6 sentences (W1). -->
+
+## Exercises
+
+<!-- Placeholder (prose): 5-7 exercises per S/spec/21.1.md part H. -->

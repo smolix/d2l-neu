@@ -32,6 +32,10 @@ CPU_ONLY_NOTEBOOKS = {
     # passes device='cpu'); "cuda" and "GPU" appear only in its regeneration
     # path, which runs through the part-runner, not the scheduler.
     "chapter_lm-data/dedup.ipynb",
+    # 21.6: a normal build fits and solves on the CPU and reads its decode
+    # rates from a committed file; "GPU" appears in its labels and in the
+    # regeneration path (decode-rates, run by tools/lm_regen.py on a card).
+    "chapter_lm-pretraining/budgets.ipynb",
 }
 
 # (framework, notebook) pairs listed in CPU_ONLY_NOTEBOOKS that nevertheless
@@ -464,6 +468,9 @@ HEAVY_GPU_NOTEBOOKS = {
     # in the extension runs) takes a whole card: run it on a card masked for
     # it alone.
     ("pytorch", "chapter_lm-data/tokenizers.ipynb"): 2,
+    # 21.5 runs the reference model at 16K tokens (32 books, 50 recall items
+    # through the cached scorer: about 8 GiB).
+    ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): 2,
 }
 
 
@@ -568,6 +575,24 @@ NOTEBOOK_ENV = {
     },
     ("pytorch", "chapter_lm-encoders/rag-failures.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    # 21.4: the Hub's "unauthenticated requests" warning on the first
+    # load_qwen3 of a fresh environment (as 21.5 and 21.6).
+    ("pytorch", "chapter_lm-pretraining/continued-pretraining.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
+    # 21.5: the Hub's X-HF-Warning (as 18.6; the regeneration's suite
+    # reads). The 16K-token prompts use d2l.lc_tokenizer, whose raised
+    # model_max_length leaves Transformers nothing to warn about.
+    ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+        "OMP_NUM_THREADS": "8",
+    },
+    # 21.6: the Hub's X-HF-Warning on the Qwen3 config reads; the bootstrap
+    # refits run on the notebook's 8 threads.
+    ("pytorch", "chapter_lm-pretraining/budgets.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+        "OMP_NUM_THREADS": "8",
     },
 }
 

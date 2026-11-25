@@ -37,6 +37,24 @@ class HyperParameters:
         for k, v in self.hparams.items():
             setattr(self, k, v)
 
+import dataclasses
+
+def _jsonable(x):
+    """x as plain JSON values (tuples become lists, namedtuples dicts).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if hasattr(x, '_asdict'):
+        x = x._asdict()
+    if dataclasses.is_dataclass(x) and not isinstance(x, type):
+        x = {f.name: getattr(x, f.name) for f in dataclasses.fields(x)}
+    if isinstance(x, dict):
+        return {str(k): _jsonable(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_jsonable(v) for v in x]
+    if isinstance(x, (np.integer, np.floating, np.bool_)):
+        return x.item()
+    return x
+
 class _TritonMissing:
     """A kernel defined without Triton: launching it raises.
 
@@ -12271,31 +12289,10 @@ class PackedAttention(d2l.Qwen3Attention):
     needed for an attention-logit softcap); 'auto' picks flex on CUDA.
 
     Defined in :numref:`sec_lm_data_path`"""
-    def __init__(self, num_hiddens, num_heads, num_kv_heads, *, head_dim=None,
-                 qk_norm=False, rope_theta=10000.0, norm_eps=1e-6, bias=False,
-                 rope=True, rope_inv_freq=None, rope_mscale=1.0, softcap=None,
-                 backend='auto'):
-        super().__init__(num_hiddens, num_heads, num_kv_heads,
-                         head_dim=head_dim, qk_norm=qk_norm,
-                         rope_theta=rope_theta, norm_eps=norm_eps, bias=bias,
-                         rope=rope)
-        assert backend in ('auto', 'sdpa', 'flex', 'math'), backend
-        self.softcap, self.backend = softcap, backend
-        self.set_rope(rope_inv_freq, rope_mscale)
-
-    def set_rope(self, inv_freq=None, mscale=1.0):
-        """RoPE frequencies (None: base rope_theta) and YaRN's scale m."""
-        self.rope_inv_freq = (None if inv_freq is None else
-                              torch.as_tensor(inv_freq, dtype=torch.float32))
-        self.rope_mscale = mscale
-
-    def qkv(self, X, offset=0, tables=None):
-        if self.rope and tables is None:  # positions offset, offset + 1, ...
-            tables = d2l._rope_tables(
-                torch.arange(X.shape[1], device=X.device) + offset,
-                self.head_dim, self.rope_theta, self.rope_inv_freq,
-                self.rope_mscale)
-        return super().qkv(X, offset, tables)
+    def __init__(self, num_hiddens, num_heads, num_kv_heads, *,
+                 backend='auto', softcap=None, **kwargs):
+        super().__init__(num_hiddens, num_heads, num_kv_heads, **kwargs)
+        self.backend, self.softcap = backend, softcap
 
     def forward(self, X, keys=None, values=None, mask=None, tables=None,
                 ctx=None):
@@ -12316,30 +12313,44 @@ class PackedAttention(d2l.Qwen3Attention):
             Y = d2l._math_attention(q, k, v, mask, self.softcap)
         return self.W_o(Y.transpose(1, 2).flatten(2))
 
+    def set_rope(self, inv_freq=None, mscale=1.0):
+        """RoPE frequencies (None: base rope_theta) and YaRN's scale m.
+
+        Defined in :numref:`sec_lm_data_path`"""
+        self.rope_inv_freq = (None if inv_freq is None else
+                              torch.as_tensor(inv_freq, dtype=torch.float32))
+        self.rope_mscale = mscale
+
+    def qkv(self, X, offset=0, tables=None):
+        """Qwen3Attention.qkv; without tables, the RoPE angles of positions
+        offset, offset + 1, ... use this block's (possibly scaled) RoPE.
+
+        Defined in :numref:`sec_lm_data_path`"""
+        if self.rope and tables is None:
+            tables = _rope_tables(
+                torch.arange(X.shape[1], device=X.device) + offset,
+                self.head_dim, self.rope_theta, self.rope_inv_freq,
+                self.rope_mscale)
+        return d2l.Qwen3Attention.qkv(self, X, offset, tables)
+
 class PackedGPT(d2l.Qwen3GPT):
     """Qwen3GPT for pretraining on packed windows: forward(X, ctx) with
-    per-document positions and masks, the final hidden states for a chunked
-    loss, scaled RoPE (set_rope) and a cached step that uses it.
+    per-document positions and the document mask, and the final hidden
+    states for a chunked loss (return_hidden=True).
 
     Defined in :numref:`sec_lm_data_path`"""
     def __init__(self, vocab_size, num_hiddens, num_heads, num_kv_heads,
-                 num_blks, *, head_dim=None, qk_norm=False, rope_theta=1e4,
-                 ffn_hidden=None, norm_eps=1e-6, tie_embeddings=True,
-                 max_len=4096, bias=False, pos='rope', rope_inv_freq=None,
-                 rope_mscale=1.0, softcap=None, backend='auto'):
-        assert pos in ('rope', 'learned'), pos
-        self.packed_options = dict(rope=pos == 'rope', softcap=softcap,
-                                   backend=backend)
+                 num_blks, *, pos='rope', backend='auto', softcap=None,
+                 qk_norm=False, rope_theta=1e4, max_len=4096, **kwargs):
+        self.packed_options = dict(rope=pos == 'rope', backend=backend,
+                                   softcap=softcap)
         super().__init__(vocab_size, num_hiddens, num_heads, num_kv_heads,
-                         num_blks, head_dim=head_dim, qk_norm=qk_norm,
-                         rope_theta=rope_theta, ffn_hidden=ffn_hidden,
-                         norm_eps=norm_eps, tie_embeddings=tie_embeddings,
-                         max_len=max_len, bias=bias)
-        self.pos, self.trained_len = pos, max_len
+                         num_blks, qk_norm=qk_norm, rope_theta=rope_theta,
+                         max_len=max_len, **kwargs)
+        self.pos = pos
         if pos == 'learned':  # an absolute table, indexed by pos_ids
             self.pos_emb = nn.Embedding(max_len, num_hiddens)
             nn.init.normal_(self.pos_emb.weight, std=0.02)
-        self.set_rope(rope_inv_freq, rope_mscale)
 
     def CausalAttention(self, d, H, *, bias, rope, num_kv_heads):
         return PackedAttention(d, H, num_kv_heads, bias=bias,
@@ -12351,9 +12362,8 @@ class PackedGPT(d2l.Qwen3GPT):
         H, tables = self.token_emb(X), None
         if self.pos == 'learned':
             H = H + self.pos_emb(pos.long())
-        else:  # angles of each token's position within its document
-            tables = d2l._rope_tables(pos, self.head_width, self.rope_theta,
-                                      self.rope_inv_freq, self.rope_mscale)
+        else:  # RoPE angles of each token's position within its document
+            tables = d2l._packed_rope_tables(self, pos)
         mask = d2l._packed_mask(self, ctx, X)  # once for every block
         for blk in self.blks:
             H = blk(H, mask, tables=tables, ctx=ctx)
@@ -12366,7 +12376,10 @@ class PackedGPT(d2l.Qwen3GPT):
 
     def set_rope(self, inv_freq=None, mscale=1.0, scheme='none', scale=1.0):
         """Use RoPE frequencies inv_freq (None: base) and YaRN's scale m in
-        every block; the model then accepts scale times its trained length."""
+        every block; the model then accepts scale times its trained length.
+
+        Defined in :numref:`sec_lm_data_path`"""
+        self.trained_len = self.trained_len or self.max_len
         self.rope_inv_freq = (None if inv_freq is None else
                               torch.as_tensor(inv_freq, dtype=torch.float32))
         self.rope_mscale, self.rope_scheme, self.rope_scale = (mscale, scheme,
@@ -12378,14 +12391,18 @@ class PackedGPT(d2l.Qwen3GPT):
     @torch.inference_mode()
     def forward_cached(self, X, ks, vs, t, all_logits=False):
         """Qwen3GPT.forward_cached with this model's (possibly scaled) RoPE;
-        all_logits=True returns the logits of every new position."""
-        tables = d2l._rope_tables(
-            torch.arange(t, t + X.shape[1], device=X.device), self.head_width,
-            self.rope_theta, self.rope_inv_freq, self.rope_mscale)
+        all_logits=True returns the logits of every new position.
+
+        Defined in :numref:`sec_lm_data_path`"""
+        if self.pos != 'rope':
+            raise NotImplementedError('forward_cached needs RoPE positions; '
+                                      'this model has a learned table')
+        tables = _packed_rope_tables(
+            self, torch.arange(t, t + X.shape[1], device=X.device))
         H = self.token_emb(X)
         for i, blk in enumerate(self.blks):
-            H = H + blk.attention.forward_step(blk.norm1(H),
-                                               (ks[i], vs[i], t), tables)
+            H = H + blk.attention.forward_step(blk.norm1(H), (ks[i], vs[i], t),
+                                               tables)
             H = H + blk.ffn(blk.norm2(H))
         H = self.norm(H if all_logits else H[:, -1])
         W = self.lm_head.weight if hasattr(self, 'lm_head') else \
@@ -12393,12 +12410,16 @@ class PackedGPT(d2l.Qwen3GPT):
         return F.linear(H, W), ks, vs
 
     def config(self):
-        """Every constructor argument and the RoPE scaling, as JSON values."""
-        return d2l._packed_config(self)
+        """Every constructor argument and the RoPE scaling, as JSON values.
+
+        Defined in :numref:`sec_lm_data_path`"""
+        return _packed_config(self)
 
     @classmethod
     def from_arch(cls, arch, **kw):
-        """A model of the shape d2l.r2_config(...).arch gives."""
+        """A model of the shape d2l.r2_config(...).arch gives.
+
+        Defined in :numref:`sec_lm_data_path`"""
         kw = dict(dict(head_dim=arch.d_h, ffn_hidden=arch.f,
                        qk_norm=arch.qk_norm, rope_theta=arch.rope_base,
                        tie_embeddings=arch.tie, max_len=arch.T), **kw)
@@ -12406,10 +12427,12 @@ class PackedGPT(d2l.Qwen3GPT):
 
     @classmethod
     def adopt(cls, model, backend='auto'):
-        """A PackedGPT holding the weights of a d2l.Qwen3GPT (no copy)."""
+        """A PackedGPT holding the weights of a d2l.Qwen3GPT (no copy).
+
+        Defined in :numref:`sec_lm_data_path`"""
         with torch.device('meta'):
-            new = cls(**d2l._qwen3_shape(model), backend=backend)
-        d2l._check_same_tensors(new.state_dict(), model.state_dict())
+            new = cls(**_qwen3_shape(model), backend=backend)
+        _check_same_tensors(new.state_dict(), model.state_dict())
         new.load_state_dict(model.state_dict(), assign=True)
         return new
 
@@ -12423,43 +12446,41 @@ def token_weighted_loss(logits, labels, ignore_index=-100):
         ignore_index=ignore_index, reduction='sum')
     return sum_nll, (labels != ignore_index).sum()
 
+def lm_loss_terms(h, W, y, ignore_index=-100):
+    """Summed NLL and summed logsumexp^2 over the valid targets y, from the
+    fp32 logits of hidden states h under output weights W.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    logits = F.linear(h, W)
+    logits = logits.to(torch.promote_types(logits.dtype, torch.float32))
+    lse, valid = torch.logsumexp(logits, -1), y != ignore_index
+    nll = lse - logits.gather(-1, y.clamp(min=0)[:, None])[:, 0]
+    return torch.stack([torch.where(valid, nll, 0.0).sum(),
+                        torch.where(valid, lse ** 2, 0.0).sum()])
+
 def chunked_lm_loss(hidden, weight, labels, chunk=8192, z_loss=0.0,
-                    ignore_index=-100, *, return_nll=False):
-    """token_weighted_loss(F.linear(hidden, weight), labels), plus z_loss *
-    logsumexp^2 per valid target, computed chunk positions at a time; each
-    chunk's logits are recomputed in the backward pass instead of stored.
-    return_nll=True also returns the summed NLL without the z-loss term.
+                    ignore_index=-100):
+    """token_weighted_loss(F.linear(hidden, weight), labels), chunk
+    positions at a time: each chunk's logits are recomputed in the backward
+    pass instead of stored. z_loss adds z_loss * logsumexp^2 per valid
+    target (the z-loss of a pretraining run).
 
     Defined in :numref:`sec_lm_data_path`"""
     H, y = hidden.flatten(0, -2), labels.flatten()
-
-    def piece(h, W, y):  # (loss, nll) of one chunk, from fp32 logits
-        logits = F.linear(h, W)
-        logits = logits.to(torch.promote_types(logits.dtype, torch.float32))
-        lse, valid = torch.logsumexp(logits, -1), y != ignore_index
-        nll = lse - logits.gather(-1, y.clamp(min=0)[:, None])[:, 0]
-        nll = torch.where(valid, nll, 0.0).sum()
-        z = torch.where(valid, lse ** 2, 0.0).sum()
-        return torch.stack([nll + z_loss * z, nll])
-
-    total = sum(torch.utils.checkpoint.checkpoint(
-        piece, H[i:i + chunk], weight, y[i:i + chunk], use_reentrant=False)
-        for i in range(0, len(y), chunk))
-    n_valid = (y != ignore_index).sum()
-    return (total[0], n_valid, total[1]) if return_nll else (total[0],
-                                                             n_valid)
+    nll, z = sum(torch.utils.checkpoint.checkpoint(
+        lm_loss_terms, H[i:i + chunk], weight, y[i:i + chunk], ignore_index,
+        use_reentrant=False) for i in range(0, len(y), chunk))
+    return nll + z_loss * z, (y != ignore_index).sum()
 
 class PackedStream:
     """Windows of seq_len + 1 tokens at offsets i * seq_len of a shard set.
-    Step s takes slice s of a permutation seeded by (seed, epoch); rank r
-    takes every world-th window of it. Targets after an EOS are -100.
+    Step s takes slice s of a permutation seeded by (seed, epoch), with the
+    steps in skip removed; rank r takes every world-th window of it.
+    Targets after an EOS are -100.
 
     Defined in :numref:`sec_lm_data_path`"""
     def __init__(self, shards, seq_len, global_batch, seed=0, rank=0, world=1,
                  epoch=0, skip=()):
-        if global_batch % world:
-            raise ValueError(f'global_batch {global_batch} is not a multiple'
-                             f' of world {world}')
         self.shards, self.seq_len, self.global_batch = (shards, seq_len,
                                                         global_batch)
         self.seed, self.rank, self.world, self.epoch = seed, rank, world, epoch
@@ -12469,27 +12490,17 @@ class PackedStream:
         self.layout_hash, self.step = d2l._layout_hash(shards), 0
 
     def batch(self, step):
-        idx = d2l._window_indices(self, self.physical_index(step))
+        idx = d2l._window_indices(self, step)  # step's permutation slice
         W = torch.from_numpy(d2l._windows(self, idx[self.rank::self.world]))
         X, Y = W[:, :-1].contiguous(), W[:, 1:].clone()
         Y[X == self.shards.eos_id] = -100  # the next token starts a document
         doc_ids, pos_ids = doc_ids_from_eos(X.int(), self.shards.eos_id)
         return dict(input_ids=X, labels=Y, doc_ids=doc_ids, pos_ids=pos_ids)
 
-    def __iter__(self):
+    def __iter__(self):  # the cursor: step counts the batches consumed
         while True:
             self.step += 1
             yield self.batch(self.step - 1)
-
-    def physical_index(self, step):
-        """The step of the unskipped schedule that logical step uses."""
-        for k in self.skipped:
-            step += k <= step
-        return step
-
-    def skip(self, step):
-        """Drop physical step `step` (a bad batch); later steps move up."""
-        self.skipped = tuple(sorted(set(self.skipped) | {step}))
 
     def state_dict(self):
         return dict(version=1, seed=self.seed, epoch=self.epoch,
@@ -12506,10 +12517,20 @@ class PackedStream:
                                             state['step'])
         self.skipped = tuple(state['skip'])
 
+    def physical_index(self, step):
+        """The step of the unskipped schedule that logical step uses.
+
+        Defined in :numref:`sec_lm_data_path`"""
+        return _physical_step(self.skipped, step)
+
+    def skip(self, step):
+        """Drop physical step `step` (a bad batch); later steps move up.
+
+        Defined in :numref:`sec_lm_data_path`"""
+        self.skipped = tuple(sorted(set(self.skipped) | {step}))
+
 Arch = collections.namedtuple('Arch',
                               'L d H H_kv d_h f vocab T rope_base qk_norm tie')
-
-import dataclasses
 
 @dataclasses.dataclass
 class PretrainConfig:
@@ -12534,7 +12555,6 @@ class PretrainConfig:
     dtype: str = 'bf16'
     compile: bool = True
     ddp: bool = False
-    log_every: int = 1
     probe_every: int = 50       # update RMS per module
     stats_every: int = 50       # largest attention logit per layer
     val_every: int = 250
@@ -12580,9 +12600,11 @@ def r2_config(preset='r2', **overrides):
     L, d, H, H_kv, f, qk_norm, T = R2_ARCHS[preset]
     arch = Arch(L, d, H, H_kv, d // H, f, 32768, T, 1e4, qk_norm, True)
     B, steps, warmup, decay, lr, data = R2_SCHEDULES[preset]
-    cfg = PretrainConfig(preset, arch, steps, B, micro_batch=16 if T < 4096
-                         else 8, peak_lr=lr, warmup=warmup, decay=decay,
-                         data=data, **d2l._preset_saves(preset))
+    # the largest micro-batch that fits a 24 GB card (r2 at 8 does not)
+    micro = 16 if T < 4096 else 4 if preset.startswith('r2') else 8
+    cfg = PretrainConfig(preset, arch, steps, B, micro_batch=micro,
+                         peak_lr=lr, warmup=warmup, decay=decay, data=data,
+                         **d2l._preset_saves(preset))
     return dataclasses.replace(cfg, **overrides)
 
 def flops_per_token(arch, T=None, causal_half=False):
@@ -12646,8 +12668,8 @@ def pretrain_step(model, optimizer, micro_batches, cfg, n_valid):
             with torch.autocast(mb['input_ids'].device.type, torch.bfloat16,
                                 enabled=cfg.dtype == 'bf16'):
                 H, W = model(mb['input_ids'], ctx, return_hidden=True)
-                loss, _, part = d2l.chunked_lm_loss(
-                    H, W, mb['labels'], z_loss=cfg.z_loss, return_nll=True)
+                loss, _, part = d2l.chunked_lm_loss_and_nll(
+                    H, W, mb['labels'], z_loss=cfg.z_loss)
             (loss * world / n_valid).backward()  # DDP averages the ranks
         nll = nll + part.detach()
     params = [p for g in optimizer.param_groups for p in g['params']]
@@ -12727,7 +12749,7 @@ def lr_sensitivity(final_losses, l0):
     min(loss, l0) - min(losses); a non-finite loss counts as l0.
 
     Defined in :numref:`sec_lm_reference_model`"""
-    x = torch.as_tensor(final_losses, dtype=torch.float64)
+    x = torch.tensor([float(v) for v in final_losses], dtype=torch.float64)
     x = torch.where(torch.isfinite(x), x, l0).clamp(max=l0)
     return float((x - x.min()).mean())
 
@@ -12735,6 +12757,7 @@ def qk_clip_(model, stats, tau, alpha=0.5):
     """Rescale in place the query and key rows of every head whose largest
     logit S exceeds tau: W_q by (tau/S)^alpha, W_k by (tau/S)^(1-alpha); a
     key head shared by a group of query heads uses the group's maximum.
+    Heads at or below tau (a largest logit can be negative) keep factor 1.
     Returns each block's per-head logit factors; {} under QK-norm.
 
     Defined in :numref:`sec_lm_reference_model`"""
@@ -12749,14 +12772,388 @@ def qk_clip_(model, stats, tau, alpha=0.5):
             attn = raw.blks[l].attention
             S = s.max_logit.to(attn.W_q.weight.device).float()
             S_kv = S.view(attn.num_kv_heads, -1).amax(1)  # per key head
-            f_q = (tau / S).clamp(max=1) ** alpha
-            f_k = (tau / S_kv).clamp(max=1) ** (1 - alpha)
+            f_q = torch.where(S > tau, tau / S, 1.0) ** alpha
+            f_k = torch.where(S_kv > tau, tau / S_kv, 1.0) ** (1 - alpha)
             d_h = attn.head_dim
             attn.W_q.weight.mul_(f_q.repeat_interleave(d_h)[:, None])
             attn.W_k.weight.mul_(f_k.repeat_interleave(d_h)[:, None])
             factors[l] = f_q * f_k.repeat_interleave(S.numel() //
                                                      S_kv.numel())
     return factors
+
+def tau_rule(log, lo, hi):
+    """QK-clip's threshold, fixed before the run that uses it: ten times the
+    ceiling of a tenth of the largest logit in log over steps lo to hi.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    rows = log[log['step'].between(lo, hi)]
+    return 10 * math.ceil(rows.filter(like='max_logit_').max().max() / 10)
+
+def fp8_quant(x, fmt='e4m3', granularity='tensor', scale_mode='current',
+              state=None):
+    """Cast x to fp8: (q, scale) with q.float() * scale ≈ x. One scale per
+    tensor, row, 1x128 tile or 128x128 block; current scaling takes the
+    amax of x, delayed scaling the largest of the last 16 amaxes kept in
+    state (a dict the call updates).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    dtype = {'e4m3': torch.float8_e4m3fn, 'e5m2': torch.float8_e5m2}[fmt]
+    fmax = torch.finfo(dtype).max  # 448 (E4M3) or 57,344 (E5M2)
+    tiles, untile = d2l._fp8_tiles(x.detach().float(), granularity)
+    amax = tiles.abs().amax(-1, keepdim=True)  # one per tile
+    if scale_mode == 'delayed':  # state: the caller's dict, kept per operand
+        if state is None:
+            raise ValueError('delayed scaling needs a state dict')
+        history = state.get('amax', amax.expand(16, *amax.shape))
+        state['amax'] = torch.cat([history[1:], amax[None]])
+        amax = history.amax(0)  # from the earlier calls only
+    scale = amax.clamp(min=1e-12) / fmax
+    q = (tiles / scale).clamp(-fmax, fmax).to(dtype)  # saturate, round
+    return untile(q), untile(scale)
+
+E2M1 = (0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0)  # the non-negative values
+
+def fake_quant_fp4(x, block=16, scale='e4m3', rounding='rtn', dim=-1,
+                   tensor_scale=True, generator=None):
+    """x rounded to E2M1 times one scale per `block` values along dim.
+    Scales: 'fp32'; 'e4m3' (NVFP4, under an fp32 tensor scale); 'pow2'
+    (MXFP4's E8M0). Rounding: to nearest, ties to even ('rtn'), or
+    stochastic ('sr').
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    xt = x.float().movedim(dim, -1)
+    xb = xt.reshape(-1, block)
+    amax = xb.abs().amax(-1, keepdim=True)
+    s = amax / 6  # the block's largest value lands on 6
+    if scale == 'e4m3':  # block scales in E4M3, times one fp32 scale
+        t = s.amax() / 448 if tensor_scale else s.new_ones(())
+        t = torch.where(t > 0, t, 1.0)
+        s = (s / t).to(torch.float8_e4m3fn).float() * t
+    elif scale == 'pow2':  # 2^(floor(log2 amax) - 2): the top may clip
+        s = torch.exp2(torch.floor(torch.log2(amax)) - 2)
+    z = torch.where(s > 0, xb.abs() / s, 0.0).clamp(max=6)  # grid units
+    grid = torch.tensor(E2M1, device=x.device)
+    i = (torch.bucketize(z, grid, right=True) - 1).clamp(max=6)
+    lo, hi = grid[i], grid[i + 1]  # the grid values around z
+    frac = (z - lo) / (hi - lo)
+    if rounding == 'sr':  # up with probability frac: unbiased
+        up = frac > torch.rand(z.shape, generator=generator, device=z.device)
+    else:  # to nearest; a tie goes to the even code (even index), as in E2M1
+        up = (frac > 0.5) | ((frac == 0.5) & (i % 2 == 1))
+    q = torch.where(up, hi, lo) * torch.sign(xb) * s
+    return q.reshape(xt.shape).movedim(-1, dim).to(x.dtype)
+
+def block_nmse(x, quantizer, block):
+    """||Q(x) - x||^2 / ||x||^2 with Q = quantizer(blocks, block).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    xb = x.float().reshape(-1, block)
+    return float(((quantizer(xb, block) - xb) ** 2).sum() / (xb ** 2).sum())
+
+class _Fp8Matmul(torch.autograd.Function):
+    """Y = X W^T and its two backward GEMMs on fp8 operands.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    @staticmethod
+    def forward(ctx, X, W, lin, training):
+        x = lin.quant(X, 'x', training)  # (q, scale), E4M3
+        w = lin.quant(W, 'w', training)
+        ctx.lin, ctx.dtypes = lin, (X.dtype, W.dtype)
+        ctx.save_for_backward(*x, *w)
+        return d2l._fp8_mm(x, w, lin.native, d2l._out_dtype(X), tb=True)
+
+    @staticmethod
+    def backward(ctx, dY):
+        xq, xs, wq, ws = ctx.saved_tensors
+        dy, native = ctx.lin.quant(dY, 'dy'), ctx.lin.native  # E5M2
+        dX = d2l._fp8_mm(dy, (wq, ws), native, ctx.dtypes[0])  # dY W
+        dW = d2l._fp8_mm(dy, (xq, xs), native, ctx.dtypes[1], ta=True)
+        return dX, dW, None, None  # dW = dY^T X
+
+class Fp8Linear(nn.Linear):
+    """nn.Linear with fp8 GEMMs: X, W in E4M3, dY in E5M2, fp32
+    accumulation; simulated, or native (torch._scaled_mm, Ada or newer).
+    While self.track, .stats() reports each training step's casts.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    def __init__(self, in_features, out_features, bias=False,
+                 granularity='tensor', scale_mode='current', native=False):
+        super().__init__(in_features, out_features, bias=bias)
+        self.granularity, self.scale_mode = granularity, scale_mode
+        self.native, self.track, self.records = native, False, []
+        self.state = {'x': {}, 'w': {}, 'dy': {}}  # delayed: amax histories
+
+    def quant(self, t, role, training=True):
+        """A cast of operand role; outside training (no gradients, e.g. a
+        validation pass) the amax history is read but not updated."""
+        fmt = 'e5m2' if role == 'dy' else 'e4m3'
+        gran = d2l._fp8_granularity(self.granularity, role)
+        state = self.state[role] if training else dict(self.state[role])
+        q, s = fp8_quant(t, fmt, gran, self.scale_mode, state)
+        if self.track and training:
+            self.records.append(d2l._fp8_record(t, q, s, fmt, gran, role))
+        return q, s
+
+    def forward(self, X):
+        Y = _Fp8Matmul.apply(X.reshape(-1, X.shape[-1]), self.weight, self,
+                             torch.is_grad_enabled())
+        Y = Y.reshape(*X.shape[:-1], -1)
+        return Y if self.bias is None else Y + self.bias
+
+    def stats(self):  # the mean per operand since the last call
+        table, self.records = d2l._fp8_stats_table(self.records), []
+        return table
+
+class _Fp4Matmul(torch.autograd.Function):
+    """Y = X W^T with simulated NVFP4 operands (the NVFP4 recipe).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    @staticmethod
+    def forward(ctx, X, W, lin):
+        ctx.lin = lin
+        ctx.save_for_backward(X, W)
+        Wq = d2l._fp4_weight(W, lin.block, lin.weight_block2d)
+        return d2l._f32_mm(fake_quant_fp4(X, lin.block), Wq.T,
+                           d2l._out_dtype(X))
+
+    @staticmethod
+    def backward(ctx, dY):
+        (X, W), lin = ctx.saved_tensors, ctx.lin
+        q = lambda t, r, dim=-1: fake_quant_fp4(t, lin.block, rounding=r,
+                                                dim=dim)
+        sr = 'sr' if lin.sr_grads else 'rtn'  # stochastic for gradients
+        Wq = d2l._fp4_weight(W, lin.block, lin.weight_block2d, dim=0)
+        dX = d2l._f32_mm(q(dY, sr), Wq, X.dtype)  # dY W
+        if lin.H is not None:  # rotate each 16 tokens: dY^T X is unchanged
+            X, dY = d2l._rotate_rows(X, lin.H), d2l._rotate_rows(dY, lin.H)
+        dW = d2l._f32_mm(q(dY, sr, 0).T, q(X, 'rtn', 0), W.dtype)
+        return dX, dW, None  # dW = dY^T X, blocks along the tokens
+
+class Fp4Linear(nn.Linear):
+    """nn.Linear with simulated NVFP4 training GEMMs; numerics only.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    def __init__(self, in_features, out_features, bias=False, block=16,
+                 weight_block2d=True, hadamard=16, sr_grads=True):
+        super().__init__(in_features, out_features, bias=bias)
+        self.block, self.weight_block2d = block, weight_block2d
+        self.sr_grads = sr_grads
+        H = (d2l._hadamard(hadamard, torch.Generator().manual_seed(0))
+             if hadamard else None)  # a random Hadamard transform
+        self.register_buffer('H', H, persistent=False)
+
+    def forward(self, X):
+        Y = _Fp4Matmul.apply(X.reshape(-1, X.shape[-1]), self.weight, self)
+        Y = Y.reshape(*X.shape[:-1], -1)
+        return Y if self.bias is None else Y + self.bias
+
+class MixStream:
+    """Batches of global_batch windows from several streams: step s draws
+    each stream's count from a multinomial seeded by (seed, s) and takes
+    that stream's next windows; the cursors follow from the seed alone.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    def __init__(self, streams, weights, global_batch, seed=0, rank=0,
+                 world=1):
+        self.streams, self.global_batch = streams, global_batch
+        self.weights = np.asarray(weights, dtype=float) / np.sum(weights)
+        self.seq_len = streams[0].seq_len
+        self.eos_id = streams[0].shards.eos_id
+        self.seed, self.rank, self.world, self.step = seed, rank, world, 0
+        self._cum = np.zeros((1, len(streams)), dtype=np.int64)
+
+    def counts(self, step):
+        rng = np.random.default_rng([self.seed, step])
+        return rng.multinomial(self.global_batch, self.weights)
+
+    def cursors(self, step):
+        """Windows each stream has given before step (prefix sums)."""
+        while len(self._cum) <= step:  # extend the table, doubling it
+            n = len(self._cum)
+            c = np.stack([self.counts(s) for s in range(n - 1, 2 * n - 1)])
+            self._cum = np.concatenate([self._cum,
+                                        self._cum[-1] + c.cumsum(0)])
+        return self._cum[step]
+
+    def batch(self, step):
+        W = np.concatenate([d2l._stream_windows(s, int(a), int(k)) for s, a, k
+                            in zip(self.streams, self.cursors(step),
+                                   self.counts(step))])
+        W = W[np.random.default_rng([self.seed, step, 1]).permutation(len(W))]
+        return d2l._window_batch(W[self.rank::self.world], self.eos_id)
+
+    def __iter__(self):
+        while True:  # the cursor: step counts the batches consumed
+            self.step += 1
+            yield self.batch(self.step - 1)
+
+    def state_dict(self):
+        return dict(version=1, kind='mix', seed=self.seed, step=self.step,
+                    weights=[float(w) for w in self.weights],
+                    global_batch=self.global_batch, seq_len=self.seq_len,
+                    streams=[[s.layout_hash, s.seed, s.epoch]
+                             for s in self.streams])
+
+    def load_state_dict(self, state):
+        mine = self.state_dict()
+        for key in ('kind', 'weights', 'global_batch', 'seq_len', 'streams'):
+            if state.get(key) != mine[key]:
+                raise ValueError(f'{key}: {mine[key]} != {state.get(key)}')
+        if state['seed'] != self.seed:  # the cursors follow from the seed
+            self._cum = self._cum[:1]
+        self.seed, self.step = state['seed'], state['step']
+
+def mix_streams(streams, weights, global_batch, seed=0, rank=0,
+                world=1):
+    """A MixStream: global_batch windows per step from streams in the
+    shares weights (rank's slice of each batch).
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    return MixStream(streams, weights, global_batch, seed, rank, world)
+
+def forgetting_gain(base, docs, n_boot=2000, seed=0):
+    """Per arm: domain gain (base minus arm loss on the domain set) and
+    forgetting (arm minus base loss on the general set), in nats per token,
+    with 95% intervals from resampling documents (the same resamples for
+    the base and every arm); fg.attrs['draws'] keeps the replicates.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    draws = {}
+    for i, (s, key, sign) in enumerate((('domain', 'gain', 1),
+                                        ('general', 'forget', -1))):
+        ids = base.loc[base['set'] == s, 'doc_id'].to_numpy()
+        if len(ids) == 0:  # a pending result
+            continue
+        idx = np.stack([*d2l.cluster_resample(ids, n_boot, seed + i),
+                        np.arange(len(ids))])  # the point estimate last
+        def loss(df):  # token-weighted: summed NLL over scored tokens
+            d = df[df['set'] == s].set_index('doc_id').loc[ids]
+            nll, n = d['sum_nll'].to_numpy(), d['n_tokens'].to_numpy()
+            return nll[idx].sum(1) / n[idx].sum(1)
+        for arm, df in docs.groupby('arm', sort=False):
+            draws.setdefault(arm, {})[key] = sign * (loss(base) - loss(df))
+    rows = [dict(arm=arm, **{f'{k}{q}': v for k, x in d.items() for q, v in
+                             zip(('', '_lo', '_hi'), (x[-1], *np.percentile(
+                                 x[:-1], [2.5, 97.5])))})
+            for arm, d in draws.items()]
+    fg = pd.DataFrame(rows, columns=['arm', 'gain', 'gain_lo', 'gain_hi',
+                                     'forget', 'forget_lo', 'forget_hi'])
+    fg.attrs['draws'] = draws
+    return fg
+
+def rewarm_bump(runs, within=40):
+    """Per arm: the bump, the largest rise of the general loss over the
+    arm's own loss at step 0 in the first `within` steps (nats per token);
+    the step of that peak; and how much of it the end has healed (peak
+    minus final loss). A peak on the window's last evaluation is no
+    transient (the loss is still rising: forgetting) and has NaN bump.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    rows = []
+    logs = runs.logs.dropna(subset=['general_loss'])
+    for arm, g in logs[logs['arm'] != 'base'].groupby('arm', sort=False):
+        loss = g.set_index('step')['general_loss'].sort_index()
+        early = loss.loc[:within]
+        if 0 not in loss.index or len(early) < 2:
+            continue
+        peak = early.iloc[1:].idxmax()
+        rise = early.index[-1] > peak  # falls again inside the window
+        rows.append(dict(arm=arm, step=peak,
+                         bump=loss[peak] - loss[0] if rise else math.nan,
+                         healed=loss[peak] - loss.iloc[-1] if rise
+                         else math.nan))
+    return pd.DataFrame(rows, columns=['arm', 'bump', 'step', 'healed'])
+
+def rope_inv_freq(d_head, base=10000.0, scheme='none', s=1.0, L=4096,
+                  alpha=1.0, beta=32.0):
+    """RoPE frequencies of the d_head / 2 pairs for a window s times the
+    trained length L: 'none' (the base frequencies), 'pi' (all divided by
+    s), 'ntk' (the base raised by s^(d / (d - 2))), or 'yarn' (pairs that
+    turn more than beta times within L kept, less than alpha times divided
+    by s, a linear ramp over the pair index between).
+
+    Defined in :numref:`sec_lm_long_context`"""
+    if scheme not in ('none', 'pi', 'ntk', 'yarn'):
+        raise ValueError(f'unknown scheme {scheme!r}')
+    if scheme == 'ntk':
+        base = base * s ** (d_head / (d_head - 2))
+    theta = 1.0 / base ** (torch.arange(0, d_head, 2, dtype=torch.float32,
+                                        device='cpu') / d_head)
+    if scheme == 'pi':
+        return theta / s
+    if scheme == 'yarn':  # the pair index m at which a pair turns r times
+        m = lambda r: d_head * math.log(L / (2 * math.pi * r)) / (
+            2 * math.log(base))
+        ramp = ((torch.arange(d_head // 2) - m(beta))
+                / (m(alpha) - m(beta))).clamp(0, 1)
+        return theta * (ramp / s + 1 - ramp)
+    return theta
+
+def yarn_mscale(s):
+    """YaRN's scale of queries and keys, 0.1 ln s + 1 (1 for s <= 1): the
+    attention logits grow by its square, the softmax scale stays.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    return 0.1 * math.log(s) + 1.0 if s > 1 else 1.0
+
+def make_recall_task(tokenizer, length, depth, n_pairs=None, n_candidates=8,
+                     n_items=200, seed=0):
+    """Key-value recall items of at most length tokens for score_choices:
+    lines 'The value of <key> is <value>.' with distinct two-word keys and
+    five-digit values, the queried line at fraction depth of the prompt,
+    then the query 'The value of <key> is'; the choices are n_candidates
+    distinct values of the haystack, the gold value among them once.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    g = d2l.recall_generator(seed, length, depth)
+    out = dict(prompts=[], choices=[], gold=[], depth_actual=[])
+    for _ in range(n_items):
+        keys, values, lines, start = d2l.recall_haystack(
+            tokenizer, length, g, n_pairs, min_lines=n_candidates)
+        q = round(depth * (len(lines) - 1))  # the queried line
+        others = values[:q] + values[q + 1:]
+        picks = torch.randperm(len(others), generator=g)[:n_candidates - 1]
+        choices = [f' {values[q]}'] + [f' {others[i]}' for i in picks]
+        order = torch.randperm(n_candidates, generator=g).tolist()
+        out['prompts'].append(d2l.RECALL_HEAD + ''.join(lines)
+                              + f'The value of {keys[q]} is')
+        out['choices'].append([choices[j] for j in order])
+        out['gold'].append(order.index(0))
+        out['depth_actual'].append(start[q] / start[-1])
+    return out
+
+def nll_by_position(model, windows, edges, ctx=None):
+    """Mean next-token loss (nats) of windows (n, T + 1) in each position
+    bucket [edges[k], edges[k + 1]), with a 95% interval from resampling
+    whole windows: DataFrame(bucket, nll, lo, hi).
+
+    Defined in :numref:`sec_lm_long_context`"""
+    nll = d2l.window_nlls(model, windows, ctx).double()  # (n, T)
+    rows = []
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        part = nll[:, lo:hi]
+        rows.append((d2l.bucket_name(lo, hi), *d2l.window_ci(
+            part.sum(1), torch.full((len(part),), float(hi - lo)))))
+    return pd.DataFrame(rows, columns=['bucket', 'nll', 'lo', 'hi'])
+
+def long_context_gain(model, windows, short_len, long_len, min_gap,
+                      rare_ids, edges):
+    """Loss drop (nats) from seeing the whole window of long_len tokens
+    instead of the last short_len / 2 to short_len tokens, on rare tokens
+    whose previous occurrence lies at least min_gap back, per gap bucket
+    (edges[k], edges[k + 1]]: DataFrame(bucket, gain, lo, hi, n).
+
+    Defined in :numref:`sec_lm_long_context`"""
+    windows = torch.as_tensor(windows)[:, :long_len + 1]
+    gain = (d2l.sliding_nlls(model, windows, short_len)
+            - d2l.window_nlls(model, windows))
+    gap = d2l.repeat_gaps(windows, rare_ids)  # 0: no earlier occurrence
+    pairs = list(zip(edges[:-1], edges[1:]))
+    sums, counts = d2l.gain_sums(gain, gap, pairs, min_gap)
+    rows = [(d2l.bucket_name(lo, hi), *d2l.window_ci(sums[:, k],
+                                                     counts[:, k]),
+             int(counts[:, k].sum())) for k, (lo, hi) in enumerate(pairs)]
+    return pd.DataFrame(rows, columns=['bucket', 'gain', 'lo', 'hi', 'n'])
 
 def chip_specs():
     """The accelerator table, one row per chip (indexed by name): memory
@@ -22871,6 +23268,13 @@ def _rolling_ngram_hashes(ids, n, eos=None):
         valid = c[n:n + m] == c[:m]
     return h, valid
 
+d2l.DATA_HUB['lm-pdp-throughput-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pdp-throughput-v1.parquet',
+    '5fbb3d679b29faee9cb5c299ecf1131c399b8ff4')
+d2l.DATA_HUB['lm-pdp-mask-runs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pdp-mask-runs-v1.json.gz',
+    '17ed3675834450ad7c0bfaf6b6183095880ec525')
+
 PRETRAIN_SOURCES = {}  # name: (kind, Hub repository, revision, licence)
 
 d2l.PRETRAIN_SOURCES['smollm3-stage1'] = (
@@ -22911,7 +23315,7 @@ PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'pdp-throughput', 'pdp-mask-runs',
     't1-runs', 'inst-t1-none', 'inst-t1-qkclip', 'inst-t1-qknorm',
     'inst-t1-softcap', 'spike-replay', 'reference-run', 'ladder', 'inst-t2',
-    'reference-evals', 'ladder-evals',
+    'reference-evals', 't1-evals', 'ladder-evals',
     'gemm-sweep', 'lowp-runs',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
     'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2', 'smollm3-3',
@@ -22928,7 +23332,7 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     'inst-t1-softcap': 'instability-t1', 'spike-replay': 'spike-replay',
     'reference-run': 'reference-run-log', 'ladder': 'ladder-logs',
     'inst-t2': 'instability-t2', 'reference-evals': 'reference-evals',
-    'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
+    't1-evals': 't1-evals', 'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
     'lowp-runs': 'lowp-runs', 'cpt-t1': 'cpt-t1', 'cpt-qwen-A': 'cpt-runs',
     'cpt-qwen-B': 'cpt-runs', 'cpt-qwen-C': 'cpt-runs',
     'cpt-qwen-A2': 'cpt-runs', 'cpt-qwen-evals': 'cpt-runs',
@@ -22940,7 +23344,7 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
 d2l.PRETRAIN_ARTIFACTS['packing-throughput'] = (
     'lm-pdp-throughput-v1', 'parquet')
 d2l.PRETRAIN_ARTIFACTS['packing-mask-runs'] = (
-    'lm-pdp-mask-runs-v1', 'parquet')
+    'lm-pdp-mask-runs-v1', 'json-table')
 
 _ARTIFACT_EXT = {'jsonl': '.jsonl.gz', 'parquet': '.parquet',
                  'json-table': '.json.gz', 'safetensors': '.safetensors',
@@ -22976,26 +23380,27 @@ def _regenerating():
                          + ', '.join(d2l.PRETRAIN_RERUN_NAMES))
     return d2l.lm_rerun(d2l.PRETRAIN_RERUN_NAMES)
 
-def _jsonable(x):
-    """x as plain JSON values (tuples become lists, namedtuples dicts).
+def _regenerates(artifact):
+    """Whether D2L_RERUN names a campaign that writes artifact (a load
+    name); only such a run reads the local next-version file of it.
 
     Defined in :numref:`sec_lm_data_path`"""
-    if hasattr(x, '_asdict'):
-        x = x._asdict()
-    if dataclasses.is_dataclass(x) and not isinstance(x, type):
-        x = {f.name: getattr(x, f.name) for f in dataclasses.fields(x)}
-    if isinstance(x, dict):
-        return {str(k): _jsonable(v) for k, v in x.items()}
-    if isinstance(x, (list, tuple)):
-        return [_jsonable(v) for v in x]
-    if isinstance(x, (np.integer, np.floating, np.bool_)):
-        return x.item()
-    return x
+    return any(d2l._RERUN_ARTIFACT.get(name) == artifact
+               for name in _regenerating())
 
 def _label_of(result):
     if hasattr(result, 'attrs'):
         return result.attrs.get('label', '')
     return getattr(result, 'label', '') or ''
+
+def _show_label(result):
+    """Print a result's label (a smoke, T1 or pending run) on its own line,
+    so that it never passes for the committed run; return the result.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if _label_of(result):
+        print(f'[{_label_of(result)}]')
+    return result
 
 def _with_label(result, label, meta=None):
     """result with its label (and stored meta) set.
@@ -23083,8 +23488,12 @@ def _read_result(path, kind, key=None):
         return load_file(path)
     if kind in ('tar', 'shards'):
         folder = os.path.join(os.path.dirname(path), 'extracted')
-        if not os.path.exists(folder):
-            d2l.extract(path, folder)
+        if not os.path.exists(folder):  # whole or not at all
+            tmp = f'{folder}.{os.getpid()}.tmp'
+            shutil.rmtree(tmp, ignore_errors=True)
+            os.makedirs(tmp)
+            d2l.extract(path, tmp)
+            os.replace(tmp, folder)
         if kind == 'tar':
             return folder
         with open(os.path.join(folder, 'manifest.json')) as f:
@@ -23130,8 +23539,8 @@ def _check_config(result, config, key):
 def load_artifact(name):
     """A committed result of this chapter by its name (PRETRAIN_ARTIFACTS):
     a table or log as a DataFrame, weights as a state dict, an archive as a
-    folder, a shard set as TokenShards. A regeneration run reads the file it
-    has just written (the next version) when there is one.
+    folder, a shard set as TokenShards. A run that regenerates it reads the
+    file it has just written (the next version) when there is one.
 
     Defined in :numref:`sec_lm_data_path`"""
     if name not in d2l.PRETRAIN_ARTIFACTS:
@@ -23139,7 +23548,7 @@ def load_artifact(name):
                        f'{sorted(d2l.PRETRAIN_ARTIFACTS)}')
     key, kind = d2l.PRETRAIN_ARTIFACTS[name]
     local = os.path.join(_rerun_dir(), _next_key(key) + _ARTIFACT_EXT[kind])
-    if _regenerating() and os.path.exists(local):
+    if _regenerates(name) and os.path.exists(local):
         return _read_result(local, kind, key)
     if key not in d2l.DATA_HUB:
         raise KeyError(f'{name} is not committed yet')
@@ -23148,8 +23557,9 @@ def load_artifact(name):
     return _read_result(path, kind, key)
 
 def _pending_result(name, fallback=None):
-    """What a pending result shows: the fallback result labelled as such, or
-    an empty table labelled '<name> pending'.
+    """What a pending result shows: the fallback result labelled as such
+    (keeping its own label, such as 't1 preset'), or an empty table
+    labelled '<name> pending'.
 
     Defined in :numref:`sec_lm_data_path`"""
     if fallback is not None:
@@ -23158,8 +23568,9 @@ def _pending_result(name, fallback=None):
         except KeyError:
             result = None
         if result is not None:
-            return _with_label(result, 'T2 run pending; showing the T1 '
-                                       'configuration')
+            own = _label_of(result)
+            label = 'T2 run pending; showing the T1 configuration'
+            return _with_label(result, f'{label} ({own})' if own else label)
     return _with_label(pd.DataFrame(), f'{name} pending')
 
 def _pretrain_result(name, compute, config, *, fallback=None):
@@ -23184,7 +23595,8 @@ def _pretrain_result(name, compute, config, *, fallback=None):
         d2l.lm_save_rerun(os.path.basename(path), lambda p: _write_result(
             p, kind, result, meta), rerun_dir=_rerun_dir())
         return _with_label(result, meta['label'], meta)
-    if key in d2l.DATA_HUB or (rerun and os.path.exists(path)):
+    if key in d2l.DATA_HUB or (_regenerates(artifact) and
+                               os.path.exists(path)):
         result = load_artifact(artifact)
         _check_config(result, config, key)
         return result
@@ -23197,7 +23609,11 @@ def _pretrain_merged(name, parts, merge, config, *, fallback=None):
     each written to its own file when D2L_RERUN names it. The merge
     (merge({part: result})) runs in a regeneration run once every part's
     file exists, and only when D2L_RERUN names the merge step name (if not
-    None). Loading, configuration check and pending as _pretrain_result.
+    None). A run computes its own parts before it looks for the others'
+    files, so of parts run side by side the last to finish merges; with
+    D2L_PRETRAIN_MERGE=1 (tools/lm_regen.py --merge) a named part whose
+    file exists is read, not computed. Loading, configuration check and
+    pending as _pretrain_result.
 
     Defined in :numref:`sec_lm_data_path`"""
     artifact = d2l._RERUN_ARTIFACT[next(iter(parts))]
@@ -23210,25 +23626,28 @@ def _pretrain_merged(name, parts, merge, config, *, fallback=None):
         result = load_artifact(artifact)
         _check_config(result, config, key)
         return result
-    if not rerun:
-        if name in d2l.PRETRAIN_PENDING or names & d2l.PRETRAIN_PENDING:
+    if not rerun & names:  # part files on disk are another run's
+        if rerun or name in d2l.PRETRAIN_PENDING or (
+                names & d2l.PRETRAIN_PENDING):
             return _pending_result(name or artifact, fallback)
         raise KeyError(f'{artifact} is not committed yet')
-    results = {}
+    results, merge_only = {}, os.environ.get('D2L_PRETRAIN_MERGE') == '1'
+    path = {part: os.path.join(_rerun_dir(), f'{nxt}.{part}{ext}')
+            for part in parts}
     for part, (compute, part_config) in parts.items():
-        path = os.path.join(_rerun_dir(), f'{nxt}.{part}{ext}')
-        meta = dict(config=_jsonable(part_config), label='')
-        if part in rerun:
+        if part in rerun and not (merge_only and os.path.exists(path[part])):
             result = compute()
-            meta['label'] = _label_of(result)
-            d2l.lm_save_rerun(os.path.basename(path), lambda p: _write_result(
-                p, kind, result, meta), rerun_dir=_rerun_dir())
-        elif os.path.exists(path):
-            result = _read_result(path, kind)
-            _check_config(result, part_config, f'{nxt}.{part}')
-        else:
-            result = None
-        results[part] = result
+            meta = dict(config=_jsonable(part_config),
+                        label=_label_of(result))
+            d2l.lm_save_rerun(os.path.basename(path[part]), lambda p:
+                              _write_result(p, kind, result, meta),
+                              rerun_dir=_rerun_dir())
+            results[part] = result
+    for part, (_, part_config) in parts.items():  # the others, after
+        if part not in results and os.path.exists(path[part]):
+            results[part] = _read_result(path[part], kind)
+            _check_config(results[part], part_config, f'{nxt}.{part}')
+    results = {part: results.get(part) for part in parts}
     if any(r is None for r in results.values()) or (name and
                                                     name not in rerun):
         return _pending_result(name or artifact, fallback)
@@ -23270,6 +23689,26 @@ def _quiet():
         for lg, level in zip(loggers, levels):
             lg.setLevel(level)
 
+def reference_shards(which='100m', **kwargs):
+    """d2l.fwedu_shards(which) (the reference tokenizer's FineWeb-Edu
+    shards, :numref:`sec_lm_tokenizers`) without its download messages.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    with _quiet():
+        return d2l.fwedu_shards(which, **kwargs)
+
+def chunked_lm_loss_and_nll(hidden, weight, labels, chunk=8192, z_loss=0.0,
+                            ignore_index=-100):
+    """chunked_lm_loss's (sum_loss, n_valid) and the summed NLL without the
+    z-loss term, from the same chunks.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    H, y = hidden.flatten(0, -2), labels.flatten()
+    nll, z = sum(torch.utils.checkpoint.checkpoint(
+        d2l.lm_loss_terms, H[i:i + chunk], weight, y[i:i + chunk],
+        ignore_index, use_reentrant=False) for i in range(0, len(y), chunk))
+    return nll + z_loss * z, (y != ignore_index).sum(), nll
+
 def _rope_tables(pos, head_dim, theta, inv_freq=None, mscale=1.0):
     """Cosines and sines of the RoPE angles of positions pos, (T,) or (B, T),
     in the layout d2l.rope broadcasts ((T, d/2) or (B, 1, T, d/2)); the
@@ -23302,6 +23741,9 @@ def _attn_backend(attn, X, ctx):
     backend that applies the document mask: 'math' for a softcap.
 
     Defined in :numref:`sec_lm_data_path`"""
+    if attn.backend not in ('auto', 'sdpa', 'flex', 'math'):
+        raise ValueError(f"backend is 'auto', 'sdpa', 'flex' or 'math', "
+                         f'not {attn.backend!r}')
     if ctx is None and attn.softcap is None and attn.backend != 'math':
         return 'causal'
     if attn.softcap is not None or attn.backend == 'math':
@@ -23441,6 +23883,23 @@ def _check_same_tensors(mine, theirs):
                              f'{tuple(theirs[name].shape)}, PackedGPT '
                              f'expects {tuple(mine[name].shape)}')
 
+_BASE_ROPE = None, 1.0  # (rope_inv_freq, rope_mscale) until set_rope
+d2l.PackedAttention.rope_inv_freq, d2l.PackedAttention.rope_mscale = _BASE_ROPE
+d2l.PackedGPT.rope_inv_freq, d2l.PackedGPT.rope_mscale = _BASE_ROPE
+d2l.PackedGPT.rope_scheme, d2l.PackedGPT.rope_scale = 'none', 1.0
+d2l.PackedGPT.trained_len = None  # max_len before the first set_rope
+
+def _packed_rope_tables(model, pos):
+    """RoPE tables of positions pos with the model's frequencies and scale
+    (base RoPE until set_rope); pos is 'rope' here.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if model.pos != 'rope':
+        raise ValueError(f"pos is 'rope' or 'learned', not {model.pos!r}")
+    return _rope_tables(pos, model.head_width, model.rope_theta,
+                        getattr(model, 'rope_inv_freq', None),
+                        getattr(model, 'rope_mscale', 1.0))
+
 def _layout_hash(shards):
     """SHA-256 over the manifest's per-file SHA-256 values, in order.
 
@@ -23451,11 +23910,24 @@ def _layout_hash(shards):
             h.update(s['sha256'][ext].encode())
     return h.hexdigest()
 
-def _window_indices(stream, p):
-    """The global batch of physical step p: a slice of the permutation of
-    the window indices seeded by (seed, epoch).
+def _physical_step(skipped, step):
+    """The step of the unskipped schedule that logical step uses.
 
     Defined in :numref:`sec_lm_data_path`"""
+    for k in sorted(skipped):
+        step += k <= step
+    return step
+
+def _window_indices(stream, step):
+    """The global batch of logical step `step`: a slice of the permutation
+    of the window indices seeded by (seed, epoch), at the physical step the
+    skip set leaves it (every rank of a stream calls this first).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if stream.global_batch % stream.world:
+        raise ValueError(f'global_batch {stream.global_batch} is not a '
+                         f'multiple of world {stream.world}')
+    p = _physical_step(stream.skipped, step)
     e = stream.epoch + p // stream.steps_per_epoch
     j = p % stream.steps_per_epoch
     cached = getattr(stream, '_perm', None)
@@ -23474,29 +23946,30 @@ def _windows(stream, idx):
                      for i in idx]).astype(np.int64)
 
 RestartOverlap = collections.namedtuple(
-    'RestartOverlap', ['naive_match', 'naive_repeats', 'stateless_match',
-                       'stateless_repeats', 'steps'])
+    'RestartOverlap', ['steps', 'windows', 'naive_match', 'naive_seen',
+                       'stateless_match', 'stateless_seen'])
 
 def reseeded_restart_overlap(n_seq=10_000, batch=64, crash_step=40,
                              steps=50, seed=0):
     """A run that crashes at crash_step and restarts with a re-seeded
-    shuffle, against a stateless cursor: batches equal to the uninterrupted
-    run's, and windows seen twice.
+    shuffle, against a stateless cursor, over the steps after the crash:
+    their number and windows, how many batches equal the uninterrupted
+    run's, and how many windows the run had already seen before the crash.
 
     Defined in :numref:`sec_lm_data_path`"""
     perm = np.random.default_rng([seed, 0]).permutation(n_seq)
     after = np.random.default_rng([seed + 1, 0]).permutation(n_seq)
-    run = [perm[s * batch:(s + 1) * batch] for s in range(steps)]
-    naive = run[:crash_step] + [after[s * batch:(s + 1) * batch]
-                                for s in range(crash_step, steps)]
-    stateless = run[:crash_step] + [perm[s * batch:(s + 1) * batch]
-                                    for s in range(crash_step, steps)]
+    later = range(crash_step, steps)
+    planned = [perm[s * batch:(s + 1) * batch] for s in later]
+    reseeded = [after[s * batch:(s + 1) * batch] for s in later]
+    before = perm[:crash_step * batch]
 
-    def overlap(batches):  # (batches equal to the run's, windows repeated)
-        seen = np.concatenate(batches)
-        return (int(sum(np.array_equal(a, b) for a, b in zip(run, batches))),
-                int(len(seen) - len(np.unique(seen))))
-    return RestartOverlap(*overlap(naive), *overlap(stateless), steps)
+    def overlap(batches):  # (batches as planned, windows seen before)
+        return (int(sum(np.array_equal(a, b)
+                        for a, b in zip(planned, batches))),
+                int(np.isin(np.concatenate(batches), before).sum()))
+    return RestartOverlap(len(later), len(later) * batch, *overlap(reseeded),
+                          *overlap(planned))
 
 def _ddp_setup():
     """Join the process group torchrun describes: (rank, world, device).
@@ -23579,15 +24052,364 @@ def t_interval(x, alpha=0.05):
         t = float(stats.t.ppf(1 - alpha / 2, n - 1))
     return float(x.mean()), float(t * x.std(ddof=1) / math.sqrt(n))
 
+PACKING_PIPELINES = ('padded', 'packed', 'sdpa-mask', 'flex-mask')
+
+def _padded_batch(shards, T, G, step):
+    """Documents step * G ... step * G + G - 1, one per row, cut after T
+    targets and padded with EOS; padded targets are -100.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    X = torch.full((G, T), shards.eos_id, dtype=torch.int64)
+    Y = torch.full((G, T), -100, dtype=torch.int64)
+    for r in range(G):
+        d = torch.from_numpy(shards.doc((step * G + r) % shards.n_docs)).long()
+        n = min(len(d) - 1, T)
+        X[r, :n], Y[r, :n] = d[:n], d[1:n + 1]
+    pos = torch.arange(T, dtype=torch.int32).expand(G, T).contiguous()
+    return dict(input_ids=X, labels=Y, doc_ids=torch.zeros_like(pos),
+                pos_ids=pos)
+
+def _pipeline_batches(pipeline, shards, T, G, steps, seed):
+    """The first steps global batches of a pipeline: padded documents, or
+    the windows of a PackedStream.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if pipeline == 'padded':
+        return [_padded_batch(shards, T, G, s) for s in range(steps)]
+    stream = d2l.PackedStream(shards, T, G, seed=seed)
+    return [stream.batch(s) for s in range(steps)]
+
+def _timed_step(model, optimizer, micro, n_valid, masked, cfg):
+    """One training step as pretrain_step takes it (bf16 autocast, chunked
+    token-weighted loss, clipping, AdamW), with the document mask only if
+    masked (else causal attention over the whole row).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    for mb in micro:
+        ctx = d2l.PackCtx(mb['doc_ids'], mb['pos_ids']) if masked else None
+        with torch.autocast(mb['input_ids'].device.type, torch.bfloat16,
+                            enabled=cfg.dtype == 'bf16'):
+            H, W = model(mb['input_ids'], ctx, return_hidden=True)
+            loss, _ = d2l.chunked_lm_loss(H, W, mb['labels'],
+                                          z_loss=cfg.z_loss)
+        (loss / n_valid).backward()
+    params = [p for g in optimizer.param_groups for p in g['params']]
+    torch.nn.utils.clip_grad_norm_(params, cfg.clip or math.inf)
+    optimizer.step()
+    optimizer.zero_grad(set_to_none=True)
+
+def _throughput_row(cfg, pipeline, T, batches, warmup, device):
+    """Useful (valid-target) tokens per second, median and quartiles over
+    the steps after warmup, the median step time, the padding share and the
+    peak memory of one pipeline at window length T.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    torch._dynamo.reset()  # a fresh compile for every model
+    torch.manual_seed(cfg.seed)
+    backend = {'sdpa-mask': 'sdpa', 'flex-mask': 'flex'}.get(pipeline,
+                                                             'auto')
+    raw = d2l.PackedGPT.from_arch(cfg.arch._replace(T=T),
+                                  backend=backend).to(device)
+    cuda = device.type == 'cuda'
+    optimizer = torch.optim.AdamW(d2l.param_groups(raw, cfg.wd),
+                                  lr=cfg.peak_lr, betas=cfg.betas,
+                                  eps=cfg.eps, fused=cuda)
+    model = torch.compile(raw) if cfg.compile else raw
+    m = max(1, cfg.micro_batch * cfg.arch.T // T)  # same tokens per micro
+    sync = (lambda: torch.cuda.synchronize(device)) if cuda else (
+        lambda: None)
+    if cuda:
+        torch.cuda.reset_peak_memory_stats(device)
+    rates, times = [], []
+    for k, b in enumerate(batches):
+        b = {key: v.to(device) for key, v in b.items()}
+        n_valid = (b['labels'] != -100).sum()
+        micro = [{key: v[i:i + m] for key, v in b.items()}
+                 for i in range(0, len(b['labels']), m)]
+        sync()
+        t = time.perf_counter()
+        _timed_step(model, optimizer, micro, n_valid,
+                    pipeline.endswith('-mask'), cfg)
+        sync()
+        if k >= warmup:
+            times.append(time.perf_counter() - t)
+            rates.append(n_valid.item() / times[-1])
+    padding = (float(np.mean([(b['labels'] == -100).float().mean()
+                              for b in batches]))
+               if pipeline == 'padded' else 0.0)  # every -100 is a pad
+    q1, med, q3 = np.percentile(rates, [25, 50, 75])
+    row = dict(pipeline=pipeline, T=T, tok_s=med, tok_s_q1=q1, tok_s_q3=q3,
+               step_ms=1e3 * float(np.median(times)), padding=padding,
+               peak_gib=(torch.cuda.max_memory_allocated(device) / 2 ** 30
+                         if cuda else float('nan')), status='ok')
+    del model, raw, optimizer
+    if cuda:
+        torch.cuda.empty_cache()
+    return row
+
+def _throughput_table(cfg, pipelines, seq_lens, steps, warmup, shards,
+                      device):
+    """_throughput_row for every pipeline and window length, at cfg's
+    tokens per step; a FlexAttention row that fails reads 'flex
+    unavailable' (any other failure raises).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    rows = []
+    for T in seq_lens:
+        G = cfg.global_batch * cfg.arch.T // T  # sequences per step
+        for p in pipelines:
+            batches = _pipeline_batches(p, shards, T, G, warmup + steps,
+                                        cfg.data_seed)
+            try:
+                rows.append(_throughput_row(cfg, p, T, batches, warmup,
+                                            device))
+            except Exception as e:
+                if p != 'flex-mask':
+                    raise
+                print(f'flex-mask at T={T}: {type(e).__name__}: {e}',
+                      file=sys.stderr)
+                rows.append(dict(pipeline=p, T=T, status='flex unavailable'))
+    df = pd.DataFrame(rows)
+    df['gpu'] = (torch.cuda.get_device_name(device)
+                 if device.type == 'cuda' else 'cpu')
+    return df
+
+def packing_throughput(cfg, pipelines=PACKING_PIPELINES, seq_lens=(1024,
+                       4096), steps=50, warmup=5):
+    """Training throughput of cfg's model under each input pipeline at each
+    window length T, at cfg's tokens per step: 'padded' (one document per
+    row), 'packed' (windows, causal attention across documents),
+    'sdpa-mask' and 'flex-mask' (windows with the document mask). Columns:
+    useful tokens/s (median, quartiles over steps), step time, padding
+    share, peak memory. The committed table, or measured on one GPU
+    (compiled) under D2L_RERUN=pdp-throughput.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    config = dict(cfg=d2l._cfg_json(cfg), pipelines=list(pipelines),
+                  seq_lens=list(seq_lens), steps=steps, warmup=warmup)
+
+    def compute():
+        if not torch.cuda.is_available():
+            raise RuntimeError('pdp-throughput measures on a GPU')
+        return _throughput_table(cfg, pipelines, seq_lens, steps, warmup,
+                                 d2l._train_shards(cfg), torch.device('cuda'))
+    return _show_label(d2l._pretrain_result('pdp-throughput', compute,
+                                            config))
+
+PackingRuns = collections.namedtuple('PackingRuns',
+                                     ['table', 'losses', 'leak', 'label'])
+
+class _UnmaskedStream(d2l.PackedStream):
+    """A PackedStream read the way a plain causal model reads it: every
+    window is one document for attention (doc_ids 0, positions 0 ... T-1);
+    windows and targets are PackedStream's, so a pair of runs differs only
+    in the mask.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    def batch(self, step):
+        b = super().batch(step)
+        b['doc_ids'] = torch.zeros_like(b['doc_ids'])
+        b['pos_ids'] = torch.arange(self.seq_len, dtype=torch.int32).expand_as(
+            b['pos_ids']).contiguous()
+        return b
+
+def _mask_run_config(cfg, tokens):
+    """cfg shortened to tokens (rounded to whole steps): WSD with 5% warmup
+    and 10% decay, validation at the end only, nothing saved.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    steps = round(tokens / (cfg.global_batch * cfg.arch.T))
+    return dataclasses.replace(
+        cfg, steps=steps, warmup=round(0.05 * steps),
+        decay=round(0.1 * steps), val_every=0, probe_every=0, stats_every=0,
+        ckpt_steps=(), state_steps=(), state_every=0, branches=(),
+        out_dir=None)
+
+def _foreign_mass(q, k, doc_ids, chunk=256):
+    """Per window: the mean, over queries that have an earlier key of
+    another document, of the causal attention mass on such keys (averaged
+    over heads; fp32), and the share uniform attention would put there;
+    nan for a window that holds one document.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    B, H, T, d_h = q.shape
+    q, k = q.float(), k.float()
+    j = torch.arange(T, device=q.device)
+    mass, base, n = (torch.zeros(B, device=q.device) for _ in range(3))
+    for a in range(0, T, chunk):
+        i = torch.arange(a, min(a + chunk, T), device=q.device)
+        causal = j[None, :] <= i[:, None]                   # (c, T)
+        s = q[:, :, i] @ k.transpose(-2, -1) / math.sqrt(d_h)
+        p = torch.softmax(s.masked_fill(~causal, -math.inf), -1)
+        foreign = (doc_ids[:, i, None] != doc_ids[:, None, :]) & causal
+        has = foreign.any(-1)                               # (B, c)
+        m = (p * foreign[:, None]).sum(-1).mean(1)          # over heads
+        mass += torch.where(has, m, 0.0).sum(-1)
+        base += torch.where(has, foreign.sum(-1) / (i + 1), 0.0).sum(-1)
+        n += has.sum(-1)
+    return mass / n, base / n
+
+def _leak_table(model, X, eos_id=0, batch=8, n_boot=2000, seed=0):
+    """Per block of a model trained without the document mask: the mean
+    over windows X of the attention mass on other documents' keys, a 95%
+    bootstrap interval over windows, and the uniform-attention share.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    dev = next(model.parameters()).device
+    doc_ids = d2l.doc_ids_from_eos(X.int(), eos_id)[0]
+    leak, uniform = [], []
+    with torch.no_grad():
+        for a in range(0, len(X), batch):
+            Xb, db = X[a:a + batch].to(dev), doc_ids[a:a + batch].to(dev)
+            per_layer = []
+            for attn, Y, tables in d2l._attention_inputs(model, Xb, None):
+                q, k, _ = attn.qkv(Y.float(), tables=tables)
+                k = k.repeat_interleave(attn.num_heads // attn.num_kv_heads,
+                                        1)
+                m, u = _foreign_mass(q, k, db)
+                per_layer.append(m)
+            leak.append(torch.stack(per_layer, 1).cpu())
+            uniform.append(u.cpu())
+    M, U = torch.cat(leak).double().numpy(), torch.cat(uniform).numpy()
+    keep = ~np.isnan(M[:, 0])  # windows with more than one document
+    M, U = M[keep], U[keep]
+    idx = np.random.default_rng(seed).integers(0, len(M), (n_boot, len(M)))
+    lo, hi = np.percentile(M[idx].mean(1), [2.5, 97.5], axis=0)
+    return pd.DataFrame(dict(layer=np.arange(M.shape[1]), leak=M.mean(0),
+                             lo=lo, hi=hi, uniform=float(U.mean()),
+                             windows=len(M)))
+
+def _mask_runs(cfg, seeds, train, val_fn, leak_X, device, every=10):
+    """For each seed, train cfg's model on train (on device) with and
+    without the document mask (the stream seed is the model seed, so a pair
+    sees the same batches): final validation loss (val_fn), the training
+    loss every `every` steps, and the leak of the unmasked seeds[0] model on
+    leak_X.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    finals, traces, leak = [], [], None
+    for seed in seeds:
+        row = dict(seed=seed)
+        for arm, Stream in (('masked', d2l.PackedStream),
+                            ('unmasked', _UnmaskedStream)):
+            torch._dynamo.reset()
+            torch.manual_seed(seed)
+            model = d2l.PackedGPT.from_arch(cfg.arch).to(device)
+            stream = Stream(train, cfg.arch.T, cfg.global_batch, seed=seed)
+            log = d2l.pretrain(model, stream, dataclasses.replace(
+                cfg, seed=seed, data_seed=seed), val_fn=val_fn)
+            row[arm] = float(log['val_loss'].dropna().iloc[-1])
+            keep = log[(log['step'] % every == 0) | (log['step'] ==
+                                                      cfg.steps)]
+            traces.append(pd.DataFrame(dict(arm=arm, seed=seed,
+                                            step=keep['step'],
+                                            loss=keep['loss'])))
+            if arm == 'unmasked' and seed == seeds[0]:
+                leak = _leak_table(model, leak_X, train.eos_id)
+            del model, stream
+        finals.append(row)
+    return PackingRuns(pd.DataFrame(finals), pd.concat(traces,
+                                                       ignore_index=True),
+                       leak, '')
+
+def packing_comparison(cfg, tokens=25_000_000, seeds=(0, 1, 2),
+                       leak_windows=64):
+    """Masked against unmasked training of cfg's model for tokens tokens
+    with paired seeds, both validated with the document mask (each
+    document on its own, as at inference): PackingRuns(table: seed, masked,
+    unmasked final validation loss; losses: training loss every 10 steps;
+    leak: per block, the unmasked seeds[0] model's attention mass on other
+    documents over leak_windows validation windows, with a 95% bootstrap
+    interval). The committed result, or trained on one GPU under
+    D2L_RERUN=pdp-mask-runs.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    run_cfg = _mask_run_config(cfg, tokens)
+    config = dict(cfg=d2l._cfg_json(run_cfg), tokens=tokens,
+                  seeds=list(seeds), leak_windows=leak_windows)
+
+    def compute():
+        if not torch.cuda.is_available():
+            raise RuntimeError('pdp-mask-runs trains on a GPU')
+        val = d2l.reference_shards('val')
+        T = cfg.arch.T
+        leak_X = torch.from_numpy(np.stack([
+            val.read(i * T, T) for i in range(leak_windows)]).astype(np.int64))
+        return _mask_runs(run_cfg, seeds, d2l._train_shards(run_cfg),
+                          d2l._val_fn(run_cfg), leak_X, torch.device('cuda'))
+    result = _show_label(d2l._pretrain_result('pdp-mask-runs', compute,
+                                              config))
+    if isinstance(result, pd.DataFrame):  # the labelled pending result
+        return PackingRuns(result, result, result, d2l._label_of(result))
+    return PackingRuns(result.table, result.losses, result.leak,
+                       result.label)
+
+d2l.DATA_HUB['lm-fwedu-val-domains-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fwedu-val-domains-v1.jsonl.gz',
+    '180e3865876bb019eea808b4222a090bedda9aaa')
+d2l.DATA_HUB['lm-r2t1-log-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-log-v1.jsonl.gz',
+    'cb398bde00c2415fd1e82a69501cce64e57341e9')
+d2l.DATA_HUB['lm-r2t1-s127-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s127-v1.safetensors',
+    '45d9c3c86ee988d2279bfab40a0412fd050561cf')
+d2l.DATA_HUB['lm-r2t1-s254-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s254-v1.safetensors',
+    'ab02e70bbbc42ee92832ec812194bbf9e2412cbc')
+d2l.DATA_HUB['lm-r2t1-s509-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s509-v1.safetensors',
+    'faa881f42c6066194bbc2f76e24b928cb71bdf55')
+d2l.DATA_HUB['lm-r2t1-s763-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s763-v1.safetensors',
+    '1eeb53e34acbaa8242896f70b16967d2e1c29aec')
+d2l.DATA_HUB['lm-r2t1-s1017-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1017-v1.safetensors',
+    '0edbc49afe5387eb08a4f04cc39720d69c6d4455')
+d2l.DATA_HUB['lm-r2t1-s1144-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1144-v1.safetensors',
+    '69db306e06d1abf391be788ad5d64d46c77e5169')
+d2l.DATA_HUB['lm-r2t1-s1221-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1221-v1.safetensors',
+    '47b2715c2c4af418e4f449beffb504faaf4118e7')
+d2l.DATA_HUB['lm-r2t1-s1297-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1297-v1.safetensors',
+    'c2446e3d272e84204c053b417acc02d21eee4ad7')
+d2l.DATA_HUB['lm-r2t1-s1373-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1373-v1.safetensors',
+    '91593410d65e6edb0a1b8681a2a20344e7be04c3')
+d2l.DATA_HUB['lm-r2t1-s1450-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1450-v1.safetensors',
+    '3216071fcd7a5eb6f0afd7da3fd6c19545b1bcff')
+d2l.DATA_HUB['lm-r2t1-s1526-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1526-v1.safetensors',
+    'ab1404181189d79fc45fd581a2e9f32fe0f64bfc')
+d2l.DATA_HUB['lm-r2t1-s1297-state-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-s1297-state-v1.pt',
+    '9e635a58da51f219333f35c2a1417a06124488ba')
+d2l.DATA_HUB['lm-r2t1-evals-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-evals-v1.json.gz',
+    '72c3ecec0b84a0a9bd899e6dd8ba1128ce559e42')
+d2l.DATA_HUB['lm-r2-spike-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-spike-v1.json.gz',
+    'b5616a662d8eeb4a04c41cc3e3637f4d80563aa3')
+d2l.DATA_HUB['lm-r2-inst-t1-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-inst-t1-v1.json.gz',
+    '7095f284a524f7a21512483cfe5ecc7093762638')
+
 d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')
-d2l.PRETRAIN_ARTIFACTS['reference-evals'] = ('lm-r2-evals-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['reference-evals'] = (
+    'lm-r2-evals-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['t1-evals'] = ('lm-r2t1-evals-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['ladder-logs'] = ('lm-ladder-logs-v1', 'jsonl')
-d2l.PRETRAIN_ARTIFACTS['ladder-evals'] = ('lm-ladder-evals-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['ladder-evals'] = (
+    'lm-ladder-evals-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['t1-runs'] = ('lm-r2t1-log-v1', 'jsonl')
-d2l.PRETRAIN_ARTIFACTS['instability-t1'] = ('lm-r2-inst-t1-v1', 'parquet')
-d2l.PRETRAIN_ARTIFACTS['instability-t2'] = ('lm-r2-inst-t2-v1', 'parquet')
-d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['instability-t1'] = (
+    'lm-r2-inst-t1-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['instability-t2'] = (
+    'lm-r2-inst-t2-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['throughput-probe'] = ('lm-r2-probe-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['val-domains'] = ('lm-fwedu-val-domains-v1', 'jsonl')
 
@@ -23598,28 +24420,63 @@ d2l.PRETRAIN_JOBS['reference-run'] = ('launch_pretrain', lambda: dict(
 d2l.PRETRAIN_JOBS['ladder'] = ('launch_pretrain', lambda: dict(
     cfgs=[d2l.r2_config(p) for p in ('ladder-25m', 'ladder-54m',
                                      'ladder-88m')], n_gpus=4))
+d2l.PRETRAIN_JOBS['reference-evals'] = ('reference_evals', lambda: dict(
+    steps=d2l.REFERENCE_STEPS,
+    tasks=('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande')))
+d2l.PRETRAIN_JOBS['t1-evals'] = ('reference_evals', lambda: dict(
+    steps=d2l.T1_STEPS,
+    tasks=('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande'),
+    preset='t1'))
+d2l.PRETRAIN_JOBS['ladder-evals'] = ('ladder_evals', lambda: dict(
+    ladder=d2l._job_log('ladder'), log=d2l._job_log('reference-run'),
+    tasks=('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande')))
+d2l.PRETRAIN_JOBS['inst-t2'] = ('instability_arms', lambda: dict(
+    cfg=d2l.r2_config('r2'), lrs=(6e-3,), variants=('none', 'qk_clip'),
+    steps=500, tau=d2l.tau_rule(d2l._job_log('reference-run'), 300, 500)))
+d2l.PRETRAIN_JOBS['inst-t1-none'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['inst-t1-qkclip'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['inst-t1-qknorm'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['inst-t1-softcap'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['spike-replay'] = ('spike_replay', lambda: dict(
+    cfg=d2l.r2_config('t1', clip=None), bad_step=300, kind='random',
+    replays=(('from 250, same batches', 250, (), None),
+             ('from 250, skip 300', 250, (300,), None),
+             ('from 50, same batches', 50, (), None),
+             ('clip 1.0', 0, (), 1.0))))
+
+REFERENCE_STEPS = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700,
+                   6000)
+
+T1_STEPS = (127, 254, 509, 763, 1017, 1144, 1221, 1297, 1373, 1450,
+            1526)  # the same fractions of the t1 run's 1,526 steps
 
 def _preset_saves(preset):
     """What a preset's run saves: bf16 checkpoints, pinned full states
     (branch points and the end of the stable phase), rolling states, and
-    the branches (from_step, decay_steps) that finish 10N and 5N budgets.
+    the branches (from_step, decay_steps) that finish 10N and 5N budgets;
+    for r2 also its logit-statistics interval (10 steps, so that the
+    change points of 'Who Moves First' resolve to 10 steps).
 
     Defined in :numref:`sec_lm_reference_model`"""
-    r2_ckpts = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700,
-                6000)
     ladder = {'ladder-25m': ((816, 144), (408, 72)),
               'ladder-54m': ((1760, 310), (880, 155)),
               'ladder-88m': ((2857, 504), (1428, 252))}
     _, steps, _, decay, _, _ = d2l.R2_SCHEDULES[preset]
     if preset == 'r2':
-        return dict(ckpt_steps=r2_ckpts, state_steps=(1275, 2550, 5100),
-                    state_every=500, branches=((2550, 450), (1275, 225)))
+        return dict(ckpt_steps=REFERENCE_STEPS, state_steps=(1275, 2550,
+                                                             5100),
+                    state_every=500, branches=((2550, 450), (1275, 225)),
+                    stats_every=10)
     if preset in ladder:
         b = ladder[preset]
         return dict(ckpt_steps=(steps,), state_steps=tuple(sorted(
             f for f, _ in b)), state_every=500, branches=b)
-    if preset == 't1':
-        return dict(ckpt_steps=(steps,), state_steps=(steps - decay,))
+    if preset == 't1':  # checkpoints for the stand-in while r2 is pending
+        return dict(ckpt_steps=T1_STEPS, state_steps=(steps - decay,))
     return dict(ckpt_steps=(steps,), state_every=500 if steps > 1500 else 0)
 
 def _arch_fields(arch):
@@ -23632,9 +24489,10 @@ def _arch_fields(arch):
     if get('num_hidden_layers') is not None:
         L, d, H = (get('num_hidden_layers'), get('hidden_size'),
                    get('num_attention_heads'))
+        tied = get('tie_word_embeddings')  # absent: Transformers' default
         return (L, d, H, get('num_key_value_heads') or H,
                 get('head_dim') or d // H, get('intermediate_size'),
-                get('vocab_size'), bool(get('tie_word_embeddings')))
+                get('vocab_size'), True if tied is None else bool(tied))
     return (arch.L, arch.d, arch.H, arch.H_kv, arch.d_h, arch.f, arch.vocab,
             arch.tie)
 
@@ -23704,6 +24562,8 @@ class _PretrainRun:
         self.accum = cfg.accum(self.world)
         self.step_tokens = cfg.global_batch * cfg.arch.T
         self.peak = _peak_flops(self.device)
+        self.gpu = (torch.cuda.get_device_name(self.device) if cuda
+                    else 'cpu')
         self.out, self.rows, self.halt = cfg.out_dir, [], False
         self.grad_hist = collections.deque(maxlen=100)
         self._mem_states, self._expect = {}, None
@@ -23711,7 +24571,6 @@ class _PretrainRun:
         path = self._resume_path(resume)
         if path is not None:
             self.start = self._load_state(path)
-            self._expect = self.start + 1
         self.log_path = self._log_file(cfg.preset)
         if self.log_path and self.rank == 0:
             d2l._truncate_log(self.log_path, self.start)
@@ -23720,6 +24579,7 @@ class _PretrainRun:
     def segments(self):
         cfg = self.cfg
         if self.start < cfg.steps:
+            self._expect = self.start + 1  # checked by the segment's 1st row
             yield _Segment(cfg.preset, self.start, cfg.steps, cfg.decay)
         for frm, dec in cfg.branches:
             name = f'b{frm + dec}'
@@ -23729,6 +24589,7 @@ class _PretrainRun:
             self.log_path = self._log_file(name)
             if self.log_path and self.rank == 0:
                 d2l._truncate_log(self.log_path, frm)
+            self._expect = frm + 1
             yield _Segment(name, frm, frm + dec, dec)
 
     def batch(self, step):
@@ -23765,7 +24626,9 @@ class _PretrainRun:
         row['mfu'] = (d2l.mfu(row['tok_s'], cfg.arch, self.peak, self.world)
                       if self.peak else float('nan'))
         row['run'], row['seed'] = seg.name, cfg.seed
-        if self._expect is not None:  # the scheduler did not restart at 0
+        row['world'], row['gpu'], row['job_start'] = (self.world, self.gpu,
+                                                      self.start)
+        if self._expect is not None:  # the segment starts where it should
             assert done == self._expect, (done, self._expect)
             self._expect = None
         hist = sorted(self.grad_hist)
@@ -23783,6 +24646,7 @@ class _PretrainRun:
             row['val_loss'] = self.val_fn(self.raw)
         self.stream.step = done
         self._save(seg, done, last or not math.isfinite(row['loss']))
+        row['time'] = time.time()  # wall clock after the step's I/O
         if self.rank == 0:
             self.rows.append(dict(row))
             if self.log_path:
@@ -23990,9 +24854,11 @@ def _update_rms(model, before, optimizer):
     return {f'rms_{k}': v for k, v in zip(med, torch.stack(
         list(med.values())).tolist())}
 
-def _val_fn(cfg, batch_size=None):
+def _val_fn(cfg, batch_size=None, inference=True):
     """Validation loss on the first cfg.val_tokens tokens of the validation
-    shard, as windows of arch.T tokens with the training targets.
+    shard, as windows of arch.T tokens with the training targets; under
+    torch.no_grad instead of inference mode when not inference (for layers
+    that refuse inference tensors).
 
     Defined in :numref:`sec_lm_reference_model`"""
     with d2l._quiet():
@@ -24005,7 +24871,8 @@ def _val_fn(cfg, batch_size=None):
     def val(model):
         dev = next(model.parameters()).device
         total, count = 0.0, 0
-        with torch.inference_mode(), torch.autocast(
+        grad_off = torch.inference_mode() if inference else torch.no_grad()
+        with grad_off, torch.autocast(
                 dev.type, torch.bfloat16, enabled=cfg.dtype == 'bf16'):
             for i in range(0, n, bs):
                 W = torch.from_numpy(windows[i:i + bs]).long().to(dev)
@@ -24082,10 +24949,11 @@ def launch_pretrain(cfgs, n_gpus=4):
     sizes) as one DataFrame with columns run and seed: the committed result
     of this call's configuration, or, under D2L_RERUN, its runs launched
     with torchrun on n_gpus GPUs (tools/lm_pretrain.py, one job folder per
-    run, resumable).
+    run, resumable). While the reference run is pending its log is the t1
+    run's seed 0; a pending result prints its label.
 
     Defined in :numref:`sec_lm_reference_model`"""
-    cfgs = [cfgs] if isinstance(cfgs, d2l.PretrainConfig) else list(cfgs)
+    cfgs = [cfgs] if dataclasses.is_dataclass(cfgs) else list(cfgs)
     presets = tuple(sorted({c.preset for c in cfgs}))
     if presets not in _RUN_NAMES:
         raise ValueError(f'no committed run for presets {presets}')
@@ -24093,20 +24961,29 @@ def launch_pretrain(cfgs, n_gpus=4):
     config = dict(n_gpus=n_gpus, runs=[_cfg_json(c) for c in cfgs])
     log = d2l._pretrain_result(
         name, lambda: _launch_jobs(cfgs, n_gpus), config,
-        fallback=None if name == 't1-runs' else 't1-runs')
+        fallback='t1-runs' if name == 'reference-run' else None)
     if log.attrs.get('label', '').startswith('T2 run pending'):
         label = log.attrs['label']
         log = log[log['seed'] == 0].reset_index(drop=True)
         log.attrs['label'] = label
-    return log
+    return d2l._show_label(log)
+
+def reference_run_log():
+    """The reference run's log: launch_pretrain(r2_config('r2'),
+    n_gpus=4).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return launch_pretrain(d2l.r2_config('r2'), n_gpus=4)
 
 def _job_root():
     return os.path.abspath(os.path.join('..', 'data', 'lm', 'rerun', 'ch21'))
 
-def _launch_jobs(cfgs, n_gpus, max_restarts=3):
+def _launch_jobs(cfgs, n_gpus, max_restarts=3, jobs=None, extra=None):
     """Run every config's job that is not done (D2L_PRETRAIN_ONLY limits
-    this process to one preset or job); the merged logs once all are done,
-    else None.
+    this process to one preset or job); the merged logs (a column job names
+    each run's folder) once all are done, else None. jobs: folder names
+    (default <preset>-s<seed>); extra: more lm_pretrain.py arguments per
+    config.
 
     Defined in :numref:`sec_lm_reference_model`"""
     import subprocess
@@ -24116,8 +24993,10 @@ def _launch_jobs(cfgs, n_gpus, max_restarts=3):
     for cfg in cfgs:  # extract the manifests before any rank starts
         _train_shards(cfg)
     logs, world = [], max(1, min(n_gpus, torch.cuda.device_count()))
-    for cfg in cfgs:
-        job = os.path.join(_job_root(), f'{cfg.preset}-s{cfg.seed}')
+    jobs = jobs or [f'{c.preset}-s{c.seed}' for c in cfgs]
+    extra = extra or [[] for _ in cfgs]
+    for cfg, name, args in zip(cfgs, jobs, extra):
+        job = os.path.join(_job_root(), name)
         done, bad = os.path.join(job, 'DONE'), os.path.join(job, 'NONFINITE')
         if not os.path.exists(done) and (not only or only in (
                 cfg.preset, os.path.basename(job))):
@@ -24128,7 +25007,8 @@ def _launch_jobs(cfgs, n_gpus, max_restarts=3):
             cmd = [sys.executable, '-m', 'torch.distributed.run',
                    '--standalone', f'--nproc-per-node={world}',
                    os.path.join(repo, 'tools', 'lm_pretrain.py'), '--config',
-                   os.path.join(job, 'config.json'), '--resume', 'auto']
+                   os.path.join(job, 'config.json'), '--resume', 'auto',
+                   *map(str, args)]
             for attempt in range(max_restarts + 1):
                 with open(os.path.join(job, 'train.log'), 'a') as out:
                     rc = subprocess.call(cmd, cwd=repo, stdout=out,
@@ -24141,7 +25021,7 @@ def _launch_jobs(cfgs, n_gpus, max_restarts=3):
                 raise RuntimeError(f'{job}: failed {max_restarts + 1} times '
                                    f'(exit {rc}); see train.log')
         if os.path.exists(done):
-            logs.append(_read_job_logs(job))
+            logs.append(_read_job_logs(job).assign(job=name))
     if len(logs) < len(cfgs):
         return None
     df = pd.concat(logs, ignore_index=True)
@@ -24251,9 +25131,6 @@ def _probe_io(cfg, tmp, device):
     return dict(preset=cfg.preset, io=True, val_s=t_val, val_loss=val_loss,
                 ckpt_bf16_s=t_bf16, state_s=t_state)
 
-REFERENCE_STEPS = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700,
-                   6000)
-
 def _reference_key(preset, step):
     if preset == 'r2':
         step = 6000 if step is None else step
@@ -24261,32 +25138,76 @@ def _reference_key(preset, step):
             raise ValueError(f'step is one of {REFERENCE_STEPS}')
         return f'lm-r2-s{step}-v1'
     if preset == 't1':
-        if step not in (None, 1526):
-            raise ValueError('the t1 checkpoint is step 1526')
-        return 'lm-r2t1-s1526-v1'
+        step = 1526 if step is None else step
+        if step not in T1_STEPS:
+            raise ValueError(f'step is one of {T1_STEPS}')
+        return f'lm-r2t1-s{step}-v1'
     if preset in ('r2-16k-pi', 'r2-16k-yarn'):
         return f'lm-{preset}-v1'
     raise ValueError(f'unknown preset {preset!r}')
 
+def _job_checkpoint(preset, step):
+    """The bf16 checkpoint a campaign job folder holds for a committed
+    key, read only by the checkpoint evaluations that follow the run before
+    its upload (E1: reference-evals, t1-evals); None otherwise.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    folders = {'r2': ('r2-s0', 6000), 't1': ('t1-s0', 1526)}
+    evals = {'r2': 'reference-evals', 't1': 't1-evals'}
+    if preset not in folders or not d2l._regenerates(evals[preset]):
+        return None
+    job, last = folders[preset]
+    return os.path.join(_job_root(), job, 'ckpt',
+                        f's{last if step is None else step}.safetensors')
+
 def load_reference_model(step=None, dtype=torch.bfloat16, device='cpu',
                          preset='r2'):
     """A committed checkpoint of the reference run (preset 'r2', steps
-    REFERENCE_STEPS, default 6000), of the t1 run ('t1'), or of a 16K arm
-    ('r2-16k-pi', 'r2-16k-yarn'), as a PackedGPT in eval mode. Its
-    tokenizer is d2l.r2_tokenizer().
+    REFERENCE_STEPS, default 6000), of the t1 run ('t1', steps T1_STEPS,
+    default 1526), or of a 16K arm ('r2-16k-pi', 'r2-16k-yarn'), as a
+    PackedGPT in eval mode. Its tokenizer is d2l.r2_tokenizer().
 
     Defined in :numref:`sec_lm_reference_model`"""
     key = _reference_key(preset, step)
     local = os.path.join(d2l._rerun_dir(), d2l._next_key(key)
                          + '.safetensors')
+    job = _job_checkpoint(preset, step)
     if d2l._regenerating() and os.path.exists(local):
         path = local
+    elif job and os.path.exists(job):
+        path = job  # the evaluations right after the run (E1)
     elif key in d2l.DATA_HUB:
         with d2l._quiet():
             path = d2l.download_keyed(key)
     else:
         raise KeyError('reference checkpoints not committed yet')
     return _load_bf16(path, dtype, device)
+
+def _reference_pending():
+    """Whether the reference run's results are pending: a regeneration
+    run, or the campaign declared pending.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return bool(d2l._regenerating()) or (
+        'reference-run' in d2l.PRETRAIN_PENDING)
+
+T1_STAND_IN = ('T2 run pending; T1 checkpoints at the same fractions of '
+               'training')
+
+def load_reference_models(steps, dtype=torch.bfloat16, device='cpu'):
+    """{step: model} of the reference run's checkpoints at steps (of
+    REFERENCE_STEPS), each as load_reference_model gives it; while the run
+    is pending, the t1 run's checkpoints at the same fractions of training
+    (T1_STEPS), under a printed label.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if _reference_key('r2', steps[0]) in d2l.DATA_HUB or not (
+            _reference_pending()):
+        return {s: load_reference_model(s, dtype, device) for s in steps}
+    print(f'[{T1_STAND_IN}]')
+    t1 = dict(zip(REFERENCE_STEPS, T1_STEPS))
+    return {s: load_reference_model(t1[s], dtype, device, preset='t1')
+            for s in steps}
 
 def packed_to_hf(model):
     """A Transformers LlamaForCausalLM with the weights of a PackedGPT
@@ -24335,19 +25256,2631 @@ def packed_to_hf(model):
         raise ValueError(f'packed_to_hf: {missing} {unexpected}')
     return hf.to(next(model.parameters()).dtype).eval()
 
+_VAL_COUNTS = {}  # (T, tokens): (scored targets, the UTF-8 bytes they spell)
+
+def val_loss(model, cfg, tokens=None):
+    """Validation loss (nats per scored target) of model on the first tokens
+    (default cfg.val_tokens) of the validation shard, in windows of
+    cfg.arch.T tokens with the training targets; on the GPU if there is one
+    (the model moves there).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    dev = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    c = dataclasses.replace(cfg, val_tokens=tokens or cfg.val_tokens)
+    return _val_fn(c)(model.to(dev))
+
+def val_bpb(loss, cfg, tokens=None):
+    """Bits per UTF-8 byte of a val_loss(model, cfg, tokens) value (or an
+    array of them): loss x scored targets / (ln 2 x their bytes).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    T, n = cfg.arch.T, tokens or cfg.val_tokens
+    if (T, n) not in _VAL_COUNTS:
+        with d2l._quiet():
+            shards = d2l.fwedu_shards('val')
+            lengths = d2l.token_byte_lengths(d2l.r2_tokenizer())
+        W = np.stack([shards.read(i * T, T + 1) for i in range(n // T)])
+        scored = W[:, :-1] != shards.eos_id
+        _VAL_COUNTS[(T, n)] = (int(scored.sum()), int(lengths[
+            W[:, 1:][scored].astype(np.int64)].sum()))
+    count, n_bytes = _VAL_COUNTS[(T, n)]
+    return loss * count / (math.log(2) * n_bytes)
+
+def _job_log(name):
+    """The log or result a later job of the campaign reads: the committed
+    result of regeneration name if registered, else the file its
+    regeneration wrote (before the upload).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    artifact = d2l._RERUN_ARTIFACT[name]
+    key, kind = d2l.PRETRAIN_ARTIFACTS[artifact]
+    if key in d2l.DATA_HUB:
+        return d2l.load_artifact(artifact)
+    path = os.path.join(d2l._rerun_dir(), key + d2l._ARTIFACT_EXT[kind])
+    if not os.path.exists(path):
+        raise FileNotFoundError(f'{name} has not run yet (no {path})')
+    return d2l._read_result(path, kind)
+
+def _as_tuple(cls, result, tables, defaults=None):
+    """A computed, stored or pending result as the namedtuple cls; a pending
+    result (an empty table) gives empty tables (with the columns tables
+    names, a dict, so that the page's code runs on them) and the defaults
+    (else None) for the other fields.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    label = d2l._label_of(result)
+    if isinstance(result, pd.DataFrame):
+        result = None
+    fields = {f: getattr(result, f, None) for f in cls._fields if f != 'label'}
+    for f, v in (defaults or {}).items():
+        if fields[f] is None:
+            fields[f] = v
+    for f in tables:
+        if fields[f] is None:
+            cols = tables[f] if isinstance(tables, dict) else []
+            fields[f] = pd.DataFrame(columns=cols)
+    return cls(**fields, label=label)
+
+_PANEL_LABELS = {'loss': 'train loss', 'grad_norm': 'grad norm\n(pre-clip)',
+                 'rms': 'update RMS\n(units of lr)',
+                 'max_logit': 'largest\nattn. logit', 'mfu': 'MFU'}
+
+def plot_run_log(log, cols, marks=(), figsize=(6, 7)):
+    """Stacked panels of a run's log against steps (its main run, not the
+    branches): 'loss', 'grad_norm' (log scale), 'rms' (update RMS per module
+    kind), 'max_logit' (largest over layers), 'mfu', or any column; marks
+    are steps drawn as dashed lines (phase boundaries).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    main = log[log['run'] == log['run'].iloc[0]]
+    d2l.use_svg_display()
+    fig, axes = d2l.plt.subplots(len(cols), 1, sharex=True, figsize=figsize)
+    for ax, col in zip(np.atleast_1d(axes), cols):
+        if col == 'rms':
+            kinds = sorted(c for c in main if c.startswith('rms_'))
+            sub = main.dropna(subset=kinds, how='all')
+            for k in kinds:
+                ax.plot(sub['step'], sub[k], lw=0.8, label=k[4:])
+            ax.legend(ncol=5, fontsize=6, loc='upper right')
+        else:
+            y = (main.filter(like='max_logit_').max(axis=1)
+                 if col == 'max_logit' else main[col])
+            ok = y.notna()
+            ax.plot(main['step'][ok], y[ok], lw=0.6)
+        if col == 'grad_norm':
+            ax.set_yscale('log')
+            d2l.set_log_ticks(ax.yaxis)
+        for m in marks:
+            ax.axvline(m, ls='--', color='black', lw=0.8)
+        ax.set_ylabel(_PANEL_LABELS.get(col, col), fontsize=8)
+    np.atleast_1d(axes)[-1].set_xlabel('step')
+    if d2l._label_of(log):  # a stand-in says so
+        fig.suptitle(f'[{d2l._label_of(log)}]', fontsize=8)
+    fig.align_ylabels()
+
+def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
+    """Stacked panels of per-step traces against step, one line per group
+    of the columns by (named by their values): cols as in plot_run_log
+    ('loss', 'grad_norm', 'max_logit') or any column; logy: the columns on
+    a log scale; steps: the (first, last) step shown.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    d2l.use_svg_display()
+    fig, axes = d2l.plt.subplots(len(cols), 1, sharex=True, figsize=figsize,
+                                 squeeze=False)
+    axes = axes[:, 0]
+    for key, g in traces.groupby(list(np.atleast_1d(by)), sort=False):
+        if steps is not None:
+            g = g[g['step'].between(*steps)]
+        name = ' '.join(f'{k:g}' if isinstance(k, float) else str(k)
+                        for k in np.atleast_1d(key))
+        for ax, col in zip(axes, cols):
+            ok = g[col].notna()
+            ax.plot(g['step'][ok], g[col][ok], lw=0.8, label=name)
+    for ax, col in zip(axes, cols):
+        ax.set_ylabel(_PANEL_LABELS.get(col, col), fontsize=8)
+        if col in logy:
+            ax.set_yscale('log')
+            d2l.set_log_ticks(ax.yaxis)
+    if len(traces):
+        axes[0].legend(fontsize=7)
+    axes[-1].set_xlabel('step')
+    fig.align_ylabels()
+
+def plot_ladder_runs(*logs, figsize=(5, 3)):
+    """Validation loss against tokens of every job in the logs (column
+    job): the main run as a line, the ends of its branches as dots in the
+    same colour.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    d2l.use_svg_display()
+    d2l.set_figsize(figsize)
+    ax = d2l.plt.gca()
+    jobs = [g for log in logs if 'job' in log for _, g in log.groupby('job')]
+    for i, g in enumerate(jobs):
+        first = g['run'].iloc[0]  # the main run's rows come first
+        main = g[g['run'] == first].dropna(subset=['val_loss'])
+        ends = g[g['run'] != first].groupby('run').last()
+        ax.plot(main['tokens'], main['val_loss'], color=f'C{i}',
+                label=g['job'].iloc[0].rsplit('-s', 1)[0])
+        ax.plot(ends['tokens'], ends['val_loss'], 'o', color=f'C{i}')
+    ax.set_xscale('log')
+    d2l.set_log_ticks(ax.xaxis)
+    ax.set_xlabel('tokens')
+    ax.set_ylabel('validation loss')
+    if jobs:
+        ax.legend(fontsize=7)
+
+GradientEvent = collections.namedtuple('GradientEvent', [
+    'step', 'hour', 'ratio', 'mild', 'source', 'at', 'max_logit', 'layer',
+    'dloss', 'nonfinite', 'label'])
+
+def gradient_event(log, mild=3, delta=0.3, window=100, after=200):
+    """The largest gradient event of a run's log: the step whose pre-clip
+    norm is largest against the median of the window steps before it, its
+    hour into the run and that ratio. Read there (source: the run), or, if
+    the ratio is below mild, at the pre-registered fallback (source: the
+    unclipped arm of instability_arms at ten times the peak rate, at its
+    first step more than delta above the baseline's loss): the largest
+    attention logit and its layer at the nearest probe, and the loss change
+    over the next `after` steps against the `after` before it (nonfinite:
+    the first non-finite step, if any).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    run = log[log['run'] == log['run'].iloc[0]].set_index('step')
+    g = run['grad_norm']
+    ratio = g / g.rolling(window).median().shift()
+    step = int(ratio.idxmax())
+    head = dict(step=step, hour=(run['time'].loc[step] - run['time'].iloc[0])
+                / 3600, ratio=float(ratio[step]),
+                mild=bool(ratio[step] < mild), label=d2l._label_of(log))
+    if not head['mild']:
+        return GradientEvent(**head, source=f'{log["run"].iloc[0]} run',
+                             at=step, **_read_event(run, step, after))
+    import contextlib
+    import io
+    with contextlib.redirect_stdout(io.StringIO()):  # its label, once
+        arms = d2l.instability_arms(  # the page's ten-x call
+            d2l.r2_config('r2'), lrs=(6e-3,), variants=('none', 'qk_clip'),
+            steps=500, tau=d2l.tau_rule(log, 300, 500))
+    if arms.label and arms.label != head['label']:
+        print(f'[{arms.label}]')
+    t = arms.traces.set_index('step')
+    arm = t[t['variant'] == 'none']
+    if arm.empty:
+        return GradientEvent(**head, source='unclipped arm (pending)',
+                             at=None, max_logit=math.nan, layer=None,
+                             dloss=math.nan, nonfinite=None)
+    gap = arm['loss'] - t.loc[t['variant'] == 'baseline', 'loss']
+    over = gap.index[~(gap <= delta)]  # non-finite, or above the margin
+    at = int(over[0] if len(over) else gap.idxmax())
+    source = f'unclipped arm at lr {arm["lr"].iloc[0]:g}'
+    return GradientEvent(**head, source=source, at=at,
+                         **_read_event(arm, at, after))
+
+def _read_event(run, at, after):
+    """max_logit, layer, dloss and nonfinite of gradient_event at step at
+    of run (indexed by step).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    logits = run.filter(like='max_logit_').dropna(how='all')
+    out = dict(max_logit=math.nan, layer=None, nonfinite=None)
+    if len(logits):
+        top = logits.loc[logits.index[np.abs(logits.index - at).argmin()]]
+        top = top.astype(float)
+        out.update(max_logit=float(top.max()),
+                   layer=int(top.idxmax().rsplit('_', 1)[1]) + 1)
+    loss = run['loss'].astype(float)
+    bad = loss.index[(loss.index >= at) & ~np.isfinite(loss.to_numpy())]
+    if len(bad):
+        out['nonfinite'] = int(bad[0])
+    out['dloss'] = float(loss.loc[at + 1:at + after].mean()
+                         - loss.loc[at - after + 1:at].mean())
+    return out
+
+CheckpointEvals = collections.namedtuple(
+    'CheckpointEvals', ['table', 'items', 'domains', 'chance', 'label'])
+
+LadderEvals = collections.namedtuple('LadderEvals',
+                                     ['points', 'items', 'label'])
+
+FULL_VAL_TOKENS = 2 ** 23  # the whole validation shard, in 4,096-token windows
+
+def domain_texts():
+    """The per-domain validation texts (FineWeb-Edu file 012 by URL-host
+    class, and the held-out book sections): doc_id, domain, text.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return d2l.load_artifact('val-domains')
+
+def _suite_chance(suite):
+    """Accuracy of guessing uniformly, per task: the mean of 1 / choices.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    out = {}
+    for t in suite.tasks:
+        k = [len(it.get('choices') or it.get('prompts') or ())
+             for it in suite.items(t.id)]
+        out[t.id] = float(np.mean([1 / n for n in k if n]))
+    return out
+
+def _score_point(model, suite, tokenizer, cfg, tokens, texts=None):
+    """Validation loss and BPB, per-item suite scores and per-domain BPB of
+    one model: (row, items, domain rows).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    loss = val_loss(model, cfg, tokens)
+    with d2l._quiet():
+        res = suite.run(model, tokenizer)
+    items = res.per_item[['task', 'item_id', 'score']]
+    row = dict(val_loss=loss, bpb=val_bpb(loss, cfg, tokens),
+               **items.groupby('task')['score'].mean())
+    doms = []
+    for dom, g in ([] if texts is None else texts.groupby('domain')):
+        with d2l._quiet():
+            doms.append(dict(domain=dom, bpb=d2l.bits_per_byte(
+                model, tokenizer, list(g['text']), ctx_len=cfg.arch.T)))
+    return row, items, doms
+
+def _eval_setup(tasks):
+    if not torch.cuda.is_available():
+        raise RuntimeError('the checkpoint evaluations run on a GPU')
+    with d2l._quiet():
+        return d2l.r2_tokenizer(), d2l.EvalSuite(list(tasks), name='r2',
+                                                 batch_size=32)
+
+def _reference_evals(steps, tasks, preset='r2'):
+    tok, suite = _eval_setup(tasks)
+    cfg, texts = d2l.r2_config(preset), domain_texts()
+    rows, items, doms = [], [], []
+    for s in steps:
+        model = load_reference_model(step=s, device='cuda', preset=preset)
+        row, it, dm = _score_point(model, suite, tok, cfg, cfg.val_tokens,
+                                   texts)
+        rows.append(dict(step=s, **row))
+        items.append(it.assign(step=s))
+        doms += [dict(step=s, **d) for d in dm]
+        del model
+        d2l.lm_free()
+    return CheckpointEvals(pd.DataFrame(rows), pd.concat(items, ignore_index=
+                           True), pd.DataFrame(doms), _suite_chance(suite), '')
+
+def reference_evals(steps, tasks, preset='r2'):
+    """The reference run's checkpoints at steps (or the t1 run's, preset
+    't1'), scored on validation loss and bits per byte (2^21 tokens), on the
+    suite tasks (full item sets, per-item scores kept) and per domain:
+    CheckpointEvals(table, items, domains, chance, label); table has one
+    row per step. While the reference run is pending: the t1 run's
+    checkpoints at the same fractions of training, its steps written as the
+    reference run's, under a printed label.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    config = dict(steps=list(steps), tasks=list(tasks))
+    name = 'reference-evals' if preset == 'r2' else f'{preset}-evals'
+    res = d2l._pretrain_result(name, lambda: _reference_evals(
+        steps, tasks, preset), config,
+        fallback='t1-evals' if preset == 'r2' else None)
+    tables = dict(table=['step', 'val_loss', 'bpb', *tasks],
+                  items=['task', 'item_id', 'score', 'step'],
+                  domains=['step', 'domain', 'bpb'])
+    res = _as_tuple(CheckpointEvals, res, tables, dict(
+        chance=dict.fromkeys(tasks, math.nan)))
+    if res.label.startswith('T2 run pending'):  # t1 steps -> r2 steps
+        r2_step = dict(zip(T1_STEPS, REFERENCE_STEPS))
+        renamed = {f: getattr(res, f) for f in tables}
+        for f, df in renamed.items():
+            if 'step' in df:
+                renamed[f] = df.assign(step=df['step'].map(r2_step))
+        res = res._replace(label=T1_STAND_IN, **renamed)
+    return d2l._show_label(res)
+
+def _ladder_points(logs):
+    """(job, run, step, finished, source) of every point ladder_evals
+    scores: per job, the finished main run and branches (bf16 checkpoints)
+    and the plateau states its branches start from.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    pts = []
+    for job in sorted(set(logs['job'])):
+        cfg = d2l.r2_config(job.rsplit('-s', 1)[0])
+        folder = os.path.join(_job_root(), job)
+        pts.append((job, cfg.preset, cfg.steps, True, os.path.join(
+            folder, 'ckpt', f's{cfg.steps}.safetensors')))
+        for frm, dec in cfg.branches:
+            end = frm + dec
+            pts.append((job, f'b{end}', end, True, os.path.join(
+                folder, 'ckpt', f'b{end}-s{end}.safetensors')))
+            pts.append((job, cfg.preset, frm, False, _state_path(folder,
+                                                                 frm)))
+    return pts
+
+def _ladder_evals(logs, tasks):
+    tok, suite = _eval_setup(tasks)
+    rows, items = [], []
+    for job, run, step, finished, src in _ladder_points(logs):
+        cfg = d2l.r2_config(job.rsplit('-s', 1)[0])
+        if finished:
+            model = _load_bf16(src, device='cuda')
+        else:
+            model = d2l.PackedGPT.from_arch(cfg.arch)
+            model.load_state_dict(torch.load(src, map_location='cpu',
+                                             weights_only=False)['model'])
+            model = model.to('cuda', torch.bfloat16).eval()
+        P = sum(p.numel() for p in model.parameters())
+        tokens = step * cfg.global_batch * cfg.arch.T
+        row, it, _ = _score_point(model, suite, tok, cfg, FULL_VAL_TOKENS)
+        rows.append(dict(size=cfg.preset, P=P, run=run, step=step,
+                         tokens=tokens, tokens_per_param=tokens / P,
+                         finished=finished, **row))
+        items.append(it.assign(size=cfg.preset, run=run, step=step))
+        del model
+        d2l.lm_free()
+    return LadderEvals(pd.DataFrame(rows), pd.concat(items, ignore_index=
+                       True), '')
+
+def ladder_evals(ladder, log, tasks):
+    """Full-validation loss (2^23 tokens) and per-item suite scores at the
+    finished points (main run and its two branches) and the plateau points
+    (the branches' starting states) of every ladder size and of the
+    reference run (log): LadderEvals(points, items, label).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    logs = pd.concat([ladder, log], ignore_index=True)
+    config = dict(jobs=sorted(set(logs['job'])) if 'job' in logs else [],
+                  tasks=list(tasks))
+    res = d2l._pretrain_result('ladder-evals', lambda: _ladder_evals(
+        logs, tasks), config)
+    return d2l._show_label(_as_tuple(LadderEvals, res, dict(
+        points=['size', 'P', 'run', 'step', 'tokens', 'tokens_per_param',
+                'finished', 'val_loss', 'bpb', *tasks],
+        items=['task', 'item_id', 'score', 'size', 'run', 'step'])))
+
+InstabilityRuns = collections.namedtuple(
+    'InstabilityRuns', ['table', 'traces', 'tau', 'label'])
+
+_INST_PARTS = {'none': 'inst-t1-none', 'qk_clip': 'inst-t1-qkclip',
+               'qk_norm': 'inst-t1-qknorm', 'softcap': 'inst-t1-softcap'}
+
+INST_SOFTCAP = 50.0  # Gemma 2's attention-logit cap
+
+_INST_TABLES = dict(  # the columns of an InstabilityRuns' tables
+    table=['variant', 'lr', 'seed', 'final_loss', 'max_logit',
+           'first_nonfinite', 'val_loss', 'steps'],
+    traces=['step', 'loss', 'grad_norm', 'max_logit', 'variant', 'lr',
+            'seed'])
+
+def _qk_clip_hook(tau):
+    """A pretrain hook: QK-clip at tau after every optimizer step.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    def hook(step, model, optimizer, batch, row):
+        d2l.qk_clip_(model, d2l.attn_logit_stats(model, batch), tau)
+    return hook
+
+def _inst_config(cfg, lr, seed, steps, **kw):
+    """An arm: cfg's warmup, then a constant learning rate (no decay), logit
+    statistics every 10 steps, validation at the end only, nothing saved.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    args = dict(steps=steps, peak_lr=lr, decay=0, seed=seed, stats_every=10,
+                probe_every=0, val_every=0, ckpt_steps=(), state_steps=(),
+                state_every=0, branches=(), out_dir=None)
+    return dataclasses.replace(cfg, **dict(args, **kw))
+
+def _arm_summary(log, variant, lr, seed, tail=20):
+    """One arm's row: final loss (mean of the last tail steps; inf after a
+    non-finite loss), largest logit, first non-finite step, final
+    validation loss.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    loss = log['loss'].to_numpy(float)
+    bad = np.flatnonzero(~np.isfinite(loss))
+    first = int(log['step'].iloc[bad[0]]) if len(bad) else None
+    logits = log.filter(like='max_logit_').to_numpy(float)
+    val = log['val_loss'].dropna() if 'val_loss' in log else pd.Series([])
+    return dict(variant=variant, lr=lr, seed=seed,
+                final_loss=(math.inf if first is not None
+                            else float(loss[-tail:].mean())),
+                max_logit=float(np.nanmax(logits)) if np.isfinite(
+                    logits).any() else math.nan, first_nonfinite=first,
+                val_loss=float(val.iloc[-1]) if len(val) else math.nan,
+                steps=int(log['step'].max()))
+
+def _arm_trace(log, variant, lr, seed):
+    """Per step: loss, pre-clip norm, the largest logit per layer and over
+    layers (at the statistics steps).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    t = log[['step', 'loss', 'grad_norm']
+            + [c for c in log if c.startswith('max_logit_')]].copy()
+    t['max_logit'] = log.filter(like='max_logit_').max(axis=1)
+    return t.assign(variant=variant, lr=lr, seed=seed)
+
+def _inst_run(cfg, variant, lr, seed, steps, tau, shards, val_fn, device):
+    """One T1 arm in this process.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    arch = cfg.arch._replace(qk_norm=variant == 'qk_norm' or cfg.arch.qk_norm)
+    extra = (dict(softcap=INST_SOFTCAP, backend='math')
+             if variant == 'softcap' else {})
+    c = _inst_config(cfg, lr, seed, steps, arch=arch)
+    torch.manual_seed(seed)
+    model = d2l.PackedGPT.from_arch(arch, **extra).to(device)
+    stream = d2l.PackedStream(shards, arch.T, c.global_batch,
+                              seed=c.data_seed)
+    hooks = [_qk_clip_hook(tau)] if variant == 'qk_clip' else []
+    return d2l.pretrain(model, stream, c, val_fn=val_fn, hooks=hooks)
+
+def _inst_t1(cfg, lrs, variant, seeds, steps, tau, device=None):
+    """The T1 grid of one variant, on one GPU (device: tests only).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if device is None and not torch.cuda.is_available():
+        raise RuntimeError('the instability arms train on a GPU')
+    device, shards = torch.device(device or 'cuda'), _train_shards(cfg)
+    val = _val_fn(dataclasses.replace(cfg, val_tokens=2 ** 20))
+    rows, traces = [], []
+    for lr in lrs:
+        for seed in seeds:
+            log = _inst_run(cfg, variant, lr, seed, steps, tau, shards, val,
+                            device)
+            rows.append(_arm_summary(log, variant, lr, seed))
+            traces.append(_arm_trace(log, variant, lr, seed))
+            torch._dynamo.reset()
+            d2l.lm_free()
+    return InstabilityRuns(pd.DataFrame(rows), pd.concat(
+        traces, ignore_index=True), tau, '')
+
+def _inst_t2(cfg, lrs, variants, steps, tau):
+    """The T2 arms as torchrun jobs on every GPU, and the reference run's
+    first steps as the baseline (same recipe at its own learning rate).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if 'softcap' in variants:
+        raise ValueError('the torchrun job has no softcap variant')
+    base = _job_log('reference-run')
+    base = base[(base['run'] == cfg.preset) & (base['step'] <= steps)]
+    cfgs, jobs, extra, arms = [], [], [], []
+    for lr in lrs:
+        for v in variants:
+            arch = cfg.arch._replace(qk_norm=v == 'qk_norm')
+            cfgs.append(_inst_config(cfg, lr, cfg.seed, steps, arch=arch,
+                                     val_every=steps))
+            jobs.append(f'inst-t2-{v.replace("_", "")}-{lr:g}')
+            extra.append(['--allow-nonfinite'] + (
+                ['--qk-clip', tau] if v == 'qk_clip' else []))
+            arms.append((v, lr))
+    logs = _launch_jobs(cfgs, torch.cuda.device_count(), jobs=jobs,
+                        extra=extra)
+    if logs is None:
+        return None
+    rows = [_arm_summary(base, 'baseline', cfg.peak_lr, cfg.seed)]
+    traces = [_arm_trace(base, 'baseline', cfg.peak_lr, cfg.seed)]
+    for (v, lr), job in zip(arms, jobs):
+        g = logs[logs['job'] == job].reset_index(drop=True)
+        rows.append(_arm_summary(g, v, lr, cfg.seed))
+        traces.append(_arm_trace(g, v, lr, cfg.seed))
+    return InstabilityRuns(pd.DataFrame(rows), pd.concat(
+        traces, ignore_index=True), tau, '')
+
+def _merge_arms(parts):
+    runs = list(parts.values())
+    return InstabilityRuns(
+        pd.concat([r.table for r in runs], ignore_index=True),
+        pd.concat([r.traces for r in runs], ignore_index=True), runs[0].tau,
+        '')
+
+T1_STAND_IN_LR = 1.6e-2  # the T1 grid's rate shown while inst-t2 is pending
+
+def _t1_stand_in(res):
+    """The T1 grid's arms shown in place of a pending inst-t2: the t1 peak
+    rate as the baseline and the none and qk_clip arms at T1_STAND_IN_LR
+    (seed 0), under the pending label.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    t1_lr = d2l.r2_config('t1').peak_lr
+    out = []
+    for df in (res.table, res.traces):
+        df = df[df['seed'] == 0]
+        base = df[(df['variant'] == 'none') & (df['lr'] == t1_lr)]
+        arms = df[df['variant'].isin(['none', 'qk_clip'])
+                  & (df['lr'] == T1_STAND_IN_LR)]
+        out.append(pd.concat([base.assign(variant='baseline'), arms],
+                             ignore_index=True))
+    return InstabilityRuns(*out, res.tau, d2l._label_of(res))
+
+def instability_arms(cfg, lrs, variants, seeds=(0,), steps=400, tau=None):
+    """Short runs of cfg at each learning rate, per variant ('none';
+    'qk_clip', QK-clip at tau after every step; 'qk_norm'; 'softcap',
+    attention logits capped at INST_SOFTCAP) and seed, warmup as cfg and a
+    constant rate after it: InstabilityRuns(table, traces, tau, label), one
+    table row per arm (final loss = mean of the last 20 steps, inf after a
+    non-finite loss), traces per step. The t1 preset trains here on one GPU
+    (a regeneration name per variant); the reference preset launches
+    torchrun jobs (inst-t2) and adds the reference run's first steps as the
+    baseline.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if 'qk_clip' in variants and tau is None:  # tau comes from tau_rule
+        raise ValueError('the qk_clip variant needs tau')
+    config = dict(cfg=_cfg_json(cfg), lrs=list(lrs), variants=list(variants),
+                  seeds=list(seeds), steps=steps, tau=tau)
+    if cfg.preset == 't1':
+        parts = {_INST_PARTS[v]: (lambda v=v: _inst_t1(
+            cfg, lrs, v, seeds, steps, tau), dict(config, variants=[v]))
+            for v in variants}
+        res = d2l._pretrain_merged(None, parts, _merge_arms, config)
+        return d2l._show_label(_as_tuple(InstabilityRuns, res, _INST_TABLES))
+    res = d2l._pretrain_result('inst-t2', lambda: _inst_t2(
+        cfg, lrs, variants, steps, tau), config, fallback='instability-t1')
+    res = _as_tuple(InstabilityRuns, res, _INST_TABLES)
+    if res.label.startswith('T2 run pending') and len(res.table):
+        res = _t1_stand_in(res)
+    return d2l._show_label(res)
+
+SpikeReplay = collections.namedtuple('SpikeReplay',
+                                     ['table', 'traces', 'floor', 'label'])
+
+class _BadBatchStream(d2l.PackedStream):
+    """A PackedStream whose batch of log step bad_step (1-based, as the log
+    counts) is make_bad_batch(kind); skipping that step removes it, and
+    bad_step=None gives the plain stream.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    def __init__(self, shards, seq_len, global_batch, bad_step, kind, vocab,
+                 **kw):
+        super().__init__(shards, seq_len, global_batch, **kw)
+        self.bad_step, self.kind, self.vocab = bad_step, kind, vocab
+
+    def batch(self, step):
+        b = super().batch(step)
+        if (self.bad_step is not None
+                and self.physical_index(step) == self.bad_step - 1):
+            b = d2l.make_bad_batch(b, self.kind, self.vocab,
+                                   seed=self.bad_step)
+        return b
+
+def _spike(cfg, bad_step, kind, replays, steps=400, window=(200, 400),
+           device=None):
+    """The spiked run (full states kept at the replays' starts), each
+    replay (from a state of the spiked run, skip set in log steps, clip),
+    and two same-state replays without the bad batch (the floor); device:
+    tests only.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    import shutil
+    if device is None and not torch.cuda.is_available():
+        raise RuntimeError('the spike protocol trains on a GPU')
+    device = device or 'cuda'
+    shards, folder = _train_shards(cfg), os.path.join(_job_root(), 'spike')
+    shutil.rmtree(folder, ignore_errors=True)  # this driver's own states
+    starts = tuple(sorted({s for _, s, _, _ in replays if s}))
+    base = _inst_config(cfg, cfg.peak_lr, cfg.seed, steps, stats_every=0)
+
+    def run(start=0, skip=(), clip=None, bad=bad_step, save=False):
+        c = dataclasses.replace(base, clip=base.clip if clip is None
+                                else clip, state_steps=starts if save
+                                else (), out_dir=folder if save else None)
+        torch.manual_seed(cfg.seed)
+        model = d2l.PackedGPT.from_arch(cfg.arch).to(device)
+        stream = _BadBatchStream(shards, cfg.arch.T, cfg.global_batch, bad,
+                                 kind, cfg.arch.vocab, seed=cfg.data_seed,
+                                 skip=[s - 1 for s in skip])
+        state = None
+        if start:
+            state = torch.load(_state_path(folder, start), map_location='cpu',
+                               weights_only=False)
+            state['stream'] = dict(state['stream'], skip=[s - 1 for s in skip])
+        log = d2l.pretrain(model, stream, c, resume=state)
+        torch._dynamo.reset()
+        return log.set_index('step')
+    spiked = run(save=True)
+    logs = {'spiked run': spiked}
+    for label, start, skip, clip in replays:
+        logs[label] = run(start, skip, clip)
+    floor = (run(starts[-1], bad=None)['loss']
+             - run(starts[-1], bad=None)['loss']).abs().max()
+    rows, traces = [], []
+    for label, g in logs.items():
+        near = g.loc[bad_step - 5:bad_step + 5, 'grad_norm']
+        after = (g['loss'] - spiked['loss']).loc[bad_step + 1:steps]
+        rows.append(dict(run=label, loss_at_bad=g['loss'].get(bad_step),
+                         peak_grad_norm=near.max(),
+                         max_dloss=math.nan if g is spiked
+                         else after.abs().max()))
+        traces.append(g.loc[window[0]:window[1], ['loss', 'grad_norm']]
+                      .reset_index().assign(run=label))
+    return SpikeReplay(pd.DataFrame(rows), pd.concat(traces, ignore_index=
+                       True), float(floor), '')
+
+def spike_replay(cfg, bad_step=300, kind='random', replays=()):
+    """The spike protocol at cfg: a bad batch (make_bad_batch(kind)) at log
+    step bad_step of a run with a constant rate after warmup, then each
+    replay (label, from_step, skipped steps, clip or None) from the spiked
+    run's state at from_step (0: from the start), and the replay floor (two
+    same-state replays without the bad batch): SpikeReplay(table, traces,
+    floor, label).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    config = dict(cfg=_cfg_json(cfg), bad_step=bad_step, kind=kind,
+                  replays=d2l._jsonable(replays))
+    res = d2l._pretrain_result('spike-replay', lambda: _spike(
+        cfg, bad_step, kind, replays), config)
+    return d2l._show_label(_as_tuple(SpikeReplay, res, dict(
+        table=['run', 'loss_at_bad', 'peak_grad_norm', 'max_dloss'],
+        traces=['step', 'loss', 'grad_norm', 'run']), dict(floor=math.nan)))
+
+def _inst_t1_job():
+    """The page's T1 grid call (cell 25) for tools/lm_regen.py, with tau
+    from the t1 run's seed-0 log by the page's rule.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    t1 = _job_log('t1-runs')
+    return dict(cfg=d2l.r2_config('t1', clip=None),
+                lrs=(1e-3, 2e-3, 4e-3, 8e-3, 1.6e-2, 3.2e-2),
+                variants=('none', 'qk_clip', 'qk_norm', 'softcap'),
+                seeds=(0, 1), steps=400,
+                tau=d2l.tau_rule(t1[t1['seed'] == 0], 76, 400))
+
+d2l.DATA_HUB['lm-lowp-runs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lowp-runs-v1.json.gz',
+    '4954512fee110cd470d3888a497aa68732336892')
+d2l.DATA_HUB['lm-fp8-gemm-sweep-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fp8-gemm-sweep-v1.json.gz',
+    '2e30da36f8761317419d1608dc15e1a1b6ba8c5f')
+
 d2l.PRETRAIN_ARTIFACTS['gemm-sweep'] = (
     'lm-fp8-gemm-sweep-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['lowp-runs'] = (
-    'lm-lowp-runs-v1', 'jsonl')
+    'lm-lowp-runs-v1', 'json-table')
+
+d2l.PRETRAIN_JOBS['gemm-sweep'] = ('fp8_gemm_sweep', lambda: dict(
+    m=16384, ns=(512, 768, 1024, 1536, 2048, 3072, 4096),
+    shapes=[(16384, 768, 768), (16384, 768, 256), (16384, 768, 2048),
+            (16384, 2048, 768)]))
+d2l.PRETRAIN_JOBS['lowp-runs'] = ('lowp_arms', lambda: dict(
+    cfg=d2l.r2_config('fp8'),
+    arms={'bf16': ('bf16', (0, 1, 2, 3)),
+          'tensorwise': ('torchao-tensorwise', (0, 1)),
+          'rowwise': ('torchao-rowwise', (0,)),
+          'delayed': ('fp8-delayed', (0,)),
+          'nvfp4-mlp': ('nvfp4-mlp', (0,))}))
+
+_FP8_MANTISSA = {'e4m3': 3, 'e5m2': 2}
+
+def _fp8_tiles(x, granularity):
+    """x as rows of its scaling tiles (one scale per row) and the function
+    that puts a tile-shaped tensor back into x's shape; a (rows, 1) tensor
+    of scales comes back in a shape that broadcasts against x.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    shape = x.shape
+    if granularity == 'tensor':
+        return x.reshape(1, -1), lambda t: (t.reshape(()) if t.shape[-1] == 1
+                                            else t.reshape(shape))
+    if granularity == 'row':
+        return x.reshape(-1, shape[-1]), lambda t: t.reshape(
+            *shape[:-1], t.shape[-1])
+    if granularity not in ('block1x128', 'block128x128'):
+        raise ValueError(f'unknown granularity {granularity!r}')
+    X = x.reshape(-1, shape[-1])
+    M, K = X.shape
+    b = 128 if granularity == 'block128x128' else 1
+    if K % 128 or M % b:
+        raise ValueError(f'{granularity} needs shapes divisible by the tile;'
+                         f' got {M} x {K}')
+    tiles = X.reshape(M // b, b, K // 128, 128).transpose(1, 2).reshape(
+        -1, b * 128)
+
+    def untile(t):
+        t = t.expand(-1, b * 128) if t.shape[-1] == 1 else t
+        return t.reshape(M // b, K // 128, b, 128).transpose(1, 2).reshape(
+            shape)
+    return tiles, untile
+
+def _fp8_granularity(granularity, role):
+    """Fp8Linear's granularity per operand: 'block' means 1 x 128 tiles for
+    activations and gradients and 128 x 128 blocks for weights (the
+    DeepSeek-V3 recipe).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    if granularity == 'block':
+        return 'block128x128' if role == 'w' else 'block1x128'
+    return granularity
+
+def _fp8_fractions(x, scale, fmt):
+    """Saturated (|x / scale| above the format's max) and underflowing
+    (non-zero, below half the smallest subnormal) shares of x.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    dtype = {'e4m3': torch.float8_e4m3fn, 'e5m2': torch.float8_e5m2}[fmt]
+    info = torch.finfo(dtype)
+    sub = info.tiny * 2.0 ** -_FP8_MANTISSA[fmt]  # smallest subnormal
+    z, nonzero = (x.float() / scale).abs(), x != 0
+    clipped = z > info.max * (1 + 2 ** -20)  # not the amax's own rounding
+    return (clipped.float().mean(),
+            ((z < sub / 2) & nonzero).sum() / nonzero.sum().clamp(min=1))
+
+def _fp8_record(x, q, scale, fmt, granularity, role):
+    """One operand cast as Fp8Linear.stats() reads it: saturation,
+    underflow and relative error under the scale used, and saturation and
+    underflow under a current scale of the same tensor (the replay delayed
+    scaling is read against). Device tensors, no host synchronization.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    x = x.detach()
+    sat, under = _fp8_fractions(x, scale, fmt)
+    err = torch.linalg.vector_norm(q.float() * scale - x.float()) / (
+        torch.linalg.vector_norm(x.float()).clamp(min=1e-30))
+    _, current = d2l.fp8_quant(x, fmt, granularity)
+    sat_c, under_c = _fp8_fractions(x, current, fmt)
+    return role, torch.stack([sat, under, err, sat_c, under_c])
+
+_FP8_STAT_COLUMNS = ('saturation', 'underflow', 'error',
+                     'saturation_current', 'underflow_current')
+
+def _fp8_stats_table(records):
+    """The mean over records of each statistic per operand role (a
+    DataFrame indexed by role: x, w, dy).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    rows = {}
+    for role, v in records:
+        rows.setdefault(role, []).append(v)
+    roles = [r for r in ('x', 'w', 'dy') if r in rows]
+    if not roles:
+        return pd.DataFrame(columns=_FP8_STAT_COLUMNS)
+    means = torch.stack([torch.stack(rows[r]).mean(0) for r in roles])
+    return pd.DataFrame(means.cpu().numpy(), index=roles,
+                        columns=_FP8_STAT_COLUMNS)
+
+def has_fp8_cores(device):
+    """Whether device has fp8 tensor cores (CUDA, compute capability 8.9:
+    Ada, or newer).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    device = torch.device(device)
+    return device.type == 'cuda' and (
+        torch.cuda.get_device_capability(device) >= (8, 9))
+
+def device_name(device):
+    """A short name of device: 'RTX 4090', 'A100-SXM4-80GB', or 'CPU'.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    device = torch.device(device)
+    if device.type != 'cuda':
+        return device.type.upper()
+    name = torch.cuda.get_device_name(device)
+    return re.sub(r'^NVIDIA (GeForce )?', '', name)
+
+def _out_dtype(X):
+    """The dtype nn.Linear would return for X: bf16 under autocast.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    if torch.is_autocast_enabled(X.device.type):
+        return torch.get_autocast_dtype(X.device.type)
+    return X.dtype
+
+def _f32_mm(A, B, out_dtype):
+    """A @ B in fp32 (autocast off), returned as out_dtype.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    with torch.autocast(A.device.type, enabled=False):
+        return (A.float() @ B.float()).to(out_dtype)
+
+def _fp8_mm(a, b, native, out_dtype, ta=False, tb=False):
+    """op(A) @ op(B) for fp8 operands a = (q, scale) and b (op transposes
+    when ta, tb): simulated, or native with tensor scales.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    if not native:
+        A, B = a[0].float() * a[1], b[0].float() * b[1]
+        return _f32_mm(A.t() if ta else A, B.t() if tb else B, out_dtype)
+    if a[1].numel() != 1 or b[1].numel() != 1:
+        raise ValueError('native fp8 GEMMs take tensor scales only')
+    A = (a[0].t() if ta else a[0]).contiguous()  # row-major
+    B = b[0].t() if tb else b[0]
+    if B.stride(0) != 1:
+        B = B.t().contiguous().t()  # column-major
+    out = torch.bfloat16 if out_dtype == torch.float32 else out_dtype
+    return torch._scaled_mm(A, B, scale_a=a[1].reshape(()).float(),
+                            scale_b=b[1].reshape(()).float(),
+                            out_dtype=out).to(out_dtype)
+
+def _hadamard(n, generator=None):
+    """The n x n Hadamard matrix (Sylvester's construction, n a power of
+    two) scaled to be orthogonal; with a generator, its columns flip sign
+    at random (the random Hadamard transform).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    H = torch.ones(1, 1)
+    while H.shape[0] < n:
+        H = torch.cat([torch.cat([H, H], 1), torch.cat([H, -H], 1)])
+    if H.shape[0] != n:
+        raise ValueError(f'n = {n} is not a power of two')
+    H = H / math.sqrt(n)
+    if generator is not None:
+        H = H * (torch.randint(0, 2, (n,), generator=generator) * 2 - 1)
+    return H
+
+def _rotate_rows(X, H):
+    """H applied to each group of len(H) consecutive rows of X (in fp32):
+    the rotation over tokens of Fp4Linear's weight gradient.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    n = H.shape[0]
+    if X.shape[0] % n:
+        raise ValueError(f'{X.shape[0]} rows do not split into groups of {n}')
+    Xg = X.float().reshape(-1, n, X.shape[-1])
+    return torch.einsum('ij,gjc->gic', H.to(X.device), Xg).reshape(X.shape)
+
+def _fp4_weight(W, block, block2d, dim=-1):
+    """W fake-quantized to NVFP4: in block x block tiles (one scale each,
+    so the forward and the input-gradient GEMM read the same quantized W)
+    or in 1 x block blocks along dim.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    if not block2d:
+        return d2l.fake_quant_fp4(W, block, dim=dim)
+    N, K = W.shape
+    if N % block or K % block:
+        raise ValueError(f'{N} x {K} does not split into {block}-blocks')
+    tiles = W.reshape(N // block, block, K // block, block).transpose(1, 2)
+    q = d2l.fake_quant_fp4(tiles.reshape(-1, block * block), block * block)
+    return q.reshape(N // block, K // block, block, block).transpose(
+        1, 2).reshape(N, K)
+
+class _Captured(Exception):
+    pass
+
+def mlp_input(model, block, n_seqs=4, T=1024):
+    """The input of block `block`'s MLP (after its RMSNorm) on the first
+    n_seqs validation windows of T tokens, as an fp32 (n_seqs * T, d)
+    matrix; the forward pass stops there.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    with d2l._quiet():
+        shards = d2l.fwedu_shards('val')
+    X = torch.from_numpy(np.stack([shards.read(i * T, T)
+                                   for i in range(n_seqs)]).astype(np.int64))
+    dev = next(model.parameters()).device
+    ctx = d2l.PackCtx(*(t.to(dev) for t in d2l.doc_ids_from_eos(
+        X.int(), shards.eos_id)))
+    seen = {}
+
+    def grab(module, args):
+        seen['x'] = args[0].detach()
+        raise _Captured
+    hook = model.blks[block].ffn.register_forward_pre_hook(grab)
+    try:
+        with torch.inference_mode():
+            model(X.to(dev), ctx, logits_to_keep=1)
+    except _Captured:
+        pass
+    finally:
+        hook.remove()
+    return seen['x'].float().flatten(0, -2).cpu()
+
+def _fp8_copy_op():
+    """torch.ops.d2l.fp8_copy, registered on first use: x.contiguous() as
+    an operator Inductor cannot fuse.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    if not hasattr(torch.ops.d2l, 'fp8_copy'):
+        @torch.library.custom_op('d2l::fp8_copy', mutates_args=())
+        def fp8_copy(x: torch.Tensor) -> torch.Tensor:
+            return x.contiguous()
+
+        @fp8_copy.register_fake
+        def _(x):
+            return torch.empty(x.shape, dtype=x.dtype, device=x.device)
+    return torch.ops.d2l.fp8_copy.default
+
+def _fp8_clone_pass():
+    """An Inductor post-grad pass: every aten.clone of an fp8 tensor becomes
+    torch.ops.d2l.fp8_copy (no two-layout fp8 stores in one kernel).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    from torch._inductor.custom_graph_pass import CustomGraphPass
+    op, fp8 = _fp8_copy_op(), (torch.float8_e4m3fn, torch.float8_e5m2)
+
+    class Fp8ClonePass(CustomGraphPass):
+        def __call__(self, graph):
+            for node in list(graph.nodes):
+                v = node.meta.get('val')
+                if (node.op == 'call_function'
+                        and str(node.target) == 'aten.clone.default'
+                        and isinstance(v, torch.Tensor) and v.dtype in fp8):
+                    with graph.inserting_before(node):
+                        new = graph.call_function(op, (node.args[0],))
+                    new.meta = dict(node.meta)
+                    node.replace_all_uses_with(new)
+                    graph.erase_node(node)
+
+        def uuid(self):
+            return 'd2l-fp8-clone-pass-v1'
+    return Fp8ClonePass()
+
+def _lowp_compile_settings():
+    """The Inductor settings of the arms and the sweep (the fp8 copy pass).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    import torch._inductor.config as inductor_config
+    return inductor_config.patch(
+        {'post_grad_custom_post_pass': _fp8_clone_pass()})
+
+def _fp8_compile_check(recipes=('tensorwise',), tol=0.1):
+    """Gradients of a compiled torchao MLP (1,024 -> 4,096 -> 1,024 on 8,192
+    tokens) against the eager ones, per float8 recipe: raises unless every
+    gradient is finite and within tol (relative Frobenius error); returns
+    {recipe: errors}.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    from torchao.float8 import (Float8LinearConfig,
+                                convert_to_float8_training)
+    dev = torch.device('cuda')
+    torch.manual_seed(0)
+    X = torch.randn(8192, 1024, device=dev)
+
+    def grads(recipe, compiled):
+        torch.manual_seed(0)
+        mlp = nn.Sequential(nn.Linear(1024, 4096, bias=False), nn.GELU(),
+                            nn.Linear(4096, 1024, bias=False)).to(dev)
+        convert_to_float8_training(
+            mlp, config=Float8LinearConfig.from_recipe_name(recipe))
+        net = torch.compile(mlp) if compiled else mlp
+        with torch.autocast('cuda', torch.bfloat16):
+            net(X).float().pow(2).mean().backward()
+        return [p.grad.float() for p in mlp.parameters()]
+    out = {}
+    for recipe in recipes:
+        torch._dynamo.reset()
+        with _lowp_compile_settings(), d2l._quiet():
+            got = grads(recipe, True)
+        ref = grads(recipe, False)
+        torch._dynamo.reset()
+        out[recipe] = _check_close(got, ref, tol, f'compiled {recipe}')
+    return out
+
+def _check_close(got, ref, tol, what):
+    """Relative Frobenius errors of got against ref; raises unless each is
+    finite and below tol.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    errs = [float(torch.linalg.norm(g.float() - r.float()) /
+                  torch.linalg.norm(r.float())) for g, r in zip(got, ref)]
+    if not all(math.isfinite(e) and e < tol for e in errs):
+        raise RuntimeError(f'{what} differs from eager: {errs}')
+    return errs
+
+GemmSweep = collections.namedtuple('GemmSweep', 'table shapes label')
+
+_SWEEP_COLUMNS = ('bf16', 'fp8 with casts', 'fp8 GEMM only')
+
+def _train_gemms_fp8(X, W, dY):
+    """One linear layer's three products in fp8, casts included.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    x, w = d2l.fp8_quant(X), d2l.fp8_quant(W)
+    dy = d2l.fp8_quant(dY, 'e5m2')
+    return (_fp8_mm(x, w, True, torch.bfloat16, tb=True),
+            _fp8_mm(dy, w, True, torch.bfloat16),
+            _fp8_mm(dy, x, True, torch.bfloat16, ta=True))
+
+def _train_gemms_check(compiled, m=4096, n=1024, tol=1e-2):
+    """The compiled _train_gemms_fp8 against the eager one on an m x n x n
+    layer: raises unless all three products agree within tol.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    dev = torch.device('cuda')
+    g = torch.Generator(dev).manual_seed(0)
+    X, W, dY = (torch.randn(r, n, device=dev, generator=g,
+                            dtype=torch.bfloat16) for r in (m, n, m))
+    return _check_close(compiled(X, W, dY), _train_gemms_fp8(X, W, dY), tol,
+                        'compiled _train_gemms_fp8')
+
+def _gemm_times(m, k, n, repeats, compiled):
+    """Seconds per training step of one m x k -> n linear layer: bf16, fp8
+    with casts, fp8 GEMMs only (medians over repeats).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    dev = torch.device('cuda')
+    X = torch.randn(m, k, device=dev, dtype=torch.bfloat16)
+    W = torch.randn(n, k, device=dev, dtype=torch.bfloat16) / math.sqrt(k)
+    dY = torch.randn(m, n, device=dev, dtype=torch.bfloat16)
+    x, w = d2l.fp8_quant(X), d2l.fp8_quant(W)
+    dy = d2l.fp8_quant(dY, 'e5m2')
+    # the layouts torch._scaled_mm reads, made once for the GEMM-only time
+    xr, xc = x[0].contiguous(), x[0].t().contiguous().t()
+    wt, wc = w[0].t(), w[0].t().contiguous().t()
+    dyr, dyt = dy[0].contiguous(), dy[0].t().contiguous()
+    mm, bf = torch._scaled_mm, torch.bfloat16
+
+    def gemm_only():
+        mm(xr, wt, x[1], w[1], out_dtype=bf)
+        mm(dyr, wc, dy[1], w[1], out_dtype=bf)
+        mm(dyt, xc, dy[1], x[1], out_dtype=bf)
+    fns = (lambda: (X @ W.t(), dY @ W, dY.t() @ X),
+           lambda: compiled(X, W, dY), gemm_only)
+    times = [[d2l.Benchmark(f, warmup=10, repeats=50).time for f in fns]
+             for _ in range(repeats)]
+    return np.median(np.array(times), axis=0)
+
+def fp8_gemm_sweep(m, ns, shapes, repeats=3):
+    """TFLOP/s of one linear layer's training step (Y = X W^T, dX = dY W,
+    dW = dY^T X) in bf16, fp8 with casts and fp8 GEMMs only, at m x n x n
+    for each n in ns (table), and milliseconds at each (m, k, n) of shapes
+    (shapes). Needs fp8 tensor cores (Ada or newer): measured only in a
+    regeneration, on a whole card in a process of its own; else the
+    committed result.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    config = dict(m=m, ns=list(ns), shapes=[list(s) for s in shapes],
+                  repeats=repeats)
+
+    def compute():
+        if not has_fp8_cores('cuda' if torch.cuda.is_available() else 'cpu'):
+            raise RuntimeError('the GEMM sweep needs an Ada or newer GPU')
+        tflop = lambda m, k, n: 3 * 2 * m * k * n / 1e12
+        with _lowp_compile_settings(), d2l._quiet():
+            compiled = torch.compile(_train_gemms_fp8)
+            _train_gemms_check(compiled)
+            rows = [[n, *(tflop(m, n, n) / _gemm_times(m, n, n, repeats,
+                                                         compiled))]
+                    for n in ns]
+            srows = [[*s, *(1e3 * _gemm_times(*s, repeats, compiled))]
+                     for s in shapes]
+        gpu = torch.cuda.get_device_name()
+        return GemmSweep(
+            pd.DataFrame(rows, columns=['n', *_SWEEP_COLUMNS]),
+            pd.DataFrame(srows, columns=['m', 'k', 'n', *_SWEEP_COLUMNS]),
+            label='' if gpu == 'NVIDIA GeForce RTX 4090' else gpu)
+    result = d2l._pretrain_result('gemm-sweep', compute, config)
+    return d2l._show_label(d2l._as_tuple(GemmSweep, result, {
+        'table': ['n', *_SWEEP_COLUMNS],
+        'shapes': ['m', 'k', 'n', *_SWEEP_COLUMNS]}))
+
+def plot_gemm_sweep(sweep, peaks=(165, 330)):
+    """TFLOP/s against n of the sweep's three series, with the datasheet
+    peaks (bf16, fp8) as dotted lines.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    t = sweep.table
+    n = t['n'].tolist()
+    d2l.plot(n, [t[c].tolist() for c in _SWEEP_COLUMNS] +
+             [[p] * len(n) for p in peaks], 'n (16,384 x n x n, training)',
+             'TFLOP/s', xscale='log', fmts=('-o', '-s', '-^', 'k:', 'k:'),
+             ylim=(0, 1.1 * max(peaks)), figsize=(4.5, 3.3))
+    ax = d2l.plt.gca()
+    ax.legend([*_SWEEP_COLUMNS, 'datasheet peaks'], loc='lower center',
+              bbox_to_anchor=(0.5, 1.0), ncol=2, frameon=False)
+    d2l.set_log_ticks(ax.xaxis)
+
+LowpRuns = collections.namedtuple('LowpRuns',
+                                  'table losses stats profile label')
+
+_LOWP_COLUMNS = {
+    'table': ['arm', 'n', 'native', 'val loss', 'tok/s', 'IQR', '÷bf16',
+              'GiB'],
+    'losses': ['arm', 'seed', 'step', 'tokens', 'loss', 'val_loss'],
+    'stats': ['step', 'role', *_FP8_STAT_COLUMNS],
+    'profile': ['arm', 'kernels', 'ms', 'share']}
+
+_PROFILE_COLUMNS = ('kernels', 'ms', 'share')
+
+_BLOCK_LINEARS = ('attention.W_q', 'attention.W_k', 'attention.W_v',
+                  'attention.W_o', 'ffn.W_g', 'ffn.W_1', 'ffn.W_2')
+
+def _swap_linears(model, make, names=_BLOCK_LINEARS):
+    """Replace the named nn.Linear of every block by make(in, out), keeping
+    its weights; the new modules run eagerly inside a compiled model.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    for blk in model.blks:
+        for name in names:
+            parent, attr = name.split('.')
+            old = getattr(getattr(blk, parent), attr)
+            new = make(old.in_features, old.out_features).to(
+                old.weight.device, old.weight.dtype)
+            new.weight.data.copy_(old.weight.data)
+            new.forward = torch.compiler.disable(new.forward)
+            setattr(getattr(blk, parent), attr, new)
+
+def _rowwise_ok(dev):
+    """Whether torch._scaled_mm runs one rowwise-scaled product on dev.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    try:
+        a = torch.ones(32, 32, device=dev).to(torch.float8_e4m3fn)
+        torch._scaled_mm(a, a.t(), torch.ones(32, 1, device=dev),
+                         torch.ones(1, 32, device=dev),
+                         out_dtype=torch.bfloat16)
+        return True
+    except RuntimeError:
+        return False
+
+def _torchao_float8(model, recipe):
+    """torchao's float8 training (recipe 'tensorwise' or 'rowwise') on the
+    block linears whose dimensions are multiples of 16; False (and nothing
+    converted) when this card cannot run the recipe natively.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    try:
+        from torchao.float8 import (Float8LinearConfig,
+                                    convert_to_float8_training)
+    except ImportError:
+        return False
+    dev = next(model.parameters()).device
+    if not has_fp8_cores(dev):
+        return False
+    if recipe == 'rowwise' and not _rowwise_ok(dev):
+        return False
+    keep = lambda mod, fqn: ('blks.' in fqn and mod.in_features % 16 == 0
+                             and mod.out_features % 16 == 0)
+    with d2l._quiet():
+        convert_to_float8_training(
+            model, config=Float8LinearConfig.from_recipe_name(recipe),
+            module_filter_fn=keep)
+    return True
+
+def _lowp_convert(model, recipe):
+    """Convert model for a recipe; returns 'yes' (native fp8, compiled),
+    'eager' (native fp8 GEMMs outside the compiled graph), 'simulated', or
+    '—' (bf16).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    dev = next(model.parameters()).device
+    if recipe == 'bf16':
+        return '—'
+    if recipe in ('torchao-tensorwise', 'torchao-rowwise'):
+        gran = recipe.split('-')[1]
+        if _torchao_float8(model, gran):
+            return 'yes'
+        if gran == 'tensorwise':
+            raise RuntimeError('torchao tensorwise needs an Ada or newer GPU')
+        _swap_linears(model, lambda i, o: d2l.Fp8Linear(
+            i, o, granularity='row'))
+        return 'simulated'
+    if recipe == 'fp8-delayed':  # native GEMMs if the card has them, run
+        native = has_fp8_cores(dev)  # eagerly: its speed is not claimed
+        _swap_linears(model, lambda i, o: d2l.Fp8Linear(
+            i, o, scale_mode='delayed', native=native))
+        return 'eager' if native else 'simulated'
+    if recipe == 'nvfp4-mlp':
+        _swap_linears(model, d2l.Fp4Linear, ('ffn.W_g', 'ffn.W_1',
+                                             'ffn.W_2'))
+        return 'simulated'
+    raise ValueError(f'unknown recipe {recipe!r}')
+
+def _stats_hook(model, rows, every=10):
+    """A pretrain hook: Fp8Linear operand statistics on every `every`-th
+    step (the mean over the layers per operand role).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    mods = [m for m in model.modules() if isinstance(m, d2l.Fp8Linear)]
+
+    def hook(step, net, opt, batch, row):
+        if mods and mods[0].track:
+            table = _fp8_stats_table([r for m in mods for r in m.records])
+            for role, v in table.iterrows():
+                rows.append(dict(step=row['step'], role=role, **v))
+        for m in mods:
+            m.records.clear()
+            m.track = (step + 2) % every == 0  # the next step is tracked
+    return hook
+
+def _profile_hook(cfg, out, start=200, stop=210):
+    """A pretrain hook that profiles the steps after `start` up to `stop`
+    (1-based) and writes out['table'] (_profile_table).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    from torch.profiler import ProfilerActivity, profile
+    state = {}
+
+    def hook(step, net, opt, batch, row):
+        if row['step'] == start:
+            torch.cuda.synchronize()
+            state['prof'] = profile(activities=[ProfilerActivity.CPU,
+                                                ProfilerActivity.CUDA],
+                                    record_shapes=True)
+            state['prof'].__enter__()
+            state['t0'] = time.perf_counter()
+        elif row['step'] == stop and 'prof' in state:
+            torch.cuda.synchronize()
+            wall = (time.perf_counter() - state['t0']) / (stop - start)
+            state['prof'].__exit__(None, None, None)
+            out['table'] = _profile_table(state.pop('prof'), cfg, wall,
+                                          stop - start)
+    return hook
+
+def _profile_table(prof, cfg, wall, steps):
+    """Milliseconds per step and share of the step: the GEMMs of the block
+    linears, the head's GEMMs (a dimension equal to the vocabulary), the
+    fp8 copies of the compiler workaround (torch.ops.d2l.fp8_copy), the
+    other kernels, and the rest of the wall-clock step (host, launches).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    parts = {'block GEMMs': 0.0, 'head GEMMs': 0.0, 'fp8 copies': 0.0}
+    total = 0.0  # the kernels' time: device events, not annotations
+    for e in prof.key_averages(group_by_input_shape=True):
+        t = e.self_device_time_total / 1e3 / steps  # ms per step
+        if e.device_type == torch.autograd.DeviceType.CUDA:
+            if not (getattr(e, 'is_user_annotation', False)
+                    or e.key.startswith('## ')):
+                total += t
+        elif e.key in ('aten::mm', 'aten::addmm', 'aten::bmm',
+                       'aten::_scaled_mm'):  # the kernels it launched
+            shapes = [s for s in e.input_shapes if s]
+            head = any(cfg.arch.vocab in s for s in shapes)
+            parts['head GEMMs' if head else 'block GEMMs'] += t
+        elif e.key == 'd2l::fp8_copy':  # its kernels run in child ops
+            parts['fp8 copies'] += e.device_time_total / 1e3 / steps
+    ms = 1e3 * wall
+    rows = [*parts.items(), ('other kernels', total - sum(parts.values())),
+            ('host and launches', max(ms - total, 0.0))]
+    return pd.DataFrame([(k, v, v / ms) for k, v in rows],
+                        columns=_PROFILE_COLUMNS)
+
+def _lowp_run(cfg, recipe, seed, profile=False, stats=False):
+    """One run of lowp_arms on the GPU: the log, the peak memory, whether
+    it ran natively, and the statistics or profile it was asked for. The
+    validation runs under torch.no_grad, not inference mode: torchao's
+    float8 layers refuse inference tensors (torchao 0.17).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    dev = torch.device('cuda')
+    c = dataclasses.replace(cfg, seed=seed, data_seed=seed, probe_every=0,
+                            stats_every=0)  # nothing here reads the probes
+    torch._dynamo.reset()
+    torch.manual_seed(seed)
+    model = d2l.PackedGPT.from_arch(c.arch).to(dev)
+    native = _lowp_convert(model, recipe)
+    stream = d2l.PackedStream(d2l._train_shards(c), c.arch.T,
+                              c.global_batch, seed=c.data_seed)
+    rows, prof, hooks = [], {}, []
+    if stats:
+        hooks.append(_stats_hook(model, rows))
+    if profile:
+        hooks.append(_profile_hook(c, prof))
+    torch.cuda.reset_peak_memory_stats(dev)
+    with _lowp_compile_settings(), d2l._quiet():
+        log = d2l.pretrain(model, stream, c, hooks=hooks,
+                           val_fn=d2l._val_fn(c, inference=False))
+    if not np.isfinite(log['loss']).all():
+        raise RuntimeError(f'{recipe} seed {seed}: non-finite loss')
+    return dict(log=log, native=native, stats=pd.DataFrame(rows),
+                gib=torch.cuda.max_memory_allocated(dev) / 2 ** 30,
+                profile=prof.get('table'))
+
+def _lowp_run_cached(cfg, name, recipe, seed, profile, stats):
+    """_lowp_run, or the file an earlier attempt of the same run wrote.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    folder = os.path.join(d2l._job_root(), 'lowp')
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, f'{name}-s{seed}.json.gz')
+    config = dict(cfg=d2l._cfg_json(cfg), recipe=recipe, seed=seed,
+                  profile=profile, stats=stats)
+    if os.path.exists(path):
+        r = d2l._read_result(path, 'json-table')
+        d2l._check_config(r, config, path)
+        return r._asdict()
+    r = _lowp_run(cfg, recipe, seed, profile, stats)
+    parts = dict(log=r['log'], stats=r['stats'], profile=(
+        r['profile'] if r['profile'] is not None else pd.DataFrame(
+            columns=_PROFILE_COLUMNS)),
+                 native=r['native'], gib=r['gib'])
+    d2l._write_result(path, 'json-table', parts,
+                      dict(config=d2l._jsonable(config), label=''))
+    return parts
+
+def _lowp_merge(runs, arms):
+    """LowpRuns from {(arm, seed): run}; the first arm is the baseline.
+    Speeds are left out (NaN) for arms whose fp8 GEMMs do not run natively
+    inside the compiled step (native 'eager' or 'simulated').
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    losses, table, stats, profiles = [], [], None, []
+    for name, (recipe, seeds) in arms.items():
+        vals, rates, iqrs, gib = [], [], [], 0.0
+        for seed in seeds:
+            r = runs[(name, seed)]
+            log = r['log']
+            window = log.loc[log['step'].between(200, 400), 'tok_s']
+            rates.append(window.median())
+            iqrs.append(window.quantile(0.75) - window.quantile(0.25))
+            gib = max(gib, r['gib'])
+            part = log.reindex(columns=['step', 'tokens', 'loss',
+                                        'val_loss'])
+            part.insert(0, 'seed', seed)
+            part.insert(0, 'arm', name)
+            losses.append(part)
+            vals.append(log['val_loss'].dropna().iloc[-1])
+            if len(r['stats']):
+                stats = r['stats']
+            if len(r['profile']):
+                profiles.append(r['profile'].assign(arm=name))
+        table.append([name, len(seeds), r['native'], float(np.mean(vals)),
+                      float(np.mean(rates)), float(np.mean(iqrs)), 0.0,
+                      gib])
+    table = pd.DataFrame(table, columns=_LOWP_COLUMNS['table'])
+    table['÷bf16'] = table['tok/s'] / table['tok/s'].iloc[0]
+    claimed = table['native'].isin(['yes', '—'])
+    table.loc[~claimed, ['tok/s', 'IQR', '÷bf16']] = np.nan
+    empty = lambda k: pd.DataFrame(columns=_LOWP_COLUMNS[k])
+    profile = (pd.concat(profiles, ignore_index=True)[_LOWP_COLUMNS[
+        'profile']] if profiles else empty('profile'))
+    return LowpRuns(table, pd.concat(losses, ignore_index=True),
+                    stats if stats is not None else empty('stats'),
+                    profile, label='')
+
+def lowp_arms(cfg, arms):
+    """Train cfg once per arm and seed; arms = {name: (recipe, seeds)} with
+    recipes 'bf16', 'torchao-tensorwise', 'torchao-rowwise' (native if the
+    card can, else the simulated rowwise Fp8Linear), 'fp8-delayed' (the
+    from-scratch Fp8Linear with delayed scaling, operand statistics every
+    10 steps) and 'nvfp4-mlp' (Fp4Linear on the MLP). A run's model and
+    data seed are its seed. The first arm is the baseline; every arm's
+    first seed is profiled over steps 200-210. Returns LowpRuns: table (per
+    arm: runs, native, final validation loss (seed mean), tokens/s (median
+    over steps 200-400) and its IQR, ratio to the baseline, peak GiB;
+    speeds only where the fp8 GEMMs run natively in the compiled step),
+    losses, stats, profile (per arm). Computed only in a regeneration (one
+    whole card, about an hour); else the committed result.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    config = dict(cfg=d2l._cfg_json(cfg),
+                  arms={k: [r, list(s)] for k, (r, s) in arms.items()})
+
+    def compute():
+        if not has_fp8_cores('cuda' if torch.cuda.is_available() else 'cpu'):
+            raise RuntimeError('the arms need an Ada or newer GPU')
+        _fp8_compile_check(_torchao_recipes(arms))
+        runs = {(name, s): _lowp_run_cached(
+            cfg, name, recipe, s, profile=(s == seeds[0]),
+            stats=(recipe == 'fp8-delayed'))
+            for name, (recipe, seeds) in arms.items() for s in seeds}
+        return _lowp_merge(runs, arms)
+    result = d2l._pretrain_result('lowp-runs', compute, config)
+    return d2l._show_label(d2l._as_tuple(LowpRuns, result, _LOWP_COLUMNS))
+
+def _torchao_recipes(arms):
+    """The torchao float8 recipes among arms that this card runs natively
+    (the ones the compile check covers).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    recipes = {r.split('-')[1] for r, _ in arms.values()
+               if r.startswith('torchao-')}
+    if 'rowwise' in recipes and not _rowwise_ok(torch.device('cuda')):
+        recipes.remove('rowwise')
+    return tuple(sorted(recipes))
+
+def plot_lowp_runs(runs, bound):
+    """Left: each arm's validation loss minus the baseline's seed mean
+    against tokens (seed means), with the band of the baseline's seeds.
+    Right: tokens/s relative to the baseline for the arms whose speed is
+    measured, with the Amdahl bound.
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    fig, (ax1, ax2) = d2l.plt.subplots(1, 2, figsize=(7.5, 3))
+    v = runs.losses.dropna(subset=['val_loss'])
+    base = runs.table['arm'].iloc[0]
+    seeds = v[v['arm'] == base].pivot_table('val_loss', 'tokens', 'seed')
+    mean = seeds.mean(axis=1)
+    x = mean.index / 1e6
+    ax1.fill_between(x, seeds.min(axis=1) - mean, seeds.max(axis=1) - mean,
+                     color='C0', alpha=0.2, label=f'{base} seeds')
+    for i, arm in enumerate(runs.table['arm']):
+        a = v[v['arm'] == arm].groupby('tokens')['val_loss'].mean()
+        ax1.plot(a.index / 1e6, a.values - mean.reindex(a.index).values,
+                 '-o', ms=3, color=f'C{i}', label=arm)
+    ax1.set_xlabel('tokens (millions)')
+    ax1.set_ylabel(f'validation loss − {base} mean')
+    ax1.legend(fontsize=8)
+    t = runs.table.dropna(subset=['÷bf16'])
+    ax2.bar(t['arm'], t['÷bf16'], color='C0')
+    ax2.set_ylim(0, 1.15 * max(bound, t['÷bf16'].max()))
+    ax2.axhline(bound, color='black', ls='--', lw=1)
+    ax2.text(len(t) - 0.5, bound, 'Amdahl bound', ha='right', va='bottom',
+             fontsize=8)
+    ax2.set_ylabel('tokens/s ÷ bf16')
+    ax2.tick_params(axis='x', labelsize=8)
+    fig.tight_layout()
+
+def plot_lowp_stats(stats, marks=()):
+    """Per operand role, against step: the saturated share under delayed
+    scales (left; current scales never saturate) and the underflowing share
+    under delayed (solid) and current (dashed) scales of the same tensors
+    (right, log scale), both in parts per million, with vertical lines at
+    marks (warmup end, decay start).
+
+    Defined in :numref:`sec_lm_low_precision`"""
+    fig, (ax1, ax2) = d2l.plt.subplots(1, 2, figsize=(7.5, 2.8))
+    for i, (role, s) in enumerate(stats.groupby('role', sort=False)):
+        s = s.groupby('step')[list(_FP8_STAT_COLUMNS)].mean()
+        c = f'C{i}'
+        ax1.plot(s.index, 1e6 * s['saturation'], color=c, label=role)
+        ax2.plot(s.index, 1e6 * s['underflow'], color=c, label=role)
+        ax2.plot(s.index, 1e6 * s['underflow_current'], color=c, ls='--')
+    ax2.set_yscale('log', nonpositive='mask')
+    ax2.legend([d2l.plt.Line2D([], [], color='black'),
+                d2l.plt.Line2D([], [], color='black', ls='--')],
+               ['delayed', 'current'], fontsize=8)
+    for ax, what in ((ax1, 'saturation'), (ax2, 'underflow')):
+        for m in marks:
+            ax.axvline(m, color='black', ls=':', lw=1)
+        ax.set_xlabel('step')
+        ax.set_ylabel(f'{what} (ppm)')
+    ax1.legend(fontsize=8, title='operand', title_fontsize=8)
+    fig.tight_layout()
+
+d2l.DATA_HUB['lm-cpt-qwen-manifest-v1'] = (
+    d2l.LM_DATA_URL + 'lm-cpt-qwen-manifest-v1.json.gz',
+    '4669a1ba7b7fa4f8dbc6c15e8d91372b733330cc')
+d2l.DATA_HUB['lm-pes2o-12m-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pes2o-12m-v1.tar',
+    '8c9b514214da373453f155f2a0adfcc364e02ee0')
+d2l.DATA_HUB['lm-pes2o-val-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pes2o-val-v1.tar',
+    '0ef7a04d6f2e9b8b23567d4eb37ca5039caf5cf0')
+d2l.DATA_HUB['lm-fwedu-replay-12m-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fwedu-replay-12m-v1.tar',
+    '46232cacbe8b9eb30ca7ce6a2d3f7e14ac765c24')
+d2l.DATA_HUB['lm-smollm3-trajectory-v1'] = (
+    d2l.LM_DATA_URL + 'lm-smollm3-trajectory-v1.json.gz',
+    '03aa35aca040cab3b127e3870b45c11b147b94b7')
+d2l.DATA_HUB['lm-cpt-runs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-cpt-runs-v1.json.gz',
+    '59dab5e3e95193643732a7d923f49a4efa1e6a58')
+
+_CPT_PENDING = {'cpt-t1'}
+d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _CPT_PENDING
 
 d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'] = (
     'lm-cpt-qwen-manifest-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['cpt-pes2o-12m'] = ('lm-pes2o-12m-v1', 'shards')
+d2l.PRETRAIN_ARTIFACTS['cpt-pes2o-val'] = ('lm-pes2o-val-v1', 'shards')
+d2l.PRETRAIN_ARTIFACTS['cpt-fwedu-replay-12m'] = (
+    'lm-fwedu-replay-12m-v1', 'shards')
 d2l.PRETRAIN_ARTIFACTS['cpt-t1'] = (
-    'lm-cpt-t1-v1', 'jsonl')
+    'lm-cpt-t1-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['cpt-runs'] = (
     'lm-cpt-runs-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['smollm3-trajectory'] = (
     'lm-smollm3-trajectory-v1', 'json-table')
+
+d2l.PRETRAIN_JOBS['cpt-t1'] = ('cpt_arms', lambda: d2l._cpt_t1_call())
+d2l.PRETRAIN_JOBS['cpt-qwen-A'] = ('cpt_arms', lambda: d2l._cpt_qwen_call())
+d2l.PRETRAIN_JOBS['cpt-qwen-B'] = ('cpt_arms', lambda: d2l._cpt_qwen_call())
+d2l.PRETRAIN_JOBS['cpt-qwen-C'] = ('cpt_arms', lambda: d2l._cpt_qwen_call())
+d2l.PRETRAIN_JOBS['cpt-qwen-A2'] = ('cpt_arms',
+                                    lambda: d2l._cpt_qwen_call())
+d2l.PRETRAIN_JOBS['cpt-qwen-evals'] = ('cpt_arms',
+                                       lambda: d2l._cpt_qwen_call())
+d2l.PRETRAIN_JOBS['smollm3-0'] = ('smollm3_trajectory',
+                                  lambda: d2l._smollm3_call())
+d2l.PRETRAIN_JOBS['smollm3-1'] = ('smollm3_trajectory',
+                                  lambda: d2l._smollm3_call())
+d2l.PRETRAIN_JOBS['smollm3-2'] = ('smollm3_trajectory',
+                                  lambda: d2l._smollm3_call())
+d2l.PRETRAIN_JOBS['smollm3-3'] = ('smollm3_trajectory',
+                                  lambda: d2l._smollm3_call())
+d2l.PRETRAIN_JOBS['smollm3-4'] = ('smollm3_trajectory',
+                                  lambda: d2l._smollm3_call())
+d2l.PRETRAIN_JOBS['smollm3-5'] = ('smollm3_trajectory',
+                                  lambda: d2l._smollm3_call())
+
+CPT_TASKS = ('hellaswag', 'arc_easy', 'arc_challenge', 'piqa', 'sciq',
+             'winogrande')
+
+_CPT_QWEN_NAMES = {'A': 'cpt-qwen-A', 'B': 'cpt-qwen-B', 'C': 'cpt-qwen-C',
+                   'A′': 'cpt-qwen-A2'}
+
+def _cpt_qwen_call():
+    """cpt_arms' arguments in the page's T2 cell.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    arms = {'A': dict(peak_lr=1e-4, replay=0.0, data_seed=0),
+            'B': dict(peak_lr=1e-4, replay=0.25, data_seed=0),
+            'C': dict(peak_lr=1e-5, replay=0.0, data_seed=0),
+            'A′': dict(peak_lr=1e-4, replay=0.0, data_seed=1)}
+    return dict(arms=arms, base='Qwen/Qwen3-0.6B-Base', tokens=80_000_000,
+                seq_len=2048, batch_tokens=262_144, warmup=10,
+                final_frac=0.1)
+
+def _cpt_t1_call():
+    """cpt_arms' arguments in the page's T1 cell."""
+    arms = {'A': dict(peak_lr=3e-4, replay=0.0, data_seed=0),
+            'A′': dict(peak_lr=3e-4, replay=0.0, data_seed=1),
+            'A″': dict(peak_lr=3e-4, replay=0.0, data_seed=2),
+            'B': dict(peak_lr=3e-4, replay=0.25, data_seed=0),
+            'cold': dict(peak_lr=None, replay=0.0, data_seed=0, warmup=0),
+            'branch': dict(peak_lr=None, replay=0.0, data_seed=0, warmup=0,
+                           start='plateau', schedule='linear')}
+    return dict(arms=arms, base='r2', tokens=12_000_000, seq_len=1024,
+                batch_tokens=65_536)
+
+def cpt_qwen_runs():
+    """The four Qwen3-0.6B-Base arms as the section's T2 cell computes
+    them (cpt_arms); while they are pending, the T1 arms under a printed
+    label."""
+    return cpt_arms(**_cpt_qwen_call())
+
+def _epoch_perm(stream, e):
+    """The permutation of all windows of stream in its epoch e (the one
+    PackedStream's own steps take slices of), cached per stream.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    key = (stream.seed, stream.epoch + int(e))
+    cached = getattr(stream, '_perm', None)
+    if cached is None or cached[0] != key:
+        stream._perm = (key, np.random.default_rng(list(key)).permutation(
+            stream.n_seq))
+    return stream._perm[1]
+
+def _stream_windows(stream, start, n):
+    """Windows start, ..., start + n - 1 of stream's permutation order
+    (epochs follow each other), as an int64 array (n, seq_len + 1)."""
+    if n == 0:
+        return np.empty((0, stream.seq_len + 1), dtype=np.int64)
+    pos = np.arange(start, start + n, dtype=np.int64)
+    idx = np.empty(n, dtype=np.int64)
+    for e in np.unique(pos // stream.n_seq):
+        sel = pos // stream.n_seq == e
+        idx[sel] = _epoch_perm(stream, e)[pos[sel] % stream.n_seq]
+    return d2l._windows(stream, idx)
+
+def _window_batch(W, eos_id):
+    """A PackedStream batch from windows W (n, T + 1)."""
+    W = torch.from_numpy(np.ascontiguousarray(W))
+    X, Y = W[:, :-1].contiguous(), W[:, 1:].clone()
+    Y[X == eos_id] = -100  # the next token starts a document
+    doc_ids, pos_ids = d2l.doc_ids_from_eos(X.int(), eos_id)
+    return dict(input_ids=X, labels=Y, doc_ids=doc_ids, pos_ids=pos_ids)
+
+def _mix_tokens(mix, step, streams):
+    """Tokens the streams with the given indices gave before step."""
+    return int(mix.cursors(step)[list(streams)].sum()) * mix.seq_len
+
+CptData = collections.namedtuple('CptData', ['table', 'shards', 'label'])
+
+_CPT_STREAMS = (  # key, row label, source, licence
+    ('pes2o', 'domain: peS2o', 'peS2o v2 train', 'ODC-By'),
+    ('book', 'domain: book (train)', 'book sections', 'CC BY-SA 4.0'),
+    ('replay', 'replay: FineWeb-Edu', 'FineWeb-Edu file 005', 'ODC-By'),
+    ('val_domain', 'val: peS2o', 'peS2o v2 validation', 'ODC-By'),
+    ('val_general', 'val: FineWeb-Edu', 'FineWeb-Edu validation',
+     'ODC-By'),
+    ('val_book', 'held-out book', 'every fifth section', 'CC BY-SA 4.0'))
+
+_CPT_DIRS = {'t1': os.path.join('..', 'data', 'lm', 'cpt-t1-v1'),
+             't2': os.path.join('..', 'data', 'lm', 'cpt-qwen-v1')}
+
+_CPT_T1_KEYS = {'pes2o': 'cpt-pes2o-12m', 'val_domain': 'cpt-pes2o-val',
+                'replay': 'cpt-fwedu-replay-12m'}
+
+def book_split(every=5):
+    """The book's sections, sorted by document id, as (train, held_out)
+    lists of (doc_id, text): every fifth section is held out.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    with d2l._quiet():
+        corpus = d2l.book_corpus()
+    docs = sorted(corpus.docs.values(), key=lambda d: d['doc_id'])
+    pairs = [(d['doc_id'], d['text']) for d in docs]
+    held = [p for i, p in enumerate(pairs) if i % every == every - 1]
+    return [p for i, p in enumerate(pairs) if i % every != every - 1], held
+
+def _cpt_tokenizer(tier):
+    """The tokenizer of a tier: the reference tokenizer (T1) or Qwen3's."""
+    with d2l._quiet():
+        if tier == 't1':
+            return d2l.r2_tokenizer()
+        import transformers
+        name = 'Qwen/Qwen3-0.6B-Base'
+        return transformers.AutoTokenizer.from_pretrained(
+            name, revision=d2l.HF_REVISIONS[name])
+
+def _locked(path):
+    """An exclusive file lock (a context manager) for a build that several
+    processes may start at once."""
+    import fcntl
+
+    @contextlib.contextmanager
+    def lock():
+        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+        with open(path, 'w') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+    return lock()
+
+def _book_shards(tier):
+    """{'book': train sections, 'val_book': held-out sections} as
+    TokenShards under the tier's tokenizer, built on first use."""
+    tag = 'r2' if tier == 't1' else 'qwen'
+    root = os.path.join('..', 'data', 'lm', f'cpt-book-{tag}-v1')
+    out = {}
+    with _locked(root + '.lock'):
+        for key, docs in zip(('book', 'val_book'), book_split()):
+            folder = os.path.join(root, key)
+            if not os.path.exists(os.path.join(folder, 'manifest.json')):
+                tmp = f'{folder}.{os.getpid()}.tmp'
+                shutil.rmtree(tmp, ignore_errors=True)
+                with d2l._quiet():
+                    d2l.write_shards(docs, _cpt_tokenizer(tier), tmp,
+                                     'train', shard_tokens=10 ** 9)
+                os.makedirs(root, exist_ok=True)
+                os.replace(tmp, folder)
+            out[key] = d2l.TokenShards(folder, 'train')
+    return out
+
+def _cpt_t1_shards():
+    """The T1 shards: the hosted ones, or the builder's local output before
+    their upload."""
+    out = {}
+    for key, name in _CPT_T1_KEYS.items():
+        local = os.path.join(_CPT_DIRS['t1'], key)
+        if d2l.PRETRAIN_ARTIFACTS[name][0] in d2l.DATA_HUB:
+            out[key] = d2l.load_artifact(name)
+        elif os.path.exists(os.path.join(local, 'manifest.json')):
+            out[key] = d2l.TokenShards(local, 'train')
+        else:
+            raise KeyError(f'{name} is not committed yet; build it with '
+                           'tools/build_pretraining_data.py --stage cpt-t1')
+    out['val_general'] = d2l.reference_shards('val')
+    return dict(out, **_book_shards('t1'))
+
+def _cpt_qwen_shards():
+    """The T2 shards (Qwen tokens, local), built through the builder when
+    missing; checked against the committed manifest when there is one."""
+    import subprocess
+    import sys
+    keys = [k for k, *_ in _CPT_STREAMS if k not in ('book', 'val_book')]
+    root = _CPT_DIRS['t2']
+    have = lambda: all(os.path.exists(os.path.join(root, k,
+                                                   'manifest.json'))
+                       for k in keys)
+    with _locked(root + '.lock'):
+        if not have():
+            repo = os.path.dirname(os.path.dirname(os.path.abspath(
+                d2l.__file__)))
+            subprocess.run([sys.executable, os.path.join(
+                repo, 'tools', 'build_pretraining_data.py'), '--stage',
+                'cpt-qwen'], check=True, cwd=repo, stdout=subprocess.DEVNULL)
+    out = {k: d2l.TokenShards(os.path.join(root, k), 'train') for k in keys}
+    if 'lm-cpt-qwen-manifest-v1' in d2l.DATA_HUB:
+        layout = d2l.load_artifact('cpt-qwen-manifest').layout
+        for k, s in out.items():
+            if d2l._layout_hash(s) != layout[k]:
+                raise ValueError(f'{k}: the local shards differ from the '
+                                 'committed manifest; rebuild them')
+    return dict(out, **_book_shards('t2'))
+
+def qwen3_val_tokens(n=4, T=512):
+    """n sequences of T Qwen3 tokens, each the start of one FineWeb-Edu
+    validation document of at least T tokens, as a LongTensor (n, T)."""
+    import gzip
+    tok, out = _cpt_tokenizer('t2'), []
+    root = d2l.reference_shards('val').root
+    with gzip.open(os.path.join(root, 'val.jsonl.gz'), 'rt') as f:
+        for line in f:
+            ids = tok(json.loads(line)['text'])['input_ids']
+            if len(ids) >= T:
+                out.append(ids[:T])
+            if len(out) == n:
+                break
+    return torch.tensor(out)
+
+def _shard_table(shards):
+    """stream, documents, tokens, source, licence of each stream."""
+    rows = [(label, shards[k].n_docs, shards[k].n_tokens, src, lic)
+            for k, label, src, lic in _CPT_STREAMS]
+    return pd.DataFrame(rows, columns=['stream', 'documents', 'tokens',
+                                       'source', 'licence'])
+
+def _cpt_qwen_regenerating():
+    names = set(_CPT_QWEN_NAMES.values()) | {'cpt-qwen-evals'}
+    return bool(d2l._regenerating() & names)
+
+def cpt_data(tier='t2'):
+    """The arms' data: CptData(table, shards, label). table: per stream
+    (domain peS2o, book train sections, replay FineWeb-Edu, the three
+    evaluation sets) documents, tokens, source and licence. 't1': the
+    R2-tokenized shards. 't2': in a normal run the committed manifest's
+    table (no shard is opened, built or downloaded; shards is None); in a
+    regeneration of the Qwen arms the local Qwen-tokenized shards."""
+    if tier == 't1':
+        shards = _cpt_t1_shards()
+        return CptData(_shard_table(shards), shards, '')
+    if tier != 't2':
+        raise ValueError(f"tier is 't1' or 't2', not {tier!r}")
+    if _cpt_qwen_regenerating():
+        shards = _cpt_qwen_shards()
+        return CptData(_shard_table(shards), shards, '')
+    if 'lm-cpt-qwen-manifest-v1' in d2l.DATA_HUB:
+        return CptData(d2l.load_artifact('cpt-qwen-manifest').table, None,
+                       '')
+    if d2l._regenerating():
+        return d2l._show_label(CptData(pd.DataFrame(columns=[
+            'stream', 'documents', 'tokens', 'source', 'licence']), None,
+            'cpt-qwen-manifest pending'))
+    raise KeyError('cpt-qwen-manifest is not committed yet')
+
+_CPT_EVAL_TOKENS = 2 ** 19  # the evaluations during training, per set
+
+_CPT_FULL_TOKENS = 2 ** 21  # the full evaluation, per set (2.1M tokens)
+
+_CPT_SETS = {'domain': 'val_domain', 'general': 'val_general',
+             'book': 'val_book'}
+
+def _token_nll(H, W, Y, chunk=2048):
+    """Per-target NLL in fp32 from hidden states and the output weight,
+    chunk positions at a time (0 where the target is ignored).
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    h, y = H.flatten(0, -2), Y.flatten()
+    out = torch.zeros(len(y), dtype=torch.float32, device=H.device)
+    for i in range(0, len(y), chunk):
+        logits = F.linear(h[i:i + chunk], W).float()
+        out[i:i + chunk] = F.cross_entropy(logits, y[i:i + chunk],
+                                           ignore_index=-100,
+                                           reduction='none')
+    return out.view(Y.shape)
+
+@torch.no_grad()
+def _doc_nll(model, shards, T, tokens=None, batch=8, chunk=2048):
+    """Per-document summed NLL and scored targets (doc_id, sum_nll,
+    n_tokens) on the first `tokens` tokens of shards (all if None), in
+    windows of T tokens with document masks; the model in its own dtype
+    under bf16 autocast on a GPU."""
+    n_win = (shards.n_tokens - 1) // T
+    if tokens is not None:  # tokens // T windows: full batches, one compile
+        n_win = min(n_win, max(1, tokens // T))
+    eos = shards.eos_id
+    toks = shards.read(0, n_win * T + 1).astype(np.int64)
+    doc = np.concatenate([[0], np.cumsum(toks == eos)[:-1]])
+    dev = next(model.parameters()).device
+    nll, cnt = np.zeros(doc[-1] + 1), np.zeros(doc[-1] + 1)
+    was_training = model.training
+    model.eval()
+    for i in range(0, n_win, batch):
+        rows = np.arange(i, min(i + batch, n_win))
+        Wn = torch.from_numpy(np.stack([toks[j * T:(j + 1) * T + 1]
+                                        for j in rows])).to(dev)
+        X, Y = Wn[:, :-1], Wn[:, 1:].clone()
+        Y[X == eos] = -100
+        ctx = d2l.PackCtx(*d2l.doc_ids_from_eos(X.int(), eos))
+        with torch.autocast(dev.type, torch.bfloat16,
+                            enabled=dev.type == 'cuda'):
+            H, Wt = model(X, ctx, return_hidden=True)
+        loss = _token_nll(H, Wt, Y, chunk).cpu().numpy()
+        valid = (Y != -100).cpu().numpy()
+        d = doc[np.add.outer(rows * T, np.arange(1, T + 1))][valid]
+        nll += np.bincount(d, weights=loss[valid], minlength=len(nll))
+        cnt += np.bincount(d, minlength=len(cnt))
+    model.train(was_training)
+    keep = cnt > 0
+    return pd.DataFrame(dict(doc_id=np.flatnonzero(keep), sum_nll=nll[keep],
+                             n_tokens=cnt[keep].astype(np.int64)))
+
+def _cpt_docs(model, shards, T, tokens):
+    """Per-document rows (set, doc_id, sum_nll, n_tokens) of the three
+    evaluation sets."""
+    return pd.concat([_doc_nll(model, shards[k], T, tokens).assign(set=s)
+                      for s, k in _CPT_SETS.items()], ignore_index=True)[
+        ['set', 'doc_id', 'sum_nll', 'n_tokens']]
+
+def _set_losses(docs):
+    """{'<set>_loss': token-weighted loss} of per-document rows."""
+    g = docs.groupby('set')[['sum_nll', 'n_tokens']].sum()
+    return {f'{s}_loss': float(g.loc[s, 'sum_nll'] / g.loc[s, 'n_tokens'])
+            for s in _CPT_SETS if s in g.index}
+
+def suite_mean(items, by=('arm', 'step')):
+    """The suite's mean accuracy (the mean over tasks of each task's mean
+    score) per group of items."""
+    by = list(by)
+    per_task = items.groupby(by + ['task'])['score'].mean()
+    return per_task.groupby(level=by).mean()
+
+def _cpt_suite(tasks, n_max=None, n_task=None, name='cpt', batch_size=16):
+    """An EvalSuite of tasks with at most n_max items each (all if None);
+    n_task {task: n} sets single tasks; subsets seeded with 0."""
+    out = []
+    for t in tasks:
+        task = d2l.EVAL_TASKS[t]
+        n = (n_task or {}).get(t, n_max)
+        if n is not None:
+            with d2l._quiet():
+                total = len(d2l._eval_load_rows(d2l._eval_canonical(task)))
+            task = task._replace(n=min(n, total), subset_seed=0)
+        out.append(task)
+    with d2l._quiet():
+        return d2l.EvalSuite(out, name=name, batch_size=batch_size)
+
+def _suite_items(suite, model, tokenizer):
+    """Per-item scores (task, item_id, score) of model on suite, under bf16
+    autocast on a GPU (the model may hold fp32 master weights)."""
+    dev = next(model.parameters()).device
+    was_training = model.training
+    model.eval()
+    with d2l._quiet(), torch.autocast(dev.type, torch.bfloat16,
+                                      enabled=dev.type == 'cuda'):
+        res = suite.run(model, tokenizer)
+    model.train(was_training)
+    return res.per_item[['task', 'item_id', 'score']].reset_index(drop=True)
+
+CptRuns = collections.namedtuple(
+    'CptRuns', ['table', 'logs', 'base_docs', 'docs', 'equal', 'items',
+                'label'])
+
+_CPT_COLUMNS = {
+    'table': ['arm', 'peak_lr', 'replay', 'steps', 'domain_tokens',
+              'domain_loss', 'general_loss', 'book_loss', 'suite', 'tok_s',
+              'gib'],
+    'logs': ['arm', 'step', 'tokens', 'domain_tokens', 'lr', 'loss',
+             'grad_norm', 'domain_loss', 'general_loss', 'book_loss'],
+    'base_docs': ['set', 'doc_id', 'sum_nll', 'n_tokens'],
+    'docs': ['arm', 'set', 'doc_id', 'sum_nll', 'n_tokens'],
+    'equal': ['arm', 'step', 'domain_tokens', 'domain_loss',
+              'general_loss', 'book_loss'],
+    'items': ['arm', 'step', 'task', 'item_id', 'score']}
+
+_CPT_MICRO = {'t1': 16, 't2': 1}  # sequences per micro-batch (D2 probe:
+# Qwen3-0.6B with fp32 master weights runs out of 24 GB at 2 x 2,048)
+
+_CPT_SUITE_STEP = 15  # arm A's early look at the suite
+
+_CPT_MIN_FREE_GB = {'t1': 10, 't2': 40}  # free disk before an arm starts
+
+def _arm_slug(arm):
+    return {'A′': 'A2', 'A″': 'A3'}.get(arm, arm)
+
+def _cpt_eval_steps(steps, tier, early=30):
+    """Interim evaluation steps: every 3 up to `early`, then every 15 (T2)
+    or 5 (T1), and the last.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    every = 15 if tier == 't2' else 5
+    return sorted(set(range(3, min(early, steps) + 1, 3)) | set(range(
+        every, steps + 1, every)) | {steps})
+
+def _cpt_configs(arms, base, tokens, seq_len, batch_tokens, warmup,
+                 final_frac):
+    """One JSON-able configuration per arm (defaults filled in)."""
+    tier = 't2' if base.startswith('Qwen/') else 't1'
+    steps, B = tokens // batch_tokens, batch_tokens // seq_len
+    replay = {a.get('peak_lr'): a['replay'] for a in arms.values()
+              if a.get('replay', 0) > 0}
+    out = {}
+    for name, a in arms.items():
+        a = dict(dict(peak_lr=None, replay=0.0, data_seed=0, warmup=warmup,
+                      start='final', schedule='cosine'), **a)
+        r = replay.get(a['peak_lr']) if a['replay'] == 0 else None
+        out[name] = dict(
+            tier=tier, arm=name, base=base, steps=steps, seq_len=seq_len,
+            global_batch=B, micro_batch=_CPT_MICRO[tier],
+            final_frac=final_frac, z_loss=0.0 if tier == 't2' else 1e-4,
+            equal_step=(round(steps * (1 - r)) if r and a['start'] ==
+                        'final' else None),
+            suite_step=_CPT_SUITE_STEP if name == 'A' else None, **a)
+    return out
+
+def _cpt_lr(step, cfg, peak):
+    """The arm's learning rate at step (0-based)."""
+    total, warmup = cfg['steps'], cfg['warmup']
+    if step < warmup:
+        return peak * (step + 1) / warmup
+    if cfg['schedule'] == 'linear':  # the plateau branch: decay to zero
+        return peak * (total - step) / (total - warmup)
+    final = cfg['final_frac'] * peak
+    t = (step - warmup) / max(1, total - warmup)
+    return final + (peak - final) * 0.5 * (1 + math.cos(math.pi * t))
+
+def _cpt_step(model, optimizer, micro_batches, cfg, n_valid, chunk=2048):
+    """pretrain_step on one GPU with the loss chunk of a large vocabulary."""
+    nll = 0.0
+    for mb in micro_batches:
+        ctx = d2l.PackCtx(mb['doc_ids'], mb['pos_ids'])
+        with torch.autocast(mb['input_ids'].device.type, torch.bfloat16,
+                            enabled=cfg.dtype == 'bf16'):
+            H, W = model(mb['input_ids'], ctx, return_hidden=True)
+            loss, _, part = d2l.chunked_lm_loss_and_nll(
+                H, W, mb['labels'], chunk=chunk, z_loss=cfg.z_loss)
+        (loss / n_valid).backward()
+        nll = nll + part.detach()
+    params = [p for g in optimizer.param_groups for p in g['params']]
+    norm = torch.nn.utils.clip_grad_norm_(params, cfg.clip or math.inf)
+    optimizer.step()
+    optimizer.zero_grad(set_to_none=True)
+    return dict(loss=nll / n_valid, grad_norm=norm,
+                clipped=norm > (cfg.clip or math.inf))
+
+def _arch_of(model, T):
+    """The Arch of a PackedGPT at sequence length T."""
+    c = model.config()
+    return d2l.Arch(c['num_blks'], c['num_hiddens'], c['num_heads'],
+                    c['num_kv_heads'], c['head_dim'], c['ffn_hidden'],
+                    c['vocab_size'], T, c['rope_theta'], c['qk_norm'],
+                    c['tie_embeddings'])
+
+def _cpt_r2_files():
+    """(preset, final bf16 checkpoint, plateau state) of the T1 base: the
+    reference run's (committed, else its job folder), else the t1 run's."""
+    for preset, key, last, plateau in (
+            ('r2', 'lm-r2-s6000-v1', 6000, 5100),
+            ('t1', 'lm-r2t1-s1526-v1', 1526, 1297)):
+        state_key = key.replace(f's{last}', f's{plateau}-state')
+        job = os.path.join(d2l._job_root(), f'{preset}-s0')
+        with d2l._quiet():
+            ckpt = (d2l.download_keyed(key) if key in d2l.DATA_HUB else
+                    os.path.join(job, 'ckpt', f's{last}.safetensors'))
+            state = (d2l.download_keyed(state_key) if state_key in
+                     d2l.DATA_HUB else d2l._state_path(job, plateau))
+        if os.path.isdir(state):
+            state = next(os.path.join(state, f) for f in sorted(
+                os.listdir(state)) if f.endswith('.pt'))
+        if os.path.exists(ckpt) and os.path.exists(state):
+            return preset, ckpt, state
+    raise FileNotFoundError('the T1 arms start from the reference run (or '
+                            "the t1 run): neither one's final checkpoint "
+                            'and plateau state are available')
+
+def _cpt_base(cfg, dtype=torch.float32, device='cpu'):
+    """(model, AdamW state or None, the base run's peak rate, label) of an
+    arm's starting point: Qwen3-0.6B-Base, or the reference model's final
+    checkpoint (fresh moments) or its plateau state (restored moments)."""
+    if cfg['tier'] == 't2':
+        with d2l._quiet():
+            q = d2l.load_qwen3(cfg['base'], dtype=dtype, device=device)
+        return d2l.PackedGPT.adopt(q), None, None, ''
+    preset, ckpt, state_path = _cpt_r2_files()
+    label = '' if preset == 'r2' else 't1 preset'
+    if cfg.get('start') == 'plateau':
+        state = torch.load(state_path, map_location='cpu',
+                           weights_only=False)
+        model = d2l.PackedGPT.from_arch(d2l.Arch(**state['cfg']['arch']))
+        model.load_state_dict(state['model'])
+        return (model.to(device, dtype), state['optim'],
+                state['cfg']['peak_lr'], label)
+    model = d2l._load_bf16(ckpt, dtype, device)
+    return model, None, d2l.r2_config(preset).peak_lr, label
+
+def _cpt_job(cfg):
+    return os.path.join(d2l._job_root(), 'cpt',
+                        f'{cfg["tier"]}-{_arm_slug(cfg["arm"])}')
+
+def _file_id(path):
+    """sha1 of a file's size and its first and last MiB: quick, and enough
+    to tell two trainings of one architecture apart."""
+    import hashlib
+    size = os.path.getsize(path)
+    h = hashlib.sha1(str(size).encode())
+    with open(path, 'rb') as f:
+        h.update(f.read(2 ** 20))
+        f.seek(max(0, size - 2 ** 20))
+        h.update(f.read(2 ** 20))
+    return h.hexdigest()
+
+def _cpt_base_id(cfg):
+    """What an arm starts from: Qwen's pinned revision, or the T1 preset
+    and the identity of its final checkpoint or plateau state."""
+    if cfg['tier'] == 't2':
+        return [cfg['base'], d2l.HF_REVISIONS[cfg['base']]]
+    preset, ckpt, state = _cpt_r2_files()
+    return [preset, _file_id(state if cfg.get('start') == 'plateau'
+                             else ckpt)]
+
+def _cpt_identity(cfg):
+    """The record of an arm in its job folder: configuration and base."""
+    return dict(config=d2l._jsonable(cfg), base=_cpt_base_id(cfg))
+
+def _cpt_check_job(job, ident, name='DONE'):
+    """Whether job holds file name; raise if that file records another
+    arm (configuration or starting point) than ident."""
+    path = os.path.join(job, name)
+    if not os.path.exists(path):
+        return False
+    with open(path) as f:
+        stored = json.load(f)
+    d = d2l._config_diff(ident, {k: stored.get(k) for k in ident})
+    if d:
+        raise ValueError(f'{job} holds another arm ({d[0]}: {d[2]!r}, this '
+                         f'arm has {d[1]!r}); move the folder away to '
+                         'retrain it')
+    return True
+
+def _cpt_check_disk(cfg):
+    """Refuse to start an arm with less than _CPT_MIN_FREE_GB free."""
+    path = os.path.abspath(d2l._job_root())
+    while not os.path.exists(path):
+        path = os.path.dirname(path)
+    free = shutil.disk_usage(path).free / 2 ** 30
+    need = _CPT_MIN_FREE_GB[cfg['tier']]
+    if free < need:
+        raise OSError(f'{free:.0f} GiB free under {path}; a {cfg["tier"]} '
+                      f'arm starts with at least {need} GiB')
+
+def _cpt_train(model, mix, sets, cfg, job, optim_state=None, peak=None,
+               tokenizer=None, suite=None, stop=None):
+    """Train one arm (resumable in job; at most `stop` steps): the log
+    rows, with the interim losses on the evaluation grid (unless
+    cfg['evaluate'] is False); arm A's suite at its suite step and the
+    equal-token per-document losses go to files in job."""
+    dev = next(model.parameters()).device
+    T = cfg['seq_len']
+    pc = d2l.PretrainConfig(
+        f'cpt-{_arm_slug(cfg["arm"])}', _arch_of(model, T), cfg['steps'],
+        cfg['global_batch'], cfg['micro_batch'], peak, cfg['warmup'], 0,
+        z_loss=cfg['z_loss'], compile=dev.type == 'cuda', probe_every=0,
+        stats_every=0, val_every=0, ckpt_steps=(cfg['steps'],),
+        state_every=50, seed=cfg['data_seed'], out_dir=job)
+    run = d2l._PretrainRun(model, mix, pc, None, 'auto')
+    if run.start == 0 and optim_state is not None:  # the plateau's moments
+        run.optimizer.load_state_dict(optim_state)
+    grid = (set(_cpt_eval_steps(cfg['steps'], cfg['tier']))
+            if cfg.get('evaluate', True) else set())
+    step0 = os.path.join(job, 'step0.json')
+    if grid and run.start == 0:  # the arm's own start: the bump's baseline
+        losses = _set_losses(_cpt_docs(run.raw, sets, T, _CPT_EVAL_TOKENS))
+        with open(step0 + '.tmp', 'w') as f:
+            json.dump(losses, f)
+        os.replace(step0 + '.tmp', step0)
+    for seg in run.segments():
+        for step in range(seg.start, min(seg.total, stop or seg.total)):
+            lr = _cpt_lr(step, cfg, peak)
+            for group in run.optimizer.param_groups:
+                group['lr'] = lr
+            t0 = time.perf_counter()
+            batch, micro, n_valid = run.batch(step)
+            t1 = time.perf_counter()
+            out = _cpt_step(run.model, run.optimizer, micro, pc, n_valid)
+            done = step + 1
+            row = dict(step=done, tokens=done * run.step_tokens, lr=lr,
+                       domain_tokens=_mix_tokens(mix, done, (0, 1)), **out)
+            if done in grid:
+                row.update(_set_losses(_cpt_docs(run.raw, sets, T,
+                                                 _CPT_EVAL_TOKENS)))
+            if done == cfg.get('equal_step'):
+                d2l._write_result(os.path.join(job, 'equal.json.gz'),
+                                  'json-table', _cpt_docs(
+                                      run.raw, sets, T, _CPT_FULL_TOKENS),
+                                  dict(config=None, label=''))
+            if done == cfg.get('suite_step'):
+                d2l._write_result(os.path.join(job, 'suite.json.gz'),
+                                  'json-table', _suite_items(
+                                      suite, run.raw, tokenizer),
+                                  dict(config=None, label=''))
+            run.record(seg, row, batch, None, t1 - t0, t0)
+            if run.stopped(row):
+                raise FloatingPointError(f'{job}: non-finite loss at '
+                                         f'step {done}')
+    return run.finish()
+
+def _cpt_mix(shards, cfg):
+    """The arm's MixStream: peS2o, book and replay windows in the shares
+    (0.9 (1 - r), 0.1 (1 - r), r), data seed for streams and mixture."""
+    T, B, seed, r = (cfg['seq_len'], cfg['global_batch'], cfg['data_seed'],
+                     cfg['replay'])
+    streams = [d2l.PackedStream(shards[k], T, B, seed=seed)
+               for k in ('pes2o', 'book', 'replay')]
+    return d2l.mix_streams(streams, (0.9 * (1 - r), 0.1 * (1 - r), r), B,
+                           seed=seed)
+
+def _cpt_suite_n(tier):
+    return None if tier == 't2' else 2000  # T1: 2,000 items per task
+
+def _cpt_arm_run(cfg):
+    """Train one arm (or read its finished job folder): {log, equal,
+    suite, peak_lr, gib, tok_s, label}."""
+    job, ident = _cpt_job(cfg), _cpt_identity(cfg)
+    done = os.path.join(job, 'DONE')
+    if not _cpt_check_job(job, ident):
+        _cpt_check_job(job, ident, 'arm.json')  # resume only the same arm
+        _cpt_check_disk(cfg)
+        os.makedirs(job, exist_ok=True)
+        with open(os.path.join(job, 'arm.json'), 'w') as f:
+            json.dump(ident, f)
+        dev = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        torch._dynamo.reset()  # one process trains several arms: compile
+        model, optim, old_peak, label = _cpt_base(cfg, device=dev)  # anew
+        model.train()
+        peak = cfg['peak_lr'] if cfg['peak_lr'] is not None else old_peak
+        shards = cpt_data(cfg['tier']).shards
+        tok = suite = None
+        if cfg['suite_step']:
+            tok, suite = _cpt_tokenizer(cfg['tier']), _cpt_suite(
+                d2l.CPT_TASKS, n_max=_cpt_suite_n(cfg['tier']))
+        if dev.type == 'cuda':
+            torch.cuda.reset_peak_memory_stats(dev)
+        with d2l._quiet():
+            _cpt_train(model, _cpt_mix(shards, cfg), shards, cfg, job,
+                       optim, peak, tok, suite)
+        gib = (torch.cuda.max_memory_allocated(dev) / 2 ** 30
+               if dev.type == 'cuda' else float('nan'))
+        with open(done, 'w') as f:
+            json.dump(dict(ident, peak_lr=peak, gib=gib, label=label), f)
+        shutil.rmtree(os.path.join(job, 'state'), ignore_errors=True)
+        del model
+        d2l.lm_free()
+    with open(done) as f:
+        info = json.load(f)
+    log = d2l._read_job_logs(job)
+    step0 = os.path.join(job, 'step0.json')
+    if os.path.exists(step0):  # the evaluation before the first update
+        with open(step0) as f:
+            log = pd.concat([pd.DataFrame([dict(
+                step=0, tokens=0, domain_tokens=0, **json.load(f))]), log],
+                            ignore_index=True)
+    read = lambda name: (d2l._read_result(os.path.join(job, name),
+                                          'json-table')
+                         if os.path.exists(os.path.join(job, name))
+                         else pd.DataFrame())
+    steady = log.loc[log['step'] > 20, 'tok_s']
+    return dict(log=log, equal=read('equal.json.gz'),
+                suite=read('suite.json.gz'), peak_lr=info['peak_lr'],
+                gib=info['gib'], tok_s=float(steady.median()),
+                label=info['label'])
+
+def _part(p):
+    """A part as a dict, whether computed or read back from its file."""
+    return p._asdict() if hasattr(p, '_asdict') else dict(p)
+
+def _cpt_merge(parts, cfgs):
+    """CptRuns from the arms' parts {arm: part}: the base and each arm's
+    final weights on the full evaluation sets and the suite."""
+    cfg0 = next(iter(cfgs.values()))
+    tier, T = cfg0['tier'], cfg0['seq_len']
+    dev = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    shards, tok = cpt_data(tier).shards, _cpt_tokenizer(tier)
+    suite = _cpt_suite(d2l.CPT_TASKS, n_max=_cpt_suite_n(tier))
+    torch._dynamo.reset()
+    base, _, _, label = _cpt_base(dict(cfg0, start='final'),
+                                  torch.bfloat16, dev)
+    base_docs = _cpt_docs(base, shards, T, _CPT_FULL_TOKENS)
+    interim = _set_losses(_cpt_docs(base, shards, T, _CPT_EVAL_TOKENS))
+    logs = [pd.DataFrame([dict(arm='base', step=0, tokens=0,
+                               domain_tokens=0, **interim)])]
+    items = [_suite_items(suite, base, tok).assign(arm='base', step=0)]
+    del base
+    d2l.lm_free()
+    rows = [dict(arm='base', steps=0, domain_tokens=0,
+                 **_set_losses(base_docs))]
+    docs, equal = [], []
+    for arm, cfg in cfgs.items():
+        p = _part(parts[arm])
+        if not _cpt_check_job(_cpt_job(cfg), _cpt_identity(cfg)):
+            raise FileNotFoundError(f'{_cpt_job(cfg)}: arm {arm} not done')
+        path = os.path.join(_cpt_job(cfg), 'ckpt',
+                            f's{cfg["steps"]}.safetensors')
+        model = d2l._load_bf16(path, device=dev)
+        d = _cpt_docs(model, shards, T, _CPT_FULL_TOKENS)
+        docs.append(d.assign(arm=arm))
+        items.append(_suite_items(suite, model, tok).assign(
+            arm=arm, step=cfg['steps']))
+        del model
+        d2l.lm_free()
+        log = p['log']
+        rows.append(dict(arm=arm, peak_lr=p['peak_lr'], replay=cfg['replay'],
+                         steps=cfg['steps'], domain_tokens=int(
+                             log['domain_tokens'].iloc[-1]),
+                         tok_s=p['tok_s'], gib=p['gib'], **_set_losses(d)))
+        logs.append(log.assign(arm=arm))
+        if len(p['equal']):
+            s = cfg['equal_step']
+            equal.append(dict(arm=arm, step=s, domain_tokens=int(log.loc[
+                log['step'] == s, 'domain_tokens'].iloc[0]),
+                **_set_losses(p['equal'])))
+        if len(p['suite']):
+            items.append(p['suite'].assign(arm=arm, step=cfg['suite_step']))
+    items = pd.concat(items, ignore_index=True)
+    final = items[items['step'].isin([0, cfg0['steps']])]
+    table = pd.DataFrame(rows)
+    table['suite'] = table['arm'].map(suite_mean(final, by=('arm',)))
+    C = _CPT_COLUMNS
+    return CptRuns(table.reindex(columns=C['table']),
+                   pd.concat(logs, ignore_index=True).reindex(
+                       columns=C['logs']),
+                   base_docs, pd.concat(docs, ignore_index=True)[C['docs']],
+                   pd.DataFrame(equal, columns=C['equal']),
+                   items[C['items']], label)
+
+def cpt_arms(arms, base, tokens, seq_len, batch_tokens, warmup=10,
+             final_frac=0.1):
+    """Continue base on the domain stream (90% peS2o, 10% the book's train
+    sections) with a replay share of FineWeb-Edu, one run per arm, and
+    evaluate it: CptRuns(table, logs, base_docs, docs, equal, items,
+    label). arms = {name: dict(peak_lr, replay, data_seed[, warmup, start,
+    schedule])}; peak_lr None is the base run's own peak; start 'plateau'
+    restores the reference run's plateau state (weights and AdamW moments)
+    instead of its final checkpoint; schedule 'cosine' (to final_frac of
+    the peak) or 'linear' (to zero). base 'Qwen/Qwen3-0.6B-Base' (T2: one
+    regeneration per arm, cpt-qwen-A, -B, -C, -A2, merged by
+    cpt-qwen-evals) or 'r2' (T1: the regeneration cpt-t1). Otherwise the
+    committed result; while the Qwen arms are pending, the T1 arms under a
+    printed label."""
+    config = dict(arms=arms, base=base, tokens=tokens, seq_len=seq_len,
+                  batch_tokens=batch_tokens, warmup=warmup,
+                  final_frac=final_frac)
+    cfgs = _cpt_configs(arms, base, tokens, seq_len, batch_tokens, warmup,
+                        final_frac)
+    if not base.startswith('Qwen/'):
+        res = d2l._pretrain_result('cpt-t1', lambda: _cpt_merge(
+            {a: _cpt_arm_run(c) for a, c in cfgs.items()}, cfgs), config)
+    else:
+        missing = set(arms) - set(_CPT_QWEN_NAMES)
+        if missing:
+            raise ValueError(f'no regeneration name for arms {missing}')
+        parts = {_CPT_QWEN_NAMES[a]: (lambda c=c: _cpt_arm_run(c), c)
+                 for a, c in cfgs.items()}
+        names = {_CPT_QWEN_NAMES[a]: a for a in cfgs}
+        res = d2l._pretrain_merged(
+            'cpt-qwen-evals', parts, lambda r: _cpt_merge(
+                {names[k]: v for k, v in r.items()}, cfgs), config,
+            fallback='cpt-t1')
+    return d2l._show_label(d2l._as_tuple(CptRuns, res, _CPT_COLUMNS))
+
+def cpt_probe(micro_batches=(1, 2), steps=15, warmup=3):
+    """The D2 probe of a T2 arm (arm A's configuration) on one GPU, per
+    micro-batch size: peak GiB reserved, median seconds per step after
+    compilation, tokens/s and the projected hours of a 305-step arm (no
+    evaluations), as a DataFrame."""
+    import tempfile
+    rows = []
+    dev = torch.device('cuda')
+    for m in micro_batches:
+        cfg = dict(_cpt_configs(**_cpt_qwen_call())['A'], micro_batch=m,
+                   evaluate=False, equal_step=None, suite_step=None)
+        torch._dynamo.reset()
+        model = _cpt_base(cfg, device=dev)[0].train()
+        shards = _cpt_qwen_shards()
+        torch.cuda.reset_peak_memory_stats(dev)
+        os.makedirs(d2l._job_root(), exist_ok=True)
+        try:
+            with tempfile.TemporaryDirectory(dir=d2l._job_root()) as job, \
+                    d2l._quiet():
+                log = _cpt_train(model, _cpt_mix(shards, cfg), shards, cfg,
+                                 job, peak=cfg['peak_lr'],
+                                 stop=steps + warmup)
+            t = float(log['step_s'].iloc[warmup:].median())
+        except torch.OutOfMemoryError:
+            t = math.nan  # the row says so: gib is the card's limit
+        B, T = cfg['global_batch'], cfg['seq_len']
+        rows.append(dict(micro_batch=m, gib=torch.cuda.max_memory_reserved(
+            dev) / 2 ** 30, step_s=t, tok_s=B * T / t,
+                         arm_hours=cfg['steps'] * t / 3600))
+        del model
+        torch._dynamo.reset()
+        d2l.lm_free()
+    return pd.DataFrame(rows)
+
+def plot_cpt_curves(runs, thin=('A′', 'A″')):
+    """Domain, general and held-out book loss against tokens, one panel
+    each, per arm (the arms in `thin` as thin lines), with the base's loss
+    as a dashed line.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    fig, axes = d2l.plt.subplots(1, 3, figsize=(8, 2.6))
+    logs = runs.logs.dropna(subset=['domain_loss'])
+    base = logs[logs['arm'] == 'base']
+    arms = [a for a in dict.fromkeys(logs['arm']) if a != 'base']
+    for ax, s in zip(axes, ('domain', 'general', 'book')):
+        for i, arm in enumerate(arms):
+            g = logs[logs['arm'] == arm]
+            ax.plot(g['tokens'] / 1e6, g[f'{s}_loss'], color=f'C{i}',
+                    lw=0.8 if arm in thin else 1.6, label=arm)
+        if len(base):
+            ax.axhline(base[f'{s}_loss'].iloc[0], color='black', ls='--',
+                       lw=1)
+        ax.set_xlabel('tokens (millions)')
+        ax.set_title(f'{s} loss', fontsize=10)
+    axes[0].set_ylabel('nats per token')
+    axes[0].legend(fontsize=8)
+    fig.tight_layout()
+
+Estimate = collections.namedtuple('Estimate', ['value', 'lo', 'hi', 'note'])
+
+def _estimate(x, note=''):
+    """Estimate from replicates whose last entry is the point estimate.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    if note:
+        return Estimate(math.nan, math.nan, math.nan, note)
+    lo, hi = np.percentile(x[:-1], [2.5, 97.5])
+    return Estimate(float(x[-1]), float(lo), float(hi), '')
+
+def frontier_excess(fg, arm='B', through='C'):
+    """How far arm's domain gain lies above the line from the base (no
+    gain, no forgetting) through arm `through`, at arm's forgetting, in
+    nats per token: an Estimate (value, lo, hi, note) with the 95% interval
+    from the document resamples of forgetting_gain (fg.attrs['draws']).
+    The line is undefined, and note says why, when an arm is missing or
+    `through`'s forgetting interval reaches 0 (the slope's replicates
+    would divide by about 0). The test is one-sided: on a concave frontier
+    the line through a low-forgetting arm lies above the frontier at
+    larger forgetting, so a positive excess shows arm above it and a
+    negative one shows nothing."""
+    draws = fg.attrs.get('draws', {})
+    if not {arm, through} <= set(draws):
+        missing = sorted({arm, through} - set(draws))
+        return _estimate(None, f'needs arm {", ".join(missing)} (T2 only)')
+    g, f = (lambda a: draws[a]['gain']), (lambda a: draws[a]['forget'])
+    if np.percentile(f(through)[:-1], 2.5) <= 0:
+        return _estimate(None, f"{through}'s forgetting is not resolved "
+                         'from 0: the line is undefined')
+    return _estimate(g(arm) - g(through) * f(arm) / f(through))
+
+def replay_fractions(fg, arm='B', of='A'):
+    """arm's domain gain and forgetting as fractions of arm `of`'s: two
+    Estimates (kept, forgot) from the same document resamples (a paired
+    ratio), or with a note when an arm is missing."""
+    draws = fg.attrs.get('draws', {})
+    if not {arm, of} <= set(draws):
+        missing = sorted({arm, of} - set(draws))
+        note = f'{arm} against {of}: needs arm {", ".join(missing)}'
+        return _estimate(None, note), _estimate(None, note)
+    return tuple(_estimate(draws[arm][k] / draws[of][k])
+                 for k in ('gain', 'forget'))
+
+def plot_tradeoff(fg, through='C'):
+    """Domain gain against forgetting with 95% intervals per arm, the base
+    at the origin, and the line from the base through arm `through` (when
+    its forgetting is resolved from 0)."""
+    fig, ax = d2l.plt.subplots(figsize=(4.2, 3.2))
+    ax.plot([0], [0], 'ks')
+    ax.annotate('base', (0, 0), xytext=(6, -10), textcoords='offset points',
+                fontsize=9)
+    for i, r in enumerate(fg.itertuples()):
+        ax.errorbar(r.forget, r.gain, xerr=[[r.forget - r.forget_lo],
+                                            [r.forget_hi - r.forget]],
+                    yerr=[[r.gain - r.gain_lo], [r.gain_hi - r.gain]],
+                    fmt='o', color=f'C{i}', capsize=2, label=r.arm)
+    c = fg.set_index('arm').reindex([through]).iloc[0]
+    if np.isfinite(c['forget_lo']) and c['forget_lo'] > 0:
+        x = np.array([0, fg['forget_hi'].max()])
+        ax.plot(x, x * c['gain'] / c['forget'], color='black', ls='--',
+                lw=1)
+    ax.axhline(0, color='black', lw=0.6)
+    ax.axvline(0, color='black', lw=0.6)
+    ax.set_xlabel('forgetting (nats/token)')
+    ax.set_ylabel('domain gain (nats/token)')
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+
+SmolTrajectory = collections.namedtuple(
+    'SmolTrajectory', ['table', 'bpb', 'items', 'docs', 'label'])
+
+SMOLLM3_TASKS = ('hellaswag', 'arc_easy', 'arc_challenge', 'piqa',
+                 'winogrande', 'mmlu')
+
+_SMOLLM3 = {  # name: (row label, tokens seen in billions)
+    'stage1': ('stage 1 end', 3_440_000 * 2_359_296 / 1e9),
+    'stage2': ('stage 2 end', 4_200_000 * 2_359_296 / 1e9),
+    'stage3': ('stage 3 end', 4_720_000 * 2_359_296 / 1e9),
+    'lc32k': ('LC 32K', 4_740_000 * 2_359_296 / 1e9),
+    'lc64k': ('LC 64K', 4_760_000 * 2_359_296 / 1e9),
+    'mid': ('mid-training', 4_760_000 * 2_359_296 / 1e9 + 140)}
+
+_SMOLLM3_DOMAINS = ('web', 'science', 'book')
+
+def _smollm3_call():
+    return dict(names=('stage1', 'stage2', 'stage3', 'lc32k', 'lc64k',
+                       'mid'))
+
+def _bpb_texts(n=500):
+    """{domain: texts}: the first n FineWeb-Edu validation documents, the
+    first n of peS2o's validation file 0, and every held-out book
+    section.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    import gzip
+    from huggingface_hub import hf_hub_download
+    root = d2l.reference_shards('val').root
+    with gzip.open(os.path.join(root, 'val.jsonl.gz'), 'rt') as f:
+        web = [json.loads(line)['text'] for _, line in zip(range(n), f)]
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES['pes2o']
+    with d2l._quiet():
+        path = hf_hub_download(repo, 'data/v2/validation-00000-of-00002.'
+                               'json.gz', repo_type='dataset', revision=rev)
+    with gzip.open(path, 'rt') as f:
+        science = [json.loads(line)['text'] for _, line in zip(range(n), f)]
+    return dict(web=web, science=science,
+                book=[t for _, t in book_split()[1]])
+
+def _smollm3_bpb_tokenizer(repo, rev):
+    """SmolLM3's tokenizer with <|begin_of_text|> as bits_per_byte's
+    document boundary. Its own end token (<|end_of_text|>; <|im_end|> from
+    mid-training on) is no context for a new document: measured on 20
+    documents per domain, it raises the bits per byte of the stage-3 and
+    long-context checkpoints by 19-61% against <|begin_of_text|>, while
+    stages 1 and 2 and mid-training score within 2.5% either way."""
+    import transformers
+    with d2l._quiet():
+        tok = transformers.AutoTokenizer.from_pretrained(
+            repo, revision=rev, eos_token='<|begin_of_text|>')
+    bos = tok.convert_tokens_to_ids('<|begin_of_text|>')
+    assert d2l._lm_boundary_id(tok) == bos, (d2l._lm_boundary_id(tok), bos)
+    return tok
+
+def _smollm3_point(name, n=None, texts=None):
+    """One checkpoint: per-item suite scores, (with texts) per-document
+    bits per byte (each document after <|begin_of_text|>) and UTF-8 bytes,
+    and its context length."""
+    import unicodedata
+    from transformers.utils import logging as hf_logging
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES[f'smollm3-{name}']
+    bars = hf_logging.is_progress_bar_enabled()
+    hf_logging.disable_progress_bar()  # a notebook shows them as widgets
+    try:
+        with d2l._quiet():
+            model, tok = d2l.load_hf(repo, revision=rev)
+    finally:
+        if bars:
+            hf_logging.enable_progress_bar()
+    tok_bpb = _smollm3_bpb_tokenizer(repo, rev) if texts else None
+    suite = _cpt_suite(SMOLLM3_TASKS, n_max=n, n_task=None if n else dict(
+        mmlu=2000), name='smollm3', batch_size=8)
+    with d2l._quiet():
+        res = suite.run(model, tok)
+    items = res.per_item[['task', 'item_id', 'score']].assign(
+        checkpoint=_SMOLLM3[name][0])
+    rows = []
+    for dom, docs in (texts or {}).items():
+        for i, t in enumerate(docs):
+            with d2l._quiet():
+                b = d2l.bits_per_byte(model, tok_bpb, [t], ctx_len=2048)
+            rows.append(dict(checkpoint=_SMOLLM3[name][0], domain=dom, doc=i,
+                             bpb=b, bytes=len(unicodedata.normalize(
+                                 'NFC', t).encode())))
+    ctx = int(model.config.max_position_embeddings)
+    del model
+    d2l.lm_free()
+    return dict(items=items, docs=pd.DataFrame(rows), ctx=ctx)
+
+def _smollm3_merge(points, names):
+    """SmolTrajectory from {name: point}."""
+    pts = {n: _part(points[n]) for n in names}
+    items = pd.concat([pts[n]['items'] for n in names], ignore_index=True)
+    acc = items.groupby(['checkpoint', 'task'], sort=False)['score'].mean(
+        ).unstack('task')
+    table = pd.DataFrame(dict(
+        checkpoint=[_SMOLLM3[n][0] for n in names],
+        tokens=[f'{_SMOLLM3[n][1] / 1e3:.1f}T' for n in names],
+        ctx=[f'{pts[n]["ctx"] // 1024}K' for n in names]))
+    table = table.join(acc[list(SMOLLM3_TASKS)], on='checkpoint')
+    docs = pd.concat([pts[n]['docs'] for n in names], ignore_index=True)
+    if len(docs):
+        g = docs.assign(bits=docs['bpb'] * docs['bytes']).groupby(
+            ['checkpoint', 'domain'], sort=False)[['bits', 'bytes']].sum()
+        bpb = (g['bits'] / g['bytes']).unstack('domain')[list(
+            _SMOLLM3_DOMAINS)].reindex(table['checkpoint']).reset_index()
+    else:
+        bpb = pd.DataFrame(columns=['checkpoint', *_SMOLLM3_DOMAINS])
+    return SmolTrajectory(table, bpb, items, docs, '')
+
+def smollm3_trajectory(names, n=None):
+    """SmolLM3-3B's checkpoints `names` (of 'stage1', 'stage2', 'stage3',
+    'lc32k', 'lc64k', 'mid'): SmolTrajectory(table, bpb, items, docs,
+    label). table: checkpoint, tokens seen, context length and accuracy per
+    task; bpb: bits per byte per domain (web, science, book). n=None: the
+    committed full-set result (regenerations smollm3-0 to smollm3-5, one
+    checkpoint each); n given: the suite scored live on n items per task
+    in every run (no bits per byte)."""
+    names = list(names)
+    if n is not None:
+        return _smollm3_merge({k: _smollm3_point(k, n=n) for k in names},
+                              names)
+    order = list(_smollm3_call()['names'])
+    texts = {}
+
+    def point(k):  # the texts are read once per process
+        if 't' not in texts:
+            texts['t'] = _bpb_texts()
+        return _smollm3_point(k, texts=texts['t'])
+    parts = {f'smollm3-{order.index(k)}': (
+        lambda k=k: point(k), dict(name=k, pin=d2l.PRETRAIN_SOURCES[
+            f'smollm3-{k}'][2])) for k in names}
+    res = d2l._pretrain_merged(None, parts, lambda r: _smollm3_merge(
+        {k: r[f'smollm3-{order.index(k)}'] for k in names}, names),
+        dict(names=names))
+    return d2l._show_label(d2l._as_tuple(SmolTrajectory, res, dict(
+        table=['checkpoint', 'tokens', 'ctx', *SMOLLM3_TASKS],
+        bpb=['checkpoint', *_SMOLLM3_DOMAINS],
+        items=['task', 'item_id', 'score', 'checkpoint'],
+        docs=['checkpoint', 'domain', 'doc', 'bpb', 'bytes'])))
+
+def plot_capability_bpb(ref, traj, tasks=('hellaswag', 'arc_easy', 'piqa',
+                                           'winogrande')):
+    """Mean accuracy on the tasks both suites share against bits per byte
+    on FineWeb-Edu validation text: the reference run's checkpoints (ref,
+    a CheckpointEvals) and SmolLM3's (traj, web BPB)."""
+    smol = traj.table.set_index('checkpoint')
+    xs = [ref.table['bpb'], traj.bpb.set_index('checkpoint')['web'].reindex(
+        smol.index)]
+    ys = [ref.table[list(tasks)].mean(axis=1), smol[list(tasks)].mean(axis=1)]
+    d2l.plot(xs, ys, 'bits per byte (FineWeb-Edu validation)',
+             'mean accuracy (4 tasks)',
+             legend=['reference model', 'SmolLM3-3B'], fmts=('o-', 's-'),
+             figsize=(4.5, 3.2))
+
+def stage_deltas(traj, n_boot=2000, seed=0):
+    """Changes between adjacent checkpoints of traj: the suite mean in
+    points (every task weighs the same; items paired) and each domain's
+    byte-weighted bits per byte in percent (documents paired), each with a
+    95% bootstrap interval: columns transition, suite, suite_lo, suite_hi
+    and the same three for each of web, science and book."""
+    import warnings
+    short = {'stage 1 end': 'S1', 'stage 2 end': 'S2', 'stage 3 end': 'S3',
+             'LC 32K': 'LC32K', 'LC 64K': 'LC64K', 'mid-training': 'mid'}
+    names = list(traj.table['checkpoint'])
+    wide = traj.items.pivot_table(index=['task', 'item_id'],
+                                  columns='checkpoint', values='score')
+    tasks = wide.index.get_level_values('task')
+    w = 1 / tasks.map(tasks.value_counts()).to_numpy()
+    w = w / w.mean()  # every task weighs the same in the suite mean
+    docs = traj.docs.assign(bits=traj.docs['bpb'] * traj.docs['bytes'])
+    rows = []
+    for a, b in zip(names, names[1:]):
+        row = dict(transition=f'{short.get(a, a)} → {short.get(b, b)}')
+        keep = wide[[a, b]].notna().all(axis=1).to_numpy()
+        with warnings.catch_warnings():  # a smoke run has under 100 items
+            warnings.simplefilter('ignore')
+            r = d2l.paired_bootstrap(wide[b][keep] * w[keep],
+                                     wide[a][keep] * w[keep], n_boot,
+                                     seed=seed)
+        row.update(suite=100 * r.mean, suite_lo=100 * r.ci[0],
+                   suite_hi=100 * r.ci[1])
+        for dom in _SMOLLM3_DOMAINS:
+            d = docs[docs['domain'] == dom].pivot_table(
+                index='doc', columns='checkpoint', values=['bits', 'bytes'])
+            if not len(d):
+                row.update(dict.fromkeys([dom, f'{dom}_lo', f'{dom}_hi'],
+                                         math.nan))
+                continue
+            bits, n = d['bits'][[a, b]].to_numpy(), d['bytes'][a].to_numpy()
+            idx = np.stack([*d2l.cluster_resample(np.arange(len(n)), n_boot,
+                                                  seed), np.arange(len(n))])
+            bpb = [bits[idx, k].sum(1) / n[idx].sum(1) for k in (0, 1)]
+            est = _estimate(100 * (bpb[1] / bpb[0] - 1))
+            row.update({dom: est.value, f'{dom}_lo': est.lo,
+                        f'{dom}_hi': est.hi})
+        rows.append(row)
+    return pd.DataFrame(rows, columns=['transition'] + [
+        f'{k}{q}' for k in ('suite', *_SMOLLM3_DOMAINS)
+        for q in ('', '_lo', '_hi')])
+
+def plot_smollm3(traj):
+    """Suite accuracy per task (left) and bits per byte per domain (right)
+    across the checkpoints."""
+    fig, (ax1, ax2) = d2l.plt.subplots(1, 2, figsize=(8, 3))
+    x = np.arange(len(traj.table))
+    for i, t in enumerate(SMOLLM3_TASKS):
+        ax1.plot(x, traj.table[t], '-o', ms=3, color=f'C{i}', label=t)
+    for i, dom in enumerate(_SMOLLM3_DOMAINS):
+        ax2.plot(x, traj.bpb[dom], '-o', ms=3, color=f'C{i}', label=dom)
+    for ax, what in ((ax1, 'accuracy'), (ax2, 'bits per byte')):
+        ax.set_xticks(x)
+        ax.set_xticklabels(traj.table['checkpoint'], rotation=30,
+                           ha='right', fontsize=8)
+        ax.set_ylabel(what)
+        ax.legend(fontsize=7)
+    fig.tight_layout()
+
+d2l.DATA_HUB['lm-lc-long-60m-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lc-long-60m-v1.tar',
+    '24ddc3182a630192b02dfaf9e8fb474f4554cd9f')
+d2l.DATA_HUB['lm-pg19-test-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pg19-test-v1.tar',
+    'a92784936e0d0da6a0623c0b9bd22d335b3a39df')
+d2l.DATA_HUB['lm-lc-t1-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lc-t1-v1.json.gz',
+    '05a0b45828fbfe613d5b63e0eaa3e275b618f0c2')
+
+_LC_PENDING = {'lc-zeroshot', 'lc-t2-evals'}
+d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _LC_PENDING
 
 d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'] = (  # the zero-shot part
     'lm-lc-evals-v1', 'json-table')
@@ -24355,9 +27888,1938 @@ d2l.PRETRAIN_ARTIFACTS['lc-t1'] = (
     'lm-lc-t1-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['lc-evals'] = (
     'lm-lc-evals-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['lc-long'] = (
+    'lm-lc-long-60m-v1', 'shards')
+d2l.PRETRAIN_ARTIFACTS['pg19-test'] = (
+    'lm-pg19-test-v1', 'shards')
+
+d2l.PRETRAIN_JOBS['lc-t1'] = ('lc_arms', lambda: d2l._lc_t1_call())
+d2l.PRETRAIN_JOBS['lc-zeroshot'] = ('lc_zeroshot',
+                                    lambda: d2l._lc_zeroshot_call())
+d2l.PRETRAIN_JOBS['lc-t2-pi'] = ('lc_arms', lambda: d2l._lc_t2_call())
+d2l.PRETRAIN_JOBS['lc-t2-yarn'] = ('lc_arms', lambda: d2l._lc_t2_call())
+d2l.PRETRAIN_JOBS['lc-t2-prog'] = ('lc_arms', lambda: d2l._lc_t2_call())
+d2l.PRETRAIN_JOBS['lc-t2-evals'] = ('lc_arms', lambda: d2l._lc_t2_call())
+
+LC_TASKS = ('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande')
+
+_LC_SCHEMES = {'none': dict(scheme='none', s=4),
+               'PI': dict(scheme='pi', s=4),
+               'NTK': dict(scheme='ntk', s=4),
+               'YaRN': dict(scheme='yarn', s=4),
+               'YaRN, mscale 1': dict(scheme='yarn', s=4, mscale=1.0)}
+
+_LC_ARMS = {'PI': dict(scheme='pi', stages=((16_384, 4, 1.0),)),
+            'YaRN': dict(scheme='yarn', stages=((16_384, 4, 1.0),)),
+            'YaRN-prog': dict(scheme='yarn', stages=((8_192, 2, 0.4),
+                                                     (16_384, 4, 0.6)))}
+
+_LC_ARMS_T1 = {
+    'PI': dict(scheme='pi', stages=((4096, 4, 1.0),), seeds=(0, 1, 2)),
+    'YaRN': dict(scheme='yarn', stages=((4096, 4, 1.0),), seeds=(0, 1, 2)),
+    'YaRN-prog': dict(scheme='yarn', stages=((2048, 2, 0.4),
+                                             (4096, 4, 0.6)), seeds=(0,))}
+
+_LC_T2_NAMES = {'PI': 'lc-t2-pi', 'YaRN': 'lc-t2-yarn',
+                'YaRN-prog': 'lc-t2-prog'}
+
+_LC_TIERS = {
+    't2': dict(trained=4096, lengths=(4096, 8192, 12288, 16384), books=64,
+               n_items=100, zs_items=100, eval_books=16, eval_items=50),
+    't1': dict(trained=1024, lengths=(1024, 2048, 3072, 4096), books=64,
+               n_items=100, zs_items=100, eval_books=16, eval_items=50)}
+
+LC_DEPTHS = (0.1, 0.3, 0.5, 0.7, 0.9)
+
+_LC_SUITE_N = 2000  # suite items per task (fewer where a task has fewer)
+
+_LC_VAL_TOKENS = 2 ** 21  # the val loss at the trained length
+
+_LC_MICRO = {'t1': 8, 't2': 1}  # sequences per micro-batch (D2 probe)
+
+_LC_EVAL_EVERY = 64  # steps between the periodic evaluations
+
+_LC_MIN_FREE_GB = {'t1': 5, 't2': 20}  # free disk before an arm starts
+
+def _lc_zeroshot_call():
+    """lc_zeroshot's arguments in the page's zero-shot cell.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    return dict(base='r2', schemes=_LC_SCHEMES, lengths=(4096, 8192, 16384))
+
+def _lc_t2_call():
+    """lc_arms' arguments in the page's T2 cell."""
+    return dict(arms=_LC_ARMS, base='r2', tokens=100_000_000,
+                seq_len=16_384, batch_tokens=262_144, peak_lr=1e-4,
+                warmup=20, decay_frac=0.15, long_share=0.5)
+
+def _lc_t1_call():
+    """lc_arms' arguments in the page's T1 cell."""
+    return dict(arms=_LC_ARMS_T1, base='t1', tokens=16_000_000,
+                seq_len=4096, batch_tokens=65_536)
+
+LcData = collections.namedtuple('LcData', ['table', 'shards', 'label'])
+
+_LC_LOCAL = {'lc-long': os.path.join('..', 'data', 'lm', 'lc-long-v1'),
+             'pg19-test': os.path.join('..', 'data', 'lm', 'pg19-test-v1')}
+
+def _lc_shards(name, max_tokens=None):
+    """A shard set of this section: the hosted one, or the builder's local
+    output before its upload; max_tokens keeps a prefix of shards.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    key = d2l.PRETRAIN_ARTIFACTS[name][0]
+    if key in d2l.DATA_HUB:
+        root = d2l.load_artifact(name).root
+    elif os.path.exists(os.path.join(_LC_LOCAL[name], 'manifest.json')):
+        root = _LC_LOCAL[name]
+    else:
+        raise KeyError(f'{name} is not committed yet; build it with '
+                       f'tools/build_pretraining_data.py --stage {name}')
+    return d2l.TokenShards(root, 'train', max_tokens=max_tokens)
+
+def _shard_subset(shards, keep):
+    """A TokenShards over the shards with indices keep only."""
+    import copy
+    s = copy.copy(shards)
+    s.shards = [shards.shards[k] for k in keep]
+    s._docs = np.cumsum([0] + [x['n_docs'] for x in s.shards])
+    s._toks = np.cumsum([0] + [x['n_tokens'] for x in s.shards])
+    s.n_docs, s.n_tokens = int(s._docs[-1]), int(s._toks[-1])
+    s.n_shards, s._mm, s._idx = len(s.shards), {}, {}
+    return s
+
+def _lc_replay(tier):
+    """The short replay: 4B shard train-00032 (T2) or the T1 replay."""
+    if tier == 't1':
+        if 'lm-fwedu-replay-12m-v1' in d2l.DATA_HUB:
+            return d2l.load_artifact('cpt-fwedu-replay-12m')
+        return d2l.TokenShards(os.path.join(d2l._CPT_DIRS['t1'], 'replay'),
+                               'train')
+    with d2l._quiet():
+        s = d2l.fwedu_shards('4b')
+    k = next(i for i, x in enumerate(s.shards)
+             if x['file'].endswith('train-00032'))
+    return _shard_subset(s, [k])
+
+def _lc_parts_table(shards):
+    """part, documents, tokens, median length, source of each stream."""
+    rows = []
+    meta = pd.concat([shards['long'].meta(k)
+                      for k in range(shards['long'].n_shards)])
+    for part, name, src in (('pg19', 'PG-19 train books', 'PG-19 (PD)'),
+                            ('pes2o', 'long peS2o papers',
+                             'peS2o v2 (ODC-By)')):
+        m = meta[meta['part'] == part]
+        if len(m):
+            rows.append((name, len(m), int(m['n_tokens'].sum()),
+                         int(m['n_tokens'].median()), src))
+    for key, name, src in (('short', 'short replay', 'FineWeb-Edu (ODC-By)'),
+                           ('test', 'PG-19 test books', 'PG-19 (PD)')):
+        s = shards[key]
+        n = pd.concat([s.meta(k) for k in range(s.n_shards)])['n_tokens']
+        rows.append((name, s.n_docs, s.n_tokens, int(n.median()), src))
+    return pd.DataFrame(rows, columns=['part', 'documents', 'tokens',
+                                       'median length', 'source'])
+
+def long_data(tier='t2'):
+    """The arms' data: LcData(table, shards, label). shards: 'long' (the
+    long half; T1: its first shard), 'short' (the replay) and 'test' (the
+    64 test books); table: per part documents, tokens, median length in
+    tokens and source."""
+    if tier not in ('t1', 't2'):
+        raise ValueError(f"tier is 't1' or 't2', not {tier!r}")
+    long = _lc_shards('lc-long', 8_000_000 if tier == 't1' else None)
+    shards = dict(long=long, short=_lc_replay(tier),
+                  test=_lc_shards('pg19-test'))
+    return LcData(_lc_parts_table(shards), shards, '')
+
+def test_books(n, T):
+    """The first T + 1 tokens of the first n PG-19 test books, as a
+    LongTensor (n, T + 1) (64 books of 16,385 tokens at most)."""
+    s = _lc_shards('pg19-test')
+    if n > s.n_docs or T + 1 > s.doc(0).shape[0] - 1:
+        raise ValueError(f'{s.n_docs} test books of '
+                         f'{s.doc(0).shape[0] - 1} tokens')
+    return torch.from_numpy(np.stack([s.doc(i)[:T + 1].astype(np.int64)
+                                      for i in range(n)]))
+
+def _val_windows(T, tokens=None):
+    """Windows (n, T + 1) of the FineWeb-Edu validation shard, the first
+    tokens (default _LC_VAL_TOKENS) tokens, and its EOS id."""
+    with d2l._quiet():
+        s = d2l.fwedu_shards('val')
+    n = (tokens or _LC_VAL_TOKENS) // T
+    W = np.stack([s.read(i * T, T + 1) for i in range(n)]).astype(np.int64)
+    return torch.from_numpy(W), s.eos_id
+
+def _device_of(model):
+    import itertools
+    for t in itertools.chain(model.parameters(), model.buffers()):
+        return t.device
+    return torch.device('cpu')
+
+def window_nlls(model, windows, ctx=None, eos=None, batch=1, chunk=4096):
+    """Per-target loss (n, T) in fp32 of windows (n, T + 1) under bf16
+    autocast on a GPU: a PackedGPT through its hidden states (chunked), any
+    other model through its logits. ctx: a PackCtx of the inputs; eos: the
+    EOS id that ends documents (masks built from it, NaN after an EOS).
+
+    Defined in :numref:`sec_lm_long_context`"""
+    W = torch.as_tensor(windows).long()
+    dev, out = _device_of(model), []
+    was_training = model.training
+    model.eval()
+    for i in range(0, len(W), batch):
+        Wb = W[i:i + batch].to(dev)
+        X, Y = Wb[:, :-1], Wb[:, 1:]
+        c = None if ctx is None else d2l.PackCtx(
+            ctx.doc_ids[i:i + batch].to(dev), ctx.pos_ids[i:i + batch].to(dev))
+        if eos is not None:
+            c = d2l.PackCtx(*d2l.doc_ids_from_eos(X.int(), eos))
+        with torch.no_grad(), torch.autocast(dev.type, torch.bfloat16,
+                                             enabled=dev.type == 'cuda'):
+            if isinstance(model, d2l.PackedGPT):
+                H, Wt = model(X, c, return_hidden=True)
+                nll = d2l._token_nll(H, Wt, Y, chunk)
+            else:
+                nll = F.cross_entropy(model(X).float().flatten(0, 1),
+                                      Y.flatten(), reduction='none')
+        nll = nll.view(Y.shape).float()
+        if eos is not None:
+            nll = nll.masked_fill(X == eos, float('nan'))
+        out.append(nll.cpu())
+    model.train(was_training)
+    return torch.cat(out)
+
+def sliding_nlls(model, windows, short_len):
+    """Per-target loss (n, T) when every target sees only its last
+    short_len / 2 to short_len tokens: windows of short_len tokens that
+    advance by short_len / 2 (the first window scores all its targets)."""
+    W = torch.as_tensor(windows).long()
+    n, T, h = W.shape[0], W.shape[1] - 1, short_len // 2
+    if T % h or T < short_len:
+        raise ValueError(f'T = {T} is a multiple of short_len / 2 = {h}, '
+                         'at least short_len')
+    starts = list(range(0, T - short_len + 1, h))
+    segs = torch.stack([W[:, a:a + short_len + 1] for a in starts], 1)
+    nll = window_nlls(model, segs.flatten(0, 1),
+                      batch=max(1, 16_384 // short_len)).view(
+        n, len(starts), short_len)
+    out = torch.empty(n, T)
+    out[:, :short_len] = nll[:, 0]
+    for k, a in enumerate(starts[1:], 1):
+        out[:, a + h:a + short_len] = nll[:, k, h:]
+    return out
+
+def repeat_gaps(windows, rare_ids):
+    """Per target (n, T): the distance back to the previous occurrence of
+    the target token in its window when that token is in rare_ids, else 0
+    (no earlier occurrence, or not rare)."""
+    W = torch.as_tensor(windows).long()
+    n, T1 = W.shape
+    pos = torch.arange(T1).expand(n, T1)
+    order = (W * T1 + pos).argsort(-1)  # by token, then by position
+    tok = W.gather(1, order)
+    same = tok[:, 1:] == tok[:, :-1]
+    prev = torch.full_like(W, -1)
+    prev.scatter_(1, order[:, 1:], torch.where(same, order[:, :-1], -1))
+    gap = torch.where(prev >= 0, pos - prev, 0)
+    rare = torch.isin(W, torch.as_tensor(rare_ids).long())
+    return (gap * rare)[:, 1:]
+
+def gain_sums(gain, gap, pairs, min_gap):
+    """Per window and gap bucket (lo, hi]: summed gain and count of the
+    targets with a gap in the bucket and at least min_gap."""
+    sums, counts = [], []
+    for lo, hi in pairs:
+        hit = (gap > lo) & (gap <= hi) & (gap >= min_gap)
+        sums.append(torch.where(hit, gain, 0.0).sum(1))
+        counts.append(hit.sum(1))
+    return torch.stack(sums, 1).double(), torch.stack(counts, 1).double()
+
+def window_ci(sums, counts, n_boot=2000, seed=0):
+    """(mean, lo, hi): the ratio sum(sums) / sum(counts) over windows and
+    its 95% percentile interval from resampling whole windows."""
+    s = np.asarray(sums, dtype=float)
+    c = np.asarray(counts, dtype=float)
+    if c.sum() == 0:
+        return float('nan'), float('nan'), float('nan')
+    idx = np.random.default_rng(seed).integers(len(s), size=(n_boot, len(s)))
+    with np.errstate(invalid='ignore', divide='ignore'):
+        means = s[idx].sum(1) / c[idx].sum(1)
+    lo, hi = np.nanquantile(means, [0.025, 0.975])
+    return float(s.sum() / c.sum()), float(lo), float(hi)
+
+def bucket_name(lo, hi):
+    """'0-4K', '1.5-3K' or '256-512' for the positions (lo, hi]."""
+    if hi >= 1024 and lo % 512 == 0 and hi % 512 == 0:
+        return f'{lo / 1024:g}-{hi / 1024:g}K'
+    return f'{lo}-{hi}'
+
+def _rare_ids(rank=2000, min_letters=3, tokens=2 ** 25):
+    """Token ids beyond rank in the unigram counts of the first tokens of
+    the 100M shard (and seen there) that decode to at least min_letters
+    letters (an optional leading space), cached."""
+    key = (rank, min_letters, tokens)
+    if getattr(_rare_ids, 'key', None) != key:
+        with d2l._quiet():
+            s = d2l.fwedu_shards('100m')
+            tok = d2l.r2_tokenizer()
+        counts = np.bincount(s.read(0, min(tokens, s.n_tokens)).astype(
+            np.int64), minlength=len(tok))
+        order = np.argsort(-counts, kind='stable')[rank:]
+        word = re.compile(rf' ?[A-Za-z]{{{min_letters},}}')
+        _rare_ids.ids = torch.tensor(sorted(
+            int(i) for i in order if counts[i] > 0
+            and word.fullmatch(tok.decode([int(i)]))))
+        _rare_ids.key = key
+    return _rare_ids.ids
+
+_RECALL_ADJ = (
+    'amber', 'ancient', 'autumn', 'bitter', 'bold', 'brave', 'bright',
+    'broken', 'calm', 'clever', 'cold', 'copper', 'crimson', 'dark', 'dry',
+    'dusty', 'eager', 'early', 'empty', 'frozen', 'gentle', 'golden',
+    'green', 'hidden', 'hollow', 'honest', 'little', 'lonely', 'lucky',
+    'mighty', 'misty', 'narrow', 'noble', 'quiet', 'rapid', 'rough', 'round',
+    'rusty', 'sharp', 'silent', 'silver', 'simple', 'small', 'smooth',
+    'solid', 'steady', 'sweet', 'wild')
+
+_RECALL_NOUN = (
+    'anchor', 'apple', 'arrow', 'basket', 'bell', 'bridge', 'bucket',
+    'candle', 'castle', 'cloud', 'coin', 'desert', 'door', 'eagle', 'engine',
+    'feather', 'field', 'forest', 'garden', 'harbor', 'hammer', 'island',
+    'jacket', 'kettle', 'ladder', 'lake', 'lantern', 'letter', 'meadow',
+    'mirror', 'needle', 'orchard', 'pencil', 'pillow', 'planet', 'river',
+    'rocket', 'saddle', 'shadow', 'shell', 'signal', 'spoon', 'stone',
+    'temple', 'tower', 'valley', 'wagon', 'window')
+
+RECALL_HEAD = 'Each line below gives the value of a key.\n'
+
+def lc_tokenizer(max_len=65_536):
+    """The reference tokenizer with its nominal length (4,096) raised to
+    max_len tokens.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    tok = d2l.r2_tokenizer()
+    tok.model_max_length = max_len
+    return tok
+
+def recall_generator(seed, length, depth):
+    """The random generator of the recall items of one (seed, length,
+    depth)."""
+    return torch.Generator().manual_seed(
+        seed * 1_000_003 + length * 1009 + round(1000 * depth))
+
+def _recall_lines(tokenizer, keys, values):
+    """The haystack lines and their token counts."""
+    lines = [f'The value of {k} is {v}.\n' for k, v in zip(keys, values)]
+    return lines, [len(x) for x in d2l._lm_encode(tokenizer, lines)]
+
+def recall_haystack(tokenizer, length, generator, n_pairs=None,
+                    min_lines=8, value_tokens=6):
+    """(keys, values, lines, start) of one recall item: distinct two-word
+    keys and five-digit values, and as many haystack lines as fit length
+    tokens after RECALL_HEAD with the query and a value (n_pairs lines if
+    given, at least min_lines); start: the token offset of every line and
+    of the query."""
+    adj, noun = _RECALL_ADJ, _RECALL_NOUN
+    pick = torch.randperm(len(adj) * len(noun), generator=generator).tolist()
+    keys = [f'{adj[i // len(noun)]} {noun[i % len(noun)]}' for i in pick]
+    values = (torch.randperm(90_000, generator=generator)[:len(keys)]
+              + 10_000).tolist()
+    n_max = min(len(keys), n_pairs or length // 10 + 1)
+    lines, sizes = _recall_lines(tokenizer, keys[:n_max], values[:n_max])
+    head = len(d2l._lm_encode(tokenizer, [RECALL_HEAD])[0])
+    cum = np.cumsum(sizes)
+    budget = length - head - max(sizes) - value_tokens
+    n = n_pairs or int(np.searchsorted(cum, budget, side='right'))
+    if n < min_lines or cum[n - 1] > budget:
+        raise ValueError(f'{max(n, min_lines)} lines do not fit {length} '
+                         'tokens')
+    if n_pairs is None and n == n_max and budget - cum[-1] > max(sizes):
+        raise ValueError(f'the {n_max:,} keys fill {head + cum[-1]:,} of '
+                         f'{length:,} tokens')
+    start = [head] + (head + cum[:n]).tolist()
+    return keys[:n], values[:n], lines[:n], start
+
+def _recall_ll(model, tokenizer, task, chunk=2048):
+    """Summed log-probabilities (N, C) of every candidate of every item,
+    with one prefill of the prompt per item (the cache repeated for the C
+    candidates); equal to score_choices(..., norm='sum')."""
+    dev = _device_of(model)
+    ll = torch.full((len(task['prompts']), len(task['choices'][0])),
+                    -math.inf, dtype=torch.float64)
+    auto = torch.autocast(dev.type, torch.bfloat16,
+                          enabled=dev.type == 'cuda')
+    for i, (prompt, choices) in enumerate(zip(task['prompts'],
+                                              task['choices'])):
+        tail = prompt[prompt.rfind('\n') + 1:]  # the query line
+        _, inputs, conts, _, _ = d2l._lm_continuations(
+            tokenizer, [tail], [list(choices)])
+        ctx = d2l._lm_encode(tokenizer, [prompt])[0]
+        head = inputs[0][:len(inputs[0]) - len(conts[0]) + 1]
+        assert ctx[-len(head):] == head, 'the query line tokenizes apart'
+        m = max(map(len, conts))
+        ks, vs = model.init_cache(1, len(ctx) - 1 + m)
+        with auto:
+            for t in range(0, len(ctx) - 1, chunk):
+                X = torch.tensor([ctx[t:min(t + chunk, len(ctx) - 1)]],
+                                 device=dev)
+                model.forward_cached(X, ks, vs, t)
+            X = torch.tensor([[ctx[-1]] + c[:-1] + [0] * (m - len(c))
+                              for c in conts], device=dev)
+            C = len(conts)
+            logits, _, _ = model.forward_cached(
+                X, ks.repeat(1, C, 1, 1, 1), vs.repeat(1, C, 1, 1, 1),
+                len(ctx) - 1, all_logits=True)
+        lp = logits.float().log_softmax(-1)
+        for j, c in enumerate(conts):
+            ll[i, j] = lp[j, torch.arange(len(c)), torch.tensor(c)].double(
+                ).sum().cpu()
+    return ll
+
+def score_recall(model, tokenizer, task):
+    """Per item (a bool array): whether the gold value scores highest
+    among the candidates (summed log-probability, one prefill per item)."""
+    ll = _recall_ll(model, tokenizer, task)
+    return (ll.argmax(1).numpy() == np.asarray(task['gold']))
+
+def _recall_task(tokenizer, length, depth, n_items, seed=0):
+    """make_recall_task, cached on the tokenizer object (tokenizing
+    16K-token items takes a while; every model is scored on the same
+    items)."""
+    cache = tokenizer.__dict__.setdefault('_d2l_recall_tasks', {})
+    key = (length, depth, n_items, seed)
+    if key not in cache:
+        cache[key] = d2l.make_recall_task(tokenizer, length, depth,
+                                          n_items=n_items, seed=seed)
+    return cache[key]
+
+class CopyOracle(nn.Module):
+    """Logits that put `confidence` on the token that followed the
+    previous occurrence of the current token (uniform where there is
+    none): an induction head as a whole model.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    def __init__(self, vocab_size, confidence=30.0):
+        super().__init__()
+        self.vocab_size, self.confidence = vocab_size, confidence
+
+    def forward(self, X):
+        n, T = X.shape
+        idx = torch.arange(T, device=X.device)
+        earlier = (X[:, :, None] == X[:, None, :]) & (idx[None, :] <
+                                                     idx[:, None])
+        last = torch.where(earlier, idx, -1).amax(-1)
+        nxt = X.gather(1, last + 1)  # last + 1 <= t: no look-ahead
+        logits = torch.zeros(n, T, self.vocab_size, device=X.device)
+        hit = torch.where(last >= 0, self.confidence, 0.0)
+        return logits.scatter_(2, nxt[..., None], hit[..., None])
+
+class UnigramModel(nn.Module):
+    """Uniform logits whatever the context.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    def __init__(self, vocab_size):
+        super().__init__()
+        self.vocab_size = vocab_size
+
+    def forward(self, X):
+        return torch.zeros(*X.shape, self.vocab_size, device=X.device)
+
+def effective_context(recall, gain, threshold=0.5):
+    """Per model: the largest evaluated length L whose recall, pooled over
+    depths, has a lower 95% Wilson bound of at least threshold and whose
+    long-context gain in the gap bucket (L/2, L] has a lower 95% bound
+    above 0; 0 where no length clears both. Seeds share the items, so an
+    item counts once, with its recall averaged over the seeds.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    out = {}
+    for model, r in recall.groupby('model', sort=False):
+        ok = [0]
+        for L, rl in r.groupby('length'):
+            item = rl.groupby(['depth', 'item'])['correct'].mean()
+            lo = d2l.wilson_ci(float(item.sum()), len(item))[0]
+            g = gain[(gain['model'] == model) & gain['rule'] & (
+                gain['bucket'] == bucket_name(L // 2, L))]
+            if lo >= threshold and len(g) and g['lo'].iloc[0] > 0:
+                ok.append(int(L))
+        out[model] = max(ok)
+    return pd.Series(out, name='effective', dtype='int64')
+
+def _length_name(L):
+    """'16K', '1.5K' or '256' for a length in tokens."""
+    return f'{L / 1024:g}K' if L >= 1024 and L % 512 == 0 else str(L)
+
+def _context_name(L, lengths):
+    return _length_name(L) if L else f'below {_length_name(min(lengths))}'
+
+def flop_counter_per_token(arch, T):
+    """Training FLOPs per token that FlopCounterMode counts in one forward
+    and backward pass of a PackedGPT of arch on one window of T tokens, on
+    the meta device (nothing is allocated or computed)."""
+    from torch.utils.flop_counter import FlopCounterMode
+    with torch.device('meta'):
+        model = d2l.PackedGPT.from_arch(arch, max_len=T, backend='sdpa')
+        X = torch.zeros(1, T, dtype=torch.long)
+    with FlopCounterMode(display=False) as counter:
+        H, W = model(X, return_hidden=True)
+        F.linear(H, W).float().sum().backward()
+    return counter.get_total_flops() / T
+
+def transformers_yarn(d_head, base=10000.0, s=4.0, L=4096, truncate=False):
+    """(inverse frequencies, attention factor) of Transformers' YaRN
+    initialization for a head width d_head trained at L, scaled by s."""
+    import transformers
+    from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
+    cfg = transformers.LlamaConfig(
+        hidden_size=d_head, num_attention_heads=1, head_dim=d_head,
+        max_position_embeddings=round(s * L), rope_parameters=dict(
+            rope_type='yarn', rope_theta=base, factor=float(s),
+            original_max_position_embeddings=L, truncate=truncate,
+            beta_fast=32.0, beta_slow=1.0))
+    inv, factor = ROPE_INIT_FUNCTIONS['yarn'](cfg, 'cpu')
+    return inv.float(), float(factor)
+
+LcZeroShot = collections.namedtuple(
+    'LcZeroShot', ['table', 'position', 'recall', 'gain', 'label'])
+
+def _lc_gain_pairs(trained, T, lengths):
+    """The display gap buckets (doubling from a quarter of the trained
+    length to T) and the rule buckets (L/2, L], with a rule flag.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    short, out = trained // 4, []
+    hi = short
+    while hi < T:
+        out.append((hi, 2 * hi, False))
+        hi *= 2
+    return out + [(L // 2, L, True) for L in lengths]
+
+def _lc_eval(model, tier, books, lengths, n_items, tokenizer, val=False,
+             suite=None):
+    """Rows of one model: windows (measure, bucket, window, sum, n) for
+    'nll' (position buckets), 'gain', 'rule' and 'val'; recall (length,
+    depth, item, correct); items (task, item_id, score) of the suite."""
+    L0, T = _LC_TIERS[tier]['trained'], books.shape[1] - 1
+    nll = window_nlls(model, books)
+    rows = []
+    for lo in range(0, T, L0):
+        for w in range(len(books)):
+            rows.append(('nll', bucket_name(lo, lo + L0), w,
+                         float(nll[w, lo:lo + L0].sum()), L0))
+    pairs = _lc_gain_pairs(L0, T, lengths)
+    gain = sliding_nlls(model, books, L0 // 4) - nll
+    s, c = gain_sums(gain, repeat_gaps(books, _rare_ids()),
+                      [p[:2] for p in pairs], L0 // 4)
+    for k, (lo, hi, rule) in enumerate(pairs):
+        for w in range(len(books)):
+            rows.append(('rule' if rule else 'gain', bucket_name(lo, hi), w,
+                         float(s[w, k]), float(c[w, k])))
+    if val:
+        W, eos = _val_windows(L0)
+        v = window_nlls(model, W, eos=eos, batch=max(1, 8192 // L0))
+        for w in range(len(W)):
+            ok = ~torch.isnan(v[w])
+            rows.append(('val', 'val', w, float(v[w][ok].sum()),
+                         float(ok.sum())))
+    rec = []
+    for L in lengths:
+        for d in LC_DEPTHS:
+            task = _recall_task(tokenizer, L, d, n_items)
+            ok = score_recall(model, tokenizer, task)
+            rec += [(L, d, i, bool(x)) for i, x in enumerate(ok)]
+    items = (pd.DataFrame(columns=['task', 'item_id', 'score'])
+             if suite is None else d2l._suite_items(suite, model, tokenizer))
+    return (pd.DataFrame(rows, columns=['measure', 'bucket', 'window', 'sum',
+                                        'n']),
+            pd.DataFrame(rec, columns=['length', 'depth', 'item',
+                                       'correct']), items)
+
+def _lc_summary(windows, measure):
+    """(model, bucket, value, lo, hi, n) of one measure: per model and
+    bucket the ratio over windows (seeds pooled per window) with a
+    window-resampled 95% interval."""
+    w = windows[windows['measure'] == measure]
+    g = w.groupby(['model', 'bucket', 'window'], sort=False)[
+        ['sum', 'n']].sum().reset_index()
+    rows = []
+    for (model, bucket), x in g.groupby(['model', 'bucket'], sort=False):
+        mean, lo, hi = window_ci(x['sum'], x['n'])
+        rows.append((model, bucket, mean, lo, hi, int(x['n'].sum())))
+    return pd.DataFrame(rows, columns=['model', 'bucket', 'value', 'lo',
+                                       'hi', 'n'])
+
+def _lc_position(windows):
+    p = _lc_summary(windows, 'nll')
+    return p.rename(columns={'value': 'nll'})[['model', 'bucket', 'nll',
+                                               'lo', 'hi']]
+
+def _lc_gain(windows):
+    g = pd.concat([_lc_summary(windows, 'gain').assign(rule=False),
+                   _lc_summary(windows, 'rule').assign(rule=True)],
+                  ignore_index=True)
+    return g.rename(columns={'value': 'gain'})[
+        ['model', 'bucket', 'rule', 'gain', 'lo', 'hi', 'n']]
+
+def _lc_set_scheme(model, scheme, s, trained, mscale=None):
+    """Scaled RoPE on model: frequencies of scheme at scale s (base RoPE
+    for 'none'), YaRN's attention scale for 'yarn' unless mscale is
+    given; the model then accepts s times its trained length."""
+    if mscale is None:
+        mscale = d2l.yarn_mscale(s) if scheme == 'yarn' else 1.0
+    inv = None if scheme == 'none' else d2l.rope_inv_freq(
+        model.blks[0].attention.head_dim, model.rope_theta, scheme, s,
+        trained)
+    model.set_rope(inv, mscale, scheme, s)
+    return model
+
+_LC_BASES = {'r2': ('lm-r2-s6000-v1', 'r2-s0', 6000),
+             't1': ('lm-r2t1-s1526-v1', 't1-s0', 1526)}
+
+def _lc_base_path(base):
+    """The base checkpoint: committed, else the run's job folder.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    key, job, step = _LC_BASES[base]
+    if key in d2l.DATA_HUB:
+        with d2l._quiet():
+            return d2l.download_keyed(key)
+    path = os.path.join(d2l._job_root(), job, 'ckpt', f's{step}.safetensors')
+    if os.path.exists(path):
+        return path
+    raise KeyError(f'{key} is not committed yet')
+
+def _lc_device():
+    return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+def lc_reference_model():
+    """The reference model at step 6000 (trained at 4K) on the GPU if
+    there is one; while it is pending, the t1 checkpoint (trained at 1K)
+    under a printed label."""
+    if _LC_BASES['r2'][0] in d2l.DATA_HUB:
+        return d2l._load_bf16(_lc_base_path('r2'), device=_lc_device())
+    model = d2l._load_bf16(_lc_base_path('t1'), device=_lc_device())
+    print('[reference run pending; the t1 checkpoint, trained at 1K]')
+    return model
+
+def _lc_tier(base):
+    if base not in _LC_BASES:
+        raise ValueError(f"base is 'r2' or 't1', not {base!r}")
+    return 't2' if base == 'r2' else 't1'
+
+def _lc_zs_columns(trained, lengths):
+    T = max(lengths)
+    return (['scheme'] + [f'NLL {bucket_name(lo, lo + trained)}'
+                          for lo in range(0, T, trained)]
+            + [f'recall {_length_name(L)}' for L in lengths])
+
+def _lc_zeroshot_compute(base, schemes, lengths):
+    """LcZeroShot of base under each scheme (no training)."""
+    tier = _lc_tier(base)
+    spec, dev, tok = _LC_TIERS[tier], _lc_device(), lc_tokenizer()
+    books = test_books(spec['books'], max(lengths))
+    windows, recall = [], []
+    for name, sc in schemes.items():
+        model = d2l._load_bf16(_lc_base_path(base), device=dev)
+        _lc_set_scheme(model, sc['scheme'], sc['s'], spec['trained'],
+                       sc.get('mscale'))
+        w, r, _ = _lc_eval(model, tier, books, lengths, spec['zs_items'],
+                           tok)
+        windows.append(w.assign(model=name, seed=0))
+        recall.append(r.assign(model=name, seed=0))
+        del model
+        d2l.lm_free()
+    windows = pd.concat(windows, ignore_index=True)
+    recall = pd.concat(recall, ignore_index=True)
+    position = _lc_position(windows)
+    acc = recall.groupby(['model', 'length'], sort=False)['correct'].mean()
+    rows = [[name] + list(position[position['model'] == name]['nll'])
+            + [acc[name, L] for L in lengths] for name in schemes]
+    table = pd.DataFrame(rows, columns=_lc_zs_columns(spec['trained'],
+                                                      lengths))
+    cols = d2l._LC_COLUMNS['recall']
+    return LcZeroShot(table, position, recall[cols], _lc_gain(windows), '')
+
+def _lc_zs_path():
+    key = d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'][0]
+    return os.path.join(d2l._rerun_dir(),
+                        f'{d2l._next_key(key)}.lc-zeroshot.json.gz')
+
+def _lc_zs_as_tuple(res):
+    """The zero-shot fields of a stored, pending or fallback result."""
+    if isinstance(res, pd.DataFrame):  # pending: empty tables
+        return d2l._as_tuple(LcZeroShot, res, {
+            'table': [], 'position': _LC_COLUMNS['position'],
+            'recall': _LC_COLUMNS['recall'], 'gain': _LC_COLUMNS['gain']})
+    return LcZeroShot(res.zeroshot, res.zs_position, res.zs_recall,
+                      res.zs_gain, res.label)
+
+def lc_zeroshot(base, schemes, lengths):
+    """The base model ('r2' or 't1') under each RoPE scheme without
+    training: LcZeroShot(table, position, recall, gain, label). schemes =
+    {name: dict(scheme, s[, mscale])}; table: per scheme the loss per
+    position bucket of the trained length on 64 test books and recall at
+    each length (five depths, 100 items each). Regeneration lc-zeroshot;
+    otherwise the zero-shot part of the committed lm-lc-evals-v1; while
+    that is pending, the T1 zero-shot table, labelled so (show_lc_zeroshot
+    prints the label)."""
+    config = d2l._jsonable(dict(base=base, schemes=schemes, lengths=lengths))
+    rerun = d2l._regenerating()
+    if 'lc-zeroshot' in rerun:
+        res = _lc_zeroshot_compute(base, schemes, lengths)
+        meta = dict(config=config, label=d2l._label_of(res))
+        d2l.lm_save_rerun(os.path.basename(_lc_zs_path()),
+                          lambda p: d2l._write_result(p, 'json-table', res,
+                                                      meta),
+                          rerun_dir=d2l._rerun_dir())
+        return res
+    key = d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'][0]
+    if key in d2l.DATA_HUB:
+        res = d2l.load_artifact('lc-evals')
+        d = d2l._config_diff(config, d2l._jsonable(res.zs_config))
+        if d:
+            raise ValueError(f'page configuration differs from the committed '
+                             f'run {key}: zero-shot{d[0]} {d[1]!r} != '
+                             f'{d[2]!r}')
+        return _lc_zs_as_tuple(res)
+    if rerun or 'lc-zeroshot' in d2l.PRETRAIN_PENDING:
+        res = d2l._pending_result('lc-zeroshot', 'lc-t1')
+        return _lc_zs_as_tuple(res)
+    raise KeyError('lc-zeroshot is not committed yet')
+
+LcRuns = collections.namedtuple(
+    'LcRuns', ['table', 'logs', 'position', 'recall', 'gain', 'timeline',
+               'short', 'windows', 'items', 'zeroshot', 'zs_position',
+               'zs_recall', 'zs_gain', 'zs_config', 'label'])
+
+_LC_COLUMNS = {
+    'table': ['arm', 'val loss', 'Δ val', 'NLL 12-16K', 'recall 4K',
+              'recall 16K', '95% lo', '95% hi', 'effective'],
+    'logs': ['arm', 'seed', 'step', 'tokens', 'stage', 'lr', 'loss',
+             'grad_norm', 'tok_s'],
+    'position': ['model', 'bucket', 'nll', 'lo', 'hi'],
+    'recall': ['model', 'seed', 'length', 'depth', 'item', 'correct'],
+    'gain': ['model', 'bucket', 'rule', 'gain', 'lo', 'hi', 'n'],
+    'timeline': ['arm', 'seed', 'step', 'tokens', 'nll_first', 'nll_last',
+                 'recall_k', 'recall_n', 'recall_lo', 'gain', 'gain_lo'],
+    'short': ['arm', 'Δ val', 'val lo', 'val hi', 'Δ suite', 'suite lo',
+              'suite hi'],
+    'windows': ['model', 'seed', 'measure', 'bucket', 'window', 'sum', 'n'],
+    'items': ['model', 'seed', 'task', 'item_id', 'score'],
+    'zeroshot': [], 'zs_position': ['model', 'bucket', 'nll', 'lo', 'hi'],
+    'zs_recall': ['model', 'seed', 'length', 'depth', 'item', 'correct'],
+    'zs_gain': ['model', 'bucket', 'rule', 'gain', 'lo', 'hi', 'n']}
+
+_LC_STATE_EVERY = 50
+
+def _lc_slug(arm):
+    return arm.lower().replace(' ', '-')
+
+def _lc_configs(arms, base, tokens, seq_len, batch_tokens, peak_lr, warmup,
+                decay_frac, long_share):
+    """One JSON-able configuration per (arm, seed): the stages (window T,
+    scale s, steps), the schedule and the data shares.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    tier = _lc_tier(base)
+    out = {}
+    for name, a in arms.items():
+        stages = []
+        for T, s, share in a['stages']:
+            if seq_len % T or seq_len // T > 2:
+                raise ValueError(f'stage window {T}: seq_len or half of it')
+            stages.append(dict(T=T, s=s, steps=round(share * tokens /
+                                                     batch_tokens)))
+        steps = sum(st['steps'] for st in stages)
+        for seed in a.get('seeds', (0,)):
+            out[name, seed] = dict(
+                tier=tier, arm=name, seed=seed, base=base,
+                scheme=a['scheme'], mscale=a.get('mscale'), stages=stages,
+                steps=steps, seq_len=seq_len,
+                global_batch=batch_tokens // seq_len,
+                micro_batch=_LC_MICRO[tier], peak_lr=peak_lr, warmup=warmup,
+                decay=round(decay_frac * steps), long_share=long_share,
+                trained_len=_LC_TIERS[tier]['trained'], z_loss=1e-4,
+                eval_every=_LC_EVAL_EVERY)
+    return out
+
+def _lc_stage_of(cfg, step):
+    """The index of the stage that step (0-based) belongs to."""
+    end = 0
+    for k, st in enumerate(cfg['stages']):
+        end += st['steps']
+        if step < end:
+            return k
+    return len(cfg['stages']) - 1
+
+def _lc_set_stage(model, cfg, k):
+    st = cfg['stages'][k]
+    return _lc_set_scheme(model, cfg['scheme'], st['s'], cfg['trained_len'],
+                          cfg['mscale'])
+
+class _StagedStream:
+    """A MixStream whose windows are cut into seq_len / T pieces in the
+    stages with a shorter window T (document ids and positions recomputed
+    per piece, so no piece attends to another): the same tokens per step
+    and one compiled shape."""
+    def __init__(self, mix, cfg, eos_id):
+        self.mix, self.cfg, self.eos_id = mix, cfg, eos_id
+        self.rank, self.world = mix.rank, mix.world
+
+    @property
+    def step(self):
+        return self.mix.step
+
+    @step.setter
+    def step(self, value):
+        self.mix.step = value
+
+    def batch(self, step):
+        b = self.mix.batch(step)
+        T = self.cfg['stages'][_lc_stage_of(self.cfg, step)]['T']
+        X = b['input_ids']
+        n, k = X.shape[0], X.shape[1] // T
+        if k == 1:
+            return b
+        doc, pos = d2l.doc_ids_from_eos(X.reshape(n * k, T).int(),
+                                        self.eos_id)
+        doc = doc.view(n, k, T).long()
+        first = F.pad((doc.amax(-1) + 1)[:, :-1], (1, 0)).cumsum(-1)
+        return dict(b, doc_ids=(doc + first[..., None]).view(n, -1).to(
+            b['doc_ids'].dtype), pos_ids=pos.view(n, -1).to(
+            b['pos_ids'].dtype))
+
+    def state_dict(self):
+        return self.mix.state_dict()
+
+    def load_state_dict(self, state):
+        self.mix.load_state_dict(state)
+
+def _lc_stream(shards, cfg):
+    """The arm's batches: the long half and the replay in the shares
+    (long_share, 1 - long_share), the arm's seed for streams and mixture."""
+    T, B, seed = cfg['seq_len'], cfg['global_batch'], cfg['seed']
+    streams = [d2l.PackedStream(shards[k], T, B, seed=seed)
+               for k in ('long', 'short')]
+    mix = d2l.mix_streams(streams, (cfg['long_share'],
+                                    1 - cfg['long_share']), B, seed=seed)
+    return _StagedStream(mix, cfg, shards['long'].eos_id)
+
+def _lc_job(cfg):
+    return os.path.join(d2l._job_root(), 'lc', f'{cfg["tier"]}-'
+                        f'{_lc_slug(cfg["arm"])}-s{cfg["seed"]}')
+
+def _lc_identity(cfg):
+    """The record of an arm in its job folder: configuration and base."""
+    return dict(config=d2l._jsonable(cfg),
+                base=[cfg['base'], d2l._file_id(_lc_base_path(cfg['base']))])
+
+def _bf16_copy(model):
+    import copy
+    return copy.deepcopy(model).to(torch.bfloat16).eval()
+
+def _lc_timeline_row(model, cfg, step, tokenizer):
+    """The periodic evaluation of a bf16 copy of model: losses of the first
+    and last position buckets, recall at the longest length (pooled over
+    depths) with its lower Wilson bound, and the gain in the rule bucket
+    of the longest length with its lower bound."""
+    spec, T = _LC_TIERS[cfg['tier']], cfg['seq_len']
+    ev = _bf16_copy(model)
+    w, r, _ = _lc_eval(ev, cfg['tier'], test_books(spec['eval_books'], T),
+                       (T,), spec['eval_items'], tokenizer)
+    del ev
+    d2l.lm_free()
+    nll = w[w['measure'] == 'nll']
+    first, last = nll['bucket'].iloc[0], nll['bucket'].iloc[-1]
+    ratio = lambda x: float(x['sum'].sum() / x['n'].sum())
+    rule = w[(w['measure'] == 'rule') & (w['bucket'] ==
+                                         bucket_name(T // 2, T))]
+    g, g_lo, _ = window_ci(rule['sum'], rule['n'])
+    k, n = int(r['correct'].sum()), len(r)
+    return dict(arm=cfg['arm'], seed=cfg['seed'], step=step,
+                tokens=step * cfg['global_batch'] * T,
+                nll_first=ratio(nll[nll['bucket'] == first]),
+                nll_last=ratio(nll[nll['bucket'] == last]), recall_k=k,
+                recall_n=n, recall_lo=d2l.wilson_ci(k, n)[0], gain=g,
+                gain_lo=g_lo)
+
+def _lc_read_timeline(job):
+    path = os.path.join(job, 'timeline.jsonl')
+    if not os.path.exists(path):
+        return pd.DataFrame(columns=_LC_COLUMNS['timeline'])
+    with open(path) as f:
+        rows = [json.loads(line) for line in f]
+    return pd.DataFrame(rows).drop_duplicates('step', keep='last')
+
+def _lc_train(model, stream, cfg, job, stop=None):
+    """Train one arm (resumable in job; at most `stop` steps): the log
+    rows; the periodic evaluations (unless cfg['evaluate'] is False) go to
+    job/timeline.jsonl."""
+    dev = _device_of(model)
+    T = cfg['seq_len']
+    pc = d2l.PretrainConfig(
+        f'lc-{_lc_slug(cfg["arm"])}', d2l._arch_of(model, T), cfg['steps'],
+        cfg['global_batch'], cfg['micro_batch'], cfg['peak_lr'],
+        cfg['warmup'], cfg['decay'], z_loss=cfg['z_loss'],
+        compile=dev.type == 'cuda', probe_every=0, stats_every=0,
+        val_every=0, ckpt_steps=(cfg['steps'],),
+        state_every=_LC_STATE_EVERY, seed=cfg['seed'], out_dir=job)
+    run = d2l._PretrainRun(model, stream, pc, None, 'auto')
+    stage = _lc_stage_of(cfg, run.start)
+    _lc_set_stage(run.raw, cfg, stage)  # RoPE is not in the state
+    evaluate = cfg.get('evaluate', True)
+    tok = lc_tokenizer() if evaluate else None
+    timeline = os.path.join(job, 'timeline.jsonl')
+
+    def log_eval(step):
+        row = _lc_timeline_row(run.raw, cfg, step, tok)
+        with open(timeline, 'a') as f:
+            f.write(json.dumps(d2l._jsonable(row)) + '\n')
+
+    if evaluate and run.start == 0:
+        log_eval(0)
+    for seg in run.segments():
+        for step in range(seg.start, min(seg.total, stop or seg.total)):
+            if _lc_stage_of(cfg, step) != stage:  # the next stage's scale
+                stage = _lc_stage_of(cfg, step)
+                _lc_set_stage(run.raw, cfg, stage)
+                torch._dynamo.reset()
+                run.model = torch.compile(run.raw) if pc.compile else run.raw
+            lr = d2l.wsd_lr(step, cfg['steps'], cfg['warmup'], cfg['decay'],
+                            cfg['peak_lr'])
+            for group in run.optimizer.param_groups:
+                group['lr'] = lr
+            t0 = time.perf_counter()
+            batch, micro, n_valid = run.batch(step)
+            t1 = time.perf_counter()
+            out = d2l._cpt_step(run.model, run.optimizer, micro, pc, n_valid)
+            done = step + 1
+            row = dict(step=done, tokens=done * run.step_tokens, lr=lr,
+                       stage=stage, **out)
+            run.record(seg, row, batch, None, t1 - t0, t0)
+            if run.stopped(row):
+                raise FloatingPointError(f'{job}: non-finite loss at '
+                                         f'step {done}')
+            if evaluate and (done % cfg['eval_every'] == 0
+                             or done == cfg['steps']):
+                log_eval(done)
+    return run.finish()
+
+def _lc_check_disk(cfg):
+    path = os.path.abspath(d2l._job_root())
+    while not os.path.exists(path):
+        path = os.path.dirname(path)
+    free = shutil.disk_usage(path).free / 2 ** 30
+    if free < _LC_MIN_FREE_GB[cfg['tier']]:
+        raise OSError(f'{free:.0f} GiB free under {path}; a {cfg["tier"]} '
+                      f'arm starts with at least '
+                      f'{_LC_MIN_FREE_GB[cfg["tier"]]} GiB')
+
+def _lc_arm_run(cfg):
+    """Train one arm and seed (or read its finished job folder):
+    {log, timeline, gib, tok_s, label}."""
+    job, ident = _lc_job(cfg), _lc_identity(cfg)
+    done = os.path.join(job, 'DONE')
+    if not d2l._cpt_check_job(job, ident):
+        d2l._cpt_check_job(job, ident, 'arm.json')  # resume the same arm
+        _lc_check_disk(cfg)
+        os.makedirs(job, exist_ok=True)
+        with open(os.path.join(job, 'arm.json'), 'w') as f:
+            json.dump(ident, f)
+        dev = _lc_device()
+        torch._dynamo.reset()  # one process trains several arms
+        model = d2l._load_bf16(_lc_base_path(cfg['base']), torch.float32,
+                               dev).train()
+        shards = long_data(cfg['tier']).shards
+        if dev.type == 'cuda':
+            torch.cuda.reset_peak_memory_stats(dev)
+        with d2l._quiet():
+            _lc_train(model, _lc_stream(shards, cfg), cfg, job)
+        gib = (torch.cuda.max_memory_allocated(dev) / 2 ** 30
+               if dev.type == 'cuda' else float('nan'))
+        with open(done, 'w') as f:
+            json.dump(dict(ident, gib=gib), f)
+        shutil.rmtree(os.path.join(job, 'state'), ignore_errors=True)
+        del model
+        d2l.lm_free()
+    with open(done) as f:
+        info = json.load(f)
+    log = d2l._read_job_logs(job).assign(arm=cfg['arm'], seed=cfg['seed'])
+    steady = log.loc[log['step'] > 20, 'tok_s']
+    return dict(log=log.reindex(columns=_LC_COLUMNS['logs']),
+                timeline=_lc_read_timeline(job), gib=info['gib'],
+                tok_s=float(steady.median()) if len(steady) else math.nan,
+                label='')
+
+def _suite_delta(a, b, n_boot=2000, seed=0):
+    """Suite mean (the mean over tasks of each task's mean) of a minus b on
+    the same items, with a 95% interval from resampling items within each
+    task: (delta, lo, hi).
+
+    Defined in :numref:`sec_lm_long_context`"""
+    m = a.merge(b, on=['task', 'item_id'], suffixes=('_a', '_b'))
+    if not len(m):
+        return math.nan, math.nan, math.nan
+    rng = np.random.default_rng(seed)
+    point, boots = [], []
+    for _, t in m.groupby('task'):
+        d = (t['score_a'] - t['score_b']).to_numpy(dtype=float)
+        point.append(d.mean())
+        boots.append(d[rng.integers(len(d), size=(n_boot, len(d)))].mean(1))
+    lo, hi = np.quantile(np.mean(boots, 0), [0.025, 0.975])
+    return float(np.mean(point)), float(lo), float(hi)
+
+def _lc_short(windows, items, arms):
+    """Per arm: the val loss at the trained length and the suite mean
+    minus the base's, with 95% intervals (paired by window and by item;
+    seeds averaged per window and item)."""
+    val = windows[windows['measure'] == 'val'].groupby(
+        ['model', 'window'])[['sum', 'n']].sum()
+    per = (val['sum'] / val['n']).unstack('model')
+    score = items.groupby(['model', 'task', 'item_id'])['score'].mean()
+    rows = []
+    for arm in arms:
+        d, lo, hi = window_ci(per[arm] - per['base'], np.ones(len(per)))
+        s = _suite_delta(score[arm].reset_index(),
+                         score['base'].reset_index())
+        rows.append((arm, d, lo, hi, *s))
+    return pd.DataFrame(rows, columns=_LC_COLUMNS['short'])
+
+def _lc_table(tier, recall, position, windows, gain, arms):
+    """Per model (the base, then each arm): val loss at the trained length
+    and its difference from the base, the loss in the last position
+    bucket, recall at the trained and the longest length (pooled over
+    depths and seeds) with a 95% Wilson interval (one seed) or the range
+    over seeds, and the effective context."""
+    spec = _LC_TIERS[tier]
+    L0, Lmax = spec['trained'], max(spec['lengths'])
+    val = windows[windows['measure'] == 'val'].groupby('model')[
+        ['sum', 'n']].sum()
+    val = val['sum'] / val['n']
+    eff = effective_context(recall, gain)
+    last = position['bucket'].iloc[-1]
+    multi = recall.groupby('model')['seed'].nunique().max() > 1
+    names = ['min', 'max'] if multi else ['95% lo', '95% hi']
+    rows = []
+    for model in ['base'] + list(arms):
+        r = recall[recall['model'] == model]
+        at = lambda L: r[r['length'] == L]['correct']
+        long = r[r['length'] == Lmax]
+        if multi:
+            per_seed = long.groupby('seed')['correct'].mean()
+            lo, hi = float(per_seed.min()), float(per_seed.max())
+        else:
+            lo, hi = d2l.wilson_ci(int(long['correct'].sum()), len(long))
+        p = position[(position['model'] == model) &
+                     (position['bucket'] == last)]['nll']
+        rows.append((model, val[model], val[model] - val['base'],
+                     float(p.iloc[0]), at(L0).mean(), at(Lmax).mean(), lo,
+                     hi, _context_name(int(eff.get(model, 0)),
+                                       spec['lengths'])))
+    return pd.DataFrame(rows, columns=[
+        'arm', 'val loss', 'Δ val', f'NLL {last}',
+        f'recall {_length_name(L0)}', f'recall {_length_name(Lmax)}',
+        *names, 'effective'])
+
+def _lc_merge(parts, cfgs, zs, zs_config):
+    """LcRuns from the arms' parts {(arm, seed): part} and the zero-shot
+    result: the base (base RoPE, the long window accepted) and every arm's
+    final weights on the full evaluation."""
+    cfg0 = next(iter(cfgs.values()))
+    tier, T = cfg0['tier'], cfg0['seq_len']
+    spec, dev, tok = _LC_TIERS[tier], _lc_device(), lc_tokenizer()
+    books = test_books(spec['books'], T)
+    suite = d2l._cpt_suite(LC_TASKS, n_max=_LC_SUITE_N, name='lc')
+    models = [('base', 0, None)] + [(a, s, c) for (a, s), c in cfgs.items()]
+    windows, recall, items = [], [], []
+    for name, seed, cfg in models:
+        if cfg is None:
+            model = d2l._load_bf16(_lc_base_path(cfg0['base']), device=dev)
+            _lc_set_scheme(model, 'none', T / spec['trained'],
+                           spec['trained'])
+        else:
+            if not d2l._cpt_check_job(_lc_job(cfg), _lc_identity(cfg)):
+                raise FileNotFoundError(f'{_lc_job(cfg)}: not done')
+            model = d2l._load_bf16(os.path.join(
+                _lc_job(cfg), 'ckpt', f's{cfg["steps"]}.safetensors'),
+                device=dev)
+        w, r, it = _lc_eval(model, tier, books, spec['lengths'],
+                            spec['n_items'], tok, val=True, suite=suite)
+        windows.append(w.assign(model=name, seed=seed))
+        recall.append(r.assign(model=name, seed=seed))
+        items.append(it.assign(model=name, seed=seed))
+        del model
+        d2l.lm_free()
+    C = _LC_COLUMNS
+    windows = pd.concat(windows, ignore_index=True)[C['windows']]
+    recall = pd.concat(recall, ignore_index=True)[C['recall']]
+    items = pd.concat(items, ignore_index=True)[C['items']]
+    position, gain = _lc_position(windows), _lc_gain(windows)
+    arms = list(dict.fromkeys(a for a, _ in cfgs))
+    table = _lc_table(tier, recall, position, windows, gain, arms)
+    zs_pos = zs.position[zs.position['model'].isin(['PI', 'YaRN'])]
+    position = pd.concat([zs_pos.assign(model=zs_pos['model'] +
+                                        ', zero-shot'), position],
+                         ignore_index=True)
+    parts = [parts[k] for k in cfgs]
+    return LcRuns(
+        table, pd.concat([p['log'] for p in parts], ignore_index=True)[
+            C['logs']], position, recall, gain,
+        pd.concat([p['timeline'] for p in parts], ignore_index=True)[
+            C['timeline']], _lc_short(windows, items, arms), windows, items,
+        zs.table, zs.position, zs.recall, zs.gain, zs_config, '')
+
+def _lc_zs_for_merge():
+    """The zero-shot part for the T2 merge: the file lc-zeroshot wrote, or
+    computed here (about 30 minutes) when that regeneration was not run."""
+    call = _lc_zeroshot_call()
+    config = d2l._jsonable(call)
+    path = _lc_zs_path()
+    if os.path.exists(path):
+        res = d2l._read_result(path, 'json-table')
+        d2l._check_config(res, config, os.path.basename(path))
+        return LcZeroShot(res.table, res.position, res.recall, res.gain,
+                          ''), config
+    return _lc_zeroshot_compute(**call), config
+
+def _lc_t1_compute(cfgs):
+    """The T1 campaign in one process: zero-shot on the t1 checkpoint at
+    the T2 lengths over 4, every arm and seed, and the merge."""
+    call = dict(_lc_zeroshot_call(), base='t1')
+    call['lengths'] = tuple(L // 4 for L in call['lengths'])
+    zs = _lc_zeroshot_compute(**call)
+    parts = {k: _lc_arm_run(c) for k, c in cfgs.items()}
+    return _lc_merge(parts, cfgs, zs, d2l._jsonable(call))
+
+def lc_arms(arms, base, tokens, seq_len, batch_tokens, peak_lr=1e-4,
+            warmup=20, decay_frac=0.15, long_share=0.5):
+    """Extend base ('r2' at 4K or 't1' at 1K) to seq_len, one run per arm
+    and seed, and evaluate it: LcRuns(table, logs, position, recall, gain,
+    timeline, short, windows, items, zeroshot, zs_position, zs_recall,
+    zs_gain, zs_config, label). arms = {name: dict(scheme, stages[,
+    seeds, mscale])}, stages a tuple of (window T, scale s, share of the
+    tokens). base 'r2' (T2: one regeneration per arm, lc-t2-pi, -yarn,
+    -prog, merged by lc-t2-evals) or 't1' (the regeneration lc-t1).
+    Otherwise the committed result; while the T2 arms are pending, the T1
+    arms, labelled so (every show_lc_* display prints the label)."""
+    config = dict(arms=arms, base=base, tokens=tokens, seq_len=seq_len,
+                  batch_tokens=batch_tokens, peak_lr=peak_lr, warmup=warmup,
+                  decay_frac=decay_frac, long_share=long_share)
+    cfgs = _lc_configs(arms, base, tokens, seq_len, batch_tokens, peak_lr,
+                       warmup, decay_frac, long_share)
+    if base == 't1':
+        res = d2l._pretrain_result('lc-t1', lambda: _lc_t1_compute(cfgs),
+                                   config)
+    else:
+        if set(arms) - set(_LC_T2_NAMES) or any(s for _, s in cfgs):
+            raise ValueError(f'T2 arms are {sorted(_LC_T2_NAMES)}, seed 0')
+        parts = {_LC_T2_NAMES[a]: (lambda c=c: _lc_arm_run(c), c)
+                 for (a, _), c in cfgs.items()}
+        names = {_LC_T2_NAMES[a]: (a, s) for a, s in cfgs}
+
+        def merge(results):
+            zs, zs_config = _lc_zs_for_merge()
+            return _lc_merge({names[k]: d2l._part(v) for k, v in
+                              results.items()}, cfgs, zs, zs_config)
+        res = d2l._pretrain_merged('lc-t2-evals', parts, merge, config,
+                                   fallback='lc-t1')
+    return d2l._as_tuple(LcRuns, res, _LC_COLUMNS)
+
+def lc_probe(micro_batches=(1, 2), steps=10, warmup=3):
+    """The D2 probe of the T2 arms on one GPU: per configuration (the PI
+    arm at each micro-batch size, and the progressive arm's first stage,
+    8K pieces, at the first) peak GiB reserved, median seconds per step
+    after compilation, tokens per second and the projected hours of the
+    arm's steps (no evaluations), as a DataFrame."""
+    import tempfile
+    cfgs = _lc_configs(**_lc_t2_call())
+    runs = [('PI', m) for m in micro_batches] + [('YaRN-prog',
+                                                  micro_batches[0])]
+    shards, dev, rows = long_data('t2').shards, torch.device('cuda'), []
+    for arm, m in runs:
+        cfg = dict(cfgs[arm, 0], micro_batch=m, evaluate=False)
+        if arm == 'YaRN-prog':  # the first stage only
+            cfg['stages'] = [dict(cfg['stages'][0], steps=cfg['steps'])]
+        torch._dynamo.reset()
+        model = d2l._load_bf16(_lc_base_path('r2'), torch.float32,
+                               dev).train()
+        torch.cuda.reset_peak_memory_stats(dev)
+        os.makedirs(d2l._job_root(), exist_ok=True)
+        try:
+            with tempfile.TemporaryDirectory(dir=d2l._job_root()) as job, \
+                    d2l._quiet():
+                log = _lc_train(model, _lc_stream(shards, cfg), cfg, job,
+                                stop=steps + warmup)
+            t = float(log['step_s'].iloc[warmup:].median())
+        except torch.OutOfMemoryError:
+            t = math.nan  # the row says so: gib is the card's limit
+        T = cfg['stages'][0]['T']
+        rows.append(dict(arm=arm, window=T, micro_batch=m,
+                         gib=torch.cuda.max_memory_reserved(dev) / 2 ** 30,
+                         step_s=t, tok_s=cfg['global_batch'] *
+                         cfg['seq_len'] / t,
+                         arm_hours=_lc_configs(**_lc_t2_call())[arm, 0][
+                             'steps'] * t / 3600))
+        del model
+        torch._dynamo.reset()
+        d2l.lm_free()
+    return pd.DataFrame(rows)
+
+def plot_lc_train(logs, smooth=10):
+    """Training loss (a running mean over smooth steps) against tokens for
+    each arm's first seed, the progressive arm's stage switch marked.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    logs = logs[logs['seed'] == 0]
+    if not len(logs):
+        return
+    X, Y, names = [], [], []
+    for arm, g in logs.groupby('arm', sort=False):
+        X.append(g['tokens'].to_numpy() / 1e6)
+        Y.append(g['loss'].rolling(smooth, min_periods=1).mean().to_numpy())
+        names.append(arm)
+    d2l.plot(X, Y, 'tokens (millions)', 'training loss (nats)',
+             legend=names, figsize=(4.5, 2.8))
+    for g in [g for _, g in logs.groupby('arm') if g['stage'].nunique() > 1]:
+        switch = g.loc[g['stage'].diff() > 0, 'tokens'].iloc[0] / 1e6
+        d2l.plt.gca().axvline(switch, color='black', ls=':', lw=1)
+
+def plot_lc_position(position):
+    """Loss by position bucket with 95% intervals, one series per model."""
+    if not len(position):
+        return
+    buckets = list(dict.fromkeys(position['bucket']))
+    series = {m: tuple(g.set_index('bucket').reindex(buckets)[k].to_numpy()
+                       for k in ('nll', 'lo', 'hi'))
+              for m, g in position.groupby('model', sort=False)}
+    axes = d2l.plot_intervals(buckets, series, 'position bucket',
+                              'loss (nats)')
+    axes.legend(loc='upper left', bbox_to_anchor=(1.01, 1))
+
+def plot_recall_grid(recall, models=('PI', 'YaRN'), threshold=0.5):
+    """Recall over length (columns) and depth (rows) for each model on
+    one 0-1 scale, with the threshold as a contour."""
+    if not len(recall):
+        return
+    lengths = sorted(recall['length'].unique())
+    depths = sorted(recall['depth'].unique())
+    acc = recall.groupby(['model', 'length', 'depth'])['correct'].mean()
+    M = np.array([[[acc.get((m, L, d), np.nan) for L in lengths]
+                   for d in depths] for m in models])
+    d2l.show_heatmaps(torch.tensor(M)[None], 'length', 'depth',
+                      titles=list(models), figsize=(5, 2.5), cmap='Blues',
+                      xticklabels=[_length_name(L) for L in lengths],
+                      yticklabels=[f'{d:.1f}' for d in depths])
+    for ax in d2l.plt.gcf().axes:  # recall on 0-1 in every panel and bar
+        for image in ax.images:
+            image.set_clim(0, 1)
+    for ax, Z in zip(d2l.plt.gcf().axes, M):
+        if np.nanmin(Z) < threshold < np.nanmax(Z):
+            ax.contour(Z, levels=[threshold], colors='black',
+                       linewidths=1.5)
+
+def plot_lc_gain(gain):
+    """Long-context gain against the gap bucket with 95% intervals."""
+    g = gain[~gain['rule'].astype(bool)]
+    if not len(g):
+        return
+    buckets = list(dict.fromkeys(g['bucket']))
+    series = {m: tuple(x.set_index('bucket').reindex(buckets)[k].to_numpy()
+                       for k in ('gain', 'lo', 'hi'))
+              for m, x in g.groupby('model', sort=False)}
+    axes = d2l.plot_intervals(buckets, series,
+                              'gap to the previous occurrence', 'gain (nats)')
+    axes.legend(loc='upper left', bbox_to_anchor=(1.01, 1))
+
+def scheme_difference(runs, a='YaRN', b='PI'):
+    """a minus b on recall at the longest length (pooled over depths) and
+    on the loss in the last position bucket, with 95% intervals: over
+    seeds (t interval) when both arms have two or more, else over the
+    items and windows of the single run (paired resampling). A dict:
+    recall, recall_lo, recall_hi, nll, nll_lo, nll_hi, method."""
+    import warnings
+    r, w = runs.recall, runs.windows
+    Lmax = r['length'].max()
+    last = w[w['measure'] == 'nll']['bucket'].iloc[-1]
+    seeds = sorted(set(r[r['model'] == a]['seed'])
+                   & set(r[r['model'] == b]['seed']))
+    rl = r[r['length'] == Lmax]
+    wl = w[(w['measure'] == 'nll') & (w['bucket'] == last)]
+    if len(seeds) >= 2:
+        acc = rl.groupby(['model', 'seed'])['correct'].mean()
+        nll = wl.groupby(['model', 'seed'])[['sum', 'n']].sum()
+        nll = nll['sum'] / nll['n']
+        dr = [acc[a, s] - acc[b, s] for s in seeds]
+        dn = [nll[a, s] - nll[b, s] for s in seeds]
+        (mr, hr), (mn, hn) = d2l.t_interval(dr), d2l.t_interval(dn)
+        return dict(recall=mr, recall_lo=mr - hr, recall_hi=mr + hr,
+                    nll=mn, nll_lo=mn - hn, nll_hi=mn + hn,
+                    method=f't interval, {len(seeds)} seeds')
+    pick = lambda df, m, keys: df[df['model'] == m].sort_values(keys)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        res = d2l.paired_bootstrap(
+            pick(rl, a, ['depth', 'item'])['correct'].to_numpy(float),
+            pick(rl, b, ['depth', 'item'])['correct'].to_numpy(float),
+            n_boot=2000)
+    wa, wb = pick(wl, a, ['window']), pick(wl, b, ['window'])
+    mn, lo, hi = window_ci(wa['sum'].to_numpy() / wa['n'].to_numpy()
+                           - wb['sum'].to_numpy() / wb['n'].to_numpy(),
+                           np.ones(len(wa)))
+    return dict(recall=res.mean, recall_lo=res.ci[0], recall_hi=res.ci[1],
+                nll=mn, nll_lo=lo, nll_hi=hi,
+                method='single run, paired resampling')
+
+def _lc_tier_of(runs):
+    """'t1' or 't2' from the longest length of a result's recall grid;
+    None for a pending result (no rows).
+
+    Defined in :numref:`sec_lm_long_context`"""
+    if not len(runs.recall):
+        return None
+    L = int(runs.recall['length'].max())
+    return next((t for t, s in _LC_TIERS.items() if max(s['lengths']) == L),
+                None)
+
+def _lc_head(res, table, what):
+    """Print res's label (a stand-in or pending result) and, when table has
+    no rows and res no label, '[what pending]'; whether to show table."""
+    d2l._show_label(res)
+    if not len(table) and not d2l._label_of(res):
+        print(f'[{what} pending]')
+    return bool(len(table))
+
+def _num(x, digits, sign=False):
+    """x at digits decimals (never '-0.00'), with its sign if sign."""
+    return f'{round(float(x), digits) + 0:{"+" if sign else ""}.{digits}f}'
+
+def _interval(x, lo, hi, digits, sign=False):
+    """'x [lo, hi]' at digits decimals."""
+    return (f'{_num(x, digits, sign)} [{_num(lo, digits, sign)}, '
+            f'{_num(hi, digits, sign)}]')
+
+def show_lc_zeroshot(zs):
+    """The zero-shot table (loss per position bucket; recall per length
+    with its 95% Wilson half-width) and the loss by position with 95%
+    intervals, under the result's label."""
+    if not _lc_head(zs, zs.table, 'lc-zeroshot'):
+        return
+    t = zs.table.copy()
+    for c in [c for c in t.columns if c.startswith('NLL ')]:
+        t[c] = t[c].map(lambda x: _num(x, 2))
+    acc = zs.recall.groupby(['model', 'length'])['correct'].agg(
+        ['sum', 'count'])
+    for L in sorted(zs.recall['length'].unique()):
+        cells = []
+        for name in t['scheme']:
+            k, n = (int(v) for v in acc.loc[(name, L)])
+            lo, hi = d2l.wilson_ci(k, n)
+            cells.append(f'{k / n:.2f} ± {(hi - lo) / 2:.2f}')
+        t[f'recall {_length_name(L)}'] = cells
+    print(t.to_string(index=False))
+    plot_lc_position(zs.position)
+
+def show_lc_table(runs):
+    """The arms' table: seeds, val loss at the trained length and its change
+    from the base, the loss in the last position bucket, recall at the
+    trained and the longest length with its 95% interval (Wilson for one
+    run, the range over seeds for several) and the effective context."""
+    if not _lc_head(runs, runs.table, 'arms'):
+        return
+    t = runs.table
+    multi = 'min' in t.columns
+    lo, hi = ('min', 'max') if multi else ('95% lo', '95% hi')
+    seeds = runs.recall.groupby('model')['seed'].nunique()
+    out = pd.DataFrame({'arm': t['arm'],
+                        'seeds': [int(seeds.get(a, 0)) for a in t['arm']]})
+    for c in t.columns[1:4]:  # val loss, Δ val, last-bucket NLL
+        out[c] = t[c].map(lambda x: _num(x, 3))
+    for c in [c for c in t.columns if c.startswith('recall ')]:
+        out[c] = t[c].map(lambda x: _num(x, 2))
+    out['seed range' if multi else '95% CI'] = [
+        f'[{_num(a, 2)}, {_num(b, 2)}]' for a, b in zip(t[lo], t[hi])]
+    out['effective'] = t['effective']
+    print(out.to_string(index=False))
+
+def show_lc_position(runs):
+    """The loss by position bucket of every model, under the label."""
+    if _lc_head(runs, runs.position, 'position'):
+        plot_lc_position(runs.position)
+
+def show_lc_recall(runs, effective, threshold=0.5):
+    """Per model the effective context and the worst depth at the longest
+    length, then the recall grids of PI and YaRN, under the label."""
+    if not _lc_head(runs, runs.recall, 'recall'):
+        return
+    r = runs.recall
+    lengths = sorted(r['length'].unique())
+    grid = r.groupby(['model', 'length', 'depth'])['correct'].mean()
+    rows = []
+    for model, L in effective.items():
+        worst = grid[model, lengths[-1]]
+        rows.append((model, _context_name(int(L), lengths),
+                     f'{worst.idxmin():.1f} ({worst.min():.0%})'))
+    print(pd.DataFrame(rows, columns=[
+        'model', 'effective', f'worst depth at {_length_name(lengths[-1])}'
+    ]).to_string(index=False))
+    plot_recall_grid(r, models=('PI', 'YaRN'), threshold=threshold)
+
+def show_lc_gain(runs):
+    """The long-context gain per gap bucket with 95% intervals (nats), as a
+    table and a plot, under the label."""
+    gain = runs.gain[~runs.gain['rule'].astype(bool)]
+    if not _lc_head(runs, gain, 'gain'):
+        return
+    cell = {(r.model, r.bucket): _interval(r.gain, r.lo, r.hi, 2)
+            for r in gain.itertuples()}
+    buckets = list(dict.fromkeys(gain['bucket']))
+    print(pd.DataFrame(
+        [[m] + [cell.get((m, b), '') for b in buckets]
+         for m in dict.fromkeys(gain['model'])],
+        columns=['model'] + [f'gap {b}' for b in buckets]).to_string(
+        index=False))
+    plot_lc_gain(runs.gain)
+
+def lc_first_steps(runs, margin, threshold=0.5):
+    """Per arm (its first seed): the first evaluated step at which the loss
+    in the last position bucket is within margin of the base's loss in its
+    trained window on the same books, recall at the longest length has a
+    lower 95% bound of at least threshold, and the gain at the longest gaps
+    a lower bound above 0 ('not reached' if never)."""
+    spec = _LC_TIERS[_lc_tier_of(runs)]
+    w = runs.windows
+    base = w[(w['model'] == 'base') & (w['measure'] == 'nll')
+             & (w['bucket'] == bucket_name(0, spec['trained']))
+             & (w['window'] < spec['eval_books'])]
+    ref = base['sum'].sum() / base['n'].sum()
+    tl = runs.timeline[runs.timeline['seed'] == 0]
+    rows = []
+    for arm, t in tl.groupby('arm', sort=False):
+        rows.append([arm] + [str(t['step'][ok].min()) if ok.any()
+                             else 'not reached' for ok in (
+            t['nll_last'] <= ref + margin, t['recall_lo'] >= threshold,
+            t['gain_lo'] > 0)])
+    return pd.DataFrame(rows, columns=['arm', 'perplexity', 'recall',
+                                       'gain'])
+
+def show_lc_first_steps(runs, margin, threshold=0.5):
+    """lc_first_steps under the label."""
+    if _lc_head(runs, runs.timeline, 'timeline'):
+        print(lc_first_steps(runs, margin, threshold).to_string(index=False))
+
+def show_lc_short(runs):
+    """Per arm the val loss at the trained length and the suite mean minus
+    the base's, with paired 95% intervals, under the label."""
+    if not _lc_head(runs, runs.short, 'short-context cost'):
+        return
+    s = runs.short
+    print(pd.DataFrame({
+        'arm': s['arm'],
+        'Δ val loss (nats)': [_interval(*x, 3, sign=True) for x in zip(
+            s['Δ val'], s['val lo'], s['val hi'])],
+        'Δ suite accuracy': [_interval(*x, 3, sign=True) for x in zip(
+            s['Δ suite'], s['suite lo'], s['suite hi'])]}).to_string(
+        index=False))
+
+def show_scheme_difference(runs, tier, a='YaRN', b='PI'):
+    """a minus b (scheme_difference) on recall at the longest length and on
+    the loss in the last position bucket, in three lines; 'T2: pending'
+    when runs is not a result of tier ('T1' or 'T2'), such as the T1
+    stand-in for the T2 arms."""
+    if _lc_tier_of(runs) != tier.lower():
+        print(f'{tier}: pending')
+        return
+    d = scheme_difference(runs, a, b)
+    L = _length_name(int(runs.recall['length'].max()))
+    last = runs.windows[runs.windows['measure'] == 'nll']['bucket'].iloc[-1]
+    print(f'{tier} ({d["method"]}): {a} - {b}')
+    print(f'  recall at {L}: ' + _interval(
+        d['recall'], d['recall_lo'], d['recall_hi'], 2, sign=True))
+    print(f'  NLL {last} (nats): ' + _interval(
+        d['nll'], d['nll_lo'], d['nll_hi'], 3, sign=True))
+
+d2l.DATA_HUB['lm-decode-rates-v1'] = (
+    d2l.LM_DATA_URL + 'lm-decode-rates-v1.json.gz',
+    '880e2466382e722c88cc880fb4cf2cf991cc62de')
 
 d2l.PRETRAIN_ARTIFACTS['decode-rates'] = (
     'lm-decode-rates-v1', 'json-table')
+
+DECODE_LIMIT_GIB = 22.5  # a configuration above this is infeasible
+
+def _decode_call():
+    """The page's decode_rates call (budgets.md, 'Measured Decode Rates').
+
+    Defined in :numref:`sec_lm_budgets`"""
+    return dict(models=('r2', 'Qwen/Qwen3-0.6B', 'Qwen/Qwen3-1.7B',
+                        'Qwen/Qwen3-4B'),
+                batches=(1, 8, 32, 128), ctx=1024, new_tokens=128)
+
+d2l.PRETRAIN_JOBS['decode-rates'] = ('decode_rates', lambda: _decode_call())
+
+LADDER_SIZES = ('ladder-25m', 'ladder-54m', 'ladder-88m', 'r2')
+
+HOFFMANN_FIT = (1.69, 406.4, 410.7, 0.34, 0.28)  # E, A, B, alpha, beta
+# Hoffmann et al. (2022), as in sec_scaling-laws; budgets.md's FITS too
+
+SIMULATED_LADDER = ('ladder pending (campaign C1); '
+                    'simulated at the Hoffmann fit')
+
+SIM_SEED_SD = 0.01  # nats, while the t1 seeds are not committed
+
+_LADDER_COLUMNS = ['size', 'N', 'tokens', 'tokens_per_param', 'val_loss',
+                   'finished']
+
+def _preset_params(preset):
+    """Exact parameter count of a preset (built on the meta device).
+
+    Defined in :numref:`sec_lm_budgets`"""
+    with torch.device('meta'):
+        model = d2l.PackedGPT.from_arch(d2l.r2_config(preset).arch)
+    return sum(p.numel() for p in model.parameters())
+
+def _ladder_plan():
+    """The planned points of the ladder: per size the main run's budget and
+    the two branch budgets (finished), and the branches' starting states
+    (plateau), as rows (size, N, tokens, finished).
+
+    Defined in :numref:`sec_lm_budgets`"""
+    rows = []
+    for size in LADDER_SIZES:
+        cfg, N = d2l.r2_config(size), _preset_params(size)
+        per_step = cfg.global_batch * cfg.arch.T
+        rows.append((size, N, cfg.steps * per_step, True))
+        for start, decay in d2l._preset_saves(size)['branches']:
+            rows.append((size, N, (start + decay) * per_step, True))
+            rows.append((size, N, start * per_step, False))
+    return pd.DataFrame(rows, columns=['size', 'N', 'tokens', 'finished'])
+
+def _seed_sd():
+    """The t1 runs' seed standard deviation of the final validation loss
+    when they are committed, else SIM_SEED_SD.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    key = d2l.PRETRAIN_ARTIFACTS['t1-runs'][0]
+    if key not in d2l.DATA_HUB:
+        return SIM_SEED_SD
+    log = d2l.load_artifact('t1-runs').dropna(subset=['val_loss'])
+    final = log.groupby('seed')['val_loss'].last()
+    return float(final.std(ddof=1)) if len(final) > 1 else SIM_SEED_SD
+
+def _simulated_ladder(seed=0):
+    """The twelve planned finished points with Hoffmann et al.'s losses plus
+    Gaussian noise of the seed spread; no plateau points.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    plan = _ladder_plan()
+    pts = plan[plan['finished']].reset_index(drop=True)
+    E, A, B, alpha, beta = HOFFMANN_FIT
+    N, D = pts['N'].to_numpy(float), pts['tokens'].to_numpy(float)
+    noise = np.random.default_rng(seed).normal(0, _seed_sd(), len(pts))
+    pts['val_loss'] = E + A / N ** alpha + B / D ** beta + noise
+    return pts
+
+def ladder_points():
+    """The ladder's points (21.2): per size the finished points of three
+    budgets and the plateau points, with columns size, N (parameters),
+    tokens, tokens_per_param, val_loss (nats) and finished; while the
+    ladder campaign is pending, the simulated ladder, labelled.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    key = d2l.PRETRAIN_ARTIFACTS['ladder-evals'][0]
+    if key in d2l.DATA_HUB or d2l._regenerates('ladder-evals'):
+        evals = d2l.load_artifact('ladder-evals')
+        pts = evals.points.rename(columns={'P': 'N'})
+        label = d2l._label_of(evals)
+    elif ({'ladder', 'ladder-evals', 'reference-run'} & d2l.PRETRAIN_PENDING
+          or d2l._regenerating()):
+        pts = _simulated_ladder()
+        label = SIMULATED_LADDER
+    else:
+        raise KeyError('ladder-evals is not committed yet')
+    if label != SIMULATED_LADDER and pts['finished'].all():
+        raise ValueError('the ladder has no plateau points')
+    pts = pts.assign(tokens_per_param=pts['tokens'] / pts['N'],
+                     rank=pts['size'].map(LADDER_SIZES.index))
+    pts = pts.sort_values(['finished', 'rank', 'tokens'], ascending=[
+        False, True, True]).reset_index(drop=True)[_LADDER_COLUMNS]
+    return d2l._show_label(d2l._with_label(pts, label))
+
+def show_ladder_label(points):
+    """Print the label of a stand-in ladder (the simulated one while the
+    ladder campaign is pending, or a smoke run), so that no number fitted
+    to it passes for the campaign's; return whether it is simulated.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    d2l._show_label(points)
+    return d2l._label_of(points) == SIMULATED_LADDER
+
+TrainRate = collections.namedtuple('TrainRate', 'seconds N mfu label')
+
+ASSUMED_MFU = 0.40  # used only while no training log is committed
+
+def training_rate(log):
+    """GPU-seconds per training token of the run that wrote log (the
+    reference run or its labelled stand-in) and that run's N (the matrix
+    parameters of 6ND): TrainRate(seconds, N, mfu, label); with an empty
+    (pending) log, the reference model at ASSUMED_MFU, labelled.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    peak = d2l.GPU_PEAK_BF16['NVIDIA GeForce RTX 4090']
+    if len(log) and 'tok_s' in log:
+        arch = d2l.Arch(**log.attrs['config']['runs'][0]['arch'])
+        N = d2l.flops_per_token(arch) / 6
+        seconds = float(log['world'].median() / log['tok_s'].median())
+        return TrainRate(seconds, N, float(log['mfu'].median()),
+                         d2l._label_of(log))
+    N = d2l.flops_per_token(d2l.r2_config('r2').arch) / 6
+    return d2l._show_label(TrainRate(
+        6 * N / (ASSUMED_MFU * peak), N, ASSUMED_MFU,
+        f'training log pending; MFU {ASSUMED_MFU:.2f} assumed'))
+
+def _decode_config(name):
+    """(layers, kv heads, head width, a meta-device model) of 'r2' or a
+    pinned Qwen3 checkpoint (its config.json only, no weights).
+
+    Defined in :numref:`sec_lm_budgets`"""
+    if name == 'r2':
+        arch = d2l.r2_config('r2').arch
+        with torch.device('meta'):
+            model = d2l.PackedGPT.from_arch(arch)
+        return arch.L, arch.H_kv, arch.d_h, model
+    import huggingface_hub
+    def get(**kwargs):
+        return huggingface_hub.hf_hub_download(
+            name, 'config.json', revision=d2l.HF_REVISIONS[name], **kwargs)
+
+    with d2l._quiet():
+        try:  # the cached copy first: a build host may be offline
+            path = get(local_files_only=True)
+        except Exception:  # noqa: BLE001 (not cached yet)
+            path = get()
+    with open(path) as f:
+        cfg = json.load(f)
+    with torch.device('meta'):
+        model = d2l.Qwen3GPT(**d2l.qwen3_gpt_kwargs(cfg))
+    head = cfg.get('head_dim') or cfg['hidden_size'] // cfg[
+        'num_attention_heads']
+    return (cfg['num_hidden_layers'], cfg['num_key_value_heads'], head,
+            model)
+
+def decode_shapes(models):
+    """Per model: parameters and bf16 key-value bytes per cached token
+    (2 L H_kv d_h 2), from the configurations alone.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    rows = []
+    for name in models:
+        L, H_kv, d_h, model = _decode_config(name)
+        rows.append(dict(model=name, params=sum(
+            p.numel() for p in model.parameters()),
+            kv_bytes=2 * L * H_kv * d_h * 2))
+    return pd.DataFrame(rows)
+
+def _decode_step(model, max_len):
+    """One greedy decode step with static shapes: step(token, ks, vs, pos)
+    writes the keys and values of token (batch, 1) at position pos (a
+    0-dim device tensor) and attends to positions 0..pos (the slots after
+    it masked); then token <- argmax and pos <- pos + 1, in place; returns
+    the logits. The attention of the one query is two batched products
+    over the cache with the query heads grouped by key-value head, so the
+    cache is read once and never repeated per query head.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    p, att0 = model.token_emb.weight, model.blks[0].attention
+    d_h, H, H_kv = att0.head_dim, att0.num_heads, att0.num_kv_heads
+    inv = (1.0 / float(model.rope_theta) ** (torch.arange(
+        0, d_h, 2, dtype=torch.float32) / d_h)).to(p.device)
+    slots = torch.arange(max_len, device=p.device)
+    W = model.lm_head.weight if hasattr(model, 'lm_head') else p
+
+    def step(token, ks, vs, pos):
+        B = token.shape[0]
+        angles = pos.float().view(1, 1) * inv
+        tables = torch.cos(angles), torch.sin(angles)
+        bias = torch.zeros(max_len, device=p.device).masked_fill(
+            slots > pos, -math.inf)  # the slots not written yet
+        H_ = model.token_emb(token)
+        for i, blk in enumerate(model.blks):
+            att = blk.attention
+            q, k, v = att.qkv(blk.norm1(H_), tables=tables)
+            ks[i].index_copy_(2, pos.view(1), k)
+            vs[i].index_copy_(2, pos.view(1), v)
+            q = q.reshape(B, H_kv, H // H_kv, d_h)  # heads by kv head
+            s = (q @ ks[i].transpose(-1, -2)).float() / math.sqrt(d_h)
+            a = torch.softmax(s + bias, -1).to(q.dtype)
+            Y = (a @ vs[i]).reshape(B, 1, H * d_h)
+            H_ = H_ + att.W_o(Y)
+            H_ = H_ + blk.ffn(blk.norm2(H_))
+        logits = F.linear(model.norm(H_[:, -1]), W)
+        token.copy_(logits.argmax(-1, keepdim=True))
+        pos.add_(1)
+        return logits
+    return step
+
+def _decode_estimate(params, kv_bytes, batch, max_len, vocab):
+    """GiB of the weights, the cache and the logits of a configuration.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    return (2 * params + batch * max_len * kv_bytes
+            + 6 * batch * vocab) / 2**30
+
+def _graph(step, args):
+    """step(*args) captured as a CUDA graph (after three warm-up calls on a
+    side stream); returns its replay.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    s = torch.cuda.Stream()
+    s.wait_stream(torch.cuda.current_stream())
+    with torch.cuda.stream(s):
+        for _ in range(3):
+            step(*args)
+    torch.cuda.current_stream().wait_stream(s)
+    g = torch.cuda.CUDAGraph()
+    with torch.cuda.graph(g):
+        step(*args)
+    return g.replay
+
+def _time_decode(model, batch, ctx, new_tokens, warmup=1, repeats=3,
+                 graph=True):
+    """Milliseconds per decode step (median, first and third quartile over
+    the repeats), each repeat new_tokens steps from position ctx.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    max_len = ctx + new_tokens
+    with torch.inference_mode():
+        ks, vs = model.init_cache(batch, max_len)
+        ks.normal_(), vs.normal_()  # a step's time does not depend on them
+        token = torch.zeros(batch, 1, dtype=torch.long, device=ks.device)
+        pos = torch.tensor(ctx, device=ks.device)
+        step = _decode_step(model, max_len)
+        run = (_graph(step, (token, ks, vs, pos)) if graph else
+               lambda: step(token, ks, vs, pos))
+        times = []
+        for _ in range(warmup + repeats):
+            pos.fill_(ctx)
+            t = d2l.Benchmark(lambda: [run() for _ in range(new_tokens)],
+                              0, 1).time
+            times.append(1e3 * t / new_tokens)
+    return np.percentile(times[warmup:], [50, 25, 75])
+
+def _hf_check_ms(name, ctx, new_tokens):
+    """d2l.hf_decode_ms at batch 1 on the Hugging Face model (median ms).
+
+    Defined in :numref:`sec_lm_budgets`"""
+    with d2l._quiet():
+        model, _ = d2l.load_hf(name)
+    ids = torch.randint(0, model.config.vocab_size, (1, ctx),
+                        device=model.device)
+    out = d2l.hf_prefill(model, ids, ctx)[0]
+    token = out.logits[:, -1:].argmax(-1)
+    ms = d2l.hf_decode_ms(model, out.past_key_values, token,
+                          steps=new_tokens, warmup=1, repeats=3)[0]
+    del model, out
+    d2l.lm_free()
+    return float(ms)
+
+def _decode_model(name):
+    """'r2' (its architecture with random weights: decode time depends on
+    the shapes only) or a pinned Qwen3 checkpoint, bf16 on the GPU.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    with d2l._quiet():
+        if name == 'r2':
+            model = d2l.PackedGPT.from_arch(d2l.r2_config('r2').arch)
+            return model.to('cuda', torch.bfloat16).eval()
+        return d2l.load_qwen3(name, device='cuda')
+
+def _decode_rates(models, batches, ctx, new_tokens):
+    """Measure every (model, batch) on the current GPU.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    rows = []
+    for name, params, kv in decode_shapes(models).itertuples(index=False):
+        model = _decode_model(name)
+        vocab = model.token_emb.weight.shape[0]
+        first = len(rows)
+        for b in batches:
+            row = dict(model=name, params=params, kv_bytes=kv, batch=b,
+                       ms=math.nan, ms_q1=math.nan, ms_q3=math.nan,
+                       peak_gib=math.nan, stack='eager + CUDA graph',
+                       feasible=False, hf_ms=math.nan)
+            if _decode_estimate(params, kv, b, ctx + new_tokens,
+                                vocab) <= DECODE_LIMIT_GIB:
+                try:
+                    torch.cuda.reset_peak_memory_stats()
+                    ms, q1, q3 = _time_decode(model, b, ctx, new_tokens)
+                    peak = torch.cuda.max_memory_reserved() / 2**30
+                    row.update(ms=ms, ms_q1=q1, ms_q3=q3, peak_gib=peak,
+                               feasible=bool(peak <= DECODE_LIMIT_GIB))
+                except torch.OutOfMemoryError:
+                    pass
+            d2l.lm_free()
+            rows.append(row)
+        del model
+        d2l.lm_free()
+        if name != 'r2':  # the Hugging Face eager rate at batch 1
+            hf_ms = _hf_check_ms(name, ctx, new_tokens)
+            rows[first]['hf_ms'] = hf_ms
+            ms = rows[first]['ms']
+            if not ms < hf_ms:  # NaN (a failed measurement) fails too
+                raise RuntimeError(
+                    f'{name}: the harness ({ms:.1f} ms/step) is not faster '
+                    f'than Hugging Face eager decode ({hf_ms:.1f} ms/step)')
+    table = pd.DataFrame(rows)
+    table['tok_s'] = np.where(table['feasible'],
+                              1e3 * table['batch'] / table['ms'], np.nan)
+    return table[_DECODE_COLUMNS]
+
+_DECODE_COLUMNS = ['model', 'params', 'kv_bytes', 'batch', 'tok_s', 'ms',
+                   'ms_q1', 'ms_q3', 'peak_gib', 'stack', 'feasible',
+                   'hf_ms']
+
+def decode_rates(models, batches, ctx, new_tokens):
+    """Greedy decode rates on one GPU: per model and batch the tokens per
+    second (tok_s; NaN where infeasible), milliseconds per step with
+    quartiles, peak GiB and the stack used, with each model's parameters
+    and key-value bytes per token. Measured only when D2L_RERUN names
+    'decode-rates' (one whole card); otherwise the committed result, or,
+    while pending, the shapes with empty rates, labelled.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    config = dict(models=list(models), batches=list(batches), ctx=ctx,
+                  new_tokens=new_tokens)
+    res = d2l._pretrain_result('decode-rates', lambda: _decode_rates(
+        models, batches, ctx, new_tokens), config)
+    if res.empty:  # pending: the shapes, every rate missing
+        rows = [dict(r, batch=b) for r in decode_shapes(models).to_dict(
+            'records') for b in batches]
+        res = d2l._with_label(pd.DataFrame(rows).reindex(
+            columns=_DECODE_COLUMNS), d2l._label_of(res))
+    return d2l._show_label(res)
+
+def fmt_power(x, digits=1, tex=False):
+    """x as '10^9' or '7×10^11' at digits significant digits (tex=True:
+    '10^{9}', '7\\times10^{11}' for math text); 0 as '0'.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    if x == 0:
+        return '0'
+    mantissa, exponent = f'{x:.{digits - 1}e}'.split('e')
+    power = f'10^{{{int(exponent)}}}' if tex else f'10^{int(exponent)}'
+    if float(mantissa) == 1:
+        return power
+    return mantissa + (r'\times' if tex else '×') + power
+
+def fmt_sig(x):
+    """x (positive) with thousands separated, or at two significant digits
+    below 10: '4,368', '28', '0.37'.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    return f'{x:,.0f}' if x >= 10 else f'{x:.2g}'
+
+def plot_lifetime_cost(N, costs, dots, crosses):
+    """Lifetime FLOPs against N, one curve per demand in costs (demand ->
+    costs at N; the last, the break-even demand, dotted black), a dot at
+    each demand's optimum (dots: (N, cost) per curve) and a cross at the
+    two models of equal cost (crosses: (N, cost) pairs).
+
+    Defined in :numref:`sec_lm_budgets`"""
+    demands = list(costs)
+    D = r'D_{\mathrm{inf}}'
+    legend = [f'${D} = {fmt_power(x, tex=True)}$' for x in demands[:-1]]
+    legend.append(f'break-even ${fmt_power(demands[-1], 2, tex=True)}$')
+    d2l.plot(N, list(costs.values()), 'parameters N', 'lifetime FLOPs',
+             xscale='log', yscale='log', legend=legend,
+             fmts=('-',) * len(dots) + ('k:',), figsize=(4.5, 3),
+             legend_loc='outside')
+    ax = d2l.plt.gca()
+    for i, (n, c) in enumerate(dots):
+        ax.plot(n, c, 'o', color=f'C{i}')
+    ax.plot(*zip(*crosses), 'kx')
+
+def plot_ratio_band(demand, ratio):
+    """The optimal D*/N* against demand under each fit (ratio: fit name ->
+    values), with the band between the first two shaded.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    d2l.plot(demand, list(ratio.values()),
+             r'generated tokens $D_{\mathrm{inf}}$', 'optimal D*/N*',
+             legend=list(ratio), xscale='log', yscale='log',
+             figsize=(4.5, 3))
+    d2l.plt.gca().fill_between(demand, *list(ratio.values())[:2],
+                               color='gray', alpha=0.2)
+
+def show_decode_table(rates):
+    """Tokens per second per model and batch ('—' where infeasible or not
+    measured), and the batch-1 rate over the roofline (column roofline).
+
+    Defined in :numref:`sec_lm_budgets`"""
+    table = rates.pivot(index='model', columns='batch', values='tok_s')
+    roof = rates[rates['batch'] == 1].set_index('model')['roofline']
+    batches = list(table.columns)
+    print(f'{"model":>11} ' + ' '.join(f'{f"batch {b}":>9}' for b in batches)
+          + '   batch 1 ÷ roofline')
+    for model in dict.fromkeys(rates['model']):
+        tok = table.loc[model]
+        cells = ' '.join(f'{v:9,.0f}' if v == v else f'{"—":>9}'
+                         for v in tok)
+        ratio = tok[batches[0]] / roof[model]
+        print(f'{_short(model):>11} {cells}   ' + (
+            f'{ratio:.2f}' if ratio == ratio else '—'))
+    stacks = rates['stack'].dropna().unique()
+    print('tokens per second; decode stack: '
+          + (', '.join(stacks) if len(stacks) else 'not measured yet'))
+
+def plot_decode(rates):
+    """Measured (solid, dots) and roofline (dashed) tokens per second
+    against the batch, one colour per model.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    d2l.set_figsize((4.5, 3))
+    ax = d2l.plt.gca()
+    for i, (model, g) in enumerate(rates.groupby('model', sort=False)):
+        ax.plot(g['batch'], g['roofline'], '--', color=f'C{i}')
+        ax.plot(g['batch'], g['tok_s'], 'o-', color=f'C{i}',
+                label=_short(model))
+    ax.plot([], [], 'k--', label='roofline')
+    ax.set_xscale('log', base=2), ax.set_yscale('log')
+    batches = sorted(rates['batch'].unique())
+    ax.set_xticks(batches, [str(b) for b in batches])
+    ax.xaxis.set_minor_locator(ticker.NullLocator())
+    ax.set_xlabel('batch'), ax.set_ylabel('tokens per second')
+    ax.legend(fontsize=8, loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.grid(True)
+
+def plot_ladder_fit(points, law, withheld, interval):
+    """Finished ladder points (loss against tokens, one colour per size),
+    the fitted law per size, and the withheld point (open circle) with its
+    prediction and interval.
+
+    Defined in :numref:`sec_lm_budgets`"""
+    d2l.set_figsize((4.5, 3))
+    ax = d2l.plt.gca()
+    D = np.logspace(np.log10(points['tokens'].min() / 1.5),
+                    np.log10(points['tokens'].max() * 1.5), 100)
+    for i, (size, g) in enumerate(points.groupby('size', sort=False)):
+        mask = g.index != withheld
+        ax.plot(D, law(g['N'].iloc[0], D), '-', color=f'C{i}', lw=1)
+        ax.plot(g['tokens'][mask], g['val_loss'][mask], 'o', color=f'C{i}',
+                label=size)
+    w = points.loc[withheld]
+    pred, lo, hi = interval
+    ax.errorbar(w['tokens'] * 1.04, pred, yerr=[[pred - lo], [hi - pred]],
+                fmt='s', color='black', capsize=3, markersize=4,
+                label='prediction')
+    ax.plot(w['tokens'], w['val_loss'], 'o', mfc='none', color='black',
+            label='withheld')
+    ax.set_xscale('log'), ax.set_xlabel('training tokens D')
+    ax.set_ylabel('validation loss (nats)')
+    ax.legend(fontsize=8, loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.grid(True)
 
 HW_ARTIFACTS = {}  # box regeneration name: (DATA_HUB key, kind)
 

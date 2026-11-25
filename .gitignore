@@ -83,6 +83,7 @@ Thumbs.db
 /.quarto/
 
 **/*.quarto_ipynb
+**/*.quarto_ipynb_[0-9]*
 .env
 run_one.sh
 

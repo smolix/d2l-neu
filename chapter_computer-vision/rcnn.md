@@ -472,7 +472,7 @@ variable rectangle to a fixed-size feature:
 ![Fast R-CNN: shared backbone + RoI pooling per proposal.](../img/fast-rcnn.svg){width=72%}
 :::
 
-::: {.slide title="RoI pooling" except="tensorflow"}
+::: {.slide title="RoI pooling" only="pytorch,mxnet"}
 Variable rectangle in feature space → fixed grid (e.g.
 $2 \times 2$). Each output cell is the max over its
 sub-region of the rectangle. Differentiable, fast,
@@ -481,6 +481,16 @@ batchable:
 ![$2 \times 2$ RoI pooling: max-pool each sub-region of the proposal to a fixed-size output.](../img/roi.svg){width=58%}
 
 @rcnn-fast-r-cnn-1
+:::
+
+::: {.slide title="RoI pooling" only="jax"}
+Variable rectangle in feature space → fixed grid (e.g.
+$2 \times 2$). Each output cell is the max over its
+sub-region of the rectangle. Differentiable, fast,
+batchable:
+
+![$2 \times 2$ RoI pooling: max-pool each sub-region of the proposal to a fixed-size output.](../img/roi.svg){width=58%}
+
 @rcnn-fast-r-cnn-4
 :::
 

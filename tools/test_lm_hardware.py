@@ -1293,7 +1293,13 @@ def synthetic_grid(chip, calib, kernels=2000):
                                truth)['M3']
         ms.append(d2l._predict(row, chip, c) * 1e3)
     grid['ms'], grid['mad'] = ms, 0.01
-    grid.loc[grid.workload == 'eager', 'ms'] *= 10
+    grid['floor_ms'] = np.where(grid.workload.isin(['prefill', 'train']),
+                                1.0, np.nan)
+    grid.loc[grid.workload == 'prefill', 'floor_ms'] = 50.0
+    grid.loc[(grid.workload == 'prefill') & (grid.L == 256), 'ms'] = 50.0
+    graph = grid[(grid.workload == 'decode') & (grid.b == 1)
+                 & (grid.L == 2048)].ms.iloc[0]
+    grid.loc[grid.workload == 'eager', 'ms'] = 10 * graph
     return grid, truth
 
 
@@ -1314,6 +1320,8 @@ class TestWorkloadFits(unittest.TestCase):
         self.assertLess(held.M3.abs().max(), 1e-6)
         self.assertGreater(held.M0.abs().max(), 0.15)
         self.assertTrue(any('M3 fitted on 7 of 21' in l for l in lines))
+        self.assertEqual(lines[-1], 'held-out points within 15%, M0 / M3: '
+                         'Qwen3-8B 0 / 14 of 14')
         self.assertLessEqual(len(lines), 15)
 
     def test_pending_and_campaign(self):
@@ -1332,6 +1340,8 @@ class TestWorkloadFits(unittest.TestCase):
         self.assertIn('Qwen3-8B 9 decode, 6 prefill, 6 training', lines[0])
         self.assertIn('(32, 2,048)', lines[1])
         self.assertIn('10x the graph step', lines[2])
+        self.assertIn('Qwen3-8B prefill 50-50 ms, Qwen3-8B train 1-1 ms',
+                      ' '.join(' '.join(lines[3:]).split()))
         lines, _ = lines_of(self, d2l._show_grid, d2l._hw_pending(
             'box-workloads'))
         self.assertEqual(lines, ['box-workloads pending'])
@@ -1344,12 +1354,16 @@ class TestWorkloadFits(unittest.TestCase):
         self.assertEqual(int(picks.iloc[1].L), 2048)
 
     def test_show_control(self):
-        r = pd.DataFrame(dict(weights=['random', 'real'], ms=[19.10, 19.14],
-                              mad=[0.02, 0.03], peak_gib=[16.0, 16.0]))
+        r = pd.DataFrame(dict(arm=['random', 'real', 'random again'],
+                              ms=[19.10, 19.14, 19.12], mad=[0.002, 0.003,
+                                                             0.002],
+                              kernels=[2189] * 3, peak_gib=[16.0] * 3))
         lines, _ = lines_of(self, d2l._show_control, r, 'Qwen/Qwen3-8B', 1,
                             2048)
-        self.assertIn('real weights 19.14 ms, random 19.10 ms', lines[0])
-        self.assertIn('+0.040 ms, 0.4 x the 3-MAD band', lines[1])
+        self.assertEqual(lines[0], 'Qwen3-8B, b = 1, L = 2,048: random '
+                         '19.10 ms, real 19.14, random again 19.12')
+        self.assertEqual(lines[1], 'real minus random +0.030 ms (+0.2%), '
+                         'noise 0.020 ms, the same kernels (2,189)')
 
     def test_show_calib(self):
         lines, _ = lines_of(self, d2l.show_calib, self.calib, self.chip)
@@ -1545,8 +1559,9 @@ class TestCommittedClaims(unittest.TestCase):
         self.assertLessEqual(abs(period - wave_cols), r.N.diff().iloc[1])
 
     def test_w1_w4(self):
-        """W1: M3 within 15% on every held-out point of each workload, M0
-        worse; W4: real and random weights within 3 MAD."""
+        """W1: for Qwen3-8B (the plan's question) M3 within 15% on every
+        held-out point of each workload, M0 worse; W4: real weights within
+        the control's noise, the same kernels in every arm."""
         if not d2l.hw_registered('box-workloads'):
             self.skipTest('box-workloads is not registered yet')
         log = d2l.hw_box_log('box-workloads')
@@ -1555,12 +1570,15 @@ class TestCommittedClaims(unittest.TestCase):
             fit = d2l.fit_workload_models(grid, None, committed_specs().loc[
                 'RTX 4090'])
         held = fit['errors'][fit['errors'].held_out]
+        held = held[held.model == 'Qwen/Qwen3-8B']
         for w, e in held.groupby('workload'):
             self.assertLessEqual(e.M3.abs().max(), 0.15, w)
             self.assertGreater(e.M0.abs().max(), e.M3.abs().max(), w)
-        t = log['control-Qwen3-8B'].set_index('weights')
-        self.assertLessEqual(abs(t.ms['real'] - t.ms['random']),
-                             3 * max(t.mad['real'], t.mad['random']))
+        t = log['control-Qwen3-8B'].set_index('arm')
+        random = (t.ms['random'] + t.ms['random again']) / 2
+        self.assertLessEqual(abs(t.ms['real'] - random),
+                             d2l._control_noise(t))
+        self.assertEqual(t.kernels.nunique(), 1)
 
     def test_w5(self):
         """W5: measured expert coverage below the uniform formula at b = 64

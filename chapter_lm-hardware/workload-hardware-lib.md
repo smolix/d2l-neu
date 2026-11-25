@@ -72,9 +72,10 @@ model. Training rows are (model, layers kept or None for all, step shapes
 (b, s): b sequences of s tokens). Qwen3-0.6B trains on one sequence of 512 to
 2,048 tokens: pure bf16 AdamW holds 4.8 GB of state and 2,048 tokens of its 28
 layers' activations about 6 GB more (13 GiB at the peak, with the loss
-chunk), so 4,096 tokens would pass 20 GiB. The MoE series: Qwen3-30B-A3B's router
-on `n_prose` FineWeb-Edu validation documents and `n_code` windows of the
-held-out code text, `n_tokens` each, coverage by `draws` resamples per batch.
+chunk), so 4,096 tokens would pass 20 GiB. The MoE series: Qwen3-30B-A3B's
+router on `n_prose` FineWeb-Edu validation documents and `n_code` windows of
+the held-out code text, `n_tokens` each, coverage by `draws` resamples per
+batch.
 
 ```{.python .input #workload-hardware-lib-configs}
 %%tab pytorch
@@ -230,13 +231,45 @@ def hw_random_model(model_id, n_layers=None, seed=0):
 #@save
 def hw_pretrained_model(model_id):
     """model_id with its real weights at the pinned revision (from the Hub
-    cache), on one GPU, with the benchmark attention, in eval mode."""
+    cache), built exactly as hw_random_model builds it (same class, dtype,
+    attention and GPU), in eval mode: only the weight values differ."""
+    import transformers
+    from transformers.utils import logging as hf_logging
     _hw_bind_attention()
-    with d2l._quiet():
-        model = d2l.load_hf(model_id, _hw_revision(model_id),
-                            device_map='cuda',
-                            attn_implementation=_HW_ATTENTION)[0]
+    bar = hf_logging.is_progress_bar_enabled()
+    hf_logging.disable_progress_bar()  # a notebook shows it despite _quiet
+    try:
+        with d2l._quiet():
+            model = transformers.AutoModelForCausalLM.from_pretrained(
+                model_id, revision=_hw_revision(model_id),
+                dtype=torch.bfloat16, attn_implementation=_HW_ATTENTION,
+                device_map='cuda', use_safetensors=True)
+    finally:
+        if bar:
+            hf_logging.enable_progress_bar()
     return model.eval()
+
+#@save
+def _hw_twin(model_id, n_layers=None, width=256, vocab=8192, head_dim=32):
+    """A narrow twin of the model: the same layers and the same grouping of
+    query heads (one KV head with its group), head size head_dim, hidden and
+    MLP width `width`, a vocabulary of `vocab`; it launches the kernels of
+    the model while its GPU work is small (attention included)."""
+    import copy
+    import transformers
+    cfg = copy.deepcopy(_hw_model_config(model_id, n_layers))
+    group = cfg.num_attention_heads // cfg.num_key_value_heads
+    cfg.num_attention_heads, cfg.num_key_value_heads = group, 1
+    cfg.head_dim = head_dim
+    cfg.hidden_size = cfg.intermediate_size = width
+    cfg.vocab_size = vocab
+    if getattr(cfg, 'moe_intermediate_size', None):
+        cfg.moe_intermediate_size = width
+    _hw_bind_attention()
+    with d2l._quiet(), torch.device('cuda'):
+        twin = transformers.AutoModelForCausalLM.from_config(
+            cfg, dtype=torch.bfloat16, attn_implementation=_HW_ATTENTION)
+    return twin.eval()
 
 #@save
 def hw_static_cache(model, b, L):
@@ -423,7 +456,8 @@ def _serving_rows(spec, model_id, chip):
         rows.append(dict(base, workload='decode', series=series, b=b, L=L,
                          **d2l.hw_decode_bench(model, b, L)))
         d2l.lm_free()
-    for n in next((p for mid, p in spec['prefill'] if mid == model_id), ()):
+    prompts = next((p for mid, p in spec['prefill'] if mid == model_id), ())
+    for n in prompts:
         rows.append(dict(base, workload='prefill', series='grid', b=1, L=n,
                          **d2l.hw_prefill_bench(model, n)))
         d2l.lm_free()
@@ -436,6 +470,14 @@ def _serving_rows(spec, model_id, chip):
     kernels = _decode_kernels(model)
     del model
     d2l.lm_free()
+    if prompts:  # the CPU's time to launch an eager prefill
+        twin = _hw_twin(model_id)
+        floors = {n: d2l.hw_prefill_bench(twin, n)['ms'] for n in prompts}
+        for r in rows:
+            if r['workload'] == 'prefill':
+                r['floor_ms'] = floors[r['L']]
+        del twin
+        d2l.lm_free()
     return rows, [[model_id, b, L] for b, L, _ in cut], kernels
 
 #@save
@@ -451,6 +493,11 @@ def _train_rows(spec, model_id):
                                  n_layers=model.config.num_hidden_layers,
                                  **d2l.hw_train_bench(model, b, s)))
             del model
+            d2l.lm_free()
+            twin = _hw_twin(model_id, n_layers)  # the launch floor
+            for r, (b, s) in zip(rows[-len(shapes):], shapes):
+                r['floor_ms'] = d2l.hw_train_bench(twin, b, s)['ms']
+            del twin
             d2l.lm_free()
     return rows
 
@@ -499,8 +546,16 @@ def _show_grid(grid):
             ratios.append(f'{_short(e.model)} {e.ms / g.ms.iloc[0]:.0f}x')
     if ratios:
         L = int(grid[grid.workload == 'eager'].L.iloc[0])
-        print(f'eager decode at b = 1, L = {L:,} (no CUDA graph): '
-              + ', '.join(ratios) + ' the graph step')
+        print(textwrap.fill(f'eager decode at b = 1, L = {L:,} (no CUDA '
+                            'graph): ' + ', '.join(ratios) + ' the graph step',
+                            79, subsequent_indent='  '))
+    if 'floor_ms' in grid:
+        floors = grid.dropna(subset=['floor_ms']).groupby(
+            ['model', 'workload'], sort=False).floor_ms
+        parts = [f'{_short(m)} {w} {lo:.0f}-{hi:.0f} ms' for (m, w), lo, hi
+                 in zip(floors.min().index, floors.min(), floors.max())]
+        print(textwrap.fill('launch floor of the eager steps (narrow twin): '
+                            + ', '.join(parts), 79, subsequent_indent='  '))
 ```
 
 The live check repeats four committed points on the reader's GPU: a decode,
@@ -571,38 +626,53 @@ def hw_workload_grid(config='box'):
 ```{.python .input #workload-hardware-lib-control}
 %%tab pytorch
 #@save
+_HW_ARMS = ('random', 'real', 'random again')
+
+#@save
 def _control_compute(model_id, b, L):
+    """Random, real, then random weights again (the run-to-run noise), one
+    model on the card at a time, with the kernels of each decode step."""
     rows = []
-    for weights in ('random', 'real'):  # one model on the card at a time
-        model = (hw_random_model(model_id) if weights == 'random'
-                 else hw_pretrained_model(model_id))
-        rows.append(dict(weights=weights, **d2l.hw_decode_bench(model, b, L)))
+    for arm in _HW_ARMS:
+        model = (hw_pretrained_model(model_id) if arm == 'real'
+                 else hw_random_model(model_id))
+        rows.append(dict(arm=arm, kernels=_decode_kernels(model, b, L),
+                         **d2l.hw_decode_bench(model, b, L)))
         del model
         d2l.lm_free()
     return pd.DataFrame(rows)
+
+#@save
+def _control_noise(t):
+    """The control's noise (ms): 3 MADs or the random arms' difference."""
+    return max(3 * t.mad.max(), math.fabs(t.ms['random'] -
+                                          t.ms['random again']))
 
 #@save
 def _show_control(r, model_id, b, L):
     if r.empty:
         print(r.attrs.get('label', 'no control'))
         return
-    t = r.set_index('weights')
-    diff = t.ms['real'] - t.ms['random']
-    mad3 = 3 * max(t.mad['real'], t.mad['random'])
-    print(f'{_short(model_id)}, b = {b}, L = {L:,}: real weights '
-          f'{t.ms["real"]:.2f} ms, random {t.ms["random"]:.2f} ms per step')
-    print(f'difference {diff:+.3f} ms, {math.fabs(diff) / mad3:.1f} x the '
-          f'3-MAD band ({mad3:.3f} ms)')
+    t = r.set_index('arm')
+    random = (t.ms['random'] + t.ms['random again']) / 2
+    diff, noise = t.ms['real'] - random, _control_noise(t)
+    same = 'the same' if t.kernels.nunique() == 1 else 'different'
+    print(f'{_short(model_id)}, b = {b}, L = {L:,}: random '
+          f'{t.ms["random"]:.2f} ms, real {t.ms["real"]:.2f}, random again '
+          f'{t.ms["random again"]:.2f}')
+    print(f'real minus random {diff:+.3f} ms ({diff / random:+.1%}), noise '
+          f'{noise:.3f} ms, {same} kernels ({int(t.kernels.iloc[0]):,})')
 
 #@save
 def hw_weight_control(model_id, b, L):
-    """Decode step time at (b, L) with model_id's real weights and with
-    random ones, measured back to back, one model on the card at a time."""
+    """Decode step time at (b, L) with random weights, model_id's real
+    weights and random weights again, back to back, one model on the card
+    at a time (the two random arms measure the run-to-run noise)."""
     def live(r, same):
-        new = _control_compute(model_id, b, L).set_index('weights')
-        t = r.set_index('weights')
+        new = _control_compute(model_id, b, L).set_index('arm')
+        t = r.set_index('arm')
         return _hw_agreement([(w, t.ms[w], new.ms[w], t.mad[w] / t.ms[w])
-                              for w in ('random', 'real')], same, 'ms')
+                              for w in _HW_ARMS], same, 'ms')
     return _hw_result(
         'box-workloads', lambda: _control_compute(model_id, b, L),
         dict(model=model_id, b=b, L=L), entry=f'control-{_short(model_id)}',
@@ -613,10 +683,15 @@ def hw_weight_control(model_id, b, L):
 ## A Ladder of Models
 
 M0 is the datasheet; M1 the calibration (`P_eff`, `beta_eff`); M2 adds the
-launch term (kernels per forward from the graph of one decode step, scaled to
-the layers a point keeps); M3 fits `eta_compute`, `eta_kv` and `kappa` on the
-calibration subset (every third measured point, in grid order) by least
-squares on log ratios, so relative errors count alike.
+launch terms, both measured, none fitted: in a CUDA graph (decode) the kernels
+of one step (counted from its graph, scaled to the layers a point keeps) times
+`alpha_k`; an eager step (prefill, training) takes at least its launch floor,
+the time of the same step on a narrow twin of the model (same layers and
+kernels; width 256, one KV head with its query group, head size 32), which
+is the CPU's time to launch the kernels. M3
+fits `eta_compute`, `eta_kv` and `kappa` on the calibration subset (every
+third measured point, in grid order) by least squares on log ratios, so
+relative errors count alike.
 
 ```{.python .input #workload-hardware-lib-fit}
 %%tab pytorch
@@ -634,14 +709,19 @@ def _ladder_calibs(calib, grid, model_id, n_layers, extra=None):
 
 #@save
 def _predict(row, chip, calib):
-    """Predicted seconds of a grid row under one calibration."""
+    """Predicted seconds of a grid row under one calibration; with launch
+    terms (M2, M3) an eager step takes at least its launch floor."""
     cfg = _hw_model_config(row.model, row.n_layers)
     b, L = int(row.b), int(row.L)
+    if row.workload == 'decode':
+        return d2l.ServingModel(cfg, chip, calib).decode_step(b, L)
     if row.workload == 'train':
-        return d2l.TrainStepModel(cfg, chip, calib).step_time(b, L)
-    sm = d2l.ServingModel(cfg, chip, calib)
-    return sm.prefill_time(L, b) if row.workload == 'prefill' else (
-        sm.decode_step(b, L))
+        t = d2l.TrainStepModel(cfg, chip, calib).step_time(b, L)
+    else:
+        t = d2l.ServingModel(cfg, chip, calib).prefill_time(L, b)
+    floor = getattr(row, 'floor_ms', math.nan) / 1e3
+    launch = calib is not None and 'kernels_per_step' in calib
+    return max(t, floor) if launch and np.isfinite(floor) else t
 
 #@save
 def _ladder_errors(points, chip, calib, grid, extra=None, models=None):
@@ -682,8 +762,9 @@ def fit_workload_models(grid, calib=None, chip=None, within=0.15):
     default the run's own; chip: its chip_specs row, default the grid's):
     median and max relative error per workload on the held-out points, the
     fitted M3 parameters, and how many held-out points M0 and M3 predict
-    within `within`. A campaign log that is not committed prints its
-    status."""
+    within `within`; returns the errors, the parameters and each model's M3
+    calibration (for ServingModel). A campaign log that is not committed
+    prints its status."""
     if isinstance(grid, CampaignPending):
         print(hw_status_line(grid))
         return None
@@ -698,9 +779,14 @@ def fit_workload_models(grid, calib=None, chip=None, within=0.15):
     is_cal = np.arange(len(points)) % 3 == 0  # the calibration subset C
     extra = _fit_m3(points[is_cal], chip, calib, grid)
     errors = _ladder_errors(points, chip, calib, grid, extra)
-    errors['workload'], errors['held_out'] = points.workload, ~is_cal
+    errors['model'], errors['workload'] = points.model, points.workload
+    errors['held_out'] = ~is_cal
     _show_ladder_fit(errors, extra, int(is_cal.sum()), within)
-    return dict(errors=errors, params=extra)
+    calibs = {}  # each model's M3 calibration at full depth
+    for m in dict.fromkeys(points.model):
+        depth = _hw_model_config(m).num_hidden_layers
+        calibs[m] = _ladder_calibs(calib, grid, m, depth, extra)['M3']
+    return dict(errors=errors, params=extra, calib=calibs)
 
 #@save
 def _show_ladder_fit(errors, extra, n_cal, within):
@@ -715,9 +801,12 @@ def _show_ladder_fit(errors, extra, n_cal, within):
     print('(median / max relative error in %, held-out points)')
     print(f'M3 fitted on {n_cal} of {len(errors)} points: ' + ', '.join(
         f'{k} {v:.2f}' for k, v in extra.items()))
-    ok = {m: int((held[m].abs() <= within).sum()) for m in ('M0', 'M3')}
-    print(f'held-out points within {within:.0%}: M0 {ok["M0"]} of '
-          f'{len(held)}, M3 {ok["M3"]} of {len(held)}')
+    parts = []
+    for model_id, h in held.groupby('model', sort=False):
+        ok = [int((h[m].abs() <= within).sum()) for m in ('M0', 'M3')]
+        parts.append(f'{_short(model_id)} {ok[0]} / {ok[1]} of {len(h)}')
+    print(textwrap.fill(f'held-out points within {within:.0%}, M0 / M3: '
+                        + ', '.join(parts), 79, subsequent_indent='  '))
 ```
 
 ## The Frontier Plot

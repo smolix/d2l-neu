@@ -19,7 +19,8 @@ for 22.3 (workload-hardware): the benchmark attention's decode step against
 Transformers' SDPA on the same static cache (BF16 logits), the static cache
 refill (every replay attends over L + 1 positions), the CUDA-graph kernel
 count, and the decode, prefill and training benches on a two-layer
-Qwen3-0.6B (finite times, peak memory reported).
+Qwen3-0.6B (finite times, peak memory reported), and the MoE router hooks
+on a two-layer random Qwen3-30B-A3B.
 """
 import contextlib
 import io
@@ -276,6 +277,26 @@ class TestWorkloadHardwareGPU(unittest.TestCase):
             self.assertGreater(r['ms'], 0)
             self.assertGreaterEqual(r['mad'], 0)
             self.assertGreater(r['peak_gib'], 0)
+
+    def test_moe_routes(self):
+        """The router hooks of a two-layer random Qwen3-30B-A3B: K distinct
+        sorted experts per sequence and layer, the router's own top-K of
+        the last position's router input."""
+        model = d2l.hw_random_model('Qwen/Qwen3-30B-A3B', n_layers=2)
+        seen = {}
+        model.model.layers[0].mlp.gate.register_forward_pre_hook(
+            lambda module, args: seen.update(x=args[0].detach().clone()))
+        ids = torch.randint(1000, (5, 32)).numpy()
+        routes = d2l._moe_routes(model, ids, micro_batch=2)
+        self.assertEqual(routes.shape, (5, 2, 8))
+        for r in routes.reshape(-1, 8):
+            self.assertEqual(len(set(r.tolist())), 8)
+            self.assertEqual(r.tolist(), sorted(r.tolist()))
+        gate = model.model.layers[0].mlp.gate
+        x = seen['x'].reshape(1, 32, -1)[:, -1]  # the last micro-batch: 1
+        with torch.no_grad():
+            top = F.linear(x, gate.weight).float().topk(8, dim=-1).indices
+        self.assertEqual(sorted(top[0].tolist()), routes[-1, 0].tolist())
 
 
 if __name__ == '__main__':

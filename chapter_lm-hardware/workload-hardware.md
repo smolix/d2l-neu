@@ -76,8 +76,8 @@ t_compute, t_memory, _ = m.decode_terms(b=1, L=2048)  # seconds
 t_step = m.decode_step(b=1, L=2048)
 print(f'Qwen3-8B weights in bf16: {m.weight_bytes() / 1e9:.1f} GB')
 print(f'decode at b = 1, L = 2,048: {t_step * 1e3:.1f} ms per token '
-      f'({1 / t_step:.0f} tokens/s), matrix units busy '
-      f'{t_compute / t_step:.1%} of it')
+      f'({1 / t_step:.0f} tokens/s)')
+print(f'matrix units busy for {t_compute / t_step:.1%} of that step')
 print(f'largest batch at L = 8,192 in 90% of {chip.mem_gb:.0f} GB: '
       f'b_max = {m.max_batch(8192)}')
 ```
@@ -600,10 +600,12 @@ check repeats four of them on the reader's GPU. -->
 grid = d2l.hw_workload_grid('box')
 ```
 
-<!-- Placeholder (prose): the weight-value control: Qwen3-8B with its real
-weights (from the Hub cache) against the random ones, back to back at
-b = 1, L = 2,048 (claim W4: no difference beyond three MADs; dtype and
-cache layout are the same, and no kernel's time depends on the values). -->
+<!-- Placeholder (prose): the weight-value control: Qwen3-8B with random
+weights, its real weights (from the Hub cache, loaded into the same class,
+dtype and attention) and random weights again, back to back at b = 1,
+L = 2,048; the two random arms measure the run-to-run noise (claim W4: the
+real arm within the noise, the larger of 3 MADs and the random arms'
+difference; same kernels in every arm). -->
 
 ```{.python .input #workload-hardware-real-weights}
 %%tab pytorch
@@ -615,8 +617,13 @@ control = d2l.hw_weight_control('Qwen/Qwen3-8B', b=1, L=2048)
 
 <!-- Placeholder (prose): four models, each adding one term. M0: the
 datasheet roofline. M1: the calibrated P_eff and beta_eff. M2: plus the
-launch term, the kernels a forward runs (counted from the graph of one
-decode step, so no free parameter) times alpha_k. M3: plus at most three
+launch terms, measured, not fitted: in a CUDA graph the kernels of a decode
+step (counted from its graph) times alpha_k; an eager step (prefill and
+training here) cannot be faster than the CPU launches its kernels, which a
+narrow twin of the model (same layers and kernels, width 256, negligible
+GPU work) measures: the launch floor, which sets the time of the small
+model's prefill and training (pitfall: eager small models measure the
+CPU). M3: plus at most three
 fitted parameters (a compute efficiency for the real kernels, a cache-read
 efficiency of the attention kernel and a factor on alpha_k), fitted on the
 calibration subset only (every third grid point); errors are on the other
@@ -672,17 +679,17 @@ def gpu_s_per_mtok(self, b, L):
     return 1e6 * self.decode_step(b, L) * self.n_chips / b
 ```
 
-<!-- Placeholder (prose): the frontier of Qwen3-8B on the calibrated 4090 at
-three contexts, with the measured decode points of the grid on it (claim
-W2: per-GPU tokens/s rise with batch while per-user tokens/s fall, and the
-measured points lie on the predicted line; the cell prints the largest
-distance). -->
+<!-- Placeholder (prose): the frontier of Qwen3-8B on the 4090 under the
+fitted model M3 at three contexts, with the measured decode points of the
+grid on it (claim W2: per-GPU tokens/s rise with batch while per-user
+tokens/s fall, and the measured points lie on the predicted line; the cell
+prints the largest distance). -->
 
 ```{.python .input #workload-hardware-frontier}
 %%tab pytorch
-m_cal = d2l.ServingModel(cfg_8b, chip, calib=calib)
-front = m_cal.frontier(L=(512, 2048, 8192), batches=2**np.arange(8))
-measured = d2l.plot_frontier(front, m_cal, measured=grid)
+m_fit = d2l.ServingModel(cfg_8b, chip, calib=fits['calib']['Qwen/Qwen3-8B'])
+front = m_fit.frontier(L=(512, 2048, 8192), batches=2**np.arange(8))
+measured = d2l.plot_frontier(front, m_fit, measured=grid)
 for L, p in measured.groupby('L'):  # W2: along b, per GPU up, per user down
     assert p.gpu_tps.is_monotonic_increasing, L
     assert p.user_tps.is_monotonic_decreasing, L
@@ -698,12 +705,12 @@ rarely the cheapest place to serve. -->
 ```{.python .input #workload-hardware-gpu-seconds}
 %%tab pytorch
 L = 2048
-b_cap = m_cal.max_batch(L)
+b_cap = m_fit.max_batch(L)
 points = {f'interactive, b = 1, L = {L:,}': (1, L),
           f'capacity limit, b = {b_cap}, L = {L:,}': (b_cap, L),
           'short context, b = 64, L = 512': (64, 512)}
 for label, (b, L) in points.items():
-    cost = m_cal.gpu_s_per_mtok(b, L)
+    cost = m_fit.gpu_s_per_mtok(b, L)
     print(f'{label}: {cost:,.0f} GPU-seconds per million tokens')
 ```
 

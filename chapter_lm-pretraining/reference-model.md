@@ -406,6 +406,7 @@ def toy_run(micro, out_dir=None, hooks=(), resume=None):
     return pretrain(model, stream, c, hooks=hooks, resume=resume)
 
 full, micro4 = toy_run(8), toy_run(2)  # one micro-batch of 8, four of 2
+assert (full['loss'] - micro4['loss']).abs().max() < 1e-4
 print(f'accumulation 1 vs 4: max |Δ loss| = '
       f'{(full["loss"] - micro4["loss"]).abs().max():.1e}')
 ```
@@ -432,6 +433,7 @@ with tempfile.TemporaryDirectory() as job:
         pass
     resumed = toy_run(8, job, hooks=[keep('resumed')], resume='auto')
 same = all(torch.equal(seen['full'][t], b) for t, b in seen['resumed'].items())
+assert same and len(seen['resumed']) == 20
 print(f'resume at step 20: batches {"identical" if same else "differ"}, '
       f'max |Δ loss| = {(full["loss"] - resumed["loss"]).abs().max():.1e}')
 ```

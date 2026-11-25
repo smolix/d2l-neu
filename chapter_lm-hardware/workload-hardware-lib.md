@@ -846,15 +846,14 @@ def plot_frontier(frontier, model, measured=None):
             X.append(p.user_tps.tolist()), Y.append(p.gpu_tps.tolist())
             fmts.append(f'C{i}o')
     d2l.plot(X, Y, xlabel='tokens/s per user', ylabel='tokens/s per GPU',
-             legend=legend, fmts=fmts, xscale='log', yscale='log',
-             figsize=(5, 3.5))
+             legend=legend, fmts=fmts, figsize=(5, 3.5))  # linear: lines
     roof = model.P / (2 * model.n_matmul()) / model.n_chips
     print(f'compute roof P / (2 N_act): {roof:,.0f} tokens/s per GPU')
     if len(pts):
         err = [math.fabs(model.decode_step(int(r.b), int(r.L))
                          / (r.ms / 1e3) - 1) for r in pts.itertuples()]
-        print(f'measured decode points: {len(pts)}, at most {max(err):.0%} '
-              'off the line (step time at the same b)')
+        print(f'measured decode points (dots): {len(pts)}, step times at '
+              f'most {max(err):.0%} off the line')
     return pts
 ```
 

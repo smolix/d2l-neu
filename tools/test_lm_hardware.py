@@ -1401,7 +1401,7 @@ class TestWorkloadFits(unittest.TestCase):
         front = m.frontier(L=(512, 2048, 8192), batches=2**np.arange(8))
         lines, pts = lines_of(self, d2l.plot_frontier, front, m, grid)
         self.assertIn('compute roof', lines[0])
-        self.assertIn('measured decode points: 9,', lines[1])
+        self.assertIn('measured decode points (dots): 9,', lines[1])
         for L, p in pts.groupby('L'):
             self.assertTrue(p.gpu_tps.is_monotonic_increasing)
             self.assertTrue(p.user_tps.is_monotonic_decreasing)

@@ -1,7 +1,7 @@
 # Encoders, Decoders, and Cross-Attention
 :label:`sec_transformer`
 
-Every Transformer stack we have built so far has been a **causal decoder** (:numref:`sec_gpt`): a triangular mask restricts token $i$ to attending to prefix positions $j \le i$, turning a single forward pass into $T$ parallel next-token predictions. Causal masking is essential when generating tokens one by one, since future tokens do not yet exist at inference time. When the *entire* input sequence is already available—for example, when embedding a document for retrieval, classifying tokens, encoding a source sentence for translation, or encoding an image patch grid (:numref:`sec_vision-transformer`)—forbidding position $i$ from reading positions $j > i$ discards half of the surrounding context.
+Every Transformer stack we have built so far has been a **causal decoder** (:numref:`sec_gpt`): a triangular mask restricts token $i$ to attending to prefix positions $j \le i$, turning a single forward pass into $T$ parallel next-token predictions. Causal masking is essential when generating tokens one by one, since future tokens do not yet exist at inference time. When the *entire* input sequence is already available, as when embedding a document for retrieval, classifying tokens, encoding a source sentence for translation, or encoding an image patch grid (:numref:`sec_vision-transformer`), forbidding position $i$ from reading positions $j > i$ discards half of the surrounding context.
 
 Depending on which tokens are available at the start of the computation and whether the input and output belong to the same sequence, the same `TransformerBlock` (:numref:`sec_transformer-block`) supports three canonical wirings (:numref:`fig_three-wirings`):
 
@@ -90,7 +90,7 @@ class TransformerEncoder(nnx.Module):
 
 ### The Masked Language Modeling (MLM) Objective
 
-Why can a bidirectional stack not be trained with the next-token prediction objective (:eqref:`eq_gpt-loss`) of :numref:`sec_gpt`? The target of position $t$ is the token $x_{t+1}$, and that token is the input at position $t+1$. Without a mask, a single block already lets position $t$ attend to position $t+1$ and read its own target there (:numref:`fig_mdl-transformers-leakage`), which collapses next-token prediction to a trivial copy.
+Why can a bidirectional stack not be trained with the next-token prediction objective of :numref:`sec_gpt`? The target of position $t$ is the token $x_{t+1}$, and that token is the input at position $t+1$. Without a mask, a single block already lets position $t$ attend to position $t+1$ and read its own target there (:numref:`fig_mdl-transformers-leakage`), which collapses next-token prediction to a trivial copy.
 
 ![Next-token prediction in one block. Without a mask, position 3 attends to every input, including $x_4$, which is its own target. With the causal mask it reads only positions 1 to 3.](../img/mdl-transformers-leakage.svg)
 :label:`fig_mdl-transformers-leakage`
@@ -693,10 +693,7 @@ class PerceiverEncoder(nnx.Module):
 
 ## Summary
 
-* The same `TransformerBlock` can be wired as a **bidirectional encoder** (`is_causal=False`), a **causal decoder** (`is_causal=True`), or a **cross-attending encoder--decoder** (:numref:`fig_three-wirings`).
-* Because unmasked self-attention lets every position read its own target under next-token prediction, bidirectional encoders are trained with **Masked Language Modeling (MLM)** (:eqref:`eq_mlm`), producing a symmetric U-shaped `loss_by_position` curve across the window.
-* In an **encoder--decoder**, each `DecoderBlock` interleaves causal target self-attention with **cross-attention** (decoder queries attending to encoder keys and values) and a position-wise FFN; during generation, the encoder runs once on the source while the decoder steps autoregressively.
-* **Cross-attention** with $M \ll N$ learned query vectors (`PerceiverEncoder`) compresses an $N$-token input into an $M$-token latent bottleneck in $O(M N d + L M^2 d)$ time (:numref:`fig_latent-bottleneck`).
+The same `TransformerBlock` can be wired as a **bidirectional encoder** (`is_causal=False`), a **causal decoder** (`is_causal=True`), or a **cross-attending encoder--decoder** (:numref:`fig_three-wirings`). Because unmasked self-attention lets every position read its own target under next-token prediction, bidirectional encoders are trained with **Masked Language Modeling (MLM)** (:eqref:`eq_mlm`), producing a symmetric U-shaped `loss_by_position` curve across the window. In an **encoder--decoder**, each `DecoderBlock` interleaves causal target self-attention with **cross-attention** (decoder queries attending to encoder keys and values) and a position-wise FFN, so the encoder runs once on the source while the decoder steps autoregressively. More generally, cross-attention with $M \ll N$ learned query vectors (`PerceiverEncoder`) compresses an $N$-token input into an $M$-token latent bottleneck in $O(M N d + L M^2 d)$ time (:numref:`fig_latent-bottleneck`).
 
 ## Exercises
 
@@ -803,8 +800,8 @@ Every output vector $\mathbf{h}_i^{(L)} \in \mathbb{R}^d$ summarizes the entire 
 ::: {.cols .vc}
 ::: {.col}
 - **Layer 1 direct leakage:** Query $t$ attends directly to key $t+1$, copying target embedding $\mathbf{e}_{x_{t+1}}$ into $\mathbf{h}_t^{(1)}$.
-- **Layer 2 multi-hop leakage:** Even if $(t, t+1)$ were masked, query $t$ at layer 2 attends to position $t+2$ (or $t-1$), which already read $x_{t+1}$ in layer 1!
-- **Rule:** Any target token $x_i$ ($i \in \mathcal{M}$) must be replaced by `<mask>` in the input before layer 1!
+- **Layer 2 multi-hop leakage:** Even if $(t, t+1)$ were masked, query $t$ at layer 2 attends to position $t+2$ (or $t-1$), which already read $x_{t+1}$ in layer 1.
+- **Rule:** Any target token $x_i$ ($i \in \mathcal{M}$) must be replaced by `<mask>` in the input before layer 1.
 :::
 
 ::: {.col .fig .big}
@@ -834,7 +831,7 @@ Evaluating our trained 4-block byte-level `MaskedLM` across window positions $t 
 @!encoders-decoders-what-the-second-side-is-worth-1
 
 - **Symmetric bathtub (U-shaped) profile:** Interior positions ($t \in [16, 47]$) enjoy both left and right context, achieving a flat mean loss of **$\approx 1.55\text{ nats/byte}$** ($\approx 53\%$ exact byte accuracy).
-- **Edge penalty at $t = 0$ and $t = 63$:** At the two window boundaries where one side of the context is truncated, loss jumps to **$2.36\text{--}2.44\text{ nats/byte}$**—quantifying the $\sim 0.85\text{-nat}$ advantage of having the second side of context!
+- **Edge penalty at $t = 0$ and $t = 63$:** At the two window boundaries where one side of the context is truncated, loss jumps to **$2.36\text{--}2.44\text{ nats/byte}$**—quantifying the $\sim 0.85\text{-nat}$ advantage of having the second side of context.
 :::
 
 ::: {.slide title="How Right-Hand Context Resolves Ambiguous Gaps"}
@@ -916,7 +913,7 @@ def forward(self, X, enc, mask=None, cross_mask=None):
 ```
 
 ::: {.d2l-note}
-During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence—so they are computed **once per prompt** and reused at every target decoding step!
+During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence—so they are computed **once per prompt** and reused at every target decoding step.
 :::
 :::
 
@@ -936,7 +933,7 @@ def __call__(self, X, enc, mask=None, cross_mask=None):
 ```
 
 ::: {.d2l-note}
-During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence—so they are computed **once per prompt** and reused at every target decoding step!
+During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence—so they are computed **once per prompt** and reused at every target decoding step.
 :::
 :::
 
@@ -957,7 +954,7 @@ Training a 1-block `EncoderDecoder` on fresh random batches of $128$ strings dri
 ::: {.col}
 - **1. Encoder self-attention $(S \times S)$:** Source padding mask ($j < s_b$).
 - **2. Decoder self-attention $(T_{\text{dec}} \times T_{\text{dec}})$:** Causal lower-triangle $\land$ target padding mask.
-- **3. Cross-attention $(T_{\text{dec}} \times S)$:** Source padding mask **only**—never apply a causal mask to cross-attention, since target token $t = 0$ must read source token $S - 1$ immediately!
+- **3. Cross-attention $(T_{\text{dec}} \times S)$:** Source padding mask **only**—never apply a causal mask to cross-attention, since target token $t = 0$ must read source token $S - 1$ immediately.
 :::
 
 ::: {.col .fig .big}
@@ -972,7 +969,7 @@ Training a 1-block `EncoderDecoder` on fresh random batches of $128$ strings dri
 ::: {.cols .vc}
 ::: {.col}
 - **Without encoder self-attention (`without`, right heatmap):** Encoder slot $j$ holds only token $x_j$, so cross-attention is forced onto the exact anti-diagonal $(t, T-1-t)$ ($100\%$ of rows).
-- **With encoder self-attention (`with`, left heatmap):** Both models achieve $100\%$ reversal accuracy, yet cross-attention aligns with the anti-diagonal on as few as $33\%$ of rows because the encoder's self-attention layer can already permute or fold tokens across positions!
+- **With encoder self-attention (`with`, left heatmap):** Both models achieve $99.9\text{--}100\%$ reversal accuracy, yet cross-attention aligns with the anti-diagonal on as few as $15\%\text{--}17\%$ of rows because the encoder's self-attention layer can already permute or fold tokens across positions.
 :::
 
 ::: {.col .fig}
@@ -987,7 +984,7 @@ Training a 1-block `EncoderDecoder` on fresh random batches of $128$ strings dri
 ::: {.cols .vc}
 ::: {.col}
 - **Decoupling compute from input length $N$:** In `CrossAttn`, the output sequence length equals the number of **queries $M$**, not the number of **keys/values $N$**.
-- **Perceiver (Jaegle et al., 2021):** Uses $M \ll N$ learned latent query vectors $\mathbf{Z}_0 \in \mathbb{R}^{M \times d}$ to cross-attend into an $N$-token input in **$O(M N d)$** time, then runs $L$ self-attention blocks on the short latent array in **$O(L M^2 d)$** time—eliminating the $O(L N^2 d)$ bottleneck!
+- **Perceiver (Jaegle et al., 2021):** Uses $M \ll N$ learned latent query vectors $\mathbf{Z}_0 \in \mathbb{R}^{M \times d}$ to cross-attend into an $N$-token input in **$O(M N d)$** time, then runs $L$ self-attention blocks on the short latent array in **$O(L M^2 d)$** time—eliminating the $O(L N^2 d)$ bottleneck.
 :::
 
 ::: {.col .fig}
@@ -1069,7 +1066,7 @@ Work through these three architectural questions:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **Full encoder:** $6 \times 8192^2 \approx \mathbf{4.03 \times 10^8}$ score pairs/head. **Perceiver:** $64 \times 8192 + 6 \times 64^2 = 524{,}288 + 24{,}576 \approx \mathbf{5.49 \times 10^5}$ score pairs/head (**$734\times$ fewer**!).
+1. **Full encoder:** $6 \times 8192^2 \approx \mathbf{4.03 \times 10^8}$ score pairs/head. **Perceiver:** $64 \times 8192 + 6 \times 64^2 = 524{,}288 + 24{,}576 \approx \mathbf{5.49 \times 10^5}$ score pairs/head (**$734\times$ fewer**).
 2. **Exactly once** (right after the encoder finishes), because $\mathbf{H}_{\text{enc}}$ never changes as target tokens are generated.
 3. **Encoder-only:** every token benefits from full bidirectional context, and each description is embedded in a single parallel forward pass with no autoregressive decoding loop.
 :::

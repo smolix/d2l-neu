@@ -780,10 +780,7 @@ Comparing the 2019 `load_gpt2()` configuration against our default `GPT` highlig
 
 ## Summary
 
-* A **decoder-only GPT** wraps $L$ causal `TransformerBlock` layers between a token embedding table $\mathbf{E} \in \mathbb{R}^{V \times d}$ and a final normalization + weight-tied output projection $\mathbf{E}^\top$, predicting next-token logits at all $T$ sequence positions in one parallel forward pass (:eqref:`eq_gpt-loss`).
-* Training with **AdamW** (selective weight decay on 2D matrices only), linear warmup + cosine decay, and gradient clipping (`LMOptimizer`) drives our 4.8M-parameter byte-level `GPT` well below the bigram entropy of English text in 1,000 steps.
-* In controlled comparisons at matched parameters and compute, `SwiGLU` outperforms `GELU` by $\sim 0.06$ nats/byte (versus a $\sim 0.01$-nat seed spread), and `GPT` achieves a steadily widening advantage over a matched `RNNLM` at deeper context positions $t$.
-* Modern open-weights LLMs (:numref:`tab_modern-recipe`) share the pre-norm `RMSNorm` + `RoPE` + `SwiGLU`/`GeGLU` recipe of our `GPT` class, differing primarily in how they shrink the KV cache (:numref:`sec_kv-cache`) and whether they replace the dense FFN with a Mixture of Experts (:numref:`sec_moe`).
+A **decoder-only GPT** places $L$ causal `TransformerBlock` layers between a token embedding table $\mathbf{E} \in \mathbb{R}^{V \times d}$ and a final normalization plus weight-tied output projection $\mathbf{E}^\top$, predicting next-token logits at all $T$ sequence positions in a single parallel forward pass (:eqref:`eq_gpt-loss`). Training with **AdamW** (applying weight decay selectively to 2D matrices), linear warmup, cosine decay, and gradient clipping (`LMOptimizer`) drives our 4.8M-parameter byte-level `GPT` well below the bigram entropy of English text within 1,000 steps. In controlled comparisons at matched parameter count and compute, `SwiGLU` outperforms `GELU` by roughly $0.06$ nats/byte against a $0.01$-nat seed spread, and `GPT` opens a steadily widening advantage over a matched `RNNLM` at deeper context positions $t$. Contemporary open-weights LLMs (:numref:`tab_modern-recipe`) share this pre-norm `RMSNorm` + `RoPE` + `SwiGLU`/`GeGLU` recipe, differing mainly in how they compress the KV cache (:numref:`sec_kv-cache`) and whether they replace the dense FFN with a Mixture of Experts (:numref:`sec_moe`).
 
 ## Exercises
 
@@ -1088,12 +1085,12 @@ for i, blk in enumerate(gpt2.blks):
                f'h.{i}.mlp.c_fc': blk.ffn.W_1, f'h.{i}.mlp.c_proj': blk.ffn.W_2}
     for key, module in modules.items():
         W = weights[key + '.weight']                # Conv1D layout: (in, out)
-        module.weight.copy_(W.T if W.ndim == 2 else W)  # Transpose 2D matrices!
+        module.weight.copy_(W.T if W.ndim == 2 else W)  # Transpose 2D matrices
         module.bias.copy_(weights[key + '.bias'])
 ```
 
 ::: {.d2l-note .warn}
-**Silent bug hazard:** Because `c_proj` has square shape `(768, 768)`, forgetting `.T` passes every shape assertion without error—only a perplexity check on real text catches the transposed matrix!
+**Silent bug hazard:** Because `c_proj` has square shape `(768, 768)`, forgetting `.T` passes every shape assertion without error—only a perplexity check on real text catches the transposed matrix.
 :::
 :::
 
@@ -1113,7 +1110,7 @@ for i, blk in enumerate(gpt2.blks):
 ```
 
 ::: {.d2l-note .warn}
-**Silent bug hazard:** Forgetting whether a framework stores linear weights as `(in, out)` or `(out, in)` silently scrambles square projections like `c_proj` `(768, 768)` without raising a shape error—always verify loaded checkpoints via held-out perplexity!
+**Silent bug hazard:** Forgetting whether a framework stores linear weights as `(in, out)` or `(out, in)` silently scrambles square projections like `c_proj` `(768, 768)` without raising a shape error—always verify loaded checkpoints via held-out perplexity.
 :::
 :::
 

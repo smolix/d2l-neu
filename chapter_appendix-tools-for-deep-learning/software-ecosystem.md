@@ -233,8 +233,8 @@ prefer safetensors, review remote code, and record its license and parent.
 
 ## Exercises
 
-1. **Rating gaps on the Arena.** Arena (formerly LMArena) fits the Bradley-Terry model
-   :eqref:`eq_bradley_terry` of :numref:`sec_regularized` to pairwise votes
+1. **Rating gaps on the Arena.** Arena (formerly LMArena) fits the Bradley–Terry model
+   of :numref:`sec_regularized` to pairwise votes
    :cite:`Chiang.Zheng.Sheng.ea.2024` and reports the scores on the Elo
    scale. Ignoring ties, model A then beats model B with probability
    $$P(A \succ B) = \frac{1}{1 + 10^{-(R_A - R_B)/400}},$$
@@ -453,7 +453,7 @@ Ecosystem: Pretrained Models, Datasets, Leaderboards, and Supply-Chain Safety<br
 ::: {.col}
 $$P(A \succ B) = \frac{1}{1 + 10^{-\Delta R/400}}, \qquad \text{SE} \approx \frac{347}{\sqrt{v}}$$
 
-- **Sample size requirement:** A $+20$ Elo gap ($52.9\%$ win rate) requires **$v \ge (347/10)^2 \approx 1{,}204$ head-to-head votes** just to reach $2\,\text{SE}$!
+- **Sample size requirement:** A $+20$ Elo gap ($52.9\%$ win rate) requires **$v \ge (347/10)^2 \approx 1{,}204$ head-to-head votes** just to reach $2\,\text{SE}$.
 - **Domain mixture reversal:** A model leading by $+20$ Elo globally can still lose **$40\%\text{--}60\%$** on the $10\%$ of prompts matching your domain task.
 :::
 
@@ -502,7 +502,7 @@ A "model" is never just a weight tensor file—reproducing its predictions requi
 ::: {.slide title="Pinning Immutable Revisions and Recording a Manifest" layout="tight"}
 [Dependency Locking]{.kicker}
 
-Hub repositories are Git repositories: the `main` branch, a version tag (`v1.0`), or a pull-request ref (`refs/pr/3`) can all be moved or force-pushed by the repository owner tomorrow!
+Hub repositories are Git repositories: the `main` branch, a version tag (`v1.0`), or a pull-request ref (`refs/pr/3`) can all be moved or force-pushed by the repository owner tomorrow.
 
 ::: {.cols .vc}
 ::: {.col}
@@ -536,7 +536,7 @@ Hub repositories are Git repositories: the `main` branch, a version tag (`v1.0`)
 ::: {.cols .vc}
 ::: {.col}
 - **Why legacy `pickle` checkpoints (`.bin` / `.pt`) are dangerous:** `pickle` is a stack VM whose `__reduce__` opcode invokes arbitrary Python callables on load, so loading one (e.g. `torch.load(..., weights_only=False)`) runs arbitrary code; even the `weights_only=True` allowlist was bypassed (**CVE-2025-32434**).
-- **Why `safetensors` is secure by construction:** Stores an 8-byte header size, a pure UTF-8 JSON header (`dtype`, `shape`, `[begin, end)` offsets), and flat tensor bytes—zero executable opcodes and instant zero-copy `mmap`!
+- **Why `safetensors` is secure by construction:** Stores an 8-byte header size, a pure UTF-8 JSON header (`dtype`, `shape`, `[begin, end)` offsets), and flat tensor bytes—zero executable opcodes and instant zero-copy `mmap`.
 :::
 
 ::: {.col .fig .big}
@@ -550,7 +550,7 @@ Hub repositories are Git repositories: the `main` branch, a version tag (`v1.0`)
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. `trust_remote_code=True` & `auto_map`:** Executes repository `.py` files; if `config.json` references an external code repo, pin **both** commit SHAs!
+- **1. `trust_remote_code=True` & `auto_map`:** Executes repository `.py` files; if `config.json` references an external code repo, pin **both** commit SHAs.
 - **2. License at the pinned SHA:** Distinguish Apache-2.0/MIT from custom acceptable-use caps (MAU limits) or non-commercial CC-BY-NC weights.
 - **3. Cache disk hygiene:** Inspect and purge stale blobs in `~/.cache/huggingface` with `hf cache ls`, `hf cache rm`, and `hf cache prune`.
 :::
@@ -594,7 +594,7 @@ Test your supply-chain and evaluation judgment on these three questions:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **No!** With $v = 400$ votes, the standard error is $\text{SE} \approx 347 / \sqrt{400} = 17.35$ Elo points. A $15$-point gap is less than $1\,\text{SE}$ from zero (well within sampling noise).
+1. **No.** With $v = 400$ votes, the standard error is $\text{SE} \approx 347 / \sqrt{400} = 17.35$ Elo points. A $15$-point gap is less than $1\,\text{SE}$ from zero (well within sampling noise).
 2. (i) **Inference engine / kernel versions & hardware float associativity** (CUDA/cuBLAS/vLLM version, GPU architecture, batch size changing reduction order); (ii) **system prompt / chat-template wrapper or runtime clock/tool outputs**; (iii) **unseeded or hardware-dependent PRNG sampling** (`temperature > 0`).
 3. Legacy checkpoints of GPT-2 store non-parameter buffers (such as causal attention bias masks `attn.bias` of shape $1 \times 1 \times 1024 \times 1024$ across layers) or duplicated tied embedding weights inside the tensor file.
 :::

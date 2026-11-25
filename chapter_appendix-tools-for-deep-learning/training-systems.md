@@ -255,21 +255,7 @@ checkpoint interval for a given failure rate.
 
 ## Summary
 
-* Distributed training partitions the batch, the training state, the
-  layers, or the sequence. Starting from a measured single-GPU baseline,
-  use DDP while the state fits, FSDP or ZeRO when it does not, and tensor,
-  pipeline, context, or expert parallelism only when model scale requires
-  them. Keep tensor parallelism inside a node.
-* Peak memory is a sum of terms. Sharding, activation checkpointing,
-  gradient accumulation, offload, and LoRA each reduce one term at a known
-  cost in communication, computation, or transfer time.
-* As of November 2026, typical choices are Unsloth or PEFT on one GPU,
-  Accelerate or Axolotl with FSDP2 on a node, Megatron Core, TorchTitan, or
-  MaxText for pretraining, and TRL or veRL for reinforcement-learning
-  post-training.
-* Long runs complete when checkpoints are atomic and complete, recovery has
-  been tested, the input pipeline keeps up, and convergence is logged
-  alongside throughput.
+Distributed training partitions the batch, the training state, the layers, or the sequence across workers. Starting from a measured single-GPU baseline, use DDP while model state fits in memory, move to FSDP or ZeRO when it does not, and add tensor, pipeline, context, or expert parallelism only when model scale requires them, keeping communication-heavy tensor parallelism inside an NVLink node. Because peak memory is a sum of distinct terms, sharding, activation checkpointing, gradient accumulation, host offload, and LoRA each shrink a specific term at a predictable cost in communication, recomputation, or transfer time. As of November 2026, common choices are Unsloth or PEFT on a single GPU, Accelerate or Axolotl with FSDP2 on a single node, Megatron Core, TorchTitan, or MaxText for multi-node pretraining, and TRL or veRL for reinforcement-learning post-training. Multi-week runs finish reliably when checkpoints are complete and written atomically, recovery is drilled ahead of time, data pipelines keep pace with compute, and convergence is logged alongside throughput.
 
 ## Exercises
 
@@ -448,7 +434,7 @@ Distributed Model Training: DDP, FSDP/ZeRO, 3D Parallelism, and Fault Tolerance<
 
 ::: {.cols .vc}
 ::: {.col}
-- **The 7B single-GPU memory wall ($112\text{ GB}$):** Mixed-precision Adam holds BF16 weights ($14\text{ GB}$), BF16 grads ($14\text{ GB}$), FP32 master weights ($28\text{ GB}$), and FP32 Adam $m, v$ ($56\text{ GB}$)—exceeding an $80\text{ GB}$ H100 before any activations!
+- **The 7B single-GPU memory wall ($112\text{ GB}$):** Mixed-precision Adam holds BF16 weights ($14\text{ GB}$), BF16 grads ($14\text{ GB}$), FP32 master weights ($28\text{ GB}$), and FP32 Adam $m, v$ ($56\text{ GB}$)—exceeding an $80\text{ GB}$ H100 before any activations.
 - **Four partitioning axes:** Split the batch (DDP), training state (FSDP/ZeRO), layer matrices/stages (TP/PP), or sequence/experts (CP/EP).
 - **Golden rule:** Start from a verified 1-GPU baseline and climb one rung at a time.
 :::
@@ -467,7 +453,7 @@ Climb the scaling ladder in strict order of increasing communication volume and 
 ::: {.cols .vc}
 ::: {.col}
 1. **Single Accelerator Baseline:** Verify loss convergence, tok/s throughput, peak memory, and checkpoint restore.
-2. **Data Parallelism (DDP):** Replicate the model on every GPU, split the batch, and `all_reduce` gradients once per step. Always use DDP while state fits on one GPU!
+2. **Data Parallelism (DDP):** Replicate the model on every GPU, split the batch, and `all_reduce` gradients once per step. Always use DDP while state fits on one GPU.
 3. **Fully Sharded Data Parallelism (FSDP / ZeRO-3):** Shard parameters, gradients, and optimizer states across $W$ GPUs; `all_gather` layers on the fly ($\sim 1.5\times$ DDP traffic).
 4. **Composed 3D/4D Parallelism (TP / PP / CP / EP):** Split individual layers, layer stages, sequences, or experts when a single layer or activation exceeds device capacity.
 :::
@@ -483,8 +469,8 @@ Climb the scaling ladder in strict order of increasing communication volume and 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Rung 2 — DDP (`DistributedDataParallel`):** Replicates all $16N$ state on every GPU and averages bucketed gradients via `all_reduce` ($\approx 2S$ traffic); best choice whenever state fits!
-- **Rung 3 — FSDP2 (`fully_shard` / `DTensor` & JAX `NamedSharding`):** Divides parameters, gradients, and Adam moments by $W$ ($16N/W$), overlapping per-layer `all_gather` and `reduce_scatter` ($\approx 3S = 1.5\times$ DDP traffic).
+- **Rung 2: DDP (`DistributedDataParallel`):** Replicates all $16N$ state on every GPU and averages bucketed gradients via `all_reduce` ($\approx 2S$ traffic); best choice whenever state fits.
+- **Rung 3: FSDP2 (`fully_shard` / `DTensor` & JAX `NamedSharding`):** Divides parameters, gradients, and Adam moments by $W$ ($16N/W$), overlapping per-layer `all_gather` and `reduce_scatter` ($\approx 3S = 1.5\times$ DDP traffic).
 :::
 
 ::: {.col .fig .big}
@@ -499,7 +485,7 @@ Climb the scaling ladder in strict order of increasing communication volume and 
 ::: {.cols .vc}
 ::: {.col}
 - **Intra-layer vs. inter-layer splits:** Tensor Parallelism (TP) splits matrices inside every block (2 collectives/layer on the critical path), whereas Pipeline Parallelism (PP) passes activations point-to-point at stage boundaries.
-- **Hardware topology rule (*Ultra-Scale Playbook*):** Keep high-frequency **TP inside an 8-GPU NVLink node** ($450\text{--}900\text{ GB/s}$; stretching TP across nodes costs $-43\%$), and scale **PP + FSDP/DDP across nodes**!
+- **Hardware topology rule (*Ultra-Scale Playbook*):** Keep high-frequency **TP inside an 8-GPU NVLink node** ($450\text{--}900\text{ GB/s}$; stretching TP across nodes costs $-43\%$), and scale **PP + FSDP/DDP across nodes**.
 :::
 
 ::: {.col .fig .big}
@@ -516,7 +502,7 @@ Climb the scaling ladder in strict order of increasing communication volume and 
 $$\text{Bubble Fraction} = \frac{p - 1}{m}$$
 
 - **GPipe (all $m$ forwards, then all $m$ backwards):** Needs $m \gg p$ to shrink the bubble, forcing stage 1 to hold **all $m$ microbatch activations at once** ($O(m)$ memory).
-- **1F1B Schedule:** Alternates 1 Forward and 1 Backward after warmup, achieving the same $(p-1)/m$ bubble while capping live activations at **$\le p$ microbatches**!
+- **1F1B Schedule:** Alternates 1 Forward and 1 Backward after warmup, achieving the same $(p-1)/m$ bubble while capping live activations at **$\le p$ microbatches**.
 :::
 
 ::: {.col .fig}
@@ -533,7 +519,7 @@ $$\text{Bubble Fraction} = \frac{p - 1}{m}$$
 $$B_{\text{global}} = B_{\text{device}} \cdot N_{\text{ranks}} \cdot N_{\text{accumulation}}$$
 
 - **Preserving optimization dynamics:** Doubling $N_{\text{ranks}}$ from $64 \to 128$ without halving $N_{\text{accumulation}}$ silently **doubles $B_{\text{global}}$** and halves optimizer steps.
-- **When $B_{\text{global}}$ genuinely grows:** Scale Adam learning rate by $\sqrt{B/B_0}$ and define warmup in **tokens** rather than steps.
+- **When $B_{\text{global}}$ increases:** Scale Adam learning rate by $\sqrt{B/B_0}$ and define warmup in **tokens** rather than steps.
 :::
 
 ::: {.col .fig}
@@ -588,8 +574,8 @@ Even leaving out the $28\text{ GB}$ master-weight copy ($84\text{ GiB}$ state $+
 ::: {.cols .vc}
 ::: {.col}
 - **1 GPU plain ($107.0\text{ GiB}$):** Exceeds an $80\text{ GB}$ H100.
-- **8-GPU DDP + activation checkpointing ($95.3\text{ GiB/GPU}$):** Checkpointing shrinks activations from $18\text{ GiB}$ to $6.3\text{ GiB}$, but DDP **replicates all $84\text{ GiB}$ of model state** on every GPU—still OOM!
-- **8-GPU FSDP + activation checkpointing ($21.8\text{ GiB/GPU}$):** Sharding state by $8$ cuts per-GPU state to $10.5\text{ GiB}$, leaving nearly $60\text{ GiB}$ of headroom for larger microbatches!
+- **8-GPU DDP + activation checkpointing ($95.3\text{ GiB/GPU}$):** Checkpointing shrinks activations from $18\text{ GiB}$ to $6.3\text{ GiB}$, but DDP **replicates all $84\text{ GiB}$ of model state** on every GPU—still OOM.
+- **8-GPU FSDP + activation checkpointing ($21.8\text{ GiB/GPU}$):** Sharding state by $8$ cuts per-GPU state to $10.5\text{ GiB}$, leaving nearly $60\text{ GiB}$ of headroom for larger microbatches.
 :::
 
 ::: {.col .fig}
@@ -703,7 +689,7 @@ Work through these three distributed training scenarios:
 **Answers:**
 
 1. On 64 GPUs with $B_{\text{device}} = 4$, $N_{\text{accumulation}} = 1024 / (64 \times 4) = \mathbf{4}$. The largest pure data-parallel world size (at $B_{\text{device}} = 1, N_{\text{accumulation}} = 1$) is **$N_{\text{ranks}} = 1{,}024$ GPUs** (or $256$ GPUs if keeping $B_{\text{device}} = 4$).
-2. **It never raises an exception**, but the learning rate resets to step 0 (re-running warmup or jumping back to peak $\eta_{\max}$), **causing a sudden loss spike or silent accuracy degradation**!
+2. **It never raises an exception**, but the learning rate resets to step 0 (re-running warmup or jumping back to peak $\eta_{\max}$), **causing a sudden loss spike or silent accuracy degradation**.
 3. For $N$ parameters of size $S = 2N$ bytes, DDP runs one `all_reduce` of gradients ($\approx 2S$ bytes sent/received per GPU). FSDP runs an `all_gather` of weights in forward ($S$), another `all_gather` of weights in backward ($S$), and a `reduce_scatter` of gradients ($S$)—totaling **$3S$ bytes ($1.5\times$ DDP)**.
 :::
 :::

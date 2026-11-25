@@ -348,7 +348,7 @@ program.
 To eliminate the factor of $n$, we must multiply the chain of derivatives in
 the opposite order. In :numref:`sec_mdl-matrix-calculus`, we saw that the
 Jacobian of a $K$-step program $\mathbf f=\mathbf f_K\circ\cdots\circ\mathbf f_1$
-is the product :eqref:`eq_mdl-jacobian-product` of the step Jacobians,
+is the product of the step Jacobians,
 
 $$
 \mathbf J = \mathbf J_K\,\mathbf J_{K-1}\cdots\mathbf J_1,
@@ -573,7 +573,7 @@ print('jax       : dy/du = %.4f  dy/dv = %.4f' % (float(du), float(dv)))
 A production framework differs from our toy `Var` engine in three practical
 respects, none of which alters the underlying algorithm. First, its nodes hold
 entire tensors rather than scalars, so each backward closure implements the VJP
-of a whole tensor operation, such as :eqref:`eq_mdl-matmul-vjp` for matrix
+of a whole tensor operation, such as $\bar{\mathbf X}=\bar{\mathbf Y}\mathbf W^\top$ and $\bar{\mathbf W}=\mathbf X^\top\bar{\mathbf Y}$ (:numref:`subsec_mdl-layer-vjp`) for matrix
 multiplication. Second, its library of primitives is much larger, each paired
 with a hand-tuned VJP rule. Third, frameworks construct the computation graph in
 one of two ways. An *eager tape* records operations dynamically as the program
@@ -685,7 +685,7 @@ with it a norm computed as $\sqrt{\sum_i x_i^2}$ at $\mathbf x=\mathbf 0$.
 ### Parameter Gradients
 :label:`subsec_mdl-param-gradients`
 
-So far, the Jacobian product :eqref:`eq_mdl-jacobian-product` has tracked
+So far, the Jacobian product :eqref:`eq_mdl-ad-jacobian-product` has tracked
 derivatives with respect to the network's input, whereas training needs
 derivatives with respect to its weights. Fortunately, the weight gradients drop
 out of the very same backward sweep via the layer VJP rule
@@ -969,7 +969,7 @@ small constant multiple of computing a single gradient.
 
 Log-sum-exp gives us a clean test with a closed-form answer. Its gradient is the
 softmax $\mathbf p$, so its Hessian is the softmax Jacobian
-:eqref:`eq_mdl-softmax-jacobian` (equivalently, the covariance matrix of a
+(:numref:`sec_mdl-matrix-calculus`, equivalently the covariance matrix of a
 one-hot vector $\mathbf e_J$ with $J$ drawn from $\mathbf p$). Therefore,
 
 $$
@@ -1512,7 +1512,7 @@ Both the function value $4.6622$ and the derivative $3.360101$ match the analyti
   $$\mathbf{u}^\top\mathbf{J} = \bigl((\mathbf{u}^\top\mathbf{J}_K)\mathbf{J}_{K-1}\cdots\bigr)\mathbf{J}_1$$
 - **Match the shorter dimension of $\mathbf{J} \in \mathbb{R}^{m \times n}$:**
   - **Forward mode:** $1$ sweep per input direction ($n$ sweeps for full $\mathbf{J}$; ideal when $n \ll m$).
-  - **Reverse mode:** $1$ sweep per output direction ($m$ sweeps for full $\mathbf{J}$; for a scalar loss $m = 1$, **one sweep** gives the entire gradient!).
+  - **Reverse mode:** $1$ sweep per output direction ($m$ sweeps for full $\mathbf{J}$; for a scalar loss $m = 1$, **one sweep** gives the entire gradient).
 :::
 
 ::: {.col .fig}
@@ -1563,7 +1563,7 @@ Both the function value $4.6622$ and the derivative $3.360101$ match the analyti
 - **Reverse sweep from $\bar{y} = 1$:**
   - Node $r$ feeds **both** factors of $y = r \cdot r$, so $\bar{r} = \bar{y}r + \bar{y}r = -4 + (-4) = -8$, and $\bar{t} = \bar{r}(1) = -8$.
   - Input $u$ feeds **both** $r = t+u$ and $t = uv$, so $\bar{u} = \bar{r}(1) + \bar{t}(v) = -8 + (-8)(-3) = 16$, while $\bar{v} = \bar{t}(u) = -16$.
-- **Why `+=` is essential:** Overwriting with `=` at fan-out nodes $r$ and $u$ drops parallel paths!
+- **Why `+=` is essential:** Overwriting with `=` at fan-out nodes $r$ and $u$ drops parallel paths.
 :::
 
 ::: {.col .fig}
@@ -1625,7 +1625,7 @@ Both our 40-line `Var` tape and production framework autograd (which scales `Var
 - **Checkpointing every $s$-th step (Chen et al., 2016):** Save only $T/s$ checkpoints during the forward pass; during the backward sweep, recompute each length-$s$ segment from its checkpoint onto a local tape of size $s$.
 - **Optimal segment length $s^\star = \sqrt{T}$:** Peak memory is
   $$M(s) = \frac{T}{s} + s \ge 2\sqrt{T}$$
-  At $T = 400$ ($s^\star = 20$), peak memory drops $10\times$ ($401 \to 40$) for just **one extra forward pass**!
+  At $T = 400$ ($s^\star = 20$), peak memory drops $10\times$ ($401 \to 40$) for just **one extra forward pass**.
 :::
 
 ::: {.col .fig}
@@ -1637,7 +1637,7 @@ Both our 40-line `Var` tape and production framework autograd (which scales `Var
 ::: {.slide title="Composable Primitives: JVP and VJP in Frameworks" only="pytorch,tensorflow,jax"}
 [Framework APIs]{.kicker}
 
-Modern frameworks expose both linear operators—forward-mode `jvp` ($\mathbf{J}\mathbf{v}$) and reverse-mode `vjp` ($\mathbf{u}^\top\mathbf{J}$)—as composable higher-order transformations. On $\mathbf{f}(x, y) = (x + \sin y,\ y + x^2/2)^\top$ at $(0.5, 0.5)^\top$ with $\mathbf{v} = \mathbf{u} = (1, 2)^\top$:
+Modern frameworks expose both linear operators, forward-mode `jvp` ($\mathbf{J}\mathbf{v}$) and reverse-mode `vjp` ($\mathbf{u}^\top\mathbf{J}$), as composable higher-order transformations. On $\mathbf{f}(x, y) = (x + \sin y,\ y + x^2/2)^\top$ at $(0.5, 0.5)^\top$ with $\mathbf{v} = \mathbf{u} = (1, 2)^\top$:
 
 @!mdl-matrix-calculus-autodiff-jacobian-vector-and-vector-jacobian-products
 
@@ -1772,7 +1772,7 @@ Test your grasp of forward vs. reverse mode, checkpointing, and implicit differe
 ::: {.d2l-note}
 **Answers:**
 
-1. Here $n = 3 \ll m = 1000$: **forward mode needs only $3$ JVP sweeps** (one per input column $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ with zero tape memory), whereas reverse mode would require $1000$ VJP sweeps!
+1. Here $n = 3 \ll m = 1000$: **forward mode needs only $3$ JVP sweeps** (one per input column $\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$ with zero tape memory), whereas reverse mode would require $1000$ VJP sweeps.
 2. Plain reverse mode stores all $10{,}000$ states; checkpointing every $s^\star = \sqrt{10{,}000} = 100$ steps holds at most $T/s + s = 100 + 100 = 200$ states in memory (a **$50\times$ memory reduction** for one extra forward pass).
 3. **Just $1$ linear solve:** solving $(\partial\mathbf{g}/\partial\mathbf{w})^\top \mathbf{a} = \nabla_{\mathbf{w}} V$ once for the adjoint vector $\mathbf{a} \in \mathbb{R}^{5000}$ yields all $5000$ hyperparameter derivatives via $-\mathbf{a}^\top(\partial\mathbf{g}/\partial\boldsymbol{\lambda})$.
 :::

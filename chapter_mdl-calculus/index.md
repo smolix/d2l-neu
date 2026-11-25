@@ -98,9 +98,9 @@ Calculus and Automatic Differentiation: From Local Models to Backpropagation<br>
 
 ::: {.cols .vc}
 ::: {.col}
-- **Pillar 1 — The Descent Lemma (§§{sec_mdl-single_variable_calculus}–§{num:sec_mdl-multivariable_calculus}):** Taylor's Lagrange remainder converts a curvature bound $|f''| \le L$ into safe step sizes $0 < \eta < 2/L$ ($\eta^\star = 1/L$).
-- **Pillar 2 — Reverse-Mode Jacobian Products (§§{sec_mdl-chain-rule-graphs}–§{num:sec_mdl-matrix-calculus-autodiff}):** Associating $((\mathbf{u}^\top\mathbf{J}_K)\mathbf{J}_{K-1})\cdots\mathbf{J}_1$ from the output backward computes all gradients in $O(1)$ sweeps.
-- **Pillar 3 — Differentiating Expectations (§§{sec_mdl-integral_calculus}–§{num:sec_mdl-expectation-gradients}):** Score-function (REINFORCE) vs. pathwise reparameterization trade generality against Monte Carlo variance.
+- **Pillar 1: The Descent Lemma (§§{sec_mdl-single_variable_calculus}–§{num:sec_mdl-multivariable_calculus}):** Taylor's Lagrange remainder converts a curvature bound $|f''| \le L$ into safe step sizes $0 < \eta < 2/L$ ($\eta^\star = 1/L$).
+- **Pillar 2: Reverse-Mode Jacobian Products (§§{sec_mdl-chain-rule-graphs}–§{num:sec_mdl-matrix-calculus-autodiff}):** Associating $((\mathbf{u}^\top\mathbf{J}_K)\mathbf{J}_{K-1})\cdots\mathbf{J}_1$ from the output backward computes all gradients in $O(1)$ sweeps.
+- **Pillar 3: Differentiating Expectations (§§{sec_mdl-integral_calculus}–§{num:sec_mdl-expectation-gradients}):** Score-function (REINFORCE) vs. pathwise reparameterization trade generality against Monte Carlo variance.
 :::
 
 ::: {.col .fig .big}
@@ -114,9 +114,9 @@ Calculus and Automatic Differentiation: From Local Models to Backpropagation<br>
 
 ::: {.cols .vc}
 ::: {.col}
-- **Part I — Local Models (§§{sec_mdl-single_variable_calculus}–§{num:sec_mdl-multivariable_calculus}):** Taylor polynomials, Lagrange remainders, descent lemma, gradients $\nabla f \perp$ level sets, and symmetric Hessians $\mathbf{H}_f$.
-- **Part II — Chain Rule & Autodiff (§§{sec_mdl-chain-rule-graphs}–§{num:sec_mdl-matrix-calculus-autodiff}):** Path sums on DAGs, differential method $df = \langle \nabla f, d\mathbf{X}\rangle$, dual numbers, Wengert tape, $2\sqrt{T}$ checkpointing, HVPs, and implicit diff.
-- **Part III — Integrals & Expectations (§§{sec_mdl-integral_calculus}–§{num:sec_mdl-expectation-gradients}):** Riemann sums, FTC, Fubini, $|\det\mathbf{J}_{\boldsymbol{\phi}}|$ in flows, Leibniz rule, REINFORCE, and pathwise gradients.
+- **Part I: Local Models (§§{sec_mdl-single_variable_calculus}–§{num:sec_mdl-multivariable_calculus}):** Taylor polynomials, Lagrange remainders, descent lemma, gradients $\nabla f \perp$ level sets, and symmetric Hessians $\mathbf{H}_f$.
+- **Part II: Chain Rule & Autodiff (§§{sec_mdl-chain-rule-graphs}–§{num:sec_mdl-matrix-calculus-autodiff}):** Path sums on DAGs, differential method $df = \langle \nabla f, d\mathbf{X}\rangle$, dual numbers, Wengert tape, $2\sqrt{T}$ checkpointing, HVPs, and implicit diff.
+- **Part III: Integrals & Expectations (§§{sec_mdl-integral_calculus}–§{num:sec_mdl-expectation-gradients}):** Riemann sums, FTC, Fubini, $|\det\mathbf{J}_{\boldsymbol{\phi}}|$ in flows, Leibniz rule, REINFORCE, and pathwise gradients.
 :::
 
 ::: {.col .fig .big}

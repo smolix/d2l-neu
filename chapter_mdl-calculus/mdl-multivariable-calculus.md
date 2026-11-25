@@ -469,7 +469,7 @@ $\Delta_h$ as a mixed partial evaluated at a nearby point. Define the
 one-variable function
 $\varphi(t) = f(\mathbf{x}+t\mathbf{e}_i+h\mathbf{e}_j) - f(\mathbf{x}+t\mathbf{e}_i)$,
 so that $h^2\Delta_h = \varphi(h)-\varphi(0)$. Applying the mean value theorem
-:eqref:`eq_mdl-mvt` twice, first to $\varphi$ and then along $x_j$ to the
+(:numref:`sec_mdl-mvt`) twice, first to $\varphi$ and then along $x_j$ to the
 difference of first partials inside $\varphi'$, gives numbers $\tau$ and
 $\sigma$ between $0$ and $h$ such that
 
@@ -493,7 +493,7 @@ mixed partials at $\mathbf{x}$ sends the two expressions to the two mixed
 partials at $\mathbf{x}$. Because they agree for every $h$, their limits must
 agree as well. $\blacksquare$
 
-The continuity hypothesis is genuinely needed: there exist functions
+The continuity hypothesis is strictly needed: there exist functions
 whose mixed partials exist everywhere yet fail to be continuous at the
 origin, where they disagree.
 
@@ -532,7 +532,7 @@ the same step once more gives the second derivative:
 $\varphi''(t) = \sum_{i,j} \delta_j\frac{\partial^2 f}{\partial x_j\partial x_i}(\mathbf{x}_0 + t\boldsymbol{\delta})\,\delta_i = \boldsymbol{\delta}^\top \mathbf{H}_f(\mathbf{x}_0 + t\boldsymbol{\delta})\,\boldsymbol{\delta}$.
 
 Now apply the one-variable Taylor theorem with Lagrange remainder
-:eqref:`eq_mdl-lagrange` of degree one to $\varphi$ between $0$ and $1$: there
+(:numref:`subsec_mdl-taylor-series`) of degree one to $\varphi$ between $0$ and $1$: there
 is some $\tau \in (0, 1)$ such that
 $\varphi(1) = \varphi(0) + \varphi'(0) + \tfrac12\varphi''(\tau)$. Translating
 back to $f$ gives
@@ -888,7 +888,7 @@ $\mathbf{z}\cdot\mathbf{p} - \sum_i p_i\log p_i$ over probability vectors
 $\mathbf{p}$ subject to $\sum_i p_i = 1$. Writing out the Lagrange condition
 gives $z_i - \log p_i - 1 = \mu$ for each coordinate $i$, which implies
 $p_i \propto e^{z_i}$. The optimal distribution is therefore the softmax, and
-the maximum value attained is the log-sum-exp :eqref:`eq_mdl-opt-lse-entropy`.
+the maximum value attained is the log-sum-exp (:numref:`sec_mdl-lagrangian-duality`).
 
 The regularity hypothesis $\nabla g(\mathbf{x}^\star) \neq \mathbf{0}$ cannot
 be dropped: without it, a Lagrange multiplier need not exist at all (Exercise
@@ -1422,7 +1422,7 @@ Test your understanding of directional derivatives, Hessian eigenvalues, and Lag
 **Answers:**
 
 1. By Cauchy-Schwarz, the maximum directional derivative is $\|\nabla f\|_2 = \sqrt{(1/3)^2 + (2/3)^2} = \sqrt{5}/3 \approx 0.745$, achieved along $\mathbf{u} = \nabla f / \|\nabla f\|_2 = \frac{1}{\sqrt{5}}(1, 2)^\top$.
-2. $\mathbf{H}_f(\mathbf{x}_0)$ has trace $2$ and determinant $1 - 9 = -8 < 0$ (eigenvalues $\lambda_1 = 4 > 0$ along $(1,1)^\top$ and $\lambda_2 = -2 < 0$ along $(1,-1)^\top$). Because the eigenvalues have opposite signs, $\mathbf{x}_0$ is a **saddle point** despite positive diagonal entries!
+2. $\mathbf{H}_f(\mathbf{x}_0)$ has trace $2$ and determinant $1 - 9 = -8 < 0$ (eigenvalues $\lambda_1 = 4 > 0$ along $(1,1)^\top$ and $\lambda_2 = -2 < 0$ along $(1,-1)^\top$). Because the eigenvalues have opposite signs, $\mathbf{x}_0$ is a **saddle point** despite positive diagonal entries.
 3. Solving $z_i - \log p_i - 1 = \mu$ gives $p_i = e^{z_i - 1 - \mu} \propto e^{z_i}$; normalizing so $\sum_i p_i = 1$ yields the **softmax** distribution $p_i^\star = e^{z_i} / \sum_k e^{z_k}$.
 :::
 :::

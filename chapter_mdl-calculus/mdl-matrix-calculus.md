@@ -260,15 +260,15 @@ $\nabla f:\mathbb R^n\to\mathbb R^n$ is itself a vector-valued map, and its
 Jacobian is the matrix of second partials, the Hessian $\mathbf H_f$, whose
 entries are $[\mathbf H_f]_{ij}=\partial^2 f/\partial x_i\partial x_j$. Strictly
 speaking, $[\mathbf J_{\nabla f}]_{ij}=\partial^2 f/\partial x_j\partial x_i$
-takes the two derivatives in the opposite order, but the two agree—and
-$\mathbf H_f$ is symmetric—whenever the mixed partials are continuous (the
+takes the two derivatives in the opposite order, but the two agree, and
+$\mathbf H_f$ is symmetric, whenever the mixed partials are continuous (the
 Clairaut–Schwarz theorem of :numref:`sec_mdl-multivariable_calculus`).
 
 ## The Chain Rule for Jacobians
 
 A neural network is a composition of layers. On a graph of scalars, the chain
 rule summed the product of derivatives over every path from an input to an
-output (:eqref:`eq_mdl-chain-rule-paths`). When the layers are vector-valued
+output (:numref:`subsec_mdl-chain-rule-paths`). When the layers are vector-valued
 maps, that sum over paths becomes a matrix product.
 
 ### Composition as a Matrix Product
@@ -442,8 +442,8 @@ Both lines print $(2,4)$, as expected.
 
 The product :eqref:`eq_mdl-jacobian-product` also tells us how large or small a
 derivative can grow through a deep network. When every factor is the same
-matrix $\mathbf W$—as in a recurrent network applying one weight matrix at
-every step, ignoring the activations—the product simplifies to $\mathbf W^K$.
+matrix $\mathbf W$ (as in a recurrent network applying one weight matrix at
+every step, ignoring the activations), the product simplifies to $\mathbf W^K$.
 For a diagonalizable matrix $\mathbf W=\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$
 we have $\mathbf W^K=\mathbf V\boldsymbol\Lambda^K\mathbf V^{-1}$, so for large
 $K$ its norm grows or shrinks like $|\lambda_{\max}|^K$, where $\lambda_{\max}$
@@ -923,7 +923,7 @@ memory cost that :numref:`sec_mdl-matrix-calculus-autodiff` measures directly.
 The derivative a classifier evaluates most often is that of softmax composed
 with cross-entropy loss. Softmax converts a vector of scores $\mathbf z$, the
 *logits*, into a probability vector: setting $S=\sum_k e^{z_k}$, we have
-$p_i=e^{z_i}/S$. The same quotient rule that gave :eqref:`eq_mdl-lse-hessian`
+$p_i=e^{z_i}/S$. The same quotient rule that gave the log-sum-exp Hessian in :numref:`sec_mdl-multivariable_calculus`
 for two logits yields the softmax Jacobian for any number of classes. Writing
 $\delta_{ij}=1$ if $i=j$ and $0$ otherwise,
 
@@ -949,7 +949,7 @@ Hessian: softmax is the gradient of the log-sum-exp function
 $\operatorname{LSE}(\mathbf z)=\log\sum_k e^{z_k}$, our chapter's running
 example, because $\partial\operatorname{LSE}/\partial z_i=e^{z_i}/S=p_i$, and
 the Jacobian of a gradient is its Hessian. What :eqref:`eq_mdl-softmax-jacobian`
-adds to :eqref:`eq_mdl-lse-hessian` is a clean statistical reading of the
+adds to that two-logit formula is a clean statistical reading of the
 matrix. It is the covariance matrix of a one-hot vector drawn with
 probabilities $\mathbf p$, so for every $\mathbf z$ and every vector
 $\mathbf v$ the quadratic form
@@ -1476,7 +1476,7 @@ For a $K$-layer network $\mathbf{f} = \mathbf{f}_K \circ \cdots \circ \mathbf{f}
 ::: {.col}
 - **Same product, different parenthesizations:** To differentiate a scalar loss $\ell$, we multiply a $1 \times h$ row vector $\mathbf{u}^\top = \partial\ell/\partial\mathbf{h}_3$ into $\mathbf{J}_3\mathbf{J}_2\mathbf{J}_1$ (with $h = n = 1000$).
 - **Left-to-right (Reverse Mode / VJP):** $(((\mathbf{u}^\top \mathbf{J}_3)\mathbf{J}_2)\mathbf{J}_1)$ keeps every intermediate a $1 \times h$ row vector: three matrix–vector products costing $h^2 + h^2 + hn = 3 \times 10^6$ multiplications.
-- **Right-to-left (Matrix–Matrix trap):** Forming $\mathbf{J}_2\mathbf{J}_1$ and $\mathbf{J}_3(\mathbf{J}_2\mathbf{J}_1)$ first costs $2h^2n + hn = 2.001 \times 10^9$ multiplications—a **$667\times$ ($2h/3$) slowdown**!
+- **Right-to-left (Matrix–Matrix trap):** Forming $\mathbf{J}_2\mathbf{J}_1$ and $\mathbf{J}_3(\mathbf{J}_2\mathbf{J}_1)$ first costs $2h^2n + hn = 2.001 \times 10^9$ multiplications—a **$667\times$ ($2h/3$) slowdown**.
 :::
 
 ::: {.col .fig}
@@ -1490,8 +1490,8 @@ For a $K$-layer network $\mathbf{f} = \mathbf{f}_K \circ \cdots \circ \mathbf{f}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Step 1 — Expand $df$:** Apply linearity, matrix product rule $d(\mathbf{A}\mathbf{B}) = (d\mathbf{A})\mathbf{B} + \mathbf{A}(d\mathbf{B})$, transpose $d(\mathbf{A}^\top) = (d\mathbf{A})^\top$, and elementwise $d\varphi(\mathbf{X}) = \varphi'(\mathbf{X})\odot d\mathbf{X}$.
-- **Step 2 — Match Canonical Inner Product:** Rearrange into $df = \langle \mathbf{M}, d\mathbf{X}\rangle = \operatorname{tr}(\mathbf{M}^\top d\mathbf{X})$ and read off $\nabla_{\mathbf{X}} f = \mathbf{M}$.
+- **Step 1: Expand $df$:** Apply linearity, matrix product rule $d(\mathbf{A}\mathbf{B}) = (d\mathbf{A})\mathbf{B} + \mathbf{A}(d\mathbf{B})$, transpose $d(\mathbf{A}^\top) = (d\mathbf{A})^\top$, and elementwise $d\varphi(\mathbf{X}) = \varphi'(\mathbf{X})\odot d\mathbf{X}$.
+- **Step 2: Match Canonical Inner Product:** Rearrange into $df = \langle \mathbf{M}, d\mathbf{X}\rangle = \operatorname{tr}(\mathbf{M}^\top d\mathbf{X})$ and read off $\nabla_{\mathbf{X}} f = \mathbf{M}$.
 :::
 
 ::: {.col .fig .big}
@@ -1588,7 +1588,7 @@ We can test the matrix-product backward rules directly by differentiating the sc
 @!mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1
 
 ::: {.d2l-note}
-Every derived rule prints `True`, while every plausible wrong guess (`2 A x`, `Ybar W`, and `(X^T Ybar)^T`) prints `False`. Always test custom backward rules on nonsymmetric matrices!
+Every derived rule prints `True`, while every plausible wrong guess (`2 A x`, `Ybar W`, and `(X^T Ybar)^T`) prints `False`. Always test custom backward rules on nonsymmetric matrices.
 :::
 :::
 
@@ -1654,8 +1654,8 @@ Use the differential method, trace move rule, and Jacobian chain rule to answer 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. Applying the trace move rule gives $d\ell = \langle \mathbf{R}\mathbf{V}^\top, d\mathbf{U}\rangle + \langle \mathbf{U}^\top\mathbf{R}, d\mathbf{V}\rangle$, so $\nabla_{\mathbf{U}}\ell = \mathbf{R}\mathbf{V}^\top \in \mathbb{R}^{m \times r}$ and $\nabla_{\mathbf{V}}\ell = \mathbf{U}^\top\mathbf{R} \in \mathbb{R}^{r \times n}$ (both matching their variable shapes!).
-2. Rewriting $(\operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top)\mathbf{u}$ $= \mathbf{p} \odot \bigl(\mathbf{u} - (\mathbf{p}^\top\mathbf{u})\mathbf{1}\bigr)$ requires only one dot product $\mathbf{p}^\top\mathbf{u}$, one broadcast subtraction, and one elementwise multiply: **$O(C)$ time and memory** instead of $O(C^2)$!
+1. Applying the trace move rule gives $d\ell = \langle \mathbf{R}\mathbf{V}^\top, d\mathbf{U}\rangle + \langle \mathbf{U}^\top\mathbf{R}, d\mathbf{V}\rangle$, so $\nabla_{\mathbf{U}}\ell = \mathbf{R}\mathbf{V}^\top \in \mathbb{R}^{m \times r}$ and $\nabla_{\mathbf{V}}\ell = \mathbf{U}^\top\mathbf{R} \in \mathbb{R}^{r \times n}$ (both matching their variable shapes).
+2. Rewriting $(\operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top)\mathbf{u}$ $= \mathbf{p} \odot \bigl(\mathbf{u} - (\mathbf{p}^\top\mathbf{u})\mathbf{1}\bigr)$ requires only one dot product $\mathbf{p}^\top\mathbf{u}$, one broadcast subtraction, and one elementwise multiply: **$O(C)$ time and memory** instead of $O(C^2)$.
 3. **None of them:** row 2 of $\bar{\mathbf{W}}_1$ is $(0, 0)$, $\bar{b}_2 = 0$ (because $m_2 = 0$), and $\bar{w}_{2,2} = h_2 = 0$. If a $\mathrm{ReLU}$ unit is negative across the entire training set, gradient descent never updates its weights ("dead $\mathrm{ReLU}$").
 :::
 :::

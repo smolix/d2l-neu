@@ -27,8 +27,8 @@ To make every step concrete and easy to verify by hand, we work on small graphs
 of scalar variables with integer values throughout. The entire development
 rests on one fact from :numref:`sec_mdl-multivariable_calculus`: near any point
 where a function is differentiable, its change is approximated by the dot
-product of the step with its gradient, the linear model
-:eqref:`eq_mdl-nabla_use`. Extending the idea to layers that map vectors to
+product of the step with its gradient, the linear model of
+:numref:`subsec_mdl-gradient`. Extending the idea to layers that map vectors to
 vectors, and measuring its computational cost on real networks, comes in the
 two sections that follow.
 
@@ -107,7 +107,7 @@ amount $\epsilon$. Both intermediate nodes feel the perturbation according to
 their partial derivatives: $u$ shifts to
 $u + \epsilon\frac{\partial u}{\partial a}$, and $v$ shifts to
 $v + \epsilon\frac{\partial v}{\partial a}$. Substituting both shifts into the
-first-order linear approximation :eqref:`eq_mdl-nabla_use` of $f$ yields
+first-order linear approximation (:numref:`subsec_mdl-gradient`) of $f$ yields
 
 $$
 f\!\left(u + \epsilon\tfrac{\partial u}{\partial a},\, v + \epsilon\tfrac{\partial v}{\partial a}\right)
@@ -759,7 +759,7 @@ Work out these three questions on computation graphs and adjoints:
 
 1. The direct edge derivative holding $r$ fixed is $\frac{\partial f}{\partial p} = 3$. The total derivative sums both paths out of $p$: $\bar{p} = \frac{\partial f}{\partial r}\frac{\partial r}{\partial p} + \frac{\partial f}{\partial p} = 1(2p) + 3 = 2(4) + 3 = 11$.
 2. Every parameter path to $\ell$ passes through $f$, so the prediction adjoint $\bar{f} = \frac{\mathrm{d}\ell}{\mathrm{d}f} = f - t$ is computed once and shared by all parameters.
-3. Because the two paths are symmetric, $\bar{h}_1 = \bar{h}_2$, $\bar{w}_1 = \bar{w}_2$, and $\bar{b}_1 = \bar{b}_2$ at every step—so gradient descent updates both units identically forever! Hidden units must be initialized with random asymmetry.
+3. Because the two paths are symmetric, $\bar{h}_1 = \bar{h}_2$, $\bar{w}_1 = \bar{w}_2$, and $\bar{b}_1 = \bar{b}_2$ at every step, so gradient descent updates both units identically forever. Hidden units must be initialized with random asymmetry.
 :::
 :::
 

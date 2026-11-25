@@ -88,12 +88,13 @@ throughput per watt f / P(f) on a second axis with its maximum f* marked. -->
 
 <!-- Placeholder (prose): the three windows below, each 10 s of one
 workload on a whole card after its warm-up: idle (the CUDA context open, no
-kernels), decode of Qwen3-0.6B at batch 1 over a 512-token cache (CUDA
-graph), and a bf16 8,192^3 matrix product. Read the table against the limit
-line under it: the matrix product sits at the limit with the SM clock below
-its top value and the power-cap reason set (claim E1); decode at batch 1
-draws a fraction of it. Quote the committed W at 2 digits and the reason
-names; the live line only shows agreement. -->
+kernels: the card then holds a high clock and draws well above its rest
+power, as the table shows), decode of Qwen3-0.6B at batch 1 over a
+512-token cache (CUDA graph), and a bf16 8,192^3 matrix product. Read the
+table against the limit line under it: the matrix product sits at the
+limit with the SM clock below its top value and the power-cap reason set
+(claim E1); decode at batch 1 draws a fraction of it. Quote the committed
+W at 2 digits and the reason names; the live line only shows agreement. -->
 
 ```{.python .input #energy-cost-idle-and-peak}
 %%tab pytorch
@@ -265,7 +266,9 @@ on one card, micro-batches of 2 sequences of 4,096 tokens, fp32 master
 weights, bf16 autocast, fused AdamW and the chunked loss, eager; steps of
 8,192 tokens (no accumulation) and 32,768 (four micro-batches). J/token is
 power over tokens per second (claim E3, asserted), and MFU sets the tokens
-per second at a power the card holds near its limit. MFU here halves the
+per second; quote the measured power against the 450 W limit (the smoke run
+drew about 355 W at MFU 0.36: this step stays below the limit). MFU here
+halves the
 causal attention term; chapter 21 prints MFU with the full term, so a
 chapter-21 MFU quoted here is converted or labelled. Quote J/token and MFU
 at 2 digits. -->

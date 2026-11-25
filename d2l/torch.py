@@ -32511,7 +32511,7 @@ def _plot_decode_energy(e):
              xlabel='batch b', ylabel='J per token', xscale='log',
              yscale='log', legend=[f'L = {L:,}' for L in contexts],
              fmts=[f'C{i}o-' for i in range(len(contexts))],
-             figsize=(5, 3.5))
+             figsize=(5, 3.5), legend_loc='lower left')  # power: top right
     ax = d2l.plt.gca()
     for i, L in enumerate(contexts):
         ax.axvline(e.attrs['knee'][str(int(L))], color=f'C{i}', ls=':',
@@ -32735,7 +32735,8 @@ def plot_dvfs(fit):
     ax.axvline(fit.f_star, color='k', ls=':', lw=1)
     ax2 = ax.twinx()
     ax2.plot(f, f / power(f) / eta_top, 'C1--')
-    ax2.set_ylabel('work per joule / at the top clock')
+    ax2.set_ylim(0, 1.2 * max(f / power(f) / eta_top))  # clear of the legend
+    ax2.set_ylabel('work per joule (top clock = 1), dashed')
     gain = fit.f_star / power(fit.f_star) / eta_top
     print(f'fit: P_s = {fit.P_s:.0f} W, k = {fit.k:.0f} W/GHz^3; f* = '
           f'{fit.f_star:.2f} GHz, P(f*) = {power(fit.f_star):.0f} W')
@@ -32998,6 +32999,10 @@ def tornado_order(x, rel=0.3):
     return sorted(spans.items(),
                   key=lambda kv: -math.fabs(kv[1][1] - kv[1][0]))
 
+_OWNED_LABELS = dict(capex='purchase', life_h='life', power_kw='power',
+                     pue='PUE', elec_per_kwh='electricity',
+                     ops_per_h='operations', rent_per_h='rent')
+
 def plot_tornado(inputs, rel=0.3):
     """One tornado per chip: the range of u* as each input moves by -rel
     to +rel alone, widest on top; assumption inputs hatched, u* at the
@@ -33014,7 +33019,7 @@ def plot_tornado(inputs, rel=0.3):
                     hatch='' if quote else '///')
         ax.axvline(d2l.owned_vs_rented(**x)['u_star'], color='k', ls='--',
                    lw=1)
-        ax.set_yticks(range(len(order)), [k for k, _ in order])
+        ax.set_yticks(range(len(order)), [_OWNED_LABELS[k] for k, _ in order])
         ax.set_xlabel('break-even utilization u*')
         ax.set_title(chip, fontsize=10)
     fig.tight_layout()

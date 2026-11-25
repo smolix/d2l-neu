@@ -867,8 +867,8 @@ class TestRunPythonTests(unittest.TestCase):
                 with open(f'/proc/{pid}/stat') as f:
                     if f.read().split(')')[-1].split()[0] == 'Z':
                         break
-            except FileNotFoundError:
-                break
+            except (FileNotFoundError, ProcessLookupError):
+                break  # reaped between open() and read(): also gone
             time.sleep(0.05)
         else:
             os.kill(pid, 9)
@@ -1159,8 +1159,8 @@ class TestRunPythonTestsFixes(unittest.TestCase):
                 with open(f'/proc/{pid}/stat') as f:
                     if f.read().split(')')[-1].split()[0] == 'Z':
                         break
-            except FileNotFoundError:
-                break
+            except (FileNotFoundError, ProcessLookupError):
+                break  # reaped between open() and read(): also gone
             time.sleep(0.05)
         else:
             os.kill(pid, 9)

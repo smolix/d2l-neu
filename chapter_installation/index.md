@@ -1,13 +1,13 @@
 # Installation
 :label:`chap_installation`
 
-To get the most out of this book, you should run the code, modify it, and experiment with it first-hand. Every chapter is available as an executable Jupyter notebook for PyTorch, JAX, TensorFlow, and MXNet. To make local setup as frictionless as possible, we distribute a self-contained `.zip` bundle for each framework (available from the **Notebooks** menu at the top of the page). Each bundle includes all of the notebooks---already populated with their saved outputs and figures so you can browse them immediately---along with the matching `d2l` library source code and pinned [uv](https://docs.astral.sh/uv/) lock files for both CPU and GPU environments.
+To get the most out of this book, you should run the code, modify it, and experiment with it first-hand. Every chapter is available as an executable Jupyter notebook. To make local setup as frictionless as possible, we distribute a self-contained `.zip` bundle for each supported framework (available from the **Notebooks** menu at the top of the page). Each bundle includes the notebooks, already populated with their saved outputs and figures so you can browse them immediately, along with the matching `d2l` library source code and pinned [uv](https://docs.astral.sh/uv/) lock files for both CPU and GPU environments.
 
 While you can read the pre-computed outputs in the notebooks without installing any deep learning libraries, executing and modifying the code requires Python, JupyterLab, and your chosen framework. The included `uv` lock files install a complete, tested environment in a couple of commands.
 
 ## Choosing a Framework
 
-If you do not already have a strong preference, we recommend starting with **PyTorch**, which is the one framework that covers every chapter of the book. The Basics part (:numref:`chap_preliminaries` through :numref:`chap_rnn`) and the Mathematics for Deep Learning appendix are implemented in all four frameworks (PyTorch, JAX, TensorFlow, and MXNet), while the Advanced part (beginning with :numref:`chap_optimization`) is implemented in PyTorch and JAX.
+If you do not already have a strong preference, we recommend starting with **PyTorch**, which is the one framework that covers every chapter of the book. The Basics (:numref:`chap_preliminaries` through :numref:`chap_rnn`), Image Models (:numref:`chap_cv`), Mathematics for Deep Learning (:numref:`chap_mdl-linear-algebra` through :numref:`chap_mdl-dynamics`), and Tools for Deep Learning (:numref:`chap_appendix_tools`) parts are implemented in all four frameworks (PyTorch, JAX, TensorFlow, and MXNet). The Advanced part (:numref:`chap_optimization` through :numref:`chap_diffusion`) is implemented in PyTorch and JAX (with :numref:`chap_reinforcement_learning` in PyTorch), and the Language Models part (beginning with :numref:`chap_lm_pretrained`) is implemented in PyTorch.
 
 You do not need specialized hardware to begin: the first several chapters run comfortably on any modern laptop CPU. A GPU becomes valuable later on when we train larger convolutional networks, transformers, and generative models.
 
@@ -78,6 +78,14 @@ uv run --no-sync jupyter lab
 
 JupyterLab will normally open a tab in your default web browser automatically; if it does not, copy and paste the local `http://localhost:...` URL printed in your terminal. Passing `--no-sync` tells `uv` to run directly inside the exact CPU or GPU environment you just synchronized with `uv pip sync`.
 
+For the Language Models part (:numref:`chap_lm_pretrained` onward), the PyTorch bundle (`d2l-pytorch.zip`) also includes `pylock.lm-cpu.toml` and `pylock.lm-gpu.toml`, which add Hugging Face `transformers`, `accelerate`, the OpenAI client, and retrieval and data-curation libraries on top of PyTorch. Keep those extra dependencies in a separate `.venv-lm` virtual environment so the main `.venv` stays lightweight:
+
+```bash
+uv venv --python 3.12 .venv-lm
+VIRTUAL_ENV=.venv-lm uv pip sync pylock.lm-cpu.toml
+VIRTUAL_ENV=.venv-lm uv run --no-sync jupyter lab
+```
+
 ## Setting Up a GPU Environment
 
 The included GPU lock files reproduce the hardware-accelerated environments used to execute this book. They target Linux (`x86-64`) machines equipped with an NVIDIA GPU. Before installing the GPU environment, confirm that your NVIDIA driver is active and visible:
@@ -94,7 +102,7 @@ uv pip sync pylock.gpu.toml
 uv run --no-sync jupyter lab
 ```
 
-You do not need a separate virtual environment to switch from CPU to GPU: running `uv pip sync pylock.gpu.toml` in an existing environment cleanly replaces the CPU packages with their GPU counterparts. The GPU lock files pin the following accelerator stacks:
+You do not need a separate virtual environment to switch from CPU to GPU: running `uv pip sync pylock.gpu.toml` in an existing environment cleanly replaces the CPU packages with their GPU counterparts (and similarly, `VIRTUAL_ENV=.venv-lm uv pip sync pylock.lm-gpu.toml` upgrades the Language Models environment in the PyTorch bundle). The GPU lock files pin the following accelerator stacks:
 
 * **PyTorch:** CUDA 12.8 wheels.
 * **JAX:** the CUDA 12 pip distribution.
@@ -105,7 +113,7 @@ Because GPU software stacks depend on your operating system, kernel driver, and 
 
 ## Verifying the Installation
 
-You can verify that your framework is installed properly---and check whether it detects a GPU accelerator---with a one-line command:
+You can verify that your framework is installed properly and check whether it detects a GPU accelerator with a one-line command:
 
 :begin_tab:`pytorch`
 
@@ -113,6 +121,7 @@ You can verify that your framework is installed properly---and check whether it 
 uv run --no-sync python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"
 ```
 
+On a CPU-only installation, the second line prints `False`; when an NVIDIA GPU is available, it prints `True`.
 :end_tab:
 
 :begin_tab:`jax`
@@ -121,6 +130,7 @@ uv run --no-sync python -c "import torch; print(torch.__version__); print(torch.
 uv run --no-sync python -c "import jax; print(jax.__version__); print(jax.devices())"
 ```
 
+On a CPU-only installation, `jax.devices()` lists a single CPU device; when an NVIDIA GPU is available, it lists your GPU devices instead.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -129,6 +139,7 @@ uv run --no-sync python -c "import jax; print(jax.__version__); print(jax.device
 uv run --no-sync python -c "import tensorflow as tf; print(tf.__version__); print(tf.config.list_physical_devices('GPU'))"
 ```
 
+On a CPU-only installation, `list_physical_devices('GPU')` returns an empty list `[]`; when an NVIDIA GPU is available, it lists your GPU devices.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -137,14 +148,13 @@ uv run --no-sync python -c "import tensorflow as tf; print(tf.__version__); prin
 uv run --no-sync python -c "import mxnet as mx; print(mx.__version__); print(mx.context.num_gpus())"
 ```
 
+On a CPU-only installation, `num_gpus()` prints `0`; when an NVIDIA GPU is available, it prints the number of detected GPUs.
 :end_tab:
-
-Note that a CPU-only installation will report `False`, a CPU device, `[]`, or `0` GPUs; this is completely normal when running without an NVIDIA accelerator.
 
 ## The Standard Imports
 :label:`sec_preamble`
 
-Every notebook in this book begins with a standard preamble cell that imports the core libraries used throughout the text. Across all four tabs, this cell imports Python's built-in `math` module for scalar functions and constants, NumPy under its standard alias `np` for CPU arrays, and the framework-specific backend of our companion library as `d2l`. Only the deep learning framework imports differ from one tab to the next:
+Every notebook in this book begins with a standard preamble cell that imports Python's built-in `math` module for scalar functions and constants, NumPy under its standard alias `np` for CPU arrays, the deep learning framework itself, and the matching backend of our companion library as `d2l`:
 
 :begin_tab:`pytorch`
 
@@ -198,10 +208,10 @@ from d2l import mxnet as d2l
 npx.set_np()
 ```
 
-Because MXNet's array module mirrors the NumPy API, we import it as `mnp` so that `np` unambiguously refers to standard NumPy across every framework tab. The `npx` module adds deep learning extensions, `autograd` records computation graphs for automatic differentiation, `gluon` and `nn` provide neural network layers, and `init` supplies parameter initializers. Calling `npx.set_np()` activates MXNet's NumPy-compatible array semantics.
+Because MXNet's array module mirrors the NumPy API, we import it as `mnp` so that `np` unambiguously refers to standard NumPy. The `npx` module adds deep learning extensions, `autograd` records computation graphs for automatic differentiation, `gluon` and `nn` provide neural network layers, and `init` supplies parameter initializers. Calling `npx.set_np()` activates MXNet's NumPy-compatible array semantics.
 :end_tab:
 
-The final import binds the framework-specific backend of the book's companion package (`d2l.torch`, `d2l.jax`, `d2l.tensorflow`, or `d2l.mxnet`) to the uniform name `d2l`. Whenever a section defines and explains a reusable helper function or class marked with `#@save`, it is exported into `d2l` so later chapters can call it cleanly without repeating the definition.
+The final import binds the matching backend of the book's companion package to the uniform name `d2l`. Whenever a section defines and explains a reusable helper function or class marked with `#@save`, it is exported into `d2l` so later chapters can call it cleanly without repeating the definition.
 
 To keep the book uncluttered, we print this standard import cell only once, right here. The downloadable and hosted Jupyter notebooks include it at the top of every file so that each notebook runs standalone, whereas the web and PDF editions begin each section directly with the code specific to that topic. Whenever a notebook requires an additional library (such as Gymnasium in the reinforcement learning chapters) or needs to configure compiler flags before initializing the framework, we display that extra setup cell explicitly. Plotting requires no special boilerplate: Jupyter renders figures inline by default.
 

@@ -192,15 +192,23 @@ wire, only the software above it. A gloo group of 2 and 4 CPU processes
 over TCP on the loopback interface, and NCCL forced onto its socket
 transport over loopback between two cards (the four variables in the call
 disable peer-to-peer, shared memory and InfiniBand and pin the socket to
-lo); both labelled "not a datacenter network". The alpha-beta fit of
-sec_lm_server_paths (not re-taught): alpha from the messages up to 64 KiB,
-beta from those of 4 MiB and more, intervals over the regeneration's three
-processes. Quote alpha and beta at 2 significant digits from the
-committed lines, never the live check. Claim N2: software alone costs tens
-to hundreds of microseconds per all-reduce on loopback. -->
+lo); all labelled "not a datacenter network". First the kernel's own path:
+a TCP ping-pong between two processes (TCP_NODELAY), whose round trip is
+what the operating system's network stack costs on loopback, with no
+collective library on top. The alpha-beta fit of sec_lm_server_paths (not
+re-taught): alpha from the messages up to 64 KiB, beta from those of 4 MiB
+and more, intervals over the regeneration's three processes. Quote alpha
+and beta at 2 significant digits from the committed lines, never the live
+check. Claim N2, two layers of software: the TCP stack costs tens of
+microseconds per round trip; gloo adds hundreds of microseconds per ring
+step on top (its all-reduce on k ranks takes 2(k-1) steps, so the 4-rank
+alpha is about three times the 2-rank one): that is library overhead, not
+the network stack. NCCL over sockets costs about a hundred microseconds
+per all-reduce. -->
 
 ```{.python .input #networks-gloo-floor}
 %%tab pytorch
+tcp = d2l.loopback_sweep(backend='tcp', ranks=(2,), max_bytes=2**24)
 floor = d2l.loopback_sweep(backend='gloo', ranks=(2, 4), max_bytes=2**24)
 ```
 
@@ -213,19 +221,22 @@ sock = d2l.loopback_sweep(
 ```
 
 <!-- Placeholder (prose): the ladder of transports: the measured software
-floor (gloo, NCCL sockets), the box's shared-memory path of
-sec_lm_server_paths, and two quoted rows (labelled quoted): an RDMA write
-round trip of about 5 us and one NVLink hop of about 1.5 us (MLSS latency
-ladder, slide 33), with one NDR port's 50 GB/s and NVLink 3's 300 GB/s per
-direction. Note the column "alpha of": a measured alpha is a whole
-all-reduce (two messages on two ranks), the RDMA figure one round trip.
+floor (the TCP round trip, gloo, NCCL sockets), the box's shared-memory
+path of sec_lm_server_paths, and two quoted rows (labelled quoted): an RDMA
+write round trip of about 5 us and one NVLink hop of about 1.5 us (MLSS
+latency ladder, slide 33), with one NDR port's 50 GB/s and NVLink 3's 300
+GB/s per direction. Note the column "alpha of": a measured collective's
+alpha is a whole all-reduce (2(k-1) ring steps), the TCP and RDMA figures
+one round trip; "per msg" puts them on one scale (an all-reduce's alpha
+over its ring steps, half a round trip), which separates the kernel's TCP
+path (tens of us) from the collective library (hundreds of us per step).
 Pitfall: ib_write_lat's latency is not the latency of an NCCL step;
 sec_lm_collectives fits alpha from NCCL itself. -->
 
 ```{.python .input #networks-floor-compare}
 %%tab pytorch
 quoted = d2l.quoted_latencies()
-ladder = d2l.transport_ladder(floor, sock, d2l.box_alpha_beta(),
+ladder = d2l.transport_ladder(tcp, floor, sock, d2l.box_alpha_beta(),
                               quoted=quoted)
 rdma = quoted.set_index('transport').alpha_us['RDMA, one NDR port']
 assert (ladder[ladder.source == 'measured'].alpha_us > rdma).all()  # N2
@@ -278,16 +289,23 @@ def axis_ratio(axis, cfg, link_ridge, b, t, e, n_stage, b_g, T, k):  #@save
 ```
 
 <!-- Placeholder (prose): the smallest numeric case. Qwen3-8B (N_layer
-193M by layer_params, d = 4,096, b = 2, t = 8), a global batch of 1,024
-sequences of 4,096 tokens over k = 8 data-parallel replicas, 4 pipeline
-stages; the expert row is Qwen3-30B-A3B (e = 8, experts of width 768).
-One A100's quoted bf16 rate behind three links: NVLink, the node's HDR
-NIC (the ratio grows by the NVLink/NIC ratio of the opening) and the box's
-host-staged path (beta from sec_lm_server_paths). Quote the table's
-numbers as computed: tensor parallelism at t = 8 on NVLink is NOT below one
-tenth (the plan's sentence; the formula gives about 0.4 for this model; it
-needs t <= 2 to get there), which is why the layout below shrinks t or
-overlaps. The ratios only shrink with the ignored terms (second line). -->
+193M by layer_params, d = 4,096, b = 2), a global batch of 1,024 sequences
+of 4,096 tokens over k = 8 data-parallel replicas, 4 pipeline stages; the
+expert row is Qwen3-30B-A3B (e = 8, experts of width 768). P_eff is the
+achieved rate, not the datasheet peak: one A100's quoted bf16 312 TFLOP/s
+at an MFU of 0.4 (a stated assumption, about what the Llama 3 report gives
+for its 16K-GPU runs; at the peak every ratio would be 1/MFU = 2.5x
+higher), behind three links: NVLink, the node's HDR NIC (the ratio grows
+by the NVLink/NIC ratio of the opening) and the box's host-staged path
+(beta from sec_lm_server_paths; the A100's rate behind the box's link, so
+the column isolates the link). Rows name the degree (tp8 = tensor parallel
+over 8). Quote the table's numbers as computed: tensor parallelism at t =
+8 on NVLink is not below one tenth (the plan's sentence was wrong for this
+model); at t = 2 it is, and across the NIC it fits at no degree. That
+contrast is the section's idea for tp. The expert row: fine-grained
+experts (d_ff = 768) do little work per byte moved, so ep is chatty;
+dispatching in fp8 (b = 1) halves it. The ratios only shrink with the
+ignored terms (last line). -->
 
 ```{.python .input #networks-axis-ratios}
 %%tab pytorch
@@ -295,21 +313,24 @@ cfg_8b = d2l.hw_config('Qwen/Qwen3-8B')
 cfg_moe = d2l.hw_config('Qwen/Qwen3-30B-A3B')
 s, tokens_per_step, k = 4096, 1024 * 4096, 8  # sequence, tokens, replicas
 par = dict(b=2, b_g=2, t=8, e=8, n_stage=4, T=tokens_per_step // k, k=k)
-P_eff = a100.p16_tflops * 1e12  # quoted dense bf16, FLOP/s
+mfu = 0.4  # achieved share of the peak (an assumption)
+P_eff = mfu * a100.p16_tflops * 1e12  # FLOP/s
 ridges = {link: P_eff / beta for link, beta in
           d2l.link_betas(systems, d2l.box_alpha_beta()).items()}
-cases = [('tp', '8B', cfg_8b), ('pp', '8B', cfg_8b), ('dp', '8B', cfg_8b),
-         ('ep', '30B-A3B', cfg_moe)]
-rho = pd.DataFrame({link: {f'{axis} ({name})': axis_ratio(axis, cfg, R, **par)
-                           for axis, name, cfg in cases}
+cases = {'tp8 (8B)': ('tp', cfg_8b, {}), 'tp2 (8B)': ('tp', cfg_8b, {'t': 2}),
+         'pp4 (8B)': ('pp', cfg_8b, {}), 'dp8 (8B)': ('dp', cfg_8b, {}),
+         'ep8 (30B-A3B)': ('ep', cfg_moe, {})}
+rho = pd.DataFrame({link: {row: axis_ratio(axis, cfg, R, **(par | deg))
+                           for row, (axis, cfg, deg) in cases.items()}
                     for link, R in ridges.items()})
 d2l.show_ratios(rho)
 attn = d2l.flops_per_token(cfg_8b, T=s, causal_half=True) / \
     d2l.flops_per_token(cfg_8b) - 1
+print(f'every column: one A100 at MFU {mfu:g}, {P_eff / 1e12:.0f} TFLOP/s')
 print(f'ignored, both lower the ratios: attention adds {attn:.0%} to the '
       f'FLOPs at s = {s:,};')
 print('overlap f multiplies a ratio by 1 - f')
-assert (rho.loc['pp (8B)'] < rho.loc['tp (8B)']).all()  # D1's ordering
+assert (rho.loc['pp4 (8B)'] < rho.loc['tp8 (8B)']).all()  # D1's ordering
 ```
 
 <!-- Placeholder (prose): the layout calculator. A layout gives each axis a
@@ -318,89 +339,134 @@ of the replicas, tensor parallelism innermost); an axis lands on the
 scale-up link when the ranks it spans fit in one domain, else on the
 scale-out network; it fits when its ratio after overlap is at most epsilon
 = 0.15. Overlap is a parameter, not a fact (blueprint: 0 for tp, 0.5 for
-ep, 0.9 for pp and dp; AXIS_OVERLAP). Memory per chip: the 16-byte
-mixed-precision training state, sharded by t and p (experts also by e);
-activations not counted. -->
+ep, 0.9 for pp and dp; AXIS_OVERLAP). P_eff is mfu times the chip's dense
+bf16 peak (the same 0.4 as above). Two corrections to D1 inside the
+calculator, one sentence each: the dp ratio counts the gradients a chip
+holds, while the FLOPs count the layers' matmul parameters a token uses
+(D1 cancels N only when the two are equal), so dp's ratio grows by
+held x t p / (L N_layer): 1.2 for Qwen3-8B (its embeddings), about 1.9
+for Qwen3-30B-A3B at e = 8 (every chip holds its share of all experts),
+and about 11 without expert parallelism; and the bytes per step of ep
+come from the expert FLOPs its ratio is measured against. Memory per chip: the
+16-byte mixed-precision training state, sharded by t and p (experts also
+by e); activations not counted. -->
 
 ```{.python .input #networks-layout-def}
 %%tab pytorch
 AXIS_OVERLAP = {'tp': 0.0, 'ep': 0.5, 'pp': 0.9, 'dp': 0.9}  #@save
 
 def layout_fit(cfg, system, layout, tokens_per_step, p_eff=None, eps=0.15,
-               overlap=AXIS_OVERLAP, b=2, b_g=2):  #@save
+               overlap=AXIS_OVERLAP, b=2, b_g=2, mfu=1.0):  #@save
     """Per axis of a layout (degrees t, e, p, k) on a systems-table row:
     the link it lands on (scale-up when the ranks it spans fit in one
     domain), that link's ridge, GB per chip and step, the ratio after
-    overlap and whether it fits; attrs: the training state per chip."""
-    P = p_eff or system.p16_tflops * 1e12
+    overlap and whether it fits; attrs: the training state per chip.
+    P_eff is p_eff, else mfu times the chip's dense bf16 peak."""
+    P = p_eff or mfu * system.p16_tflops * 1e12
     t, e, p, k = (layout[a] for a in 'tepk')
     degree = {'tp': t, 'ep': e, 'pp': p, 'dp': k}
     span = {'tp': t, 'ep': t * e, 'pp': t * e * p, 'dp': t * p * k}
     par = dict(b=b, b_g=b_g, t=t, e=e, n_stage=p, T=tokens_per_step / k, k=k)
+    mem = d2l.state_per_chip(cfg, system, layout)
     t_c = (6 * cfg.num_hidden_layers * layer_params(cfg) * tokens_per_step
            / (t * p * k * P))  # compute seconds per chip and step
+    t_axis = {'ep': t_c * d2l.expert_flop_share(cfg)}  # ep: expert FLOPs
+    held = mem['n_held'] * t * p / (cfg.num_hidden_layers * layer_params(cfg))
     rows = {}
     for axis in (a for a in degree if degree[a] > 1):
         up = span[axis] <= system.domain_chips
         beta = 1e9 * (system.up_gbs_dir if up
                       else system.scaleout_gbs_per_chip)
-        rho = axis_ratio(axis, cfg, P / beta, **par)
+        rho = axis_ratio(axis, cfg, P / beta, **par) * (
+            held if axis == 'dp' else 1)
         rows[axis] = dict(degree=degree[axis], ridge=P / beta,
                           link='scale-up' if up else 'scale-out',
-                          gb_per_step=rho * t_c * beta / 1e9,
+                          gb_per_step=rho * t_axis.get(axis, t_c) * beta / 1e9,
                           ratio=rho * (1 - overlap[axis]))
     fit = pd.DataFrame.from_dict(rows, orient='index')
     fit['fit'] = fit.ratio <= eps
-    fit.attrs.update(d2l.state_per_chip(cfg, system, layout), eps=eps)
+    fit.attrs.update(mem, eps=eps)
     return fit
 ```
 
 <!-- Placeholder (prose): the usual placement as a rule (the chattiest
-axis on the fastest link): tensor parallelism up to 8 inside a domain for
-the dense model, expert parallelism up to 8 inside a domain for the
-mixture of experts (no tensor parallelism: its d = 2,048 is too narrow),
-4 pipeline stages, data parallelism over the rest of a 1,024-chip job; a
-system without a scale-out network (the box) runs the job on its own
-chips. Six systems and the TPU v7 pod (its per-link ICI rate is on Google's
-page, so it is included). Claim N3, stated as computed (fallback of the
-spec): read the table, do not assume it says "tp and ep inside, pp and
-dp across" everywhere. On the box, Qwen3-8B's 131 GB training state fits
-no layout of 4 x 24 GB (the memory line). Helios and Trn3 show n/a where
-their sources state no bf16 or no interconnect rate. -->
+axis on the fastest link): tensor parallelism inside a domain for the
+dense model, expert parallelism inside a domain for the mixture of
+experts (no tensor parallelism: its d = 2,048 is too narrow), each at the
+largest power-of-two degree, up to 8, whose ratio on the scale-up link is
+at most epsilon (a faster chip behind the same link needs a smaller
+degree); 4 pipeline stages; data parallelism over the rest of a 1,024-chip
+job; a system without a scale-out network (the box) runs the job on its
+own chips. -->
+
+```{.python .input #networks-layout-for}
+%%tab pytorch
+def layout_for(cfg, system, degrees, job_chips, tokens_per_step, **kw):  #@save
+    """The usual placement of a job of job_chips chips (all the system's
+    chips when it has no scale-out network): the largest power-of-two t,
+    then e, up to degrees and one domain, whose ratio fits (layout_fit
+    with the keywords kw); p pipeline stages; data parallelism over the
+    rest."""
+    n = job_chips if system.has_scaleout else int(system.chips)
+    D = int(min(system.domain_chips, n))
+
+    def place(t, e):
+        p = min(degrees['p'], n // (t * e))
+        return dict(t=t, e=e, p=p, k=n // (t * p))
+
+    def fits(axis, t, e):
+        return layout_fit(cfg, system, place(t, e), tokens_per_step,
+                          **kw).fit[axis]
+
+    powers = lambda cap: [2**i for i in range(int(math.log2(cap)), 0, -1)]
+    t = next((t for t in powers(min(degrees['t'], D)) if fits('tp', t, 1)), 1)
+    e = next((e for e in powers(min(degrees['e'], D // t))
+              if fits('ep', t, e)), 1)
+    return place(t, e)
+```
+
+<!-- Placeholder (prose): the calculator on five systems and the two
+models: the 8 x A100 node, HGX B200, GB200 NVL72, the TPU v7 pod (its
+per-link ICI rate is on Google's page, so it is included) and the box.
+Helios and Trn3 are left out, as the plan says for a system whose rates
+are not stated (first line: which rate is missing). Each cell of the table
+names the axes with their degrees (tp2 = tensor parallel over 2; in
+parentheses: over epsilon). Claim N3, stated as computed: read the table.
+Tensor and expert parallelism land inside the domain at the degree that
+fits, and tp fits across a NIC at no degree (the tp2 row above); pp and dp
+go across. On NVL72 pp moves inside. On the box, Qwen3-8B's 131 GB
+training state fits no layout of 4 x 24 GB (the memory line). The plot
+shows every axis as a point at its link's ridge, one marker per system: at
+a fixed degree a ratio grows in proportion to the ridge, so for each axis
+the boundary at epsilon is a ridge, and a faster chip behind the same link
+moves every point right. -->
 
 ```{.python .input #networks-layout-fit}
 %%tab pytorch
-def layout_for(system, degrees, job_chips):  #@save
-    """The usual placement of a job of job_chips chips (all the system's
-    chips when it has no scale-out network): degrees t and e capped to fill
-    one domain, p pipeline stages, data parallelism over the rest."""
-    n = job_chips if system.scaleout_gbs_per_chip > 0 else int(system.chips)
-    D = int(min(system.domain_chips, n))
-    t = min(degrees['t'], D)
-    e = min(degrees['e'], D // t)
-    p = min(degrees['p'], n // (t * e))
-    return dict(t=t, e=e, p=p, k=n // (t * p))
-
+job_chips = 1024
 degrees = {'8B': (cfg_8b, dict(t=8, e=1, p=4)),
            '30B-A3B': (cfg_moe, dict(t=1, e=8, p=4))}
-chosen = ['8 x A100 SXM 40 GB', 'HGX B200', 'GB200 NVL72',
-          'Helios (72 x MI455X)', 'Trn3 UltraServer', 'TPU v7 pod',
-          'this box (4 x RTX 4090)']
-fits = [layout_fit(cfg, systems.loc[name],
-                   layout_for(systems.loc[name], deg, job_chips=1024),
-                   tokens_per_step)
-        for name in chosen for cfg, deg in degrees.values()]
+chosen = d2l.stated_rates(systems.loc[[
+    '8 x A100 SXM 40 GB', 'HGX B200', 'GB200 NVL72', 'Helios (72 x MI455X)',
+    'Trn3 UltraServer', 'TPU v7 pod', 'this box (4 x RTX 4090)']])
+fits = []
+for _, system in chosen.iterrows():
+    for cfg, deg in degrees.values():
+        layout = layout_for(cfg, system, deg, job_chips, tokens_per_step,
+                            mfu=mfu)
+        fits.append(layout_fit(cfg, system, layout, tokens_per_step, mfu=mfu))
 d2l.plot_layout_fit(fits)
 d2l.show_layout_fit(fits)
 ```
 
 <!-- Placeholder (prose): epsilon is a choice: the lines below re-read the
-same ratios at a stricter and a looser threshold and name the verdicts
-that change (claim N4); the plot's dashed line moves with it. -->
+same ratios (same layouts) at a stricter and a looser threshold and name
+every verdict that changes (claim N4); the plot's dashed line moves with
+it. -->
 
 ```{.python .input #networks-epsilon}
 %%tab pytorch
-d2l.show_epsilon(fits, eps_values=(0.05, 0.15, 0.3))
+d2l.show_epsilon(fits, eps_values=(0.05, 0.3))
 flips = [x for f in fits for x in f.ratio.dropna()
          if (x <= 0.05) != (x <= 0.3)]
 assert flips  # N4: the boundary moves with epsilon

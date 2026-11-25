@@ -135,6 +135,19 @@ class TestTorchrunSweep(unittest.TestCase):
         ab = d2l.fit_collectives(t, alpha_below=2**12, plateau_from=2**15)
         self.assertGreater(ab.alpha.iloc[0], 0)
 
+    def test_loopback_tcp(self):
+        """sec_lm_networks' TCP ping-pong: a round trip per size from two
+        processes on the loopback interface, and its fit."""
+        t = d2l._loopback_compute('tcp', (2,), '', 64, 2**16, 5, 1)
+        self.assertEqual(list(t['size']), [64 * 2**i for i in range(11)])
+        self.assertEqual(list(t.columns), ['size', 'rt_us'])
+        self.assertTrue((t.rt_us > 0).all())
+        self.assertEqual(t.attrs['cpu'], d2l._cpu_model())
+        t.attrs.update(alpha_below=2**12, plateau_from=2**15)
+        x = d2l._fit_tcp(t)
+        self.assertGreater(x['alpha'], 0)
+        self.assertGreater(x['beta'], 0)
+
 
 class TestRegenCLI(unittest.TestCase):
     def test_toy(self):

@@ -13559,47 +13559,64 @@ def axis_ratio(axis, cfg, link_ridge, b, t, e, n_stage, b_g, T, k):
 AXIS_OVERLAP = {'tp': 0.0, 'ep': 0.5, 'pp': 0.9, 'dp': 0.9}
 
 def layout_fit(cfg, system, layout, tokens_per_step, p_eff=None, eps=0.15,
-               overlap=AXIS_OVERLAP, b=2, b_g=2):  #@save
+               overlap=AXIS_OVERLAP, b=2, b_g=2, mfu=1.0):  #@save
     """Per axis of a layout (degrees t, e, p, k) on a systems-table row:
     the link it lands on (scale-up when the ranks it spans fit in one
     domain), that link's ridge, GB per chip and step, the ratio after
     overlap and whether it fits; attrs: the training state per chip.
+    P_eff is p_eff, else mfu times the chip's dense bf16 peak.
 
     Defined in :numref:`sec_lm_networks`"""
-    P = p_eff or system.p16_tflops * 1e12
+    P = p_eff or mfu * system.p16_tflops * 1e12
     t, e, p, k = (layout[a] for a in 'tepk')
     degree = {'tp': t, 'ep': e, 'pp': p, 'dp': k}
     span = {'tp': t, 'ep': t * e, 'pp': t * e * p, 'dp': t * p * k}
     par = dict(b=b, b_g=b_g, t=t, e=e, n_stage=p, T=tokens_per_step / k, k=k)
+    mem = d2l.state_per_chip(cfg, system, layout)
     t_c = (6 * cfg.num_hidden_layers * layer_params(cfg) * tokens_per_step
            / (t * p * k * P))  # compute seconds per chip and step
+    t_axis = {'ep': t_c * d2l.expert_flop_share(cfg)}  # ep: expert FLOPs
+    held = mem['n_held'] * t * p / (cfg.num_hidden_layers * layer_params(cfg))
     rows = {}
     for axis in (a for a in degree if degree[a] > 1):
         up = span[axis] <= system.domain_chips
         beta = 1e9 * (system.up_gbs_dir if up
                       else system.scaleout_gbs_per_chip)
-        rho = axis_ratio(axis, cfg, P / beta, **par)
+        rho = axis_ratio(axis, cfg, P / beta, **par) * (
+            held if axis == 'dp' else 1)
         rows[axis] = dict(degree=degree[axis], ridge=P / beta,
                           link='scale-up' if up else 'scale-out',
-                          gb_per_step=rho * t_c * beta / 1e9,
+                          gb_per_step=rho * t_axis.get(axis, t_c) * beta / 1e9,
                           ratio=rho * (1 - overlap[axis]))
     fit = pd.DataFrame.from_dict(rows, orient='index')
     fit['fit'] = fit.ratio <= eps
-    fit.attrs.update(d2l.state_per_chip(cfg, system, layout), eps=eps)
+    fit.attrs.update(mem, eps=eps)
     return fit
 
-def layout_for(system, degrees, job_chips):
+def layout_for(cfg, system, degrees, job_chips, tokens_per_step, **kw):
     """The usual placement of a job of job_chips chips (all the system's
-    chips when it has no scale-out network): degrees t and e capped to fill
-    one domain, p pipeline stages, data parallelism over the rest.
+    chips when it has no scale-out network): the largest power-of-two t,
+    then e, up to degrees and one domain, whose ratio fits (layout_fit
+    with the keywords kw); p pipeline stages; data parallelism over the
+    rest.
 
     Defined in :numref:`sec_lm_networks`"""
-    n = job_chips if system.scaleout_gbs_per_chip > 0 else int(system.chips)
+    n = job_chips if system.has_scaleout else int(system.chips)
     D = int(min(system.domain_chips, n))
-    t = min(degrees['t'], D)
-    e = min(degrees['e'], D // t)
-    p = min(degrees['p'], n // (t * e))
-    return dict(t=t, e=e, p=p, k=n // (t * p))
+
+    def place(t, e):
+        p = min(degrees['p'], n // (t * e))
+        return dict(t=t, e=e, p=p, k=n // (t * p))
+
+    def fits(axis, t, e):
+        return layout_fit(cfg, system, place(t, e), tokens_per_step,
+                          **kw).fit[axis]
+
+    powers = lambda cap: [2**i for i in range(int(math.log2(cap)), 0, -1)]
+    t = next((t for t in powers(min(degrees['t'], D)) if fits('tp', t, 1)), 1)
+    e = next((e for e in powers(min(degrees['e'], D // t))
+              if fits('ep', t, e)), 1)
+    return place(t, e)
 
 def diloco_wan_bandwidth(n_params, bytes_per_param, h_steps, t_step_s):
     """Bytes/s a WAN must carry to hide one synchronization of the
@@ -30125,7 +30142,8 @@ def systems_table():
     domain, scale-up GB/s per chip as quoted (scaleup_dir says whether
     both directions are added) and per direction (up_gbs_dir), HBM per chip
     and per domain, scale-out GB/s per chip and direction, dense bf16
-    TFLOP/s, power, kind (quoted, measured, spec), source and date.
+    TFLOP/s, power, kind (quoted, measured, spec), source and date;
+    has_scaleout is False only for the measured box (one machine).
 
     Defined in :numref:`sec_lm_networks`"""
     df = pd.DataFrame(d2l._hw_static('systems')['rows']).set_index('system')
@@ -30138,9 +30156,12 @@ def systems_table():
     torus = df.scaleup_topology == 'torus'
     df.loc[torus, 'up_gbs_dir'] = 2 * df.link_gbs_per_dir[torus]  # one axis
     df['domain_mem_tb'] = df.domain_chips * df.hbm_gb_per_chip / 1e3
+    df['has_scaleout'] = df.measured.isna()
     return df
 
 _HW_NET = {  # the page's calls, by backend: ranks, sizes, iterations
+    'tcp': dict(ranks=(2,), env='', min_bytes=64, max_bytes=2**24,
+                iters=100, warmup=10),
     'gloo': dict(ranks=(2, 4), env='', min_bytes=64, max_bytes=2**24,
                  iters=20, warmup=5),
     'nccl': dict(ranks=(2,), env='NCCL_P2P_DISABLE=1 NCCL_SHM_DISABLE=1 '
@@ -30150,6 +30171,94 @@ _HW_NET = {  # the page's calls, by backend: ranks, sizes, iterations
 _HW_NET_REGIMES = dict(alpha_below=2**16, plateau_from=2**22)  # bytes
 
 _HW_NET_LIVE = dict(sizes=(2**10, 2**17, 2**24), timeout_s=60)
+
+_TCP_PINGPONG = '''
+import json, os, socket, sys, time
+sizes = json.loads(sys.argv[1])
+iters, warmup = int(sys.argv[2]), int(sys.argv[3])
+def recv_exact(sock, buf):
+    view, got = memoryview(buf), 0
+    while got < len(buf):
+        n = sock.recv_into(view[got:])
+        if n == 0:
+            raise ConnectionError('peer closed')
+        got += n
+srv = socket.socket()
+srv.bind(('127.0.0.1', 0))
+srv.listen(1)
+port = srv.getsockname()[1]
+if os.fork() == 0:  # the echo process
+    c = socket.create_connection(('127.0.0.1', port))
+    c.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    for size in sizes:
+        buf = bytearray(size)
+        for _ in range(warmup + iters):
+            recv_exact(c, buf)
+            c.sendall(buf)
+    os._exit(0)
+s, _ = srv.accept()
+s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+for size in sizes:
+    buf = bytearray(size)
+    for i in range(warmup + iters):
+        if i == warmup:
+            t = time.perf_counter()
+        s.sendall(buf)
+        recv_exact(s, buf)
+    t = (time.perf_counter() - t) / iters
+    print(json.dumps(dict(size=size, rt_us=t * 1e6)), flush=True)
+os.wait()
+'''
+
+def _tcp_pingpong(sizes, iters, warmup, timeout_s=None):
+    """(rows, HWRun) of the TCP ping-pong: rows of size (bytes) and rt_us
+    (mean round trip) from two processes on the loopback interface.
+
+    Defined in :numref:`sec_lm_networks`"""
+    timeout_s = timeout_s or d2l._sweep_timeout(
+        max(sizes), iters, warmup, min_rate=0.2e9)
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, 'pingpong.py')
+        with open(path, 'w') as f:
+            f.write(_TCP_PINGPONG)
+        run = d2l.hw_run([sys.executable, path, json.dumps(list(sizes)),
+                          iters, warmup], timeout_s=timeout_s,
+                         env=dict(CUDA_VISIBLE_DEVICES=''))
+    rows = [json.loads(l) for l in run.stdout.splitlines()
+            if l.startswith('{')]
+    return rows, run
+
+def _cpu_model():
+    """The CPU's model name (the key of the CPU-only live checks).
+
+    Defined in :numref:`sec_lm_networks`"""
+    import platform
+    try:
+        with open('/proc/cpuinfo') as f:
+            for line in f:
+                if line.startswith('model name'):
+                    return line.split(':', 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or platform.machine()
+
+def _fit_tcp(r):
+    """alpha (s, the round trip of the small messages) and beta (bytes/s
+    per direction: a round trip moves the message each way) of a TCP
+    ping-pong sweep, with 95% intervals over the regeneration's
+    processes (NaN with one).
+
+    Defined in :numref:`sec_lm_networks`"""
+    s = r['size'].to_numpy(float)
+    lo, hi = r.attrs.get('alpha_below', 2**16), r.attrs.get(
+        'plateau_from', 2**22)
+    fit = lambda rt_us: d2l._two_regimes(s, np.asarray(rt_us) / 1e6, lo, hi)
+    alpha, B = fit(r.rt_us.to_numpy())
+    per = [fit(p) for p in r.attrs.get('proc_us', [])]
+    a_lo, a_hi = d2l._t_interval(alpha, [a for a, _ in per])
+    b_lo, b_hi = d2l._t_interval(2 * B, [2 * b for _, b in per])
+    return dict(alpha=alpha, alpha_lo=a_lo, alpha_hi=a_hi, beta=2 * B,
+                beta_lo=b_lo, beta_hi=b_hi)
 
 def _gloo_env():
     """CPU processes on the loopback interface, a few threads each.
@@ -30192,6 +30301,14 @@ def _loopback_compute(backend, ranks, env, min_bytes, max_bytes, iters,
                       warmup):
     sizes = [int(min_bytes * 2**i) for i in range(
         int(round(math.log2(max_bytes / min_bytes))) + 1)]
+    if backend == 'tcp':  # one ping-pong pair; ranks is (2,)
+        rows, run = _tcp_pingpong(sizes, iters, warmup)
+        if run.refused or not rows:
+            raise RuntimeError(f'tcp ping-pong: {run.refused or "no rows"}')
+        out = pd.DataFrame(rows, columns=['size', 'rt_us'])
+        out.attrs.update(tool='Python sockets (TCP_NODELAY)', backend='tcp',
+                         env=env, cpu=_cpu_model(), **_HW_NET_REGIMES)
+        return out
     frames, info = [], {}
     for k in ranks:
         if backend == 'gloo':
@@ -30212,6 +30329,8 @@ def _loopback_compute(backend, ranks, env, min_bytes, max_bytes, iters,
     out = pd.concat(frames, ignore_index=True)
     out.attrs.update(tool=frames[0].attrs.get('tool'), backend=backend,
                      env=env, info=info, **_HW_NET_REGIMES)
+    if backend == 'gloo':
+        out.attrs['cpu'] = _cpu_model()
     if info:
         out.attrs['nccl'] = next(iter(info.values()))['version']
     return out
@@ -30221,6 +30340,8 @@ def _loopback_name(r):
         return 'gloo over TCP'
     via = sorted({t for i in r.attrs.get('info', {}).values()
                   for t in i['transports']})
+    if not via:  # no nccl-tests binary or no INFO lines: no evidence
+        return 'NCCL (transport not recorded)'
     if all(t.startswith('NET/Socket') for t in via):  # the intended path
         return 'NCCL over sockets'
     return f"NCCL over {', '.join(via)}"
@@ -30232,9 +30353,18 @@ def _ci(lo, hi, scale):
 def _show_loopback(r):
     """One line per number of ranks: alpha (us) and beta (GB/s, bus
     bandwidth) with their 95% intervals over the regeneration's
-    processes (none with one process).
+    processes (none with one process); for the TCP ping-pong the round
+    trip and beta per direction.
 
     Defined in :numref:`sec_lm_networks`"""
+    if r.attrs.get('backend') == 'tcp' and not r.empty:
+        x = _fit_tcp(r)
+        print(f"TCP ping-pong, 2 processes: round trip "
+              f"{d2l._hw_sig(x['alpha'] * 1e6)} us"
+              f"{_ci(x['alpha_lo'], x['alpha_hi'], 1e6)}, beta "
+              f"{d2l._hw_sig(x['beta'] / 1e9)} GB/s"
+              f"{_ci(x['beta_lo'], x['beta_hi'], 1e-9)}")
+        return
     ab = d2l.fit_collectives(r)
     if ab.empty:
         print(r.attrs.get('label', 'pending'))
@@ -30248,10 +30378,15 @@ def _show_loopback(r):
               f'{_ci(x.beta_lo, x.beta_hi, 1e-9)}')
 
 def _loopback_live_us(backend, env, size):
-    """The live time (us) of one all-reduce of size bytes on 2 ranks, or
-    None when the run was refused.
+    """The live time (us) of one all-reduce of size bytes on 2 ranks (a
+    round trip for tcp), or None when the run was refused.
 
     Defined in :numref:`sec_lm_networks`"""
+    if backend == 'tcp':
+        rows, _ = _tcp_pingpong([size], _HW_NET['tcp']['iters'],
+                                _HW_NET['tcp']['warmup'],
+                                _HW_NET_LIVE['timeout_s'])
+        return rows[0]['rt_us'] if rows else None
     if backend == 'gloo':
         rows, _ = _gloo_sweep(2, [size], 20, 5, _HW_NET_LIVE['timeout_s'])
         return rows[0]['time_us'] if rows else None
@@ -30261,39 +30396,64 @@ def _loopback_live_us(backend, env, size):
 
 def _loopback_live(r, same):
     """The live check of a loopback sweep: 2 ranks at three sizes, one
-    short line (the cell names the backend).
+    short line (the cell names the backend); same says whether this is
+    the committed run's GPU (nccl) or CPU model (tcp, gloo).
 
     Defined in :numref:`sec_lm_networks`"""
     backend = r.attrs.get('backend')
-    if backend == 'nccl' and torch.cuda.device_count() < 2:
-        return 'needs two GPUs: the committed box run is shown'
+    col = 'rt_us' if backend == 'tcp' else 'oop_us'
     pts = []
     for size in _HW_NET_LIVE['sizes']:
-        hit = np.flatnonzero(((r.g == 2) & (r['size'] == size)).to_numpy())
+        row = r['size'] == size
+        if backend != 'tcp':  # the tcp table has one pair only
+            row &= r.g == 2
+        hit = np.flatnonzero(row.to_numpy())
         if not len(hit):
             continue
         live = _loopback_live_us(backend, r.attrs.get('env', ''), size)
         if live is None:
             return f'{d2l._hw_bytes(size)}: not run'
         i = int(hit[0])
-        pts.append((d2l._hw_bytes(size), float(r.oop_us.iloc[i]), live,
-                    d2l._spread(r, 'oop_us', i, 0.05)))
+        pts.append((d2l._hw_bytes(size), float(r[col].iloc[i]), live,
+                    d2l._spread(r, col, i, 0.05)))
     if not same:
         return d2l._hw_agreement(pts, same, 'us')
     # one short line: loopback times move with the host's load
+    if not pts:
+        return 'no committed sizes to compare'
     worst = max(math.fabs(p[2] - p[1]) / p[1] for p in pts)
     bad = any(math.fabs(p[2] - p[1]) / p[1] > max(5 * p[3], 0.25)
               for p in pts)
     return (f'{len(pts)} sizes on 2 ranks, largest difference {worst:.0%}'
             + (' (differs)' if bad else ''))
 
+def _host_live(r):
+    """The live line of a CPU-only sweep (tcp, gloo), keyed to the CPU
+    model, with or without a GPU; nothing in a regeneration run or while
+    the result is pending.
+
+    Defined in :numref:`sec_lm_networks`"""
+    if 'box-net' in d2l._hw_regenerating() or r.empty:
+        return
+    same = r.attrs.get('cpu') == _cpu_model()
+    try:
+        with d2l._quiet():
+            text = _loopback_live(r, same)
+    except Exception as e:  # report, never fail the page
+        text = f'not run ({type(e).__name__})'
+    name = {'tcp': 'TCP', 'gloo': 'gloo'}[r.attrs.get('backend')]
+    print(f"{name} live {'check (same CPU)' if same else 'values (other CPU)'}"
+          f': {text}')
+
 def loopback_sweep(backend='gloo', ranks=(2, 4), env='', max_bytes=2**24):
-    """The all-reduce time over loopback on this host: backend 'gloo' (CPU
-    processes over TCP) on each number of ranks, or 'nccl' with env (the
-    variables that force its socket transport) on the first cards; the
-    long sweep table of nccl_sweeps (path 'loopback'). Committed in
-    box-net; a normal run prints the fits and re-times 2 ranks at three
-    sizes.
+    """The time of a message over loopback on this host: backend 'tcp'
+    (a ping-pong between two processes; rows size, rt_us), 'gloo'
+    (all-reduce in CPU processes over TCP) on each number of ranks, or
+    'nccl' with env (the variables that force its socket transport) on the
+    first cards; the collectives as the long sweep table of nccl_sweeps
+    (path 'loopback'). Committed in box-net; a normal run prints the fits
+    and re-times 2 ranks at three sizes (tcp and gloo on any host, nccl
+    with two GPUs).
 
     Defined in :numref:`sec_lm_networks`"""
     spec = _HW_NET[backend]
@@ -30303,9 +30463,16 @@ def loopback_sweep(backend='gloo', ranks=(2, 4), env='', max_bytes=2**24):
     compute = lambda: _loopback_compute(backend, tuple(ranks), env,
                                         spec['min_bytes'], max_bytes,
                                         spec['iters'], spec['warmup'])
-    return d2l._hw_result('box-net', compute, config, entry=backend,
-                          live_check=_loopback_live, show=_show_loopback,
-                          live_label='')
+    two_gpus = torch.cuda.device_count() >= 2
+    r = d2l._hw_result('box-net', compute, config, entry=backend,
+                       live_check=(_loopback_live if backend == 'nccl'
+                                   and two_gpus else None),
+                       show=_show_loopback, live_label='')
+    if backend != 'nccl':
+        _host_live(r)
+    elif not (two_gpus or r.empty or 'box-net' in d2l._hw_regenerating()):
+        print('live check needs two GPUs: the committed box run is shown')
+    return r
 
 def quoted_latencies():
     """Quoted latency (us) and bandwidth (GB/s per direction) of an RDMA
@@ -30333,31 +30500,45 @@ def link_betas(systems, box):
     node = systems.loc['8 x A100 SXM 40 GB']
     return {'NVLink (A100)': node.up_gbs_dir * 1e9,
             'NIC (A100, HDR)': node.scaleout_gbs_per_chip * 1e9,
-            'host-staged (box)': box['beta']}
+            'box link': box['beta']}
 
-def transport_ladder(floor, sock, box, quoted):
-    """Print and return, per transport, alpha (us), beta (GB/s per
+def transport_ladder(tcp, floor, sock, box, quoted):
+    """Print (2 significant digits) and return, per transport, alpha
+    (us), the latency per message (us: an all-reduce's alpha over its
+    2(k-1) ring steps, half a round trip, one hop), beta (GB/s per
     direction), what alpha is (a whole all-reduce, a round trip or one
-    hop) and whether it was measured here or quoted; floor and sock are
-    loopback sweeps, box a box_alpha_beta record, quoted the
+    hop) and whether it was measured here or quoted; tcp, floor and sock
+    are loopback sweeps, box a box_alpha_beta record, quoted the
     quoted_latencies table.
 
     Defined in :numref:`sec_lm_networks`"""
-    rows = []
+    x = _fit_tcp(tcp)
+    rows = [dict(transport='TCP, 2 processes', alpha_us=x['alpha'] * 1e6,
+                 msg_us=x['alpha'] * 1e6 / 2, beta_gbs=x['beta'] / 1e9,
+                 alpha_of='round trip', source='measured')]
     for name, sweep, unit in (('gloo', floor, 'ranks'),
                               ('NCCL sockets', sock, 'GPUs')):
         for (_, g, _), x in d2l.fit_collectives(sweep).iterrows():
             rows.append(dict(transport=f'{name}, {g} {unit}',
-                             alpha_us=x.alpha * 1e6, beta_gbs=x.beta / 1e9,
+                             alpha_us=x.alpha * 1e6,
+                             msg_us=x.alpha_step * 1e6,
+                             beta_gbs=x.beta / 1e9,
                              alpha_of='all-reduce', source='measured'))
     rows.append(dict(transport=f"NCCL shm, {box['g']} GPUs",
-                     alpha_us=box['alpha'] * 1e6, beta_gbs=box['beta'] / 1e9,
+                     alpha_us=box['alpha'] * 1e6,
+                     msg_us=box['alpha'] * 1e6 / d2l._ring_steps(
+                         'all_reduce', box['g']),
+                     beta_gbs=box['beta'] / 1e9,
                      alpha_of='all-reduce', source='measured'))
-    rows += quoted.drop(columns='source_url').to_dict('records')
+    half = {'round trip': 0.5, 'one hop': 1.0}
+    rows += [dict(r, msg_us=r['alpha_us'] * half[r['alpha_of']])
+             for r in quoted.drop(columns='source_url').to_dict('records')]
     df = pd.DataFrame(rows).set_index('transport')
-    d2l.show_table(df, headers={'alpha_us': 'alpha (us)', 'beta_gbs':
-                                'beta (GB/s)', 'alpha_of': 'alpha of'},
-                   width=79)
+    num = ['alpha_us', 'msg_us', 'beta_gbs']
+    d2l.show_table(df.assign(**{c: df[c].map(d2l._hw_sig) for c in num}),
+                   headers={'alpha_us': 'alpha (us)', 'msg_us':
+                            'per msg (us)', 'beta_gbs': 'beta (GB/s)',
+                            'alpha_of': 'alpha of'}, width=79)
     return df
 
 def cross_leaf_flow(ft, beta):
@@ -30443,8 +30624,8 @@ def fit_perftest(log, small=64, large=2**20):
 
 def state_per_chip(cfg, system, layout):
     """The layout_fit attributes of a layout's memory: system and model
-    names, the training state per chip (GB, mem_gb) and the chip's HBM
-    (GB, hbm_gb).
+    names, the training state per chip (GB, mem_gb), the chip's HBM
+    (GB, hbm_gb) and the parameters it holds (n_held).
 
     Defined in :numref:`sec_lm_networks`"""
     m = d2l.ServingModel(cfg, d2l.chip_specs().loc[system.chip])
@@ -30452,12 +30633,42 @@ def state_per_chip(cfg, system, layout):
     N = m.n_params()[0]
     N_exp = n_moe * E * 3 * cfg.hidden_size * d_ff if E > 1 else 0
     t, e, p = layout['t'], layout['e'], layout['p']
-    state = d2l.TrainStepModel.state['mixed16'] * (
-        (N - N_exp) / (t * p) + N_exp / (t * p * e))
+    held = (N - N_exp) / (t * p) + N_exp / (t * p * e)  # parameters
     name = getattr(cfg, 'name_or_path', '') or ''
     return dict(system=system.name, short=system.short,
-                model=name.split('-', 1)[-1], mem_gb=state / 1e9,
-                hbm_gb=float(system.hbm_gb_per_chip))
+                model=name.split('-', 1)[-1],
+                mem_gb=d2l.TrainStepModel.state['mixed16'] * held / 1e9,
+                hbm_gb=float(system.hbm_gb_per_chip), n_held=held)
+
+def expert_flop_share(cfg):
+    """The experts' share of a layer's matmul FLOPs per token (1 for a
+    dense model, whose expert ratio is NaN anyway).
+
+    Defined in :numref:`sec_lm_networks`"""
+    K = getattr(cfg, 'num_experts_per_tok', 0) or 1
+    if K == 1:
+        return 1.0
+    return K * 3 * cfg.hidden_size * cfg.moe_intermediate_size / \
+        d2l.layer_params(cfg)
+
+def stated_rates(systems):
+    """The rows of a systems table whose dense bf16 rate, scale-up rate
+    and (where the system has a scale-out network) scale-out rate are
+    stated; one printed line names the others and what they lack.
+
+    Defined in :numref:`sec_lm_networks`"""
+    need = {'p16_tflops': 'bf16', 'up_gbs_dir': 'scale-up',
+            'scaleout_gbs_per_chip': 'scale-out'}
+    lack = {}
+    for _, row in systems.iterrows():
+        gaps = [w for c, w in need.items() if pd.isna(row[c]) and (
+            c != 'scaleout_gbs_per_chip' or row.has_scaleout)]
+        if gaps:
+            lack[row.short] = gaps
+    if lack:
+        print('no stated rate, left out: ' + '; '.join(
+            f"{s} ({', '.join(g)})" for s, g in lack.items()))
+    return systems[~systems.short.isin(list(lack))]
 
 def show_ratios(rho):
     """The table of communication-to-compute ratios (rows: axis and model,
@@ -30467,9 +30678,9 @@ def show_ratios(rho):
     d2l.show_table(rho.map(lambda x: d2l._hw_sig(x, 2)), width=79)
 
 def _fit_cell(fit, link):
-    """The axes of one layout on one link: those that fit, and in
-    parentheses those over epsilon; '-' when none lands there, 'n/a' when
-    the system's rates are not stated.
+    """The axes of one layout on one link with their degrees (tp2): those
+    that fit, and in parentheses those over epsilon; '-' when none lands
+    there, 'n/a' when the system's rates are not stated.
 
     Defined in :numref:`sec_lm_networks`"""
     on = fit[fit.link == link]
@@ -30477,14 +30688,15 @@ def _fit_cell(fit, link):
         return '-'
     if on.ratio.isna().all():
         return 'n/a'
-    return ' '.join(a if ok else f'({a})' for a, ok in zip(on.index, on.fit))
+    return ' '.join(f'{a}{g}' if ok else f'({a}{g})'
+                    for a, g, ok in zip(on.index, on.degree, on.fit))
 
 def show_layout_fit(fits):
-    """One row per system, three columns per model: the axes on the
-    scale-up link and on the scale-out link (in parentheses: over epsilon;
-    n/a: a rate the system's sources do not state) and the training state
-    per chip (GB); then the layouts whose state exceeds the chip's
-    memory.
+    """One row per system, three columns per model: the axes and their
+    degrees on the scale-up link and on the scale-out link (in
+    parentheses: over epsilon; n/a: a rate the system's sources do not
+    state) and the training state per chip (GB); then the layouts whose
+    state exceeds the chip's memory.
 
     Defined in :numref:`sec_lm_networks`"""
     rows, over = {}, []
@@ -30502,50 +30714,61 @@ def show_layout_fit(fits):
     print('state over the chip\'s memory: ' + (', '.join(over) or 'none'))
 
 def show_epsilon(fits, eps_values):
-    """Per epsilon, the verdicts that differ from those at the fits' own
-    epsilon: one line each, naming up to two (system, model, axis).
+    """Per epsilon, every verdict that differs from those at the fits' own
+    epsilon (system, model, axis and degree, with its ratio), folded to
+    the page width.
 
     Defined in :numref:`sec_lm_networks`"""
     for eps in eps_values:
-        flips = [f"{f.attrs['short']} {f.attrs['model']} {axis}"
+        flips = [f"{f.attrs['short']} {f.attrs['model']} {axis}{x.degree} "
+                 f'({d2l._hw_sig(x.ratio)})'
                  for f in fits for axis, x in f.iterrows()
                  if np.isfinite(x.ratio) and bool(x.ratio <= eps) != x.fit]
-        text = '; '.join(flips[:2]) + (f'; +{len(flips) - 2} more'
-                                       if len(flips) > 2 else '')
-        print(f'eps = {eps:g}: {len(flips)} changed'
-              + (f': {text}' if flips else ''))
+        print(textwrap.fill(f'eps = {eps:g}: {len(flips)} changed'
+                            + (': ' + '; '.join(flips) if flips else ''),
+                            width=79, subsequent_indent='  '))
 
 _AXIS_COLORS = {'tp': 'C0', 'ep': 'C1', 'pp': 'C2', 'dp': 'C3'}
 
+_SYSTEM_MARKERS = ('o', 's', '^', 'D', 'v', 'P', 'X')
+
 def plot_layout_fit(fits):
     """Each axis of each layout as a point: x the ridge P_eff / beta of the
-    link it lands on (FLOP per byte), y its ratio after overlap; filled
-    circles on the scale-up link, open squares on the scale-out link. A
-    ratio is proportional to the ridge, so the points of one axis and
-    model lie on one line; the dashed line is epsilon.
+    link it lands on (FLOP per byte), y its ratio after overlap; colour
+    the axis, marker the system, filled on the scale-up link, open on the
+    scale-out link. At a fixed layout a ratio is proportional to the
+    ridge; the dashed line is epsilon.
 
     Defined in :numref:`sec_lm_networks`"""
+    from matplotlib.lines import Line2D
+    systems = list(dict.fromkeys(f.attrs['short'] for f in fits))
+    marker = dict(zip(systems, _SYSTEM_MARKERS))
     d2l.set_figsize((6, 3.4))
     _, ax = d2l.plt.subplots()
     for f in fits:
         for axis, x in f.dropna(subset=['ratio']).iterrows():
             c, up = _AXIS_COLORS[axis], x.link == 'scale-up'
-            ax.scatter(x.ridge, x.ratio, s=28, edgecolors=c,
+            ax.scatter(x.ridge, x.ratio, s=30, edgecolors=c,
                        facecolors=c if up else 'none',
-                       marker='o' if up else 's')
+                       marker=marker[f.attrs['short']])
     eps = fits[0].attrs['eps']
-    ax.axhline(eps, color='black', linestyle='--', linewidth=1,
-               label=f'eps = {eps:g}')
-    for axis, c in _AXIS_COLORS.items():
-        ax.scatter([], [], color=c, label=axis)
-    ax.scatter([], [], facecolors='none', edgecolors='black', marker='s',
-               label='scale-out')
+    ax.axhline(eps, color='black', linestyle='--', linewidth=1)
     ax.set(xscale='log', yscale='log', xlabel='link ridge (FLOP/byte)',
            ylabel='communication / compute')
-    ax.legend(fontsize=8, loc='center left', bbox_to_anchor=(1.02, 0.5))
+    dot = lambda **kw: Line2D([], [], linestyle='none', markersize=6, **kw)
+    handles = ([dot(marker='o', color=c, label=a)
+                for a, c in _AXIS_COLORS.items()]
+               + [Line2D([], [], color='black', linestyle='--',
+                         label=f'eps = {eps:g}')]
+               + [dot(marker=marker[s], color='gray', label=s)
+                  for s in systems]
+               + [dot(marker='o', markerfacecolor='none',
+                      markeredgecolor='black', label='open: scale-out')])
+    ax.legend(handles=handles, fontsize=8, loc='center left',
+              bbox_to_anchor=(1.02, 0.5))
 
 def regen_net(config='box'):
-    """Driver of box-net: the page's two loopback sweeps.
+    """Driver of box-net: the page's three loopback sweeps.
 
     Defined in :numref:`sec_lm_networks`"""
     if config != 'box':
@@ -30553,24 +30776,27 @@ def regen_net(config='box'):
                          'two-node campaign C-T4 runs perftest')
     if torch.cuda.device_count() < 2:
         raise RuntimeError('box-net needs two GPUs (lock both)')
+    tcp = loopback_sweep(backend='tcp', ranks=_HW_NET['tcp']['ranks'],
+                         max_bytes=_HW_NET['tcp']['max_bytes'])
     floor = loopback_sweep(backend='gloo', ranks=_HW_NET['gloo']['ranks'],
                            max_bytes=_HW_NET['gloo']['max_bytes'])
     sock = loopback_sweep(backend='nccl', ranks=_HW_NET['nccl']['ranks'],
                           env=_HW_NET['nccl']['env'],
                           max_bytes=_HW_NET['nccl']['max_bytes'])
-    return floor, sock
+    return tcp, floor, sock
 
 def regen_net_finish(folder):
     """After tools/hw_regen.py combined the processes: every process's
     sweep times kept with each combined sweep (attrs['proc_us']).
 
     Defined in :numref:`sec_lm_networks`"""
-    for entry in ('gloo', 'nccl'):
+    for entry in ('tcp', 'gloo', 'nccl'):
+        col = 'rt_us' if entry == 'tcp' else 'oop_us'
         path = os.path.join(folder, f'{entry}.json.gz')
         table, meta = d2l._hw_read(path)
         procs = sorted(glob.glob(os.path.join(folder, 'proc*',
                                               f'{entry}.json.gz')))
-        table.attrs['proc_us'] = [d2l._hw_read(p)[0].oop_us.tolist()
+        table.attrs['proc_us'] = [d2l._hw_read(p)[0][col].tolist()
                                   for p in procs]
         d2l._hw_write(path, table, meta)
 

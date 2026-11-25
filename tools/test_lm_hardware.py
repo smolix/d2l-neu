@@ -2495,6 +2495,9 @@ class TestNetworks(unittest.TestCase):
         self.assertEqual(sy.loc['this box (4 x RTX 4090)', 'up_gbs_dir'], 2.4)
         self.assertAlmostEqual(sy.loc['GB200 NVL72', 'domain_mem_tb'],
                                72 * 186.1 / 1e3)
+        # 'no scale-out network' (the box) is not 'rate not stated' (Trn3)
+        self.assertFalse(sy.loc['this box (4 x RTX 4090)', 'has_scaleout'])
+        self.assertTrue(sy.loc['Trn3 UltraServer', 'has_scaleout'])
         lines, _ = lines_of(self, d2l.show_table,
                             sy[list(d2l.SYSTEMS_SHORT)],
                             headers=d2l.SYSTEMS_SHORT)
@@ -2565,7 +2568,7 @@ class TestNetworks(unittest.TestCase):
         return pd.Series(dict(
             short='toy', chip='H100 SXM', chips=chips, domain_chips=domain,
             up_gbs_dir=up / 2, scaleout_gbs_per_chip=out, p16_tflops=1000.0,
-            hbm_gb_per_chip=80.0), name='toy system')
+            hbm_gb_per_chip=80.0, has_scaleout=True), name='toy system')
 
     def test_layout_fit(self):
         cfg = small_config(L=8, d=1024, H=8, H_kv=2)
@@ -2579,12 +2582,13 @@ class TestNetworks(unittest.TestCase):
         par = dict(b=2, b_g=2, t=8, e=1, n_stage=2, T=2**20 / 4, k=4)
         self.assertAlmostEqual(fit.ratio['tp'],
                                d2l.axis_ratio('tp', cfg, R_up, **par))
-        self.assertAlmostEqual(fit.ratio['dp'], 0.1 * d2l.axis_ratio(
-            'dp', cfg, R_out, **par))
-        self.assertEqual(list(fit.fit), list(fit.ratio <= 0.15))
-        self.assertEqual(fit.attrs['model'], 'toy')
         N = d2l.ServingModel(cfg, d2l.chip_specs().loc['H100 SXM']
                              ).n_params()[0]
+        held = N / (8 * d2l.layer_params(cfg))  # embeddings' gradients too
+        self.assertAlmostEqual(fit.ratio['dp'], 0.1 * d2l.axis_ratio(
+            'dp', cfg, R_out, **par) * held)
+        self.assertEqual(list(fit.fit), list(fit.ratio <= 0.15))
+        self.assertEqual(fit.attrs['model'], 'toy')
         self.assertAlmostEqual(fit.attrs['mem_gb'], 16 * N / 16 / 1e9)
         # bytes per step: tp moves 8 (t-1)/t T d b per layer and replica
         T_r = 2**20 / 4
@@ -2595,25 +2599,91 @@ class TestNetworks(unittest.TestCase):
         big = d2l.layout_fit(cfg, self.toy_system(domain=72), dict(
             t=8, e=1, p=2, k=4), 2**20)
         self.assertEqual(big.link['pp'], 'scale-up')
+        # mfu scales P_eff: compute takes 1 / mfu longer, every ratio
+        # shrinks by mfu
+        half = d2l.layout_fit(cfg, sys_, dict(t=8, e=1, p=2, k=4), 2**20,
+                              mfu=0.5)
+        for axis in fit.index:
+            self.assertAlmostEqual(half.ratio[axis], fit.ratio[axis] / 2)
+
+    def test_layout_fit_moe(self):
+        """dp counts the gradients a chip holds; ep's bytes come from the
+        expert FLOPs its ratio is measured against."""
+        cfg = small_config(L=8, d=1024, H=8, H_kv=2)
+        moe = d2l.HWShape(cfg, num_experts=16, num_experts_per_tok=2,
+                          moe_intermediate_size=256, decoder_sparse_step=1,
+                          mlp_only_layers=[], name_or_path='Qwen/Qwen3-moe')
+        sys_ = self.toy_system(domain=8)
+        layout, T = dict(t=1, e=8, p=2, k=16), 2**22
+        fit = d2l.layout_fit(moe, sys_, layout, T)
+        m = d2l.ServingModel(moe, d2l.chip_specs().loc['H100 SXM'])
+        N = m.n_params()[0]
+        N_exp = 8 * 16 * 3 * 1024 * 256
+        held = (N - N_exp) / 2 + N_exp / 16  # per chip, t p = 2, e = 8
+        par = dict(b=2, b_g=2, t=1, e=8, n_stage=2, T=T / 16, k=16)
+        R_out = 1e15 / 50e9
+        self.assertAlmostEqual(fit.ratio['dp'], 0.1 * d2l.axis_ratio(
+            'dp', moe, R_out, **par) * held * 2 / (8 * d2l.layer_params(moe)))
+        # dp bytes per chip: 2 (k-1)/k of the held gradients in bf16
+        self.assertAlmostEqual(fit.gb_per_step['dp'] * 1e9,
+                               2 * 15 / 16 * held * 2, delta=1e-6 * held)
+        # ep bytes per chip: 4 all-to-alls of K d b (1 - 1/e) per token and
+        # MoE layer, T / k tokens, L / p layers
+        ep_bytes = 4 * 2 * 1024 * 2 * (7 / 8) * (T / 16) * 8 / 2
+        self.assertAlmostEqual(fit.gb_per_step['ep'] * 1e9 / ep_bytes, 1.0,
+                               places=6)
+        self.assertAlmostEqual(d2l.expert_flop_share(moe),
+                               2 * 3 * 1024 * 256 / d2l.layer_params(moe))
 
     def test_layout_for_and_display(self):
         sy = d2l.systems_table()
         cfg = small_config(L=8, d=1024, H=8, H_kv=2)
         cfg['name_or_path'] = 'Qwen/Qwen3-toy'
         box = sy.loc['this box (4 x RTX 4090)']
-        self.assertEqual(d2l.layout_for(box, dict(t=8, e=1, p=4), 1024),
-                         dict(t=4, e=1, p=1, k=1))
+        T = 2**22
+        # the box's link fits no tensor parallelism: t = 1, its 4 chips
+        self.assertEqual(d2l.layout_for(cfg, box, dict(t=8, e=1, p=4), 1024,
+                                        T), dict(t=1, e=1, p=4, k=1))
         node = sy.loc['8 x A100 SXM 40 GB']
-        self.assertEqual(d2l.layout_for(node, dict(t=1, e=8, p=4), 1024),
+        moe = d2l.HWShape(cfg, num_experts=16, num_experts_per_tok=2,
+                          moe_intermediate_size=256, decoder_sparse_step=1,
+                          mlp_only_layers=[])
+        # with eps = inf every degree fits: the caps decide
+        self.assertEqual(d2l.layout_for(moe, node, dict(t=1, e=8, p=4), 1024,
+                                        T, eps=math.inf),
                          dict(t=1, e=8, p=4, k=256))
-        fits = [d2l.layout_fit(cfg, sy.loc[n], d2l.layout_for(
-            sy.loc[n], dict(t=8, e=1, p=4), 1024), 2**22) for n in
-            ('8 x A100 SXM 40 GB', 'Trn3 UltraServer', 'this box (4 x RTX 4090)')]
+        self.assertEqual(d2l.layout_for(cfg, node, dict(t=8, e=1, p=4), 1024,
+                                        T, eps=math.inf)['t'], 8)
+        # the chosen t is the largest power of two whose tp ratio fits
+        lay = d2l.layout_for(cfg, node, dict(t=8, e=1, p=4), 1024, T)
+        fit = d2l.layout_fit(cfg, node, lay, T)
+        if lay['t'] > 1:
+            self.assertTrue(fit.fit['tp'])
+        if lay['t'] < 8:
+            up = dict(lay, t=2 * lay['t'], k=1024 // (2 * lay['t'] * 4))
+            self.assertFalse(d2l.layout_fit(cfg, node, up, T).fit['tp'])
+        # Trn3 states no rates: stated_rates drops it and says why
+        lines, kept = lines_of(self, d2l.stated_rates, sy.loc[[
+            '8 x A100 SXM 40 GB', 'Trn3 UltraServer',
+            'this box (4 x RTX 4090)']])
+        self.assertEqual(list(kept.short), ['A100 node', 'box'])
+        self.assertEqual(lines, ['no stated rate, left out: Trn3 (bf16, '
+                                 'scale-up, scale-out)'])
+        fits = [d2l.layout_fit(cfg, s, d2l.layout_for(
+            cfg, s, dict(t=8, e=1, p=4), 1024, T), T)
+            for _, s in kept.iterrows()]
         lines, _ = lines_of(self, d2l.show_layout_fit, fits)
         self.assertLessEqual(len(lines), 15)
-        self.assertIn('n/a', lines[2])  # Trn3 states no rates
-        lines, _ = lines_of(self, d2l.show_epsilon, fits, (0.05, 0.3))
-        self.assertEqual(len(lines), 2)
+        self.assertRegex(lines[1], r'A100 node .*dp\d+')  # degrees shown
+        lines, _ = lines_of(self, d2l.show_epsilon, fits, (0.0, math.inf))
+        n = sum(len(f.dropna(subset=['ratio'])) for f in fits)
+        n_fit = sum(int(f.fit.sum()) for f in fits)
+        # eps = 0 flips every fit, eps = inf every miss: all are named
+        text = ' '.join(lines)
+        self.assertIn(f'eps = 0: {n_fit} changed', text)
+        self.assertIn(f'eps = inf: {n - n_fit} changed', text)
+        self.assertEqual(text.count(';'),  # every flip named, none hidden
+                         max(n_fit - 1, 0) + max(n - n_fit - 1, 0))
 
     def test_diloco(self):
         self.assertEqual(d2l.diloco_wan_bandwidth(8e9, 2, 100, 2.0), 8e7)
@@ -2657,17 +2727,67 @@ class TestNetworks(unittest.TestCase):
         self.assertIn('gloo over TCP, 2 ranks: alpha 600 us', lines[0])
         lines, _ = lines_of(self, d2l._show_loopback, sock)
         self.assertIn('NCCL over sockets, 2 GPUs', lines[0])
+        # no transport recorded is not evidence of sockets
+        bare = sock.copy()
+        bare.attrs = dict(sock.attrs, info={2: dict(version='2.28.9',
+                                                    transports=[])})
+        self.assertEqual(d2l._loopback_name(bare),
+                         'NCCL (transport not recorded)')
+        tcp = self.pingpong(40e-6, 2e9)
+        lines, _ = lines_of(self, d2l._show_loopback, tcp)
+        self.assertEqual(len(lines), 1)
+        self.assertIn('TCP ping-pong, 2 processes: round trip 40 us', lines[0])
         quoted = d2l.quoted_latencies()
         self.assertTrue(quoted.source_url.str.contains('https://').all())
-        lines, ladder = lines_of(self, d2l.transport_ladder, floor, sock,
+        lines, ladder = lines_of(self, d2l.transport_ladder, tcp, floor, sock,
                                  dict(BOX_AB), quoted)
-        self.assertEqual(len(ladder), 6)
-        self.assertLessEqual(len(lines), 7)
+        self.assertEqual(len(ladder), 7)
+        self.assertLessEqual(len(lines), 8)
         self.assertAlmostEqual(ladder.alpha_us['NCCL shm, 4 GPUs'], 30)
+        self.assertAlmostEqual(ladder.msg_us['NCCL shm, 4 GPUs'], 5)
+        self.assertAlmostEqual(ladder.msg_us['RDMA, one NDR port'], 2.5)
+        self.assertAlmostEqual(ladder.alpha_us['TCP, 2 processes'], 40,
+                               delta=2)
+        self.assertAlmostEqual(ladder.beta_gbs['TCP, 2 processes'], 2.0,
+                               delta=0.1)
+        # gloo on 4 ranks: alpha 1,200 us over 6 ring steps
+        self.assertAlmostEqual(ladder.msg_us['gloo, 4 ranks'],
+                               ladder.alpha_us['gloo, 4 ranks'] / 6)
+        self.assertTrue(all(len(c) <= 4 for c in ' '.join(
+            lines[1:]).replace(',', '').split() if c.replace('.', '')
+            .isdigit()))  # two significant digits
         betas = d2l.link_betas(d2l.systems_table(), dict(BOX_AB))
         self.assertEqual(betas, {'NVLink (A100)': 300e9,
                                  'NIC (A100, HDR)': 25e9,
-                                 'host-staged (box)': 2.4e9})
+                                 'box link': 2.4e9})
+
+    def pingpong(self, alpha, beta, procs=()):
+        """A TCP ping-pong table: round trip alpha + 2 S / beta."""
+        s = 64 * 2.0 ** np.arange(19)
+        t = pd.DataFrame(dict(size=s.astype(int),
+                              rt_us=(alpha + 2 * s / beta) * 1e6))
+        t.attrs.update(backend='tcp', env='', alpha_below=2**16,
+                       plateau_from=2**22, cpu='toy CPU',
+                       proc_us=[list(t.rt_us * f) for f in procs])
+        return t
+
+    def test_host_live(self):
+        """The CPU-only live line needs no GPU and is keyed to the CPU."""
+        tcp = self.pingpong(40e-6, 2e9)
+        live = lambda b, e, size: float(tcp.rt_us[tcp['size'] == size].iloc[0])
+        with mock.patch.object(d2l, '_loopback_live_us', side_effect=live), \
+                mock.patch.object(torch.cuda, 'is_available',
+                                  return_value=False):
+            with mock.patch.object(d2l, '_cpu_model',
+                                   return_value='toy CPU'):
+                lines, _ = lines_of(self, d2l._host_live, tcp)
+            self.assertEqual(lines, ['TCP live check (same CPU): 3 sizes on '
+                                     '2 ranks, largest difference 0%'])
+            with mock.patch.object(d2l, '_cpu_model',
+                                   return_value='other CPU'):
+                lines, _ = lines_of(self, d2l._host_live, tcp)
+            self.assertTrue(lines[0].startswith(
+                'TCP live values (other CPU): 1 KiB'))
 
     def test_loopback_live_line(self):
         floor = self.loopback('gloo', (2, 4), 300e-6, 1.4e9)
@@ -2688,19 +2808,26 @@ class TestNetworks(unittest.TestCase):
     def test_regen_finish(self):
         with tempfile.TemporaryDirectory() as tmp:
             for i, scale in enumerate((1.0, 1.1)):
+                os.makedirs(os.path.join(tmp, f'proc{i}'), exist_ok=True)
                 for entry in ('gloo', 'nccl'):
                     t = self.loopback(entry, (2,), 100e-6 * scale, 1e9)
-                    os.makedirs(os.path.join(tmp, f'proc{i}'), exist_ok=True)
                     d2l._hw_write(os.path.join(tmp, f'proc{i}',
                                                f'{entry}.json.gz'), t, {})
+                d2l._hw_write(os.path.join(tmp, f'proc{i}', 'tcp.json.gz'),
+                              self.pingpong(40e-6 * scale, 2e9), {})
             for entry in ('gloo', 'nccl'):
                 d2l._hw_write(os.path.join(tmp, f'{entry}.json.gz'),
                               self.loopback(entry, (2,), 100e-6, 1e9), {})
+            d2l._hw_write(os.path.join(tmp, 'tcp.json.gz'),
+                          self.pingpong(40e-6, 2e9), {})
             d2l.regen_net_finish(tmp)
             t, _ = d2l._hw_read(os.path.join(tmp, 'gloo.json.gz'))
             self.assertEqual(len(t.attrs['proc_us']), 2)
             ab = d2l.fit_collectives(t)
             self.assertFalse(math.isnan(ab.alpha_lo.iloc[0]))
+            t, _ = d2l._hw_read(os.path.join(tmp, 'tcp.json.gz'))
+            x = d2l._fit_tcp(t)
+            self.assertLess(x['alpha_lo'], x['alpha_hi'])
 
 
 if __name__ == '__main__':

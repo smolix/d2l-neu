@@ -12,7 +12,7 @@ list one by one. What, then, is the probability of a single one of them?
 Think of a dart thrown at a round board so carelessly that it is equally
 likely to land anywhere on the board, and suppose it comes to rest at half the
 radius from the center. Asked how likely that was, we would round the
-distance—say, to between $0.45$ and $0.55$ radii—which happens about one time
+distance (say, to between $0.45$ and $0.55$ radii), which happens about one time
 in ten. Asking for one more digit of precision makes the probability ten times
 smaller, and another digit makes it ten times smaller again. With infinitely
 many digits, the probability is zero, and yet the dart clearly landed
@@ -591,7 +591,7 @@ ten times the mean gives an immediate rule of thumb: at most a tenth of any
 non-negative population can exceed ten times its average, whether we are
 looking at incomes, file sizes, or gradient norms.
 
-![The picture behind Markov's inequality. For $x\ge0$ the step function $t\,\mathbf{1}\{x\geq t\}$ (orange) lies under the line $y=x$ (blue), so its average $t\,P(X\geq t)$ cannot exceed $\mathbb{E}[X]$. The shaded gap is what the bound gives away.](../img/mdl-prob-markov-step.svg)
+![Geometry of Markov's inequality. For $x\ge0$ the step function $t\,\mathbf{1}\{x\geq t\}$ (orange) lies under the line $y=x$ (blue), so its average $t\,P(X\geq t)$ cannot exceed $\mathbb{E}[X]$. The shaded gap is what the bound gives away.](../img/mdl-prob-markov-step.svg)
 :label:`fig_mdl-prob-markov-step`
 
 Because Markov's inequality uses only the mean, it is necessarily crude.
@@ -1245,7 +1245,7 @@ Test your intuition on three foundational calculations from this section:
 
 1. $F(x) = \int_1^x t^{-2}\,dt = 1 - 1/x$ for $x \ge 1$. Solving $1 - 1/x = U$ gives sampler **$X = 1/(1 - U)$** (median $= 2$). Its mean $\int_1^\infty x(1/x^2)\,dx = [\log x]_1^\infty = \boldsymbol{\infty}$ (clipping at $c$ gives finite mean $1 + \log c$).
 2. $\mathrm{Var}(3X - 7) = 3^2 \mathrm{Var}(X) = \mathbf{18}$ (shift drops out, scale squares). By Chebyshev, $P(|X - \mu_X| \ge 4\sigma_X) \le 1/4^2 = \mathbf{1/16 = 6.25\%}$.
-3. Since $\mathbb{E}[X^2] = 1$ and $Y^2$ has the same distribution as $\min(0, X)^2$ with $Y \cdot \min(0, X) = 0$, we get $2\mathbb{E}[Y^2] = 1 \implies \boldsymbol{\mathbb{E}[Y^2] = 1/2}$. He initialization multiplies weight variance by $2$ to restore unit activation second moment across layers!
+3. Since $\mathbb{E}[X^2] = 1$ and $Y^2$ has the same distribution as $\min(0, X)^2$ with $Y \cdot \min(0, X) = 0$, we get $2\mathbb{E}[Y^2] = 1 \implies \boldsymbol{\mathbb{E}[Y^2] = 1/2}$. He initialization multiplies weight variance by $2$ to restore unit activation second moment across layers.
 :::
 :::
 

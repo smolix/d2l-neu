@@ -218,7 +218,7 @@ $$
 where $\log p(x\mid\boldsymbol{\theta})$ pulls straight out of the expectation
 because it does not depend on $z$. Rearranging gives
 :eqref:`eq_mdl-elbo-gap`. By Gibbs' inequality
-:eqref:`eq_mdl-exp_family_gibbs`, the KL divergence is always nonnegative and
+(:numref:`subsec_mdl-max-entropy-derivation`), the KL divergence is always nonnegative and
 vanishes if and only if its two arguments match. $\blacksquare$
 
 Let us check this identity on our concrete example $x = 0.5$ from the previous
@@ -455,7 +455,7 @@ an exact posterior to keep its monotonicity guarantee.
        $I_{\textrm{obs}}=-\frac{d^2}{d\pi^2}\sum_i\log p(x_i\mid\pi)$ at
        $\hat\pi$, and the complete-data information
        $I_{\textrm{com}}=n/(\hat\pi(1-\hat\pi))$ that the labels would carry
-       if they were observed (compare :eqref:`eq_mdl-coin-fisher`). Show
+       if they were observed (compare :numref:`sec_mdl-maximum_likelihood`). Show
        that
 
        $$M'(\hat\pi)=1-\frac{I_{\textrm{obs}}}{I_{\textrm{com}}}.$$

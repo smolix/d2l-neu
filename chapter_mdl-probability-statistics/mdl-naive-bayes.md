@@ -3,8 +3,8 @@
 
 In :numref:`sec_softmax_concise`, we trained softmax regression on
 Fashion-MNIST by running gradient descent directly on the probability of the
-label given the image. That fit produced 7,850 parameters—one weight for
-each pixel and class, plus ten offsets—achieved about 83% accuracy, and
+label given the image. That fit produced 7,850 parameters (one weight for
+each pixel and class, plus ten offsets), achieved about 83% accuracy, and
 passed the calibration check of :numref:`sec_classification`. Yet gradient descent is not the only way to
 build a classifier. We can instead describe how each class generates its
 images, capturing what a typical coat or sandal looks like, and let Bayes'
@@ -13,7 +13,7 @@ alternative work, and what do we give up by choosing it?
 
 The immediate obstacle is scale. Describing how coats look means assigning a
 probability to every possible picture. Even if we simplify each pixel to a
-single bit—inked or blank—there are far more possible $28\times28$
+single bit (inked or blank), there are far more possible $28\times28$
 pictures than atoms in the observable universe, while we have only 60,000
 training images. The *naive Bayes* classifier sidesteps this obstacle with a
 single bold assumption: once the class is known, the features tell us
@@ -99,8 +99,8 @@ classifier its name.
 ### The Generative Route
 
 A classifier assigns a label $y\in\{1,\ldots,K\}$ to an input $\mathbf x$.
-If we knew the true posterior $p(y\mid\mathbf x)$—the probability of each
-label given the input—then the decision rule that is right most often
+If we knew the true posterior $p(y\mid\mathbf x)$ (the probability of each
+label given the input), then the decision rule that is right most often
 simply picks the most probable label,
 
 $$\hat y=\operatorname*{argmax}_y\,p(y\mid\mathbf x).$$
@@ -125,8 +125,8 @@ numerators by their sum restores $p(\mathbf x)$ and recovers the full
 posterior.
 
 This splits classification into two broad families. A *generative
-classifier* models how the inputs of each class arise—the class-conditional
-distribution $p(\mathbf x\mid y)$ together with the prior $p(y)$—and then
+classifier* models how the inputs of each class arise, combining the class-conditional
+distribution $p(\mathbf x\mid y)$ with the prior $p(y)$, and then
 applies Bayes' rule. A *discriminative classifier* models $p(y\mid\mathbf x)$
 directly and never describes how the inputs themselves are generated;
 softmax regression (:numref:`sec_softmax`) is the prototypical example.
@@ -197,8 +197,8 @@ fails on Fashion-MNIST, and what that failure does to the classifier.
 Before scaling up to 784 pixels, let us work through the smallest possible
 example by hand. Consider an email filter that inspects only two binary
 features: whether a message contains the word "free" and whether it contains
-"meeting". Suppose our training set has ten messages—4 spam and 6
-ordinary—with the following counts:
+"meeting". Suppose our training set has ten messages (4 spam and 6
+ordinary) with the following counts:
 
 | | spam (4 emails) | ordinary (6 emails) |
 |---|---|---|
@@ -683,7 +683,7 @@ differences is much sharper than comparing two separate confidence intervals
 
 Overall accuracy tells us how often the classifier errs; the confusion
 matrix of :numref:`sec_classification` tells us *how* it errs. Following the
-convention of :eqref:`eq_confusion-matrix`, rows correspond to predicted
+convention of :numref:`sec_softmax_scratch`, rows correspond to predicted
 classes and columns to true classes, so each column traces where the 1,000
 test images of a given garment end up.
 
@@ -896,7 +896,7 @@ turns a 60-nat gap into a reported confidence of $1.000$. That naive Bayes
 still ranks the classes usefully despite extreme overconfidence is a classic
 property of the model :cite:`Domingos.Pazzani.1997`. Even so, the ranking is
 not completely unscathed: correlated patches vary in size, so a broad region
-of redundant pixels can easily outvote a smaller region carrying genuinely
+of redundant pixels can easily outvote a smaller region carrying
 independent information. This imbalance is a plausible explanation for the
 twelve percentage points lost to softmax regression, which can down-weight
 pixels that merely echo their neighbors, though our experiment alone does
@@ -1282,7 +1282,7 @@ Under conditional independence, the training set log-likelihood decouples into a
 
 $$\log P(\mathcal{D} \mid \boldsymbol{\theta}) = \sum_{y=1}^K n_y \log p(y) + \sum_{y=1}^K \sum_{i=1}^d \Bigl[n_{iy}\log\theta_{iy} + (n_y - n_{iy})\log(1 - \theta_{iy})\Bigr]$$
 
-- **Zero-count pathology of the raw MLE ($\hat{\theta}_{iy} = n_{iy}/n_y$):** Whenever $n_{iy} = 0$ (such as `"meeting"` in our $4$ training spam emails), $\hat{\theta}_{iy} = 0$ and any future test example with $x_i = 1$ receives a Bayes numerator of $0$ for class $y$—one feature vetoes the entire class!
+- **Zero-count pathology of the raw MLE ($\hat{\theta}_{iy} = n_{iy}/n_y$):** Whenever $n_{iy} = 0$ (such as `"meeting"` in our $4$ training spam emails), $\hat{\theta}_{iy} = 0$ and any future test example with $x_i = 1$ receives a Bayes numerator of $0$ for class $y$, so one feature vetoes the entire class.
 - **Laplace smoothing (Beta posterior mean):** Appending one imaginary positive example and one imaginary negative example yields the posterior mean under a uniform $\mathrm{Beta}(1,1)$ prior:
   $$\hat{\theta}_{iy} = \frac{n_{iy} + 1}{n_y + 2} \in (0, 1)$$
   With smoothing, an email containing both `"free"` and `"meeting"` receives spam probability $0.32$ instead of $0$.
@@ -1366,7 +1366,7 @@ We can measure the failure of conditional independence both globally (by countin
 
 @!mdl-naive-bayes-checking-the-assumption
 
-- **Nearly one feature recorded twice:** Each hem pixel is inked in $55\%$ of pullovers. Independence predicts both are inked together in $0.55^2 = 30\%$ of pullovers, whereas in the real data both are inked together in **$54\%$** of pullovers!
+- **Nearly one feature recorded twice:** Each hem pixel is inked in $55\%$ of pullovers. Independence predicts both are inked together in $0.55^2 = 30\%$ of pullovers, whereas in the real data both are inked together in **$54\%$** of pullovers.
 :::
 
 ::: {.slide title="Vectorized Inference and Bootstrap Error Bars"}
@@ -1399,7 +1399,7 @@ Extracting the six largest off-diagonal entries of the $10 \times 10$ confusion 
 @!mdl-naive-bayes-confusions-and-weights-1
 
 - **Two major confusion clusters:** The four long-sleeved/upper-body garments (coat, pullover, shirt, t-shirt) and the three footwear classes (sandal, sneaker, ankle boot) account for the vast majority of mistakes, with shirts recognized only **$17\%$** of the time.
-- **Distinct silhouettes remain easy:** Classes with unique spatial footprints—such as trousers ($91\%$) and sneakers ($89\%$)—are separated cleanly even by independent pixel counts.
+- **Distinct silhouettes remain easy:** Classes with unique spatial footprints, such as trousers ($91\%$) and sneakers ($89\%$), are separated cleanly even by independent pixel counts.
 :::
 
 ::: {.slide title="Visualizing the Log-Odds Discriminant Weights"}
@@ -1408,7 +1408,7 @@ Extracting the six largest off-diagonal entries of the $10 \times 10$ confusion 
 ::: {.cols .vc}
 ::: {.col}
 - **Linear log-odds difference ($\mathbf{w}_{\text{pullover}} - \mathbf{w}_{\text{coat}}$):** When pixel $i$ is inked ($x_i = 1$) rather than blank ($x_i = 0$), it shifts the log-odds between pullover and coat by $w_{i,\text{pullover}} - w_{i,\text{coat}}$ nats.
-- **Why the blue torso ($-1$ nat) does not vote for coat when inked:** Torso pixels are inked in $\approx 99.0\%$ of pullovers and $\approx 99.6\%$ of coats, so seeing an inked torso pixel shifts the log-ratio by $\log\frac{0.990}{0.996} \approx -0.006$ nats. The $-1$ nat weight comes from $-\log\frac{1-0.990}{1-0.996}$: it is the penalty when a torso pixel is left *blank*!
+- **Why the blue torso ($-1$ nat) does not vote for coat when inked:** Torso pixels are inked in $\approx 99.0\%$ of pullovers and $\approx 99.6\%$ of coats, so seeing an inked torso pixel shifts the log-ratio by $\log\frac{0.990}{0.996} \approx -0.006$ nats. The $-1$ nat weight comes from $-\log\frac{1-0.990}{1-0.996}$: it is the penalty when a torso pixel is left *blank*.
 - **Decisions happen along the red sides:** Outer sleeve and shoulder pixels drive the actual separation on inked garments.
 :::
 
@@ -1437,7 +1437,7 @@ Exponentiating and normalizing the class scores recovers the model's posterior p
 ::: {.col}
 $$\log\frac{p_{\mathrm{NB}}(y=1 \mid \mathbf{x})}{p_{\mathrm{NB}}(y=0 \mid \mathbf{x})} = \log\frac{\pi_1}{\pi_0} + k\log r(x)$$
 
-- **Duplication multiplies log-odds by $k$:** When a clue with likelihood ratio $r = 4$ ($80\%$ true accuracy) is copied $k = 5$ times, naive Bayes reports odds $4^5 = 1024$ ($99.9\%$ confidence!).
+- **Duplication multiplies log-odds by $k$:** When a clue with likelihood ratio $r = 4$ ($80\%$ true accuracy) is copied $k = 5$ times, naive Bayes reports odds $4^5 = 1024$ ($99.9\%$ confidence).
 - **Repair:** Temperature scaling $s_y(\mathbf{x})/T$ with $T = k$ restores calibrated log-odds without altering class rankings under equal priors.
 :::
 
@@ -1455,7 +1455,7 @@ Two operational adjustments repair naive Bayes probabilities at test time withou
 - **1. Temperature Scaling ($p_T(y \mid \mathbf{x}) = \operatorname{softmax}\bigl(s_y(\mathbf{x})/T\bigr)$):** Dividing every class score by a single scalar temperature $T > 1$ (fitted by minimizing NLL on a held-out validation split) shrinks the $60$-nat score gaps back to calibrated log-odds without changing $\operatorname{argmax}_y s_y(\mathbf{x})$. For $k$ duplicated features under equal priors, setting $T = k$ recovers the exact posterior.
 - **2. Zero-Retraining Label-Shift Adaptation:** If the deployment class prior $p_T(y)$ differs from the training prior $p_S(y)$ while $p(\mathbf{x} \mid y)$ remains fixed (*label shift*), a generative classifier updates its offset in one line:
   $$s_y^{\mathrm{target}}(\mathbf{x}) = s_y^{\mathrm{source}}(\mathbf{x}) + \log\frac{p_T(y)}{p_S(y)}$$
-  (Note that temperature scaling must be applied *before* adding the prior shift so the $60$-nat feature sum does not drown out a $2.2$-nat prior shift!)
+  (Note that temperature scaling must be applied *before* adding the prior shift so the $60$-nat feature sum does not drown out a $2.2$-nat prior shift.)
 :::
 
 ::: {.slide title="Where Generative Classifiers Win: Missing Features"}
@@ -1520,7 +1520,7 @@ $$p(\mathbf{x}_{\mathcal{V}} \mid y) = \Biggl[\prod_{i \in \mathcal{V}} p(x_i \m
 **Answers:**
 
 1. Bernoulli naive Bayes produces an affine log-odds score $(\mathbf{w}_1 - \mathbf{w}_0)^\top \mathbf{x} + (b_1 - b_0)$, whose decision boundary is a single straight hyperplane, whereas XOR is not linearly separable (and in fact each marginal frequency $\hat{\theta}_{iy} = 1/2$, making every weight $w_{iy} = \log 1 = 0$).
-2. The true posterior odds are $\frac{1}{5} \times 4 = \frac{4}{5} < 1$, predicting **class $0$** ($p(y=1\mid x=1) = 4/9 \approx 44\%$). Naive Bayes computes odds $\frac{1}{5} \times 4^3 = \frac{64}{5} = 12.8 > 1$, flipping the prediction to **class $1$** with $92.8\%$ claimed confidence!
+2. The true posterior odds are $\frac{1}{5} \times 4 = \frac{4}{5} < 1$, predicting **class $0$** ($p(y=1\mid x=1) = 4/9 \approx 44\%$). Naive Bayes computes odds $\frac{1}{5} \times 4^3 = \frac{64}{5} = 12.8 > 1$, flipping the prediction to **class $1$** with $92.8\%$ claimed confidence.
 3. Because $b_y = \log p(y) + \sum_{j=1}^d \log(1 - \theta_{jy})$ already includes $\log(1 - \theta_{iy})$ for every pixel, setting $x_i = 0$ scores pixel $i$ as **observed blank background** ($p(x_i=0\mid y) = 1-\theta_{iy}$) rather than dropping pixel $i$'s factor ($1$).
 :::
 :::

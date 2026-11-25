@@ -114,7 +114,7 @@ drawn independently from a large pool on which the classifier's true accuracy
 is $\theta$, the indicators $x_i$ are i.i.d. Bernoulli random variables with
 mean $\theta$. Our estimate is the sample proportion $\hat\theta$ of correct
 answers among the $n$ questions. By linearity of expectation,
-$\mathbb{E}[\hat\theta]=\theta$, and by :eqref:`eq_prob_var_phat`, its variance
+$\mathbb{E}[\hat\theta]=\theta$, and as in :numref:`sec_prob`, its variance
 is $\textrm{Var}(\hat\theta)=\theta(1-\theta)/n$. In other words, the sample
 proportion is centered right on the true accuracy, and its typical error
 shrinks at the rate $1/\sqrt n$. Plugging in $\theta=0.912$ and $n=1{,}000$
@@ -424,8 +424,7 @@ This same bias–variance trade-off governs supervised prediction. At any fixed
 input $x$, the prediction $\hat f(x)$ of a model trained on a random data set
 is an estimator of the true regression function $f^*(x)$. Its expected squared
 error on a fresh label equals the MSE of that estimator plus the irreducible
-variance of the label noise (:eqref:`eq_generalization-bias-variance` in
-:numref:`sec_generalization_basics`). Across many model families, adding
+variance of the label noise (:numref:`sec_generalization_basics`). Across many model families, adding
 flexibility reduces bias while increasing variance, and regularization acts
 much like the shrinkage factor $c$ :cite:`Geman.Bienenstock.Doursat.1992`. Keep
 in mind, though, that test error in modern overparameterized models does not
@@ -450,7 +449,7 @@ $\varepsilon>0$, the probability of missing $\theta$ by more than $\varepsilon$
 shrinks to zero as the sample grows.
 
 The bias–variance decomposition gives us a quick way to check consistency.
-Applying Markov's inequality :eqref:`eq_mdl-markov` to the nonnegative random
+Applying Markov's inequality (:numref:`sec_mdl-random_variables`) to the nonnegative random
 variable $(\hat\theta_n-\theta)^2$ with threshold $\varepsilon^2$ bounds the
 probability of a large error directly by the MSE:
 
@@ -553,8 +552,7 @@ $$
 
 There is nothing mathematically new here: this is just the $\sigma^2/n$
 variance of a sample mean from the law of large numbers, with $g(X_i)$ playing
-the role of $x_i$ (:eqref:`eq_mdl-var_mean` in
-:numref:`sec_mdl-joint-distributions`). What is remarkable is the consequence.
+the role of $x_i$ (:numref:`sec_mdl-joint-distributions`). What is remarkable is the consequence.
 The root-mean-square error shrinks as $\sigma/\sqrt n$. On the face of it, that
 is slow: gaining one extra decimal digit of accuracy requires 100 times as many
 samples. Yet the dimension of $x$ never appears in the exponent, and that
@@ -1591,8 +1589,8 @@ for clustered test sets.
    $N$ evaluations in $d$ dimensions, a second-order grid has error of order
    $N^{-2/d}$ and Monte Carlo of order $N^{-1/2}$. Test this comparison on
    $f(\mathbf x)=\exp(-\|\mathbf x\|^2)$ over $[0,1]^d$, whose integral is
-   $\bigl(\tfrac{\sqrt\pi}{2}\operatorname{erf}(1)\bigr)^d$ by the product
-   rule :eqref:`eq_mdl-fubini-product`.
+   $\bigl(\tfrac{\sqrt\pi}{2}\operatorname{erf}(1)\bigr)^d$ by Fubini's product
+   rule (:numref:`sec_mdl-integral_calculus`).
     1. Implement the midpoint rule on the full grid of $m^d$ cubes and the
        Monte Carlo average :eqref:`eq_mdl-monte-carlo` over $N=m^d$ uniform
        samples. For $d\in\{1,2,4,5,6\}$ and $N$ up to about $10^6$, plot the
@@ -1839,7 +1837,7 @@ Comparing the sample mean $\bar{x}$, the shrunk mean $0.65\,\bar{x}$, and the sa
   $$\mathrm{MSE}(c) = (1 - c)^2\theta^2 + c^2\frac{\sigma^2}{n}$$
 - Setting $\frac{d}{dc}\mathrm{MSE}(c) = 0$ yields the optimal shrinkage:
   $$c^\star = \frac{\theta^2}{\theta^2 + \sigma^2/n} < 1, \quad \mathrm{MSE}(c^\star) = \frac{\theta^2\,\sigma^2/n}{\theta^2 + \sigma^2/n} < \frac{\sigma^2}{n}$$
-- **The catch:** $c^\star$ depends on unknown $\theta$ (at $\theta=1$, $c^\star \approx 0.65$ gives $\mathrm{MSE} = 0.35$; if $\theta=10$, $c=0.65$ gives $\mathrm{MSE} = 12.5 \gg 0.53$). In $d \ge 3$ dimensions, data-driven **James–Stein shrinkage** $\left(1 - \frac{d-2}{\|\mathbf{x}\|^2}\right)\mathbf{x}$ beats $\mathbf{x}$ for *every* $\boldsymbol{\theta}$!
+- **The catch:** $c^\star$ depends on unknown $\theta$ (at $\theta=1$, $c^\star \approx 0.65$ gives $\mathrm{MSE} = 0.35$; if $\theta=10$, $c=0.65$ gives $\mathrm{MSE} = 12.5 \gg 0.53$). In $d \ge 3$ dimensions, data-driven **James–Stein shrinkage** $\left(1 - \frac{d-2}{\|\mathbf{x}\|^2}\right)\mathbf{x}$ beats $\mathbf{x}$ for *every* $\boldsymbol{\theta}$.
 :::
 
 ::: {.col .fig}
@@ -1959,7 +1957,7 @@ Vectorizing $R$ random relabelings of the pooled accuracies and testing $k = 20$
   $$1 - \beta = P(\text{reject } H_0 \mid H_A \text{ true})$$
 - **Two classic $p$-value fallacies to avoid:**
   1. $p$ is $P(\text{data this extreme} \mid H_0)$, **not** $P(H_0 \mid \text{data})$.
-  2. $p > 0.05$ does **not** prove $H_0$ is true—an underpowered test ($k = 5$ seeds) routinely misses real gains!
+  2. $p > 0.05$ does **not** prove $H_0$ is true: an underpowered test ($k = 5$ seeds) routinely misses real gains.
 :::
 
 ::: {.col .fig}
@@ -1988,7 +1986,7 @@ Vectorizing $R$ random relabelings of the pooled accuracies and testing $k = 20$
 - **Sample size for target power $1 - \beta$ ($\alpha = 0.05$, power $0.80$ $\implies$ $z_{0.975} + z_{0.80} = 1.96 + 0.842 = 2.802$):**
   $$n = \frac{(z_{1-\alpha/2} + z_{1-\beta})^2}{\delta^2} \approx \frac{7.85}{\delta^2}$$
   (Doubled to $k \approx \frac{15.7}{\delta^2}$ per group for a two-sample test).
-- At $\delta = 0.8$, $80\%$ power needs $k = 25$ seeds per model ($k = 20$ gives $72\%$ power; $k = 5$ gives only $24\%$!).
+- At $\delta = 0.8$, $80\%$ power needs $k = 25$ seeds per model ($k = 20$ gives $72\%$ power; $k = 5$ gives only $24\%$).
 :::
 
 ::: {.col .fig}
@@ -2004,7 +2002,7 @@ Evaluating Classifier A ($912/1000$) and Classifier B ($921/1000$) on the *same*
 
 @!mdl-statistics-paired-comparisons
 
-- **Massive sample-size savings ($9\times$ fewer labels):** Because $\mathrm{Var}(X_B - X_A) = \mathrm{Var}(X_B) + \mathrm{Var}(X_A) - 2\,\mathrm{Cov}(X_B, X_A)$, positive correlation across shared questions slashes the noise. Detecting $91\%$ vs. $90\%$ accuracy when models disagree on $4\%$ of questions ($\mathrm{Var}(d_i) \approx 0.0399$) requires **$n \approx 3{,}100$ paired questions** vs. **$13{,}500$ unpaired questions per model** ($27{,}000$ total)!
+- **Massive sample-size savings ($9\times$ fewer labels):** Because $\mathrm{Var}(X_B - X_A) = \mathrm{Var}(X_B) + \mathrm{Var}(X_A) - 2\,\mathrm{Cov}(X_B, X_A)$, positive correlation across shared questions slashes the noise. Detecting $91\%$ vs. $90\%$ accuracy when models disagree on $4\%$ of questions ($\mathrm{Var}(d_i) \approx 0.0399$) requires **$n \approx 3{,}100$ paired questions** vs. **$13{,}500$ unpaired questions per model** ($27{,}000$ total).
 :::
 
 ::: {.slide title="Multiple Testing, p-Hacking, and Bonferroni"}
@@ -2065,7 +2063,7 @@ Flipping the probability statement $|\bar{x} - \mu| \le h \iff \mu \in [\bar{x} 
 - A two-sided level-$\alpha$ test of $H_0 : \mu = \mu_0$ fails to reject $H_0$ iff $|\bar{x} - \mu_0| \le 1.96\frac{\sigma}{\sqrt{n}} \iff \mu_0 \in [\bar{x} - h, \bar{x} + h]$.
 - **Universal inversion theorem:** For *any* level-$\alpha$ test of $H_0 : \theta = \theta_0$, collecting all non-rejected parameter values
   $$C_n = \bigl\{\theta_0 : \text{test of } H_0:\theta=\theta_0 \text{ does not reject}\bigr\}$$
-  automatically forms an exact $1 - \alpha$ confidence set!
+  automatically forms an exact $1 - \alpha$ confidence set.
 - **Fixing boundary overflow ($29/30$ correct):** The Wald interval $(0.90, 1.03)$ spills past $1.0$, whereas inverting the exact binomial test keeps $(0.83, 0.999) \subset [0, 1]$.
 :::
 
@@ -2113,11 +2111,11 @@ Flipping the probability statement $|\bar{x} - \mu| \le h \iff \mu \in [\bar{x} 
 :::
 
 ::: {.col}
-- **Failure 1 — Non-smooth extremes ($\hat{\theta} = \max_i x_i$ on $U(0, \theta)$):** Every resample has $\hat{\theta}^* \le \hat{\theta} < \theta$ ($0\%$ CI coverage!) and piles mass at the sample maximum:
+- **Failure 1: Non-smooth extremes ($\hat{\theta} = \max_i x_i$ on $U(0, \theta)$):** Every resample has $\hat{\theta}^* \le \hat{\theta} < \theta$ ($0\%$ CI coverage) and piles mass at the sample maximum:
   $$P(\hat{\theta}^* = \hat{\theta}) = 1 - \left(1 - \frac{1}{n}\right)^n \xrightarrow{n \to \infty} 1 - \frac{1}{e} \approx 0.632$$
-- **Failure 2 — Clustered benchmarks ($G$ passages $\times$ $m$ questions, within-passage correlation $\rho$):**
+- **Failure 2: Clustered benchmarks ($G$ passages $\times$ $m$ questions, within-passage correlation $\rho$):**
   $$\mathrm{Var}(\hat{\theta}) = \frac{\theta(1 - \theta)}{Gm}\bigl(1 + (m - 1)\rho\bigr)$$
-  At $m = 20, \rho = 0.1$, resampling individual questions understates $\mathrm{se}$ by $\sqrt{2.9} \approx \mathbf{1.7\times}$! **Fix:** Cluster-bootstrap whole passages.
+  At $m = 20, \rho = 0.1$, resampling individual questions understates $\mathrm{se}$ by $\sqrt{2.9} \approx \mathbf{1.7\times}$. **Fix:** Cluster-bootstrap whole passages.
 :::
 :::
 :::
@@ -2135,7 +2133,7 @@ Test your understanding on three practical statistical design problems:
 **Answers:**
 
 1. At $\delta = 0.5$, $n \approx 7.85 / 0.25 \approx \mathbf{32}$ observations. Shrinking $\delta$ by $5\times$ to $0.1$ requires $5^2 = 25\times$ more data: $n \approx 7.85 / 0.01 = \mathbf{785}$ observations.
-2. The variance inflation factor is $1 + (m - 1)\rho = 1 + 15(0.2) = 4.0$, so the naive frame-level bootstrap understates the true standard error by **$\sqrt{4.0} = 2.0\times$**!
+2. The variance inflation factor is $1 + (m - 1)\rho = 1 + 15(0.2) = 4.0$, so the naive frame-level bootstrap understates the true standard error by **$\sqrt{4.0} = 2.0\times$**.
 3. Each of the $n$ draws misses $x_i$ with probability $1 - 1/n$, so all $n$ draws miss $x_i$ with probability **$(1 - 1/n)^n \to e^{-1} \approx 36.8\%$** (meaning each resample includes $\approx 63.2\%$ of the unique original points).
 :::
 :::

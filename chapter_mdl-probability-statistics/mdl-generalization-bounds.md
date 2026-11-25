@@ -181,7 +181,7 @@ because whichever candidate we pick is already covered
 The simplest setting is a finite list of candidates fixed in advance, such
 as a pre-specified grid of hyperparameter configurations. For this case the
 main text already stated the result in
-:eqref:`eq_generalization-classification-finite`, and its proof takes only
+:numref:`chap_classification_generalization`, and its proof takes only
 two lines. Hoeffding's inequality bounds the probability that a single fixed
 $f$ deviates by $t$ or more by $2e^{-2nt^2}$. Applying the union bound
 (:numref:`sec_mdl-concentration-generalization`) across all $|\mathcal F|$
@@ -259,7 +259,7 @@ any practitioner can test: how well can the class fit pure noise?
 The two central results of this section live in this part: the uniform
 convergence theorem :eqref:`eq_mdl-rademacher-bound` and the complexity
 bound $Br/\sqrt n$ for norm-bounded linear models,
-:eqref:`eq_mdl-linear-rademacher`. The one genuinely tricky step is the
+:eqref:`eq_mdl-linear-rademacher`. The one subtle step is the
 symmetrization argument in the proof of the first.
 
 ### Correlation with Random Signs
@@ -1040,7 +1040,7 @@ direction. At $p=n$, a tiny $\sigma_{\min}$ is an accident of the forty
 training points: along $\mathbf v_q$, the test features are typically
 thousands of times larger in mean square than the training features. At
 $p=400$, by contrast, a small $\sigma_i$ marks a direction where the
-features are genuinely small for training and test points alike. The final
+features are small for training and test points alike. The final
 two columns of the table confirm this: `ratio_q` (along $\mathbf v_q$) is
 only about $2$, and `ratio` (averaged over all directions) sits just below
 $1$, so the small denominator is cancelled by a small numerator. This is
@@ -1355,7 +1355,7 @@ $$\bigl\lvert\hat{R}_S(\hat{f}) - R(\hat{f})\bigr\rvert \le \sup_{f \in \mathcal
 $$\sup_{f \in \mathcal{F}} \bigl\lvert\hat{R}_S(f) - R(f)\bigr\rvert \le \sqrt{\frac{\log(2\lvert\mathcal{F}\rvert/\delta)}{2n}}$$
 
 - **Logarithmic penalty for search:** Under Hoeffding's exponential tail, searching $\lvert\mathcal{F}\rvert$ fixed models on $n = 10{,}000$ examples widens the $95\%$ band gently from $\pm 1.36\%$ ($1$ model) to $\pm 2.38\%$ ($2{,}000$ models) and $\pm 2.96\%$ ($10^6$ models).
-- **Polynomial tails collapse:** Under Chebyshev's $1/n$ tail, a union bound over $2{,}000$ models gives a vacuous $\pm 100\%$ bound!
+- **Polynomial tails collapse:** Under Chebyshev's $1/n$ tail, a union bound over $2{,}000$ models gives a vacuous $\pm 100\%$ bound.
 :::
 
 ::: {.col .fig}
@@ -1370,7 +1370,7 @@ $$\sup_{f \in \mathcal{F}} \bigl\lvert\hat{R}_S(f) - R(f)\bigr\rvert \le \sqrt{\
 ::: {.cols .vc}
 ::: {.col}
 - **Non-adaptive pool ($\sqrt{\log k / n}$):** Fixing all $k$ candidates *before* seeing holdout scores preserves the logarithmic union bound even for $k = 10^6$.
-- **Adaptive Blum–Hardt attack ($\sqrt{k / n}$):** Inspecting the leaderboard after each query lets an attacker submit $k$ random coin-flip vectors, keep those with error $\le 1/2$, and take their majority vote—driving holdout error to $\frac{1}{2} - \Omega(\sqrt{k/n})$ while true error stays $50\%$!
+- **Adaptive Blum–Hardt attack ($\sqrt{k / n}$):** Inspecting the leaderboard after each query lets an attacker submit $k$ random coin-flip vectors, keep those with error $\le 1/2$, and take their majority vote—driving holdout error to $\frac{1}{2} - \Omega(\sqrt{k/n})$ while true error stays $50\%$.
 :::
 
 ::: {.col .fig .big}
@@ -1502,7 +1502,7 @@ What happens when a model family is overparameterized ($p = 2n = 100$ standard G
 @!mdl-generalization-bounds-rademacher-complexity-in-numbers-1
 
 - **Interpolating noise forces $Br/\sqrt{n} \ge 1$:** Because $\boldsymbol{\Phi}\mathbf{w} = \boldsymbol{\varepsilon}$ achieves correlation $1$ on every sign pattern, any weight ball $\|\mathbf{w}\|_2 \le B$ containing these interpolants has $\widehat{\mathfrak{R}}_S(\mathcal{F}) \ge 1$ and $Br/\sqrt{n} \approx 2.4 > 1$.
-- **The Zhang et al. (2017) random-label puzzle:** Because deep neural networks can fit random labels with zero training error, $2\mathfrak{R}_n(\mathcal{G}) \approx 1$ for the unconstrained architecture class, making uniform convergence bounds over the whole class vacuous—generalization depends on the specific solution the optimizer selects!
+- **The Zhang et al. (2017) random-label puzzle:** Because deep neural networks can fit random labels with zero training error, $2\mathfrak{R}_n(\mathcal{G}) \approx 1$ for the unconstrained architecture class, making uniform convergence bounds over the whole class vacuous: generalization depends on the specific solution the optimizer selects.
 :::
 
 ::: {.slide title="Minimum-Norm Interpolation and the SVD Spectrum"}
@@ -1547,7 +1547,7 @@ Inspecting all nine diagnostics across $p \in \{15, 38, 40, 42, 50, 80, 400\}$ r
 
 - **Training error is blind past $p = 40$:** For every $p \ge 40$, training MSE is floating-point zero ($\sim 10^{-28}$), yet test MSE drops over $100\times$ from $p = 40$ to $400$, tracked by $\sigma_{\min}$ ($0.02 \to 2.8$) and $\|\mathbf{w}\|_2$ ($10$–$30 \to 0.4$).
 - **Target misspecification alone triggers the spike:** Even at $p = 40$, the noise-free `clean` error exceeds the `noise` error because a linear teacher is poorly approximated by $40$ ReLU ridges along $\mathbf{u}_n$.
-- **Well-specified small models still win:** While $p = 400$ beats every smaller ReLU model, ordinary least squares directly on the $15$ raw inputs achieves $\mathrm{MSE} \approx 0.006$—another $10\times$ lower!
+- **Well-specified small models still win:** While $p = 400$ beats every smaller ReLU model, ordinary least squares directly on the $15$ raw inputs achieves $\mathrm{MSE} \approx 0.006$, another $10\times$ lower.
 :::
 
 ::: {.slide title="Bias–Variance Decomposition of Interpolating Fits"}
@@ -1572,8 +1572,8 @@ $$\mathbb{E}_{\boldsymbol{\xi}}\bigl[\mathrm{MSE}_{\mathrm{test}}\bigr] = \frac{
 
 ::: {.cols .vc}
 ::: {.col}
-- **Threshold $p = n = 40$ (catastrophic):** $\mathbf{v}_n$ is an accidental pinch on the $40$ training points ($\sigma_{\min}^2/n \approx 10^{-5}$) while test inputs carry $O(1)$ energy, giving a $\sim 10^4\times$ energy ratio!
-- **Wide limit $p = 400$ (benign overfitting):** Label noise is absorbed into genuinely low-variance directions where test inputs *also* have small projections, keeping the mean energy ratio $\approx 0.9\times$.
+- **Threshold $p = n = 40$ (catastrophic):** $\mathbf{v}_n$ is an accidental pinch on the $40$ training points ($\sigma_{\min}^2/n \approx 10^{-5}$) while test inputs carry $O(1)$ energy, giving a $\sim 10^4\times$ energy ratio.
+- **Wide limit $p = 400$ (benign overfitting):** Label noise is absorbed into low-variance directions where test inputs *also* have small projections, keeping the mean energy ratio $\approx 0.9\times$.
 :::
 
 ::: {.col .fig .big}

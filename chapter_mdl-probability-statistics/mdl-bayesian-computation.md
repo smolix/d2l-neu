@@ -1121,7 +1121,7 @@ posterior without requiring the unknown normalizing constant $p(\mathcal D)$.
 Fortunately, we already derived such an objective in
 :numref:`sec_mdl-latent-em-elbo`, where an approximating distribution $q$ over a
 latent variable gave a lower bound on the log evidence whose gap was a KL
-divergence :eqref:`eq_mdl-elbo-gap`. Treating the parameter vector
+divergence. Treating the parameter vector
 $\boldsymbol\theta$ as the latent variable and the dataset $\mathcal D$ as the
 observation yields the exact same identity:
 
@@ -1808,7 +1808,7 @@ where $\bar{w}_s = \frac{w_s}{\sum_{r=1}^N w_r}$ are the self-normalized weights
 - **Effective sample size (ESS):** When one draw carries nearly all the weight, $N$ weighted samples are worth only one draw. The ESS quantifies this via the normalized weights $\bar{w}_s$:
   $$N_{\mathrm{eff}} = \frac{1}{\sum_{s=1}^N \bar{w}_s^2}$$
 - **Large-sample limit:** As $N \to \infty$, $\frac{N_{\mathrm{eff}}}{N} \to \frac{(\mathbb{E}_q[w])^2}{\mathbb{E}_q[w^2]} = \frac{1}{1 + \chi^2(p \,\|\, q)} \ge \frac{p(\mathcal{D})}{M}$, always beating rejection sampling ($42.0\%$ vs $30.5\%$ on the coin).
-- **The unseen-mass hazard:** Empirical ESS measures weight inequality among observed draws, not whether $q$ covered all modes of $p$!
+- **The unseen-mass hazard:** Empirical ESS measures weight inequality among observed draws, not whether $q$ covered all modes of $p$.
 :::
 
 ::: {.col .fig}
@@ -1853,7 +1853,7 @@ Comparing the broad Gaussian prior ($N = 20{,}000$) against the targeted Laplace
 - **Target $\pi = (1/4, 3/4)$ with swap proposal:** When the proposal always suggests the *other* state, moving $1 \to 2$ is uphill ($\widetilde{p}_2/\widetilde{p}_1 = 3 \implies \alpha = 1$), while moving $2 \to 1$ is downhill ($\alpha = 1/3$).
 - **Stationarity check:** The transition matrix $\mathbf{T} = \begin{pmatrix}0 & 1 \\ 1/3 & 2/3\end{pmatrix}$ preserves $\pi$:
   $$\bigl(\tfrac{1}{4},\, \tfrac{3}{4}\bigr)\begin{pmatrix}0 & 1 \\ 1/3 & 2/3\end{pmatrix} = \bigl(\tfrac{1}{4},\, \tfrac{3}{4}\bigr)$$
-- **Why repeats matter:** The self-loop $T_{22} = 2/3$ records rejected moves from state $2$. Discarding rejections would alternate $2, 1, 2, 1$ and converge to $(1/2, 1/2)$!
+- **Why repeats matter:** The self-loop $T_{22} = 2/3$ records rejected moves from state $2$. Discarding rejections would alternate $2, 1, 2, 1$ and converge to $(1/2, 1/2)$.
 :::
 
 ::: {.col .fig}

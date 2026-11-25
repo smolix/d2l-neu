@@ -11893,6 +11893,190 @@ def qk_clip_(model, stats, tau, alpha=0.5):
                                                      S_kv.numel())
     return factors
 
+def chip_specs():
+    """The accelerator table, one row per chip (indexed by name): memory
+    (GB, TB/s), on-chip SRAM (MB), dense peaks (TFLOP/s) in 16, 8 and 4
+    bits, power (W), scale-up and scale-out bandwidth (GB/s), each row with
+    its source and retrieval date. NaN where the vendor states nothing.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    df = d2l._hw_static('chip-specs').set_index('chip')
+    d2l._check_specs(df)  # sources, dates, and the book's four rows
+    return df
+
+def derive_ratios(df):
+    """Add the design ratios to a chip table: the ridge point (FLOP/byte,
+    dense 16-bit), the sweep time C / beta (ms), the scale-out and
+    scale-up bytes per FLOP, and on-chip SRAM as a fraction of memory.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    out = df.copy()
+    out['ridge16'] = df.p16_tflops / df.mem_bw_tbs  # TFLOP/s over TB/s
+    out['sweep_ms'] = df.mem_gb / df.mem_bw_tbs
+    flops = df.p16_tflops * 1e12
+    out['net_bytes_per_flop'] = df.scaleout_gbs * 1e9 / flops
+    out['scaleup_bytes_per_flop'] = df.scaleup_gbs * 1e9 / flops
+    out['hbm_fraction_sram'] = df.sram_mb / (1000 * df.mem_gb)
+    return out
+
+def sweep_floor(specs, cfg, L, mem_util=0.9):
+    """The decode floor of a model that fills each chip: the largest batch
+    b_max of sequences of L tokens whose weights W and KV cache fit
+    mem_util of memory, the step time (W + b_max L k_KV) / beta that every
+    step at that batch needs (ms), and the per-user token rate it allows.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    mem = d2l.config_memory(cfg, L, 1)
+    W, kv = mem['weights'], mem['kv_cache']  # bytes; KV of one sequence
+    C, beta = specs.mem_gb * 1e9, specs.mem_bw_tbs * 1e12
+    b_max = np.floor((mem_util * C - W) / kv)
+    b_max = b_max.where(b_max >= 1)  # NaN: the weights alone do not fit
+    floor_ms = (W + b_max * kv) / beta * 1e3
+    return pd.DataFrame({'sweep_ms': C / beta * 1e3, 'b_max': b_max,
+                         'floor_ms': floor_ms, 'user_tps_max': 1e3 / floor_ms})
+
+def sram_chips_needed(model_bytes, sram_bytes, eta=0.8):
+    """Chips of sram_bytes each that hold model_bytes when a fraction eta
+    of every chip is usable (the rest holds activations and buffers).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    return math.ceil(model_bytes / (eta * sram_bytes))
+
+def env_fingerprint():
+    """What a measurement ran on: software versions, the GPU model, count,
+    SMs, clocks, power limits and PCIe link, sha1 prefixes of the host name
+    and of `nvidia-smi topo -m`, the git commit (no names, no paths).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    env = d2l._hw_env()
+    env.update(d2l._hw_gpu_limits())
+    topo = d2l.hw_run(['nvidia-smi', 'topo', '-m'], timeout_s=60)
+    env['topo_sha1'] = (None if topo.refused else
+                        hashlib.sha1(topo.stdout.encode()).hexdigest()[:8])
+    return env
+
+class BenchLog:
+    """An append-only JSONL log of microbenchmark records (tool, tier):
+    each record holds the command, its parameters and results, the raw
+    tool output (gzip + base64), the environment, and contended: a foreign
+    compute process on the GPU when the log opened or at the record.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    def __init__(self, path, tool, tier):
+        self.path, self.tool, self.tier = path, tool, tier
+
+    def __enter__(self):
+        os.makedirs(os.path.dirname(self.path) or '.', exist_ok=True)
+        self.env = d2l.env_fingerprint()
+        self.foreign = d2l._hw_contention()[0]
+        self.file = open(self.path, 'a', encoding='utf-8')
+        return self
+
+    def __exit__(self, *exc):
+        self.file.close()
+
+    def record(self, cmd, params, results, raw=''):
+        rec = dict(ts=round(time.time(), 3), tool=self.tool, tier=self.tier,
+                   cmd=cmd, params=params, results=results, env=self.env,
+                   contended=bool(self.foreign or d2l._hw_contention()[0]),
+                   raw=d2l._hw_pack_raw(raw))
+        self.file.write(json.dumps(d2l._hw_encode(rec)) + '\n')
+        self.file.flush()
+        return rec
+
+    @staticmethod
+    def read(path):
+        with open(path, encoding='utf-8') as f:
+            recs = [d2l._hw_decode(json.loads(l)) for l in f if l.strip()]
+        for r in recs:
+            r['raw'] = d2l._hw_unpack_raw(r['raw'])
+        return recs
+
+    def power_trace(self, hz=10):
+        """Samples (power, clocks, temperature, throttle reasons) at hz
+        while the block runs (pynvml, else nvidia-smi)."""
+        return d2l._hw_power_trace(hz)
+
+def hw_copy_bench(nbytes, kind='copy', repeats=20, graph=True):
+    """Bandwidth (GB/s) of streaming nbytes of fp32 on the GPU: 'read'
+    reads them `passes` times in one kernel (passes x nbytes moved), 'copy'
+    copies them once (2 nbytes: read + write). Returns gbs, ms per call
+    (median of repeats) and its MAD.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    x = torch.empty(nbytes // 4, device='cuda').uniform_()
+    if kind == 'read':
+        passes = max(1, 2**28 // nbytes)  # at least 256 MiB per kernel
+        fn, moved = (lambda: d2l.read_passes(x, passes)), passes * nbytes
+    else:
+        y = torch.empty_like(x)
+        fn, moved = (lambda: y.copy_(x)), 2 * nbytes
+    ms, mad = d2l._hw_stats(d2l._hw_time(fn, repeats, graph))
+    return dict(gbs=moved / ms / 1e6, ms=ms, mad=mad)
+
+def hw_bandwidth_ladder(sizes, kinds=('read', 'copy')):
+    """The bandwidth ladder: hw_copy_bench for each kind and working set
+    (bytes), sizes too large for this GPU skipped.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    sizes, kinds = [int(s) for s in sizes], list(kinds)
+    compute = lambda: d2l._hw_frame([
+        dict(bytes=s, kind=k, **hw_copy_bench(s, k)) for k in kinds
+        for s in sizes if d2l._hw_fits(s * (2 if k == 'copy' else 1))])
+    return d2l._hw_result('box-microbench', compute,
+                          dict(sizes=sizes, kinds=kinds), entry='ladder',
+                          live_check=d2l._ladder_live)
+
+def fp8_per_tensor(x):
+    """x in float8 E4M3 with one float32 scale, x ~ scale * x8: the scale
+    maps the largest |x| to the largest E4M3 value (448).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    scale = x.abs().max().float() / torch.finfo(torch.float8_e4m3fn).max
+    return (x / scale).to(torch.float8_e4m3fn), scale
+
+def hw_matmul_op(m, n, k, dtype, device='cuda'):
+    """A zero-argument (m x k) @ (k x n) product in a format: 'fp32',
+    'tf32' (both FP32 storage), 'bf16', 'fp16', or 'fp8' (E4M3 with
+    per-tensor scales through torch._scaled_mm, bf16 output).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    A = torch.randn(m, k, device=device)
+    B = torch.randn(n, k, device=device)  # B.T is (k, n), column-major
+    if dtype == 'fp8':
+        (A8, s_A), (B8, s_B) = fp8_per_tensor(A), fp8_per_tensor(B)
+        return lambda: torch._scaled_mm(A8, B8.T, scale_a=s_A, scale_b=s_B,
+                                        out_dtype=torch.bfloat16)
+    store = {'fp32': torch.float32, 'tf32': torch.float32,
+             'bf16': torch.bfloat16, 'fp16': torch.float16}[dtype]
+    A, Bt = A.to(store), B.to(store).T
+    return lambda: A @ Bt
+
+def hw_matmul_bench(m, n, k, dtype, repeats=20, graph=True):
+    """TFLOP/s of hw_matmul_op (2 m n k FLOPs per product): tflops, ms per
+    product (median of repeats) and its MAD.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    fn = hw_matmul_op(m, n, k, dtype)
+    with d2l._hw_tf32(dtype == 'tf32'):
+        ms, mad = d2l._hw_stats(d2l._hw_time(fn, repeats, graph))
+    return dict(tflops=2 * m * n * k / ms / 1e9, ms=ms, mad=mad)
+
+def hw_dtype_ladder(n, formats):
+    """Measured TFLOP/s of an n x n x n product in each format, with the
+    datasheet figure of the GPU it ran on.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    formats = list(formats)
+    def compute():
+        df = d2l._hw_frame([dict(format=f, **hw_matmul_bench(n, n, n, f))
+                            for f in formats])
+        df.attrs['n'] = n
+        return df
+    return d2l._hw_result('box-microbench', compute,
+                          dict(n=n, formats=formats), entry='dtypes',
+                          live_check=d2l._dtype_live, show=d2l._show_dtypes)
+
 def fit_alpha_beta(sizes, times, weights=None):
     """Fit t = alpha + s / beta to transfer times (seconds) at sizes
     (bytes) by weighted least squares, weights 1 / t^2 by default (each
@@ -23108,6 +23292,7 @@ def show_table(df, digits=None, max_rows=15, headers=None, width=100):
         d = digits.get(c) if isinstance(digits, dict) else digits
         cols[(headers or {}).get(c, c)] = [_hw_fmt(v, d) for v in shown[c]]
     table = pd.DataFrame(cols, index=shown.index)
+    table.index.names = [None] * table.index.nlevels  # no name line
     show_index = not isinstance(df.index, pd.RangeIndex)
     text = table.to_string(index=show_index, justify='right')
     if len(df) > max_rows:
@@ -23117,6 +23302,748 @@ def show_table(df, digits=None, max_rows=15, headers=None, width=100):
         raise ValueError(f'table is {wide} characters wide (> {width}): '
                          'pass shorter headers or fewer columns')
     print(text)
+
+_HW_BOOK_TABLE = {  # tab_gpu_specs of sec_hardware, as printed (strings keep its rounding)
+    'H100 SXM': dict(mem_gb='80', mem_bw_tbs='3.35', p16_tflops='989',
+                     p8_tflops='1979', p4_tflops=None, tdp_w='700',
+                     ridge16='295', link='450'),
+    'B200': dict(mem_gb='180', mem_bw_tbs='8', p16_tflops='2250',
+                 p8_tflops='4500', p4_tflops='9000', tdp_w='1000',
+                 ridge16='281', link='900'),
+    'RTX 4090': dict(mem_gb='24', mem_bw_tbs='1.0', p16_tflops='165',
+                     p8_tflops='330', p4_tflops=None, tdp_w='450',
+                     ridge16='164', link='32'),
+    'RTX 5090': dict(mem_gb='32', mem_bw_tbs='1.8', p16_tflops='210',
+                     p8_tflops='419', p4_tflops='1676', tdp_w='575',
+                     ridge16='117', link='64')}
+
+_HW_SPEC_COLUMNS = (
+    'vendor', 'kind', 'year', 'mem_type', 'mem_gb', 'mem_bw_tbs', 'sram_mb',
+    'p16_tflops', 'p8_tflops', 'p4_tflops', 'tdp_w', 'scaleup_gbs',
+    'scaleup_note', 'scaleup_domain', 'scaleout_gbs', 'sparsity_note',
+    'source_url', 'retrieved', 'notes', 'status', 'tf32_tflops',
+    'fp32_tflops')
+
+def _book_round(x, printed):
+    """x rounded as the book prints `printed` (its number of decimals).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    decimals = len(printed.split('.')[1]) if '.' in printed else 0
+    return round(float(x), decimals) == float(printed)
+
+def _check_specs(df):
+    """Assert the table's contract: the 01_interfaces columns (plus status,
+    tf32_tflops, fp32_tflops), a source and a retrieval date per row, a
+    known kind and status, and the book's four rows reproduced (the ridge
+    to +-1 FLOP/byte, links as half the bidirectional scale-up figure).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    missing = [c for c in _HW_SPEC_COLUMNS if c not in df.columns]
+    assert not missing, f'chip table lacks columns {missing}'
+    assert df.index.name == 'chip' and df.index.is_unique
+    for chip, row in df.iterrows():
+        assert isinstance(row.source_url, str) and row.source_url.startswith(
+            'https://'), f'{chip}: no source_url'
+        assert isinstance(row.retrieved, str) and len(row.retrieved) == 10, (
+            f'{chip}: no retrieval date')
+        assert row.kind in ('gpu', 'tpu', 'asic', 'wafer', 'lpu'), chip
+        assert row.status in ('shipping', 'announced'), chip
+    for chip, book in _HW_BOOK_TABLE.items():
+        row = df.loc[chip]
+        for col in ('mem_gb', 'mem_bw_tbs', 'p16_tflops', 'p8_tflops',
+                    'p4_tflops', 'tdp_w'):
+            if book[col] is None:
+                assert np.isnan(row[col]), f'{chip} {col}: book has none'
+            else:
+                assert _book_round(row[col], book[col]), (
+                    f'{chip} {col}: {row[col]} != book {book[col]}')
+        ridge = row.p16_tflops / row.mem_bw_tbs
+        assert math.fabs(ridge - float(book['ridge16'])) <= 1, f'{chip} ridge'
+        assert _book_round(row.scaleup_gbs / 2, book['link']), f'{chip} link'
+
+d2l.DATA_HUB['lm-hw-chip-specs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-chip-specs-v1.csv',
+    '173e1685760ac66e99376ce195fe667f83a15dcb')
+
+def _hw_time(fn, repeats=20, graph=True, target_ms=2.0, max_inner=100,
+             warmup=3):
+    """Milliseconds per call of fn() on the current GPU, repeats values:
+    warm-up calls, then inner calls per timing (enough for target_ms, at
+    most max_inner), captured in one CUDA graph when graph (no launch
+    cost between them), timed with CUDA events.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    for _ in range(warmup):
+        fn()
+    torch.cuda.synchronize()
+    start = torch.cuda.Event(enable_timing=True)
+    stop = torch.cuda.Event(enable_timing=True)
+    start.record()
+    fn()
+    stop.record()
+    stop.synchronize()
+    inner = int(min(max_inner, max(1, math.ceil(
+        target_ms / max(start.elapsed_time(stop), 1e-4)))))
+    if graph:
+        side = torch.cuda.Stream()
+        side.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(side):
+            fn()
+        torch.cuda.current_stream().wait_stream(side)
+        g = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(g):
+            for _ in range(inner):
+                fn()
+        run = g.replay
+        run()
+    else:
+        def run():
+            for _ in range(inner):
+                fn()
+    times = []
+    for _ in range(repeats):
+        start.record()
+        run()
+        stop.record()
+        stop.synchronize()
+        times.append(start.elapsed_time(stop) / inner)
+    return np.array(times)
+
+def _hw_stats(t):
+    """(median, median absolute deviation) of the times t.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    med = float(np.median(t))
+    return med, float(np.median(np.abs(np.asarray(t) - med)))
+
+@contextlib.contextmanager
+def _hw_tf32(on):
+    """FP32 matrix products on TF32 tensor cores (on) or in full FP32.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    old = torch.backends.cuda.matmul.allow_tf32, torch.get_float32_matmul_precision()
+    torch.backends.cuda.matmul.allow_tf32 = on
+    torch.set_float32_matmul_precision('high' if on else 'highest')
+    try:
+        yield
+    finally:
+        torch.backends.cuda.matmul.allow_tf32 = old[0]
+        torch.set_float32_matmul_precision(old[1])
+
+def _hw_fits(nbytes, fraction=0.5):
+    """True when nbytes fit in fraction of this GPU's memory (the ladders
+    skip larger working sets on a smaller card).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    return nbytes <= fraction * torch.cuda.get_device_properties(0).total_memory
+
+def _hw_frame(rows):
+    """A result table with the GPU it was measured on in its attrs.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    df = pd.DataFrame(rows)
+    p = torch.cuda.get_device_properties(0)
+    df.attrs.update(gpu=_gpu_short(p.name), l2_bytes=int(p.L2_cache_size),
+                    n_sm=int(p.multi_processor_count),
+                    smem_per_sm=int(p.shared_memory_per_multiprocessor))
+    return df
+
+_HW_GPU_FIELDS = ('clocks.max.sm', 'clocks.max.mem', 'power.limit',
+                  'power.default_limit', 'power.min_limit', 'power.max_limit',
+                  'pcie.link.gen.max', 'pcie.link.width.max',
+                  'pcie.link.gen.current', 'pcie.link.width.current')
+
+def _hw_number(s):
+    try:
+        x = float(s)
+    except (TypeError, ValueError):
+        return None
+    return int(x) if x.is_integer() else x
+
+def _hw_gpu_limits():
+    """Limits of the first visible GPU (nvidia-smi, by UUID): clocks, power
+    limits, PCIe link; its SM count and the host's GPU count.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    if not torch.cuda.is_available():
+        return {}
+    uuid = _hw_visible_uuids()[0]
+    rows = _hw_smi('--query-gpu=' + ','.join(_HW_GPU_FIELDS), '-i', uuid)
+    vals = [x.split()[0] if x.split() else x
+            for x in (rows[0] if rows else [None] * len(_HW_GPU_FIELDS))]
+    out = {f.replace('.', '_'): _hw_number(v)
+           for f, v in zip(_HW_GPU_FIELDS, vals)}
+    out['n_sm'] = torch.cuda.get_device_properties(0).multi_processor_count
+    out['n_host'] = len(_hw_smi('--query-gpu=uuid'))
+    out['toolchain'] = (f'triton {triton.__version__}'
+                        if hasattr(triton, '__version__') else None)
+    return out
+
+def _hw_pack_raw(raw):
+    """Raw tool output as gzip + base64 text (contract rule 2).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    import base64
+    data = raw.encode() if isinstance(raw, str) else bytes(raw)
+    return base64.b64encode(gzip.compress(data, mtime=0)).decode('ascii')
+
+def _hw_unpack_raw(text):
+    import base64
+    return gzip.decompress(base64.b64decode(text)).decode()
+
+def _hw_nvml_sampler(hz, samples, stop):
+    """Append NVML samples of the first visible GPU at hz until stop is set
+    (False if pynvml cannot be used).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    try:
+        import pynvml
+        pynvml.nvmlInit()
+    except Exception:
+        return False
+    def run():
+        h = pynvml.nvmlDeviceGetHandleByUUID(_hw_visible_uuids()[0])
+        t0 = time.time()
+        while not stop.is_set():
+            samples.append(dict(
+                t=round(time.time() - t0, 3),
+                power_w=pynvml.nvmlDeviceGetPowerUsage(h) / 1000,
+                sm_mhz=pynvml.nvmlDeviceGetClockInfo(h, pynvml.NVML_CLOCK_SM),
+                mem_mhz=pynvml.nvmlDeviceGetClockInfo(h, pynvml.NVML_CLOCK_MEM),
+                temp_c=pynvml.nvmlDeviceGetTemperature(
+                    h, pynvml.NVML_TEMPERATURE_GPU),
+                throttle=int(
+                    pynvml.nvmlDeviceGetCurrentClocksEventReasons(h))))
+            stop.wait(1 / hz)
+        pynvml.nvmlShutdown()
+    import threading
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    return thread
+
+@contextlib.contextmanager
+def _hw_power_trace(hz=10):
+    """Samples (t, power_w, sm_mhz, mem_mhz, temp_c, throttle) of the first
+    visible GPU at hz during the block: pynvml, else an `nvidia-smi -lms`
+    subprocess, else none (an empty list).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    import threading
+    samples, stop = [], threading.Event()
+    thread = (_hw_nvml_sampler(hz, samples, stop)
+              if torch.cuda.is_available() else False)
+    proc = None
+    if thread is False and torch.cuda.is_available():
+        try:
+            proc = subprocess.Popen(
+                ['nvidia-smi', '-i', _hw_visible_uuids()[0],
+                 '--query-gpu=power.draw,clocks.sm,clocks.mem,'
+                 'temperature.gpu,clocks_event_reasons.active',
+                 '--format=csv,noheader,nounits', f'-lms={int(1000 / hz)}'],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                start_new_session=True)
+        except OSError:
+            proc = None
+    try:
+        yield samples
+    finally:
+        stop.set()
+        if thread:
+            thread.join(timeout=5)
+        if proc is not None:
+            d2l._kill_session(proc)
+            out = proc.communicate()[0]
+            for i, line in enumerate(out.splitlines()):
+                v = [x.strip() for x in line.split(',')]
+                if len(v) == 5:
+                    samples.append(dict(
+                        t=round(i / hz, 3), power_w=_hw_number(v[0]),
+                        sm_mhz=_hw_number(v[1]), mem_mhz=_hw_number(v[2]),
+                        temp_c=_hw_number(v[3]), throttle=int(v[4], 16)
+                        if v[4].startswith('0x') else None))
+
+def _hw_sm_clock_mhz():
+    """The first visible GPU's SM clock now, in MHz (NVML; nvidia-smi).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    try:
+        import pynvml
+        pynvml.nvmlInit()
+        h = pynvml.nvmlDeviceGetHandleByUUID(_hw_visible_uuids()[0])
+        mhz = pynvml.nvmlDeviceGetClockInfo(h, pynvml.NVML_CLOCK_SM)
+        pynvml.nvmlShutdown()
+        return mhz
+    except Exception:
+        rows = _hw_smi('--query-gpu=clocks.sm', '-i', _hw_visible_uuids()[0])
+        return _hw_number(rows[0][0].split()[0]) if rows else None
+
+@triton.jit
+def _l1_read_kernel(x_ptr, out_ptr, iters, WORK: tl.constexpr,
+                    BLOCK: tl.constexpr):
+    pid = tl.program_id(0)
+    offs = tl.arange(0, BLOCK)
+    acc = tl.zeros([BLOCK], dtype=tl.float32)
+    for i in range(iters):
+        acc += tl.load(x_ptr + pid * WORK + (offs + i * BLOCK) % WORK,
+                       cache_modifier='.ca')
+    tl.store(out_ptr + pid * BLOCK + offs, acc)
+
+@triton.jit
+def _chase_kernel(next_ptr, pos_ptr, steps):
+    j = tl.load(pos_ptr)  # continue where the last launch stopped
+    for _ in range(steps):
+        j = tl.load(next_ptr + j)  # each address depends on the last load
+    tl.store(pos_ptr, j)
+
+@triton.jit
+def _read_kernel(x_ptr, out_ptr, n, passes, BLOCK: tl.constexpr):
+    pid, grid = tl.program_id(0), tl.num_programs(0)
+    offs = tl.arange(0, BLOCK)
+    acc = tl.zeros([BLOCK], dtype=tl.float32)
+    for _ in range(passes):
+        for start in range(pid * BLOCK, n, grid * BLOCK):
+            i = start + offs
+            acc += tl.load(x_ptr + i, mask=i < n, other=0.0,
+                           cache_modifier='.cg')  # L2 only, never L1
+    tl.store(out_ptr + pid * BLOCK + offs, acc)
+
+def read_passes(x, passes, block=2048, programs_per_sm=4):
+    """Read the fp32 tensor x passes times in one kernel (loads cached in
+    L2, not L1), so a working set that fits L2 is served from L2 after the
+    first pass and launch cost is paid once; returns the per-program sums.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    n_sm = torch.cuda.get_device_properties(x.device).multi_processor_count
+    grid = (max(1, min(n_sm * programs_per_sm, triton.cdiv(x.numel(), block))),)
+    out = torch.empty(grid[0] * block, device=x.device)
+    _read_kernel[grid](x, out, x.numel(), passes, BLOCK=block, num_warps=8)
+    return out
+
+_HW_L1_BYTES_PER_CLK = 128  # per SM per clock, Ada and Ampere whitepapers
+
+def _smem_compute(programs_per_sm=8, work=2048, block=1024, iters=8192,
+                  repeats=20):
+    x = torch.rand(torch.cuda.get_device_properties(0).multi_processor_count
+                   * programs_per_sm * work, device='cuda')
+    grid = (x.numel() // work,)
+    out = torch.empty(grid[0] * block, device='cuda')
+    fn = lambda: _l1_read_kernel[grid](x, out, iters, WORK=work, BLOCK=block,
+                                       num_warps=4)
+    with d2l._quiet():  # the first call compiles
+        t = _hw_time(fn, repeats, graph=False, max_inner=1)
+    mhz = _hw_sm_clock_mhz()
+    ms, mad = _hw_stats(t)
+    n_sm = torch.cuda.get_device_properties(0).multi_processor_count
+    moved = grid[0] * iters * block * 4
+    return dict(gpu=_gpu_short(torch.cuda.get_device_name(0)), tbs=moved / ms / 1e9,
+                ms=ms, mad=mad, n_sm=n_sm, sm_mhz=mhz,
+                peak_tbs=n_sm * _HW_L1_BYTES_PER_CLK * mhz * 1e6 / 1e12
+                if mhz else math.nan)
+
+def _show_smem(r):
+    if not r:
+        return
+    print(f"L1/shared memory: {_hw_sig(r['tbs'])} TB/s measured; "
+          f"{r['n_sm']} SMs x {_HW_L1_BYTES_PER_CLK} B/clk x "
+          f"{r['sm_mhz'] / 1000:.2f} GHz = {_hw_sig(r['peak_tbs'])} TB/s")
+
+def _smem_live(r, same):
+    live = _smem_compute(repeats=5)
+    return _hw_agreement([('L1', r.get('tbs'), live['tbs'], r.get('mad', 0)
+                           / r.get('ms', 1))], same, 'TB/s')
+
+def hw_smem_bench():
+    """L1/shared-memory read bandwidth of every SM at once (TB/s), with the
+    bound n_SM x 128 B/clk x the SM clock measured during the run.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    return _hw_result('box-microbench', _smem_compute, dict(kernel='l1-read'),
+                      entry='smem', live_check=_smem_live, show=_show_smem,
+                      empty=dict)
+
+def _chase_next(nbytes, line=128, seed=0):
+    """The pointer-chase array over nbytes: one int32 per line bytes, a
+    random cycle through all of them (each entry the next one's index).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    n_lines, stride = nbytes // line, line // 4
+    g = torch.Generator(device='cuda').manual_seed(seed)
+    perm = torch.randperm(n_lines, device='cuda', generator=g)
+    nxt = torch.zeros(nbytes // 4, dtype=torch.int32, device='cuda')
+    nxt[perm * stride] = (torch.roll(perm, -1) * stride).int()
+    return nxt  # index 0 (line 0) is on the cycle: the chase starts there
+
+def _chase_ns(nbytes, steps=16384, repeats=5, warm_lines=2**20):
+    """ns per load of the chase over nbytes: one warm-up walk over the whole
+    cycle (up to warm_lines lines), then timed walks of steps loads, each
+    continuing where the last stopped (a cycle larger than the L2 keeps
+    missing it).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    nxt = _chase_next(nbytes)
+    pos = torch.zeros(1, dtype=torch.int32, device='cuda')
+    with d2l._quiet():  # the first launch compiles
+        _chase_kernel[(1,)](nxt, pos, min(nbytes // 128, warm_lines),
+                            num_warps=1)
+    fn = lambda: _chase_kernel[(1,)](nxt, pos, steps, num_warps=1)
+    t = _hw_time(fn, repeats, graph=False, max_inner=1, warmup=0)
+    ms, mad = _hw_stats(t)
+    return dict(bytes=nbytes, ns_per_load=ms * 1e6 / steps,
+                mad=mad * 1e6 / steps)
+
+def _latency_live(r, same):
+    picks = r.iloc[[0, len(r) // 2, -1]] if len(r) else r
+    pairs = [(f"{_hw_bytes(b)}", ns, _chase_ns(int(b))['ns_per_load'],
+              mad / ns) for b, ns, mad in zip(picks.bytes, picks.ns_per_load,
+                                               picks.mad)]
+    return _hw_agreement(pairs, same, 'ns')
+
+def hw_latency_bench(sizes):
+    """Nanoseconds per dependent load (one thread chasing a random cycle)
+    for working sets of each size in bytes: L1, L2 and DRAM latency.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    sizes = [int(s) for s in sizes]
+    compute = lambda: _hw_frame([_chase_ns(s) for s in sizes if _hw_fits(s)])
+    return _hw_result('box-microbench', compute, dict(sizes=sizes),
+                      entry='latency', live_check=_latency_live)
+
+def _hw_sig(x, digits=2):
+    """x at `digits` significant digits, thousands separated.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    if x is None or not np.isfinite(x):
+        return 'n/a'
+    if x == 0:
+        return '0'
+    mag = math.floor(math.log10(math.fabs(x)))
+    r = round(x, digits - 1 - mag)
+    return f'{r:,.{max(0, digits - 1 - mag)}f}'
+
+def _hw_bytes(n):
+    """4096 -> '4 KiB', 2**30 -> '1 GiB'.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    for unit, size in (('GiB', 2**30), ('MiB', 2**20), ('KiB', 2**10)):
+        if n >= size:
+            return f'{n / size:g} {unit}'
+    return f'{n} B'
+
+def _hw_agreement(points, same, unit, floor=0.1, k=5):
+    """The live line: on the committed run's GPU, the largest relative
+    difference of (label, committed, live, committed relative MAD) points,
+    and 'differs' for any beyond max(k x MAD, floor): series not run back
+    to back with unlocked clocks (rule R4) move by several percent with the
+    card's temperature; on another GPU, the live values.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    if not same:
+        return ', '.join(f'{p[0]} {_hw_sig(p[2])}' for p in points) + f' {unit}'
+    diffs = [(p[0], p[1], p[2], math.fabs(p[2] - p[1]) / p[1]) for p in points]
+    worst = max(d[3] for d in diffs)
+    bad = [d for d, p in zip(diffs, points) if d[3] > max(k * p[3], floor)]
+    text = (f'{len(points)} point{"s" if len(points) > 1 else ""}, largest '
+            f'difference {worst:.0%}')
+    if bad:
+        text += '; differs: ' + ', '.join(
+            f'{d[0]} {_hw_sig(d[2])} vs {_hw_sig(d[1])} {unit}' for d in bad)
+    return text
+
+def _ladder_live(r, same):
+    picks = [s for s in (2**26, 2**30, 2**32) if _hw_fits(s)]
+    reads = r[r.kind == 'read'].set_index('bytes')
+    pts = []
+    for s in picks:
+        if s in reads.index:
+            row = reads.loc[s]
+            pts.append((_hw_bytes(s), row.gbs, d2l.hw_copy_bench(
+                s, 'read', repeats=5)['gbs'], row.mad / row.ms))
+    return _hw_agreement(pts, same, 'GB/s')
+
+def _dtype_live(r, same):
+    rows = r.set_index('format')
+    pts = [(f, rows.loc[f, 'tflops'], d2l.hw_matmul_bench(
+        int(r.attrs.get('n', 8192)), int(r.attrs.get('n', 8192)),
+        int(r.attrs.get('n', 8192)), f, repeats=5)['tflops'],
+        rows.loc[f, 'mad'] / rows.loc[f, 'ms'])
+           for f in ('bf16', 'fp8') if f in rows.index]
+    return _hw_agreement(pts, same, 'TFLOP/s')
+
+_HW_DATASHEET = {'fp32': 'fp32_tflops', 'tf32': 'tf32_tflops',
+                 'bf16': 'p16_tflops', 'fp16': 'p16_tflops',
+                 'fp8': 'p8_tflops'}
+
+def _show_dtypes(r):
+    if r.empty:
+        return
+    specs = d2l.chip_specs()
+    gpu = r.attrs.get('gpu')
+    sheet = [specs.loc[gpu, _HW_DATASHEET[f]] if gpu in specs.index
+             else math.nan for f in r.format]
+    t = pd.DataFrame({'format': r.format,
+                      'TFLOP/s': [_hw_sig(x) for x in r.tflops],
+                      'datasheet': sheet,
+                      'fraction': [f'{m / s:.0%}' if s == s else ''
+                                   for m, s in zip(r.tflops, sheet)]})
+    show_table(t)
+
+def _ladder_plateaus(ladder):
+    """(L2 read, DRAM read, DRAM copy) in GB/s: medians over 4 MiB to half
+    the L2 and over working sets of at least 1 GiB.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    l2 = ladder.attrs.get('l2_bytes', 0)
+    read, copy = ladder[ladder.kind == 'read'], ladder[ladder.kind == 'copy']
+    in_l2 = read[(read.bytes >= 2**22) & (read.bytes <= l2 / 2)]
+    return (float(in_l2.gbs.median()),
+            float(read[read.bytes >= 2**30].gbs.median()),
+            float(copy[copy.bytes >= 2**30].gbs.median()))
+
+def plot_ladder(ladder, specs, reference=None):
+    """Plot read and copy bandwidth against the working set (log2 x, log
+    y) with the datasheet DRAM line (dashed) and the L2 capacity (band),
+    the A100 campaign's series when committed; print the plateaus.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    gpu, l2 = ladder.attrs.get('gpu'), ladder.attrs.get('l2_bytes', 0)
+    X, Y, legend = [], [], []
+    logs = [(gpu, ladder)]
+    if reference:
+        logs.append((reference['ladder'].attrs.get('gpu'),
+                     reference['ladder']))
+    for name, df in logs:
+        for kind, label in (('read', 'read'), ('copy', 'copy (read + write)')):
+            part = df[df.kind == kind]
+            X.append(part.bytes.to_numpy())
+            Y.append(part.gbs.to_numpy())
+            legend.append(f'{name}: {label}' if len(logs) > 1 else label)
+    d2l.plot(X, Y, 'working set (bytes)', 'bandwidth (GB/s)', legend=legend,
+             xscale='log', yscale='log', figsize=(4.5, 3))
+    ax = d2l.plt.gca()
+    ax.set_xscale('log', base=2)
+    if gpu in specs.index:
+        ax.axhline(specs.loc[gpu, 'mem_bw_tbs'] * 1000, color='k', ls='--',
+                   lw=1)
+    if l2:
+        ax.axvspan(l2 / 2, l2, color='0.9', zorder=0)
+    l2_gbs, dram, copy = _ladder_plateaus(ladder)
+    sheet = specs.loc[gpu, 'mem_bw_tbs'] * 1000 if gpu in specs.index else math.nan
+    print(f'L2 read (4 MiB to {l2 / 2**21:g} MiB): {_hw_sig(l2_gbs)} GB/s, '
+          f'{l2_gbs / dram:.1f}x the DRAM read')
+    print(f'DRAM read (1-4 GiB): {_hw_sig(dram)} GB/s, '
+          f'{dram / sheet:.0%} of the datasheet {sheet:,.0f} GB/s')
+    print(f'DRAM copy (1-4 GiB, read + write counted): {_hw_sig(copy)} GB/s')
+    status = hw_status_line(reference) if reference is not None else ''
+    if status:
+        print(status.replace('not run yet', 'pending'))
+
+def plot_latency(lat):
+    """Nanoseconds per dependent load against the working set (log2 x, log
+    y), with the L1/shared size per SM and the L2 capacity marked.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    d2l.plot(lat.bytes.to_numpy(), lat.ns_per_load.to_numpy(),
+             'working set (bytes)', 'latency (ns per load)', xscale='log',
+             yscale='log', figsize=(4.5, 3))
+    ax = d2l.plt.gca()
+    ax.set_xscale('log', base=2)
+    for size, label in ((lat.attrs.get('smem_per_sm'), 'shared/L1 per SM'),
+                        (lat.attrs.get('l2_bytes'), 'L2')):
+        if size:
+            ax.axvline(size, color='k', ls=':', lw=1)
+            ax.text(size, ax.get_ylim()[1], f' {label}', va='top',
+                    fontsize=9)
+
+def _place_labels(ax, points, names, radii, fontsize=7):
+    """Annotate each point with its name at the first of eight offsets
+    (outside its marker of the given radius, in points) whose text box
+    overlaps no earlier label and no other point.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    fig = ax.figure
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    marks = [ax.transData.transform(p) for p in points]
+    placed = []
+    unit = [(1, 0.5), (1, -1.4), (-1, 0.5), (-1, -1.4), (0, 1.2),
+            (0, -2.2), (1.4, -0.5), (-1.4, -0.5)]
+    for (x, y), name, own, r in zip(points, names, marks, radii):
+        offsets = [(dx * (r + 3), dy * (r + 3)) for dx, dy in unit]
+        for dx, dy in offsets:
+            text = ax.annotate(name, (x, y), xytext=(dx, dy),
+                               textcoords='offset points', fontsize=fontsize,
+                               ha='left' if dx >= 0 else 'right')
+            box = text.get_window_extent(renderer).expanded(1.05, 1.1)
+            hit = any(box.overlaps(b) for b in placed) or any(
+                box.contains(*m) for m in marks if m is not own)
+            if not hit:
+                break
+            text.remove()
+        else:
+            text = ax.annotate(name, (x, y), xytext=offsets[0],
+                               textcoords='offset points', fontsize=fontsize)
+            box = text.get_window_extent(renderer)
+        placed.append(box)
+
+def plot_chip_plane(ratios):
+    """The design plane: ridge point (FLOP/byte, dense 16-bit) against
+    sweep time C / beta (ms), marker area by memory capacity, colour by
+    kind; chips without a dense 16-bit figure (or without a bandwidth) sit
+    in the strip below, on a log axis of their own.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    fig = d2l.plt.figure(figsize=(6.5, 5))
+    ax, strip = fig.subplots(2, 1, gridspec_kw=dict(height_ratios=[5, 1.3]))
+    kinds = sorted(ratios.kind.unique())
+    colour = {k: f'C{i}' for i, k in enumerate(kinds)}
+    area = lambda df: 15 + 1.2 * df.mem_gb.clip(lower=1).to_numpy()
+    full = ratios[ratios.ridge16.notna() & ratios.sweep_ms.notna()]
+    side = ratios[ratios.ridge16.isna() & ratios.sweep_ms.notna()]
+    for kind in kinds:
+        part = full[full.kind == kind]
+        ax.scatter(part.sweep_ms, part.ridge16, s=area(part),
+                   color=colour[kind], alpha=0.6, label=kind, lw=0)
+        part = side[side.kind == kind]
+        strip.scatter(part.sweep_ms, np.zeros(len(part)), s=area(part),
+                      color=colour[kind], alpha=0.6, lw=0)
+    ax.set_xlabel('sweep time C / beta (ms)')
+    ax.set_ylabel('ridge point (FLOP/byte)')
+    ax.margins(0.12)
+    handles = [d2l.plt.Line2D([], [], ls='', marker='o', alpha=0.6,
+                              color=colour[k], label=k) for k in kinds]
+    ax.legend(handles=handles, fontsize=8, loc='upper left',
+              bbox_to_anchor=(1.01, 1), title='marker area:\nmemory',
+              title_fontsize=8, frameon=False)
+    ax.text(0.02, 0.97, 'more FLOP per byte: prefill, training',
+            transform=ax.transAxes, va='top', fontsize=8, color='k')
+    ax.text(0.02, 0.03, 'shorter sweep: decode', transform=ax.transAxes,
+            va='bottom', fontsize=8, color='k')
+    strip.set_xscale('log')
+    strip.set_yticks([])
+    strip.set_ylim(-1, 1.6)
+    strip.margins(x=0.15)
+    strip.set_xlabel('sweep time (ms), chips without a dense 16-bit figure')
+    fig.tight_layout()
+    radius = lambda df: np.sqrt(area(df) / np.pi)
+    _place_labels(ax, list(zip(full.sweep_ms, full.ridge16)), list(full.index),
+                  radius(full))
+    _place_labels(strip, list(zip(side.sweep_ms, np.zeros(len(side)))),
+                  list(side.index), radius(side))
+    for a in (ax, strip):
+        for spine in a.spines.values():
+            spine.set_color('k')
+
+def show_env(env):
+    """The fingerprint as six labelled lines.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    n_host = env.get('n_host') or env.get('n_gpu')
+    print(f"GPU: {_gpu_short(env.get('gpu'))} ({env.get('n_gpu')} visible, "
+          f"{n_host} on the host)")
+    print(f"SMs per GPU: {env.get('n_sm')}")
+    print(f"max SM clock: {env.get('clocks_max_sm'):,} MHz; memory clock "
+          f"{env.get('clocks_max_mem'):,} MHz")
+    print(f"power limit: {env.get('power_limit'):g} W (settable "
+          f"{env.get('power_min_limit'):g}-{env.get('power_max_limit'):g} W)")
+    print(f"PCIe: Gen {env.get('pcie_link_gen_max')} x"
+          f"{env.get('pcie_link_width_max')} (max); Gen "
+          f"{env.get('pcie_link_gen_current')} x"
+          f"{env.get('pcie_link_width_current')} now")
+    print(f"driver {env.get('driver')}, CUDA {env.get('cuda')}, torch "
+          f"{env.get('torch')}, NCCL {env.get('nccl')}, "
+          f"{env.get('toolchain')}")
+
+_HW_SHEET_ROWS = (  # quantity, datasheet column, (entry, key) of the measurement
+    ('BF16 (TFLOP/s)', 'p16_tflops', ('dtypes', 'bf16')),
+    ('FP16 (TFLOP/s)', 'p16_tflops', ('dtypes', 'fp16')),
+    ('TF32 (TFLOP/s)', 'tf32_tflops', ('dtypes', 'tf32')),
+    ('FP32 (TFLOP/s)', 'fp32_tflops', ('dtypes', 'fp32')),
+    ('FP8 (TFLOP/s)', 'p8_tflops', ('dtypes', 'fp8')),
+    ('DRAM read (GB/s)', 'mem_bw_tbs', ('ladder', 'dram')),
+    ('L2 read (GB/s)', None, ('ladder', 'l2')),
+    ('shared memory (TB/s)', None, ('smem', 'tbs')))
+
+def _hw_measured(entries, entry, key):
+    """One measured number of a {'ladder', 'dtypes', 'smem'} dict.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    r = entries.get(entry)
+    if r is None or len(r) == 0:
+        return math.nan
+    if entry == 'dtypes':
+        rows = r.set_index('format')
+        return float(rows.loc[key, 'tflops']) if key in rows.index else math.nan
+    if entry == 'ladder':
+        l2, dram, _ = _ladder_plateaus(r)
+        return dram if key == 'dram' else l2
+    return float(r.get(key, math.nan))
+
+def datasheet_vs_measured(row, *measured):
+    """Print (and return) datasheet, measured and their fraction for the
+    eight quantities of the chip row: measured is (ladder, dtypes, smem)
+    or one committed campaign log (a dict of those entries); a pending
+    campaign log prints its status and the datasheet column only.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    pending = len(measured) == 1 and isinstance(measured[0], CampaignPending)
+    if len(measured) == 1 and not pending:
+        entries = dict(measured[0])
+    elif len(measured) == 3:
+        entries = dict(zip(('ladder', 'dtypes', 'smem'), measured))
+    else:
+        entries = {}
+    rows = []
+    for quantity, column, (entry, key) in _HW_SHEET_ROWS:
+        sheet = math.nan if column is None else float(row[column])
+        if column == 'mem_bw_tbs':
+            sheet *= 1000
+        if entry == 'smem' and entries.get('smem'):
+            sheet = entries['smem'].get('peak_tbs', math.nan)
+        rows.append((quantity, sheet, _hw_measured(entries, entry, key)))
+    table = pd.DataFrame(rows, columns=['quantity', 'datasheet', 'measured']
+                         ).set_index('quantity')
+    table['fraction'] = table.measured / table.datasheet
+    if pending:
+        print(hw_status_line(measured[0]) + ' (datasheet values only)')
+        show_table(table[['datasheet']])
+    else:
+        show_table(pd.DataFrame({
+            'datasheet': table.datasheet,
+            'measured': [_hw_sig(x) for x in table.measured],
+            'fraction': [f'{f:.0%}' if f == f else '' for f in table.fraction]
+        }, index=table.index))
+    return table
+
+_HW_TIERS = {'box': 'T1', 't1': 'T1', 't2': 'T2'}
+
+def regen_microbench(config='box'):
+    """Driver of box-microbench: 22.1's page calls on the full
+    configuration, each point also recorded in a BenchLog.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    if not torch.cuda.is_available():
+        raise RuntimeError('box-microbench needs a CUDA GPU')
+    folder = _hw_regen_dir('box-microbench')
+    os.makedirs(folder, exist_ok=True)
+    topo = hw_run(['nvidia-smi', 'topo', '-m'], timeout_s=60)
+    with open(os.path.join(folder, 'topo.txt'), 'w') as f:
+        f.write(topo.stdout)
+    with d2l.BenchLog(os.path.join(folder, 'benchlog.jsonl'), 'torch',
+                      _HW_TIERS[config]) as log:
+        with open(os.path.join(folder, 'fingerprint.json'), 'w') as f:
+            json.dump(_hw_encode(log.env), f, indent=1)
+        ladder = d2l.hw_bandwidth_ladder(sizes=2**np.arange(18, 33),
+                                         kinds=('read', 'copy'))
+        dtypes = d2l.hw_dtype_ladder(
+            n=8192, formats=('fp32', 'tf32', 'bf16', 'fp16', 'fp8'))
+        smem = hw_smem_bench()
+        lat = hw_latency_bench(sizes=2**np.arange(12, 31, 2))
+        for cmd, df in (('hw_copy_bench', ladder), ('hw_matmul_bench', dtypes),
+                        ('pointer chase', lat)):
+            for rec in df.to_dict('records'):
+                log.record(cmd, {k: rec[k] for k in ('bytes', 'kind', 'format')
+                                 if k in rec}, rec)
+        log.record('l1 read kernel', {}, smem)
 
 d2l.HW_ARTIFACTS['box-workloads'] = ('lm-hw-buildbox-workloads-v1', 'jsonl')
 d2l.HW_ARTIFACTS['box-moe'] = ('lm-hw-buildbox-moe-v1', 'jsonl')

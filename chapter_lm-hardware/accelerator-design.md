@@ -31,3 +31,440 @@ when the section is written.
 - Code and documentation: Google, [Ironwood](https://cloud.google.com/blog/products/compute/ironwood-tpus-and-new-axion-based-vms-for-your-ai-workloads/) (TPU v7 row); AWS, [Trn3 UltraServers](https://aws.amazon.com/about-aws/whats-new/2025/12/amazon-ec2-trn3-ultraservers/) (Trainium3 row); AMD, [Helios](https://www.amd.com/en/products/rackscale-solutions/helios.html) (MI455X row and the rack); NVIDIA, [Rubin CPX announcement](https://nvidianews.nvidia.com/news/nvidia-unveils-rubin-cpx-a-new-class-of-gpu-designed-for-massive-context-inference) (GDDR prefill part); Groq, [The LPU Explained](https://groq.com/blog/the-groq-lpu-explained) and the [NVIDIA licensing agreement](https://groq.com/newsroom/groq-and-nvidia-enter-non-exclusive-inference-technology-licensing-agreement-to-accelerate-ai-inference-at-global-scale) (SRAM row and its 2025 status); Cerebras, [Inference 3x faster](https://www.cerebras.ai/blog/cerebras-inference-3x-faster) (wafer-scale row); NVIDIA, [Hopper architecture in depth](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/) (register-file and cluster facts used by 5.2).
 - Courses, tutorials and blogs: [Scaling Book: How to Think About GPUs](https://jax-ml.github.io/scaling-book/gpus/) (chip-level view); [Modal GPU Glossary](https://modal.com/gpu-glossary) (vocabulary); [GPU MODE lectures](https://github.com/gpu-mode/lectures) (microbenchmark methodology).
 -->
+
+<!-- Placeholder (prose): opening. Two datasheets, one part with twice the
+FLOP/s and half the bandwidth of the other, and one decode step of Qwen3-8B
+on each; the question of one plane that places any accelerator. -->
+
+```{.python .input #accelerator-design-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #accelerator-design-extras}
+%%tab pytorch
+import hashlib
+import json
+import os
+import time
+import pandas as pd
+```
+
+<!-- Placeholder (prose): the specification table is a data file, one row
+per chip with its source and retrieval date; dense figures only. -->
+
+```{.python .input #accelerator-design-chip-specs}
+%%tab pytorch
+def chip_specs():  #@save
+    """The accelerator table, one row per chip (indexed by name): memory
+    (GB, TB/s), on-chip SRAM (MB), dense peaks (TFLOP/s) in 16, 8 and 4
+    bits, power (W), scale-up and scale-out bandwidth (GB/s), each row with
+    its source and retrieval date. NaN where the vendor states nothing."""
+    df = d2l._hw_static('chip-specs').set_index('chip')
+    d2l._check_specs(df)  # sources, dates, and the book's four rows
+    return df
+```
+
+<!-- Placeholder (prose): three of its rows answer the opening's question
+for an HBM GPU, a GDDR card and an SRAM-only chip. The GDDR prefill part
+(Rubin CPX) publishes no bandwidth yet, so the GDDR row is the RTX 5090. -->
+
+```{.python .input #accelerator-design-three-chips}
+%%tab pytorch
+specs = d2l.chip_specs()
+cfg_8b = d2l.hw_config('Qwen/Qwen3-8B')
+W_8b = d2l.config_memory(cfg_8b, 1, 1)['weights']  # bytes in bf16
+three = specs.loc[['H100 SXM', 'RTX 5090', 'Groq LPU'],
+                  ['mem_type', 'mem_gb', 'mem_bw_tbs']].copy()
+three['sweep_ms'] = three.mem_gb / three.mem_bw_tbs  # GB / (TB/s) = ms
+three['chips_8b'] = np.ceil(W_8b / (three.mem_gb * 1e9)).astype(int)
+print(f'Qwen3-8B weights in bf16: {W_8b / 1e9:.1f} GB')
+d2l.show_table(three, headers={
+    'mem_type': 'memory', 'mem_gb': 'GB', 'mem_bw_tbs': 'TB/s',
+    'sweep_ms': 'sweep (ms)', 'chips_8b': 'chips for Qwen3-8B'})
+```
+
+## A Chip Is a Budget
+:label:`subsec_lm_hw_budget`
+
+<!-- Placeholder (prose): recap of subsec_hw-shoreline (one paragraph); the
+three budgets (area: matrix units, SRAM, memory controllers and PHYs,
+control; power per chip and per rack; perimeter: HBM stacks and SerDes
+lanes; reticle limit about 858 mm^2, chiplets and interposers);
+eq_lm_hw_areabudget; figure fig_lm_hw_chip_budget (generator chip-budget). -->
+
+### HBM, GDDR, LPDDR and SRAM
+:label:`subsec_lm_hw_memmenu`
+
+<!-- Placeholder (prose): table tab_lm_hw_memmenu (HBM, GDDR, LPDDR, DDR5,
+SRAM-only: bandwidth and capacity per device, interface width x rate, cost
+rank, why it exists). An HBM stack has a 1,024-bit interface, so its
+bandwidth is the width times the per-pin rate; the cell checks two
+datasheets against that. -->
+
+```{.python .input #accelerator-design-hbm-stack}
+%%tab pytorch
+stack_bits = 1024  # HBM interface width per stack (JEDEC)
+hbm = {'H100 SXM': (5, 5.2), 'B200': (8, 8.0)}  # stacks, Gb/s per pin
+for chip, (stacks, rate) in hbm.items():
+    per_stack = stack_bits * rate / 8 / 1000  # TB/s
+    print(f'{chip}: {stacks} stacks x {stack_bits:,} bit x {rate} Gb/s / 8 '
+          f'= {stacks * per_stack:.2f} TB/s '
+          f'(datasheet {specs.loc[chip, "mem_bw_tbs"]:.2f} TB/s)')
+```
+
+## Five Numbers and Three Ratios
+:label:`subsec_lm_hw_ratios`
+
+<!-- Placeholder (prose): the five datasheet numbers (peak FLOP/s per
+format, memory bandwidth, capacity, scale-up and scale-out bandwidth) and
+three ratios: the ridge P/beta, the sweep time C/beta (GB over TB/s is
+milliseconds) and network bytes per FLOP; dense figures only; vendors state
+scale-up links as bidirectional aggregates. -->
+
+```{.python .input #accelerator-design-derive-ratios}
+%%tab pytorch
+def derive_ratios(df):  #@save
+    """Add the design ratios to a chip table: the ridge point (FLOP/byte,
+    dense 16-bit), the sweep time C / beta (ms), the scale-out and
+    scale-up bytes per FLOP, and on-chip SRAM as a fraction of memory."""
+    out = df.copy()
+    out['ridge16'] = df.p16_tflops / df.mem_bw_tbs  # TFLOP/s over TB/s
+    out['sweep_ms'] = df.mem_gb / df.mem_bw_tbs
+    flops = df.p16_tflops * 1e12
+    out['net_bytes_per_flop'] = df.scaleout_gbs * 1e9 / flops
+    out['scaleup_bytes_per_flop'] = df.scaleup_gbs * 1e9 / flops
+    out['hbm_fraction_sram'] = df.sram_mb / (1000 * df.mem_gb)
+    return out
+```
+
+### The Design Plane
+:label:`subsec_lm_hw_plane`
+
+<!-- Placeholder (prose): how to read the plane: up is compute-rich for its
+bandwidth (prefill, training), left is fast to sweep (decode); marker area is
+capacity; chips without a published dense 16-bit figure sit in the strip
+below. One sentence per corner; 22.3 develops them. -->
+
+```{.python .input #accelerator-design-ratios-plane}
+%%tab pytorch
+ratios = d2l.derive_ratios(specs)
+d2l.plot_chip_plane(ratios)
+```
+
+<!-- Placeholder (prose): the ordering in the plane is a datasheet fact, not
+a measurement (claim C4). -->
+
+### The Sweep-Time Floor
+:label:`subsec_lm_hw_sweep_floor`
+
+<!-- Placeholder (prose): derivation D2 and eq_lm_hw_sweep_floor: if
+W + b L k_KV = C, every decode step reads at least C bytes, so
+t_step >= C / beta for any batch, and tensor parallelism over c chips scales
+C and beta alike. The A100 PCIe 40 GB: 40 GB / 1.555 TB/s = 25.7 ms, at most
+39 tokens per second per user. -->
+
+```{.python .input #accelerator-design-sweep-floor-def}
+%%tab pytorch
+def sweep_floor(specs, cfg, L, mem_util=0.9):  #@save
+    """The decode floor of a model that fills each chip: the largest batch
+    b_max of sequences of L tokens whose weights W and KV cache fit
+    mem_util of memory, the step time (W + b_max L k_KV) / beta that every
+    step at that batch needs (ms), and the per-user token rate it allows."""
+    mem = d2l.config_memory(cfg, L, 1)
+    W, kv = mem['weights'], mem['kv_cache']  # bytes; KV of one sequence
+    C, beta = specs.mem_gb * 1e9, specs.mem_bw_tbs * 1e12
+    b_max = np.floor((mem_util * C - W) / kv)
+    b_max = b_max.where(b_max >= 1)  # NaN: the weights alone do not fit
+    floor_ms = (W + b_max * kv) / beta * 1e3
+    return pd.DataFrame({'sweep_ms': C / beta * 1e3, 'b_max': b_max,
+                         'floor_ms': floor_ms, 'user_tps_max': 1e3 / floor_ms})
+```
+
+```{.python .input #accelerator-design-sweep-floor}
+%%tab pytorch
+L = 8192  # tokens per sequence
+floor = d2l.sweep_floor(specs, cfg_8b, L).dropna()
+d2l.show_table(floor.sort_values('floor_ms'), max_rows=len(floor),
+               digits={'b_max': 0}, headers={
+    'sweep_ms': 'sweep (ms)', 'b_max': 'b_max', 'floor_ms': 'floor (ms)',
+    'user_tps_max': 'tokens/s per user'})
+```
+
+<!-- Placeholder (prose): D3 in two sentences: an SRAM-only chip of
+capacity S_c holds a model on N_c = ceil(bytes / (eta S_c)) chips, and
+chip-seconds per token are N_c times the stage time; the dollar side is
+22.8. -->
+
+```{.python .input #accelerator-design-sram-chips-def}
+%%tab pytorch
+def sram_chips_needed(model_bytes, sram_bytes, eta=0.8):  #@save
+    """Chips of sram_bytes each that hold model_bytes when a fraction eta
+    of every chip is usable (the rest holds activations and buffers)."""
+    return math.ceil(model_bytes / (eta * sram_bytes))
+```
+
+```{.python .input #accelerator-design-sram-chips}
+%%tab pytorch
+eta = 0.8  # usable fraction of each chip's SRAM
+W_70b = d2l.config_memory(d2l.HW_SHAPES['dense-70b'], 1, 1)['weights']
+for chip in ('Groq LPU', 'Cerebras WSE-3'):
+    S_c = specs.loc[chip, 'mem_gb'] * 1e9
+    for model, W in (('Qwen3-8B', W_8b), ('dense 70B', W_70b)):
+        N_c = d2l.sram_chips_needed(W, S_c, eta)
+        print(f'{model} ({W / 1e9:.0f} GB) on {chip} ({S_c / 1e9:g} GB '
+              f'each, eta {eta}): {N_c} chip{"s" if N_c > 1 else ""}')
+```
+
+## Measuring One Chip
+:label:`subsec_lm_hw_measure`
+
+<!-- Placeholder (prose): the microbenchmark contract in one paragraph
+(command, log, statistics: median and MAD of at least 5 timed repeats after
+warm-up, the headline the median of three processes' medians; parser, plot
+with the datasheet line, the twin on the A100); the numbers below are the
+committed regeneration, and each cell's last line is a short live check of
+this run. First, the box as the measured object. -->
+
+```{.python .input #accelerator-design-fingerprint-def}
+%%tab pytorch
+def env_fingerprint():  #@save
+    """What a measurement ran on: software versions, the GPU model, count,
+    SMs, clocks, power limits and PCIe link, sha1 prefixes of the host name
+    and of `nvidia-smi topo -m`, the git commit (no names, no paths)."""
+    env = d2l._hw_env()
+    env.update(d2l._hw_gpu_limits())
+    topo = d2l.hw_run(['nvidia-smi', 'topo', '-m'], timeout_s=60)
+    env['topo_sha1'] = (None if topo.refused else
+                        hashlib.sha1(topo.stdout.encode()).hexdigest()[:8])
+    return env
+```
+
+```{.python .input #accelerator-design-fingerprint}
+%%tab pytorch
+env = d2l.env_fingerprint()
+d2l.show_env(env)
+```
+
+<!-- Placeholder (prose): every measured point goes into a log of records
+(command, parameters, results, raw output, environment, whether another
+user's process shared the card); 22.8 samples power through the same log. -->
+
+```{.python .input #accelerator-design-benchlog}
+%%tab pytorch
+class BenchLog:  #@save
+    """An append-only JSONL log of microbenchmark records (tool, tier):
+    each record holds the command, its parameters and results, the raw
+    tool output (gzip + base64), the environment, and contended: a foreign
+    compute process on the GPU when the log opened or at the record."""
+    def __init__(self, path, tool, tier):
+        self.path, self.tool, self.tier = path, tool, tier
+
+    def __enter__(self):
+        os.makedirs(os.path.dirname(self.path) or '.', exist_ok=True)
+        self.env = d2l.env_fingerprint()
+        self.foreign = d2l._hw_contention()[0]
+        self.file = open(self.path, 'a', encoding='utf-8')
+        return self
+
+    def __exit__(self, *exc):
+        self.file.close()
+
+    def record(self, cmd, params, results, raw=''):
+        rec = dict(ts=round(time.time(), 3), tool=self.tool, tier=self.tier,
+                   cmd=cmd, params=params, results=results, env=self.env,
+                   contended=bool(self.foreign or d2l._hw_contention()[0]),
+                   raw=d2l._hw_pack_raw(raw))
+        self.file.write(json.dumps(d2l._hw_encode(rec)) + '\n')
+        self.file.flush()
+        return rec
+
+    @staticmethod
+    def read(path):
+        with open(path, encoding='utf-8') as f:
+            recs = [d2l._hw_decode(json.loads(l)) for l in f if l.strip()]
+        for r in recs:
+            r['raw'] = d2l._hw_unpack_raw(r['raw'])
+        return recs
+
+    def power_trace(self, hz=10):
+        """Samples (power, clocks, temperature, throttle reasons) at hz
+        while the block runs (pynvml, else nvidia-smi)."""
+        return d2l._hw_power_trace(hz)
+```
+
+### The Bandwidth Ladder
+
+<!-- Placeholder (prose): two kernels, a read and a copy (read plus write
+counted). A kernel launch costs about 5 microseconds, the time L2 needs for
+20 MB, so the read kernel streams a small working set many times (loads
+cached in L2, not L1) and the copy is replayed in one CUDA graph; a working
+set that fits the 72 MB L2 is served from L2 after its first pass, a larger
+one from DRAM. -->
+
+```{.python .input #accelerator-design-copy-bench}
+%%tab pytorch
+def hw_copy_bench(nbytes, kind='copy', repeats=20, graph=True):  #@save
+    """Bandwidth (GB/s) of streaming nbytes of fp32 on the GPU: 'read'
+    reads them `passes` times in one kernel (passes x nbytes moved), 'copy'
+    copies them once (2 nbytes: read + write). Returns gbs, ms per call
+    (median of repeats) and its MAD."""
+    x = torch.empty(nbytes // 4, device='cuda').uniform_()
+    if kind == 'read':
+        passes = max(1, 2**28 // nbytes)  # at least 256 MiB per kernel
+        fn, moved = (lambda: d2l.read_passes(x, passes)), passes * nbytes
+    else:
+        y = torch.empty_like(x)
+        fn, moved = (lambda: y.copy_(x)), 2 * nbytes
+    ms, mad = d2l._hw_stats(d2l._hw_time(fn, repeats, graph))
+    return dict(gbs=moved / ms / 1e6, ms=ms, mad=mad)
+```
+
+```{.python .input #accelerator-design-bandwidth-ladder}
+%%tab pytorch
+def hw_bandwidth_ladder(sizes, kinds=('read', 'copy')):  #@save
+    """The bandwidth ladder: hw_copy_bench for each kind and working set
+    (bytes), sizes too large for this GPU skipped."""
+    sizes, kinds = [int(s) for s in sizes], list(kinds)
+    compute = lambda: d2l._hw_frame([
+        dict(bytes=s, kind=k, **hw_copy_bench(s, k)) for k in kinds
+        for s in sizes if d2l._hw_fits(s * (2 if k == 'copy' else 1))])
+    return d2l._hw_result('box-microbench', compute,
+                          dict(sizes=sizes, kinds=kinds), entry='ladder',
+                          live_check=d2l._ladder_live)
+```
+
+```{.python .input #accelerator-design-ladder}
+%%tab pytorch
+ladder = d2l.hw_bandwidth_ladder(sizes=2**np.arange(18, 33),
+                                 kinds=('read', 'copy'))
+d2l.plot_ladder(ladder, specs,
+                reference=d2l.hw_campaign_log('a100-microbench'))
+```
+
+### The Format Ladder
+
+<!-- Placeholder (prose): one 8192^3 product in each format; FP32 on the
+CUDA cores, TF32 (FP32 storage, a 10-bit-mantissa compute format) and the
+16- and 8-bit formats on the tensor cores; the 4090's BF16 and FP8 figures
+are the FP32-accumulate rates, half the FP16-accumulate figure on the vendor
+page. FP8 needs a scale per tensor so that the largest entry lands near the
+largest E4M3 value, 448. -->
+
+```{.python .input #accelerator-design-matmul-bench}
+%%tab pytorch
+def fp8_per_tensor(x):  #@save
+    """x in float8 E4M3 with one float32 scale, x ~ scale * x8: the scale
+    maps the largest |x| to the largest E4M3 value (448)."""
+    scale = x.abs().max().float() / torch.finfo(torch.float8_e4m3fn).max
+    return (x / scale).to(torch.float8_e4m3fn), scale
+
+def hw_matmul_op(m, n, k, dtype, device='cuda'):  #@save
+    """A zero-argument (m x k) @ (k x n) product in a format: 'fp32',
+    'tf32' (both FP32 storage), 'bf16', 'fp16', or 'fp8' (E4M3 with
+    per-tensor scales through torch._scaled_mm, bf16 output)."""
+    A = torch.randn(m, k, device=device)
+    B = torch.randn(n, k, device=device)  # B.T is (k, n), column-major
+    if dtype == 'fp8':
+        (A8, s_A), (B8, s_B) = fp8_per_tensor(A), fp8_per_tensor(B)
+        return lambda: torch._scaled_mm(A8, B8.T, scale_a=s_A, scale_b=s_B,
+                                        out_dtype=torch.bfloat16)
+    store = {'fp32': torch.float32, 'tf32': torch.float32,
+             'bf16': torch.bfloat16, 'fp16': torch.float16}[dtype]
+    A, Bt = A.to(store), B.to(store).T
+    return lambda: A @ Bt
+
+def hw_matmul_bench(m, n, k, dtype, repeats=20, graph=True):  #@save
+    """TFLOP/s of hw_matmul_op (2 m n k FLOPs per product): tflops, ms per
+    product (median of repeats) and its MAD."""
+    fn = hw_matmul_op(m, n, k, dtype)
+    with d2l._hw_tf32(dtype == 'tf32'):
+        ms, mad = d2l._hw_stats(d2l._hw_time(fn, repeats, graph))
+    return dict(tflops=2 * m * n * k / ms / 1e9, ms=ms, mad=mad)
+```
+
+```{.python .input #accelerator-design-dtype-ladder-def}
+%%tab pytorch
+def hw_dtype_ladder(n, formats):  #@save
+    """Measured TFLOP/s of an n x n x n product in each format, with the
+    datasheet figure of the GPU it ran on."""
+    formats = list(formats)
+    def compute():
+        df = d2l._hw_frame([dict(format=f, **hw_matmul_bench(n, n, n, f))
+                            for f in formats])
+        df.attrs['n'] = n
+        return df
+    return d2l._hw_result('box-microbench', compute,
+                          dict(n=n, formats=formats), entry='dtypes',
+                          live_check=d2l._dtype_live, show=d2l._show_dtypes)
+```
+
+```{.python .input #accelerator-design-dtype-ladder}
+%%tab pytorch
+dtypes = d2l.hw_dtype_ladder(n=8192,
+                             formats=('fp32', 'tf32', 'bf16', 'fp16', 'fp8'))
+```
+
+### Shared Memory and Latency
+
+<!-- Placeholder (prose): two Triton kernels (library): every SM re-reads a
+small L1-resident block (on Ada, L1 and shared memory are one 128 KB SRAM per
+SM, 128 bytes per clock), and one thread chases a random cycle of pointers,
+so each load waits for the last: the latency of L1, L2 and DRAM by working
+set. ncu counters need root on this box (an exercise). -->
+
+```{.python .input #accelerator-design-smem-latency}
+%%tab pytorch
+smem = d2l.hw_smem_bench()
+lat = d2l.hw_latency_bench(sizes=2**np.arange(12, 31, 2))
+d2l.plot_latency(lat)
+```
+
+### Datasheet against Measured
+
+<!-- Placeholder (prose): the summary table; claims C1 (DRAM read within 15%
+of 1,008 GB/s), C2 (L2 a multiple of DRAM), C3 (BF16 fraction, FP8 about
+twice BF16); TF32 is a compute format with 32-bit storage; clocks are not
+locked on this box, so gaps between series count only above 5x their MAD. -->
+
+```{.python .input #accelerator-design-datasheet-vs-measured}
+%%tab pytorch
+table = d2l.datasheet_vs_measured(specs.loc['RTX 4090'], ladder, dtypes, smem)
+assert table.loc['DRAM read (GB/s)', 'fraction'] >= 0.85  # claim C1
+assert (table.loc['L2 read (GB/s)', 'measured']
+        >= 2 * table.loc['DRAM read (GB/s)', 'measured'])  # claim C2
+```
+
+### The A100 Twin
+:label:`subsec_lm_hw_a100_twin`
+
+<!-- Placeholder (prose): what the T2 campaign (C-T2, one A100 PCIe 40 GB)
+measures and why it is the part's T2 chip; no FP8 tensor cores. Claim C5
+(the A100 reproduces its datasheet HBM within 15%) is pending: part of the
+A100 campaign. -->
+<!-- campaign: lm-hw-a100-microbench-v1 -->
+
+```{.python .input #accelerator-design-a100-twin}
+%%tab pytorch
+a100 = d2l.datasheet_vs_measured(specs.loc['A100 PCIe 40 GB'],
+                                 d2l.hw_campaign_log('a100-microbench'))
+```
+
+<!-- Placeholder (prose): close: forward to sec_lm_kernels (how a kernel
+turns the budget into FLOP/s) and sec_lm_workload_hardware. -->
+
+## Summary
+
+<!-- Placeholder (prose): 3-6 sentences. -->
+
+## Exercises
+
+<!-- Placeholder (prose): 6-8 exercises per S/spec/22.1.md part 10 (MoE
+sweep floor; Cerebras chips for Qwen3-235B-A22B; half-peak message size of a
+device-to-device copy; bidirectional aggregates; a new chip row; Nsight
+Compute L2 hit rate where counters are allowed). -->

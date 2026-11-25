@@ -426,5 +426,269 @@ class TestTriton(unittest.TestCase):
             self.assertIs(d2l.triton, triton)
 
 
+# ---- 22.1 (accelerator-design): the chip table, ratios, floors, benches ----
+
+SPECS_CSV = os.path.join(REPO, 'tools', 'lm_data', 'hw', 'chip_specs.csv')
+
+
+def committed_specs():
+    return pd.read_csv(SPECS_CSV).set_index('chip')
+
+
+class TestChipSpecs(unittest.TestCase):
+    def test_contract(self):
+        df = committed_specs()
+        d2l._check_specs(df)  # sources, dates, kinds, the book's four rows
+        for col in ('p16_tflops', 'p8_tflops', 'p4_tflops'):
+            self.assertTrue((df[col].dropna() > 0).all())
+        self.assertEqual(df.loc['A100 PCIe 40 GB', 'mem_type'], 'HBM2')
+        self.assertTrue(np.isnan(df.loc['A100 PCIe 40 GB', 'p8_tflops']))
+
+    def test_book_table_regression(self):
+        df = committed_specs()
+        bad = df.copy()
+        bad.loc['B200', 'p16_tflops'] = 4500.0  # a sparse figure
+        with self.assertRaisesRegex(AssertionError, 'B200 p16'):
+            d2l._check_specs(bad)
+        bad = df.copy()
+        bad.loc['RTX 4090', 'source_url'] = np.nan
+        with self.assertRaisesRegex(AssertionError, 'source_url'):
+            d2l._check_specs(bad)
+        self.assertTrue(d2l._book_round(1.008, '1.0'))
+        self.assertTrue(d2l._book_round(989.4, '989'))
+        self.assertFalse(d2l._book_round(3.4, '3.35'))
+
+    def test_registered_sha1(self):
+        """The registered table is the committed CSV."""
+        key, kind = d2l.HW_STATIC['chip-specs']
+        self.assertEqual(kind, 'csv')
+        self.assertIn(key, d2l.DATA_HUB)
+        self.assertEqual(d2l.DATA_HUB[key][1], d2l.hashlib.sha1(
+            read(SPECS_CSV, 'rb')).hexdigest())
+
+    def test_derive_ratios(self):
+        r = d2l.derive_ratios(committed_specs())
+        self.assertAlmostEqual(r.loc['A100 PCIe 40 GB', 'ridge16'], 200.6, 1)
+        self.assertAlmostEqual(r.loc['A100 PCIe 40 GB', 'sweep_ms'], 25.7, 1)
+        self.assertLessEqual(abs(r.loc['RTX 4090', 'ridge16'] - 164), 1)
+        self.assertAlmostEqual(r.loc['RTX 4090', 'sweep_ms'], 23.8, 1)
+        self.assertAlmostEqual(r.loc['A100 SXM 80 GB', 'sweep_ms'], 39.2, 1)
+        self.assertTrue(np.isnan(r.loc['Groq LPU', 'ridge16']))
+
+
+def small_config(L=4, d=256, H=4, H_kv=2, V=1000):
+    return d2l.HWShape(model_type='qwen3', hidden_size=d, num_hidden_layers=L,
+                       num_attention_heads=H, num_key_value_heads=H_kv,
+                       head_dim=d // H, intermediate_size=4 * d,
+                       vocab_size=V, tie_word_embeddings=False,
+                       max_position_embeddings=65536)
+
+
+class TestFloors(unittest.TestCase):
+    def specs(self, c=1):
+        return pd.DataFrame({'mem_gb': [0.4 * c, 0.001],
+                             'mem_bw_tbs': [1.0 * c, 1.0]},
+                            index=['chip', 'tiny'])
+
+    def test_sweep_floor(self):
+        cfg, L = small_config(), 512
+        mem = d2l.config_memory(cfg, L, 1)
+        W, kv = mem['weights'], mem['kv_cache']
+        f = d2l.sweep_floor(self.specs(), cfg, L)
+        self.assertTrue(np.isnan(f.loc['tiny', 'b_max']))  # weights too big
+        b = f.loc['chip', 'b_max']
+        self.assertEqual(b, np.floor((0.9 * 0.4e9 - W) / kv))
+        self.assertLessEqual(W + b * kv, 0.9 * 0.4e9)
+        self.assertAlmostEqual(f.loc['chip', 'sweep_ms'], 0.4, 9)
+        tau = f.loc['chip', 'floor_ms']
+        self.assertLessEqual(tau, 0.9 * 0.4 + 1e-12)
+        self.assertGreater(tau, 0.9 * 0.4 - kv / 1e12 * 1e3)
+        self.assertAlmostEqual(f.loc['chip', 'user_tps_max'], 1e3 / tau)
+        for c in (2, 4, 8):  # tensor parallelism: the floor is the chip's
+            g = d2l.sweep_floor(self.specs(c), cfg, L)
+            self.assertAlmostEqual(g.loc['chip', 'sweep_ms'], 0.4, 9)
+            self.assertLess(math_fabs(g.loc['chip', 'floor_ms'] - 0.36),
+                            kv / (c * 1e12) * 1e3 + 1e-12)
+
+    def test_sram_chips(self):
+        self.assertEqual(d2l.sram_chips_needed(16.4e9, 0.23e9, 0.8), 90)
+        self.assertEqual(d2l.sram_chips_needed(10, 10, 1.0), 1)
+        self.assertEqual(d2l.sram_chips_needed(11, 10, 1.0), 2)
+        W, S = 141.1e9, 44e9
+        prev = None
+        for eta in (0.5, 0.6, 0.7, 0.8, 0.9, 1.0):
+            n = d2l.sram_chips_needed(W, S, eta)
+            self.assertGreaterEqual(n * S * eta, W)
+            if prev is not None:
+                self.assertLessEqual(n, prev)
+            prev = n
+
+
+def math_fabs(x):
+    return float(np.abs(x))
+
+
+class TestBenchHelpers(unittest.TestCase):
+    def test_matmul_flops(self):
+        from torch.utils.flop_counter import FlopCounterMode
+        m, n, k = 24, 40, 56
+        for fmt in ('fp32', 'bf16'):
+            fn = d2l.hw_matmul_op(m, n, k, fmt, device='cpu')
+            with FlopCounterMode(display=False) as counter:
+                out = fn()
+            self.assertEqual(counter.get_total_flops(), 2 * m * n * k)
+            self.assertEqual(tuple(out.shape), (m, n))
+
+    def test_fp8_scale(self):
+        x = torch.randn(64, 64) * 1000
+        x8, s = d2l.fp8_per_tensor(x)
+        self.assertEqual(x8.dtype, torch.float8_e4m3fn)
+        self.assertAlmostEqual(float(x8.float().abs().max()), 448.0, 0)
+        err = (x8.float() * s - x).abs().max() / x.abs().max()
+        self.assertLess(float(err), 0.07)  # E4M3: 3 mantissa bits
+
+    def test_stats_and_formatting(self):
+        med, mad = d2l._hw_stats([1.0, 2.0, 3.0, 10.0])
+        self.assertEqual((med, mad), (2.5, 1.0))
+        self.assertEqual(d2l._hw_sig(927.4), '930')
+        self.assertEqual(d2l._hw_sig(4812.0), '4,800')
+        self.assertEqual(d2l._hw_sig(0.01234), '0.012')
+        self.assertEqual(d2l._hw_bytes(2**30), '1 GiB')
+        self.assertEqual(d2l._hw_bytes(4096), '4 KiB')
+
+    def test_agreement(self):
+        pts = [('64 MiB', 100.0, 108.0, 0.001), ('1 GiB', 100.0, 80.0, 0.01)]
+        line = d2l._hw_agreement(pts, True, 'GB/s')
+        self.assertTrue(line.startswith('2 points, largest difference 20%'))
+        self.assertIn('differs: 1 GiB 80 vs 100 GB/s', line)  # > 10%
+        self.assertNotIn('64 MiB', line)
+        line = d2l._hw_agreement(pts[:1], False, 'GB/s')
+        self.assertEqual(line, '64 MiB 110 GB/s')  # live value, 2 digits
+
+    def test_raw_round_trip(self):
+        text = 'line one\nline two\n' * 50
+        packed = d2l._hw_pack_raw(text)
+        self.assertNotIn('line', packed)
+        self.assertEqual(d2l._hw_unpack_raw(packed), text)
+        self.assertEqual(packed, d2l._hw_pack_raw(text))  # mtime fixed
+
+
+def synthetic_ladder():
+    sizes = [2**k for k in range(18, 33)]
+    rows = [dict(bytes=s, kind='read', gbs=4000.0 if s <= 2**25 else 900.0,
+                 ms=1.0, mad=0.01) for s in sizes]
+    rows += [dict(bytes=s, kind='copy', gbs=3000.0 if s <= 2**25 else 850.0,
+                  ms=1.0, mad=0.01) for s in sizes]
+    df = pd.DataFrame(rows)
+    df.attrs.update(gpu='RTX 4090', l2_bytes=72 * 2**20)
+    return df
+
+
+class TestDisplays(unittest.TestCase):
+    def test_plateaus(self):
+        l2, dram, copy = d2l._ladder_plateaus(synthetic_ladder())
+        self.assertEqual((l2, dram, copy), (4000.0, 900.0, 850.0))
+
+    def test_datasheet_vs_measured(self):
+        specs = committed_specs()
+        dtypes = pd.DataFrame({'format': ['fp32', 'tf32', 'bf16', 'fp16',
+                                          'fp8'],
+                               'tflops': [60.0, 80.0, 150.0, 150.0, 300.0]})
+        smem = dict(tbs=30.0, peak_tbs=45.0)
+        with quiet() as buf:
+            t = d2l.datasheet_vs_measured(specs.loc['RTX 4090'],
+                                          synthetic_ladder(), dtypes, smem)
+        self.assertEqual(len(t), 8)
+        self.assertAlmostEqual(t.loc['DRAM read (GB/s)', 'fraction'],
+                               900 / 1008)
+        self.assertAlmostEqual(t.loc['BF16 (TFLOP/s)', 'fraction'],
+                               150 / 165.2)
+        self.assertAlmostEqual(t.loc['shared memory (TB/s)', 'fraction'],
+                               30 / 45)
+        self.assertTrue(np.isnan(t.loc['L2 read (GB/s)', 'datasheet']))
+        text = buf.getvalue()
+        self.assertLessEqual(len(text.splitlines()), 15)
+        self.assertLessEqual(max(map(len, text.splitlines())), 100)
+        pending = d2l.hw_campaign_log('a100-microbench')
+        with quiet() as buf:
+            t = d2l.datasheet_vs_measured(specs.loc['A100 PCIe 40 GB'],
+                                          pending)
+        self.assertTrue(buf.getvalue().startswith(
+            'A100 PCIe 40 GB: campaign C-T2 not run yet'))
+        self.assertTrue(t.measured.isna().all())
+
+    def test_show_env(self):
+        env = dict(gpu='NVIDIA GeForce RTX 4090', n_gpu=1, n_host=4, n_sm=128,
+                   clocks_max_sm=3120, clocks_max_mem=10501, power_limit=450,
+                   power_min_limit=150, power_max_limit=600,
+                   pcie_link_gen_max=4, pcie_link_width_max=16,
+                   pcie_link_gen_current=1, pcie_link_width_current=16,
+                   driver='595.71.05', cuda='12.8', torch='2.11.0',
+                   nccl='2.28.9', toolchain='triton 3.6.0')
+        with quiet() as buf:
+            d2l.show_env(env)
+        lines = buf.getvalue().splitlines()
+        self.assertEqual(len(lines), 6)
+        self.assertEqual(lines[0], 'GPU: RTX 4090 (1 visible, 4 on the host)')
+        self.assertIn('Gen 4 x16 (max)', lines[4])
+
+    def test_show_table_no_index_name(self):
+        with quiet() as buf:
+            d2l.show_table(pd.DataFrame({'x': [1.5]}, index=pd.Index(
+                ['a'], name='chip')))
+        self.assertEqual(len(buf.getvalue().splitlines()), 2)
+
+    def test_plots(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        d2l.plot_chip_plane(d2l.derive_ratios(committed_specs()))
+        with quiet() as buf:
+            d2l.plot_ladder(synthetic_ladder(), committed_specs(),
+                            reference=d2l.hw_campaign_log('a100-microbench'))
+        lines = buf.getvalue().splitlines()
+        self.assertEqual(len(lines), 4)
+        self.assertIn('4.4x the DRAM read', lines[0])
+        self.assertIn('89% of the datasheet 1,008 GB/s', lines[1])
+        self.assertEqual(lines[3], 'A100 PCIe 40 GB: campaign C-T2 pending')
+        lat = pd.DataFrame({'bytes': [4096, 2**20, 2**30],
+                            'ns_per_load': [30.0, 200.0, 600.0]})
+        lat.attrs.update(l2_bytes=72 * 2**20, smem_per_sm=100 * 2**10)
+        d2l.plot_latency(lat)
+        d2l.plt.close('all')
+
+
+class TestBenchLog(unittest.TestCase):
+    def test_round_trip(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(d2l, 'env_fingerprint',
+                                  return_value=dict(gpu='x')), \
+                mock.patch.object(d2l, '_hw_contention',
+                                  side_effect=[(0, 0), (1, 0)]):
+            path = os.path.join(tmp, 'a', 'log.jsonl')
+            with d2l.BenchLog(path, 'torch', 'T1') as log:
+                log.record('cmd one', dict(n=1), dict(gbs=1.5), raw='out\n')
+            recs = d2l.BenchLog.read(path)
+        self.assertEqual(len(recs), 1)
+        r = recs[0]
+        self.assertEqual((r['tool'], r['tier'], r['cmd']),
+                         ('torch', 'T1', 'cmd one'))
+        self.assertEqual(r['results'], dict(gbs=1.5))
+        self.assertEqual(r['raw'], 'out\n')
+        self.assertTrue(r['contended'])  # foreign process at the record
+        self.assertEqual(r['env'], dict(gpu='x'))
+
+    def test_power_trace_without_gpu(self):
+        with mock.patch.object(torch.cuda, 'is_available', return_value=False):
+            with d2l._hw_power_trace(10) as samples:
+                pass
+        self.assertEqual(samples, [])
+
+    def test_driver_needs_gpu(self):
+        with mock.patch.object(torch.cuda, 'is_available', return_value=False):
+            with self.assertRaisesRegex(RuntimeError, 'CUDA'):
+                d2l.regen_microbench()
+        self.assertEqual(d2l.HW_JOBS['box-microbench'][0], 'regen_microbench')
+
+
 if __name__ == '__main__':
     unittest.main()

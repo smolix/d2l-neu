@@ -799,6 +799,7 @@ def qk_clip_(model, stats, tau, alpha=0.5):
     """Rescale in place the query and key rows of every head whose largest
     logit S exceeds tau: W_q by (tau/S)^alpha, W_k by (tau/S)^(1-alpha); a
     key head shared by a group of query heads uses the group's maximum.
+    Heads at or below tau (a largest logit can be negative) keep factor 1.
     Returns each block's per-head logit factors; {} under QK-norm."""
     import warnings
     raw = d2l._unwrap(model)
@@ -811,8 +812,8 @@ def qk_clip_(model, stats, tau, alpha=0.5):
             attn = raw.blks[l].attention
             S = s.max_logit.to(attn.W_q.weight.device).float()
             S_kv = S.view(attn.num_kv_heads, -1).amax(1)  # per key head
-            f_q = (tau / S).clamp(max=1) ** alpha
-            f_k = (tau / S_kv).clamp(max=1) ** (1 - alpha)
+            f_q = torch.where(S > tau, tau / S, 1.0) ** alpha
+            f_k = torch.where(S_kv > tau, tau / S_kv, 1.0) ** (1 - alpha)
             d_h = attn.head_dim
             attn.W_q.weight.mul_(f_q.repeat_interleave(d_h)[:, None])
             attn.W_k.weight.mul_(f_k.repeat_interleave(d_h)[:, None])

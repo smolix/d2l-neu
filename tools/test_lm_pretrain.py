@@ -375,6 +375,16 @@ class PretrainTest(unittest.TestCase):
         d2l.qk_clip_(m, after, tau * (1 + 1e-4))
         for n, p in m.named_parameters():
             self.assertTrue(torch.equal(p, again[n]), n)
+        # a head whose largest logit is negative is left alone (run A: the
+        # factor (tau/S)^alpha was NaN there and the t1 qk_clip arm at lr
+        # 0.032 turned non-finite at step 18 with every logit below tau)
+        neg = {l: s._replace(max_logit=-s.max_logit.abs())
+               for l, s in after.items()}
+        f = d2l.qk_clip_(m, neg, tau)
+        self.assertTrue(all(torch.equal(v, torch.ones_like(v))
+                            for v in f.values()))
+        for n, p in m.named_parameters():
+            self.assertTrue(torch.equal(p, again[n]), n)
         torch.manual_seed(0)
         qn = d2l.PackedGPT.from_arch(TOY._replace(qk_norm=True))
         with warnings.catch_warnings(record=True) as w:

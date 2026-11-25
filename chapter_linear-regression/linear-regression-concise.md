@@ -6,9 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Concise Implementation of Linear Regression
 :label:`sec_linear_concise`
 
-In :numref:`sec_linear_scratch`, we built every piece of linear regression from raw tensors—parameter allocation, the affine forward pass, the squared loss, reverse-mode differentiation, the minibatch generator, and the SGD update step. In :numref:`sec_oo-design`, we organized those components into reusable object-oriented base classes (`d2l.Module`, `d2l.DataModule`, and `d2l.Trainer`) and verified that `LinearRegressionScratch` trained through `trainer.fit(model, data)` reproduced our exact benchmark results.
+In :numref:`sec_linear_scratch`, we built every piece of linear regression from raw tensors: parameter allocation, the affine forward pass, the squared loss, reverse-mode differentiation, the minibatch generator, and the SGD update step. In :numref:`sec_oo-design`, we organized those components into reusable base classes (`d2l.Module`, `d2l.DataModule`, and `d2l.Trainer`) and verified that `LinearRegressionScratch` trained through `trainer.fit(model, data)` reproduced our benchmark results.
 
-Writing and testing raw parameter tensors and update rules by hand was straightforward for a 3-parameter linear model, but modern architectures like ResNet-50 (:numref:`sec_resnet`) or GPT (:numref:`sec_gpt`) manage tens of millions to billions of parameters across hundreds of layers and train with stateful adaptive optimizers. Deep learning frameworks—PyTorch :cite:`Paszke.Gross.Massa.ea.2019`, JAX :cite:`Frostig.Johnson.Leary.2018` (with Flax and Optax), TensorFlow :cite:`Abadi.Barham.Chen.ea.2016`, and MXNet :cite:`Chen.Li.Li.ea.2015`—therefore provide pre-built, hardware-tuned layers, numerically tested loss primitives, and standard optimizers out of the box. In this section, we see how concisely we can express linear regression by plugging those high-level framework building blocks directly into `d2l.Module` and `d2l.Trainer`.
+Writing and testing raw parameter tensors and update rules by hand was straightforward for a 3-parameter linear model, but modern architectures like ResNet-50 (:numref:`sec_resnet`) or GPT (:numref:`sec_gpt`) manage millions to billions of parameters across dozens of layers and train with stateful adaptive optimizers. Deep learning frameworks—PyTorch :cite:`Paszke.Gross.Massa.ea.2019`, JAX :cite:`Frostig.Johnson.Leary.2018` (with Flax and Optax), TensorFlow :cite:`Abadi.Barham.Chen.ea.2016`, and MXNet :cite:`Chen.Li.Li.ea.2015`—therefore provide hardware-tuned layers, numerically tested loss primitives, and standard optimizers out of the box. In this section, we see how concisely we can express linear regression by plugging those high-level building blocks into `d2l.Module` and `d2l.Trainer`.
 
 ```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab mxnet
@@ -54,7 +54,7 @@ from d2l import jax as d2l
 In our concise implementation, a subclass `LinearRegression(d2l.Module)` wraps a single built-in fully connected layer with one output unit, initializing its weights from $\mathcal{N}(0, 0.01^2)$ and its bias to zero.
 
 :begin_tab:`pytorch`
-PyTorch's `nn.LazyLinear(1)` requires only the output dimension at construction time and infers the number of input features $d$ automatically on the very first forward pass!
+PyTorch's `nn.LazyLinear(1)` requires only the output dimension at construction time and infers the number of input features $d$ automatically on the first forward pass.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -125,22 +125,10 @@ to `self.net(X)`.
 
 ## The Loss Function
 
-Instead of writing $(\hat{y} - y)^2 / 2$ by hand, we delegate `loss` to the framework's built-in mean squared error primitive. The resulting loss omits the cosmetic $\frac{1}{2}$ factor of our scratch loss, so it is twice our scratch value and levels off at $\sigma^2 = 10^{-4}$ rather than $\sigma^2 / 2$:
+Instead of writing $(\hat{y} - y)^2 / 2$ by hand, we delegate `loss` to the framework's built-in mean squared error primitive. Standard mean squared error omits the $\frac{1}{2}$ factor of our scratch loss, so it is twice our scratch value and levels off at $\sigma^2 = 10^{-4}$ rather than $\sigma^2 / 2$.
 
 :begin_tab:`mxnet`
-MXNet's primitive is `gluon.loss.L2Loss`, which includes the $\frac{1}{2}$ factor, so we multiply it by $2$.
-:end_tab:
-
-:begin_tab:`pytorch`
-PyTorch's primitive is `nn.MSELoss`.
-:end_tab:
-
-:begin_tab:`tensorflow`
-TensorFlow's primitive is `tf.keras.losses.MeanSquaredError`.
-:end_tab:
-
-:begin_tab:`jax`
-In JAX, Optax provides `optax.squared_error`.
+MXNet's `gluon.loss.L2Loss` already includes the $\frac{1}{2}$ factor, so we multiply it by $2$ to match standard mean squared error.
 :end_tab:
 
 ```{.python .input #linear-regression-concise-defining-the-loss-function}
@@ -176,23 +164,7 @@ def loss(self, y_hat, y):
 
 ## The Optimizer
 
-Similarly, `configure_optimizers` returns the framework's built-in minibatch SGD optimizer, automatically wired to the module's registered parameters and learning rate `self.lr`:
-
-:begin_tab:`mxnet`
-In MXNet, this is a `gluon.Trainer` with the `'sgd'` optimizer.
-:end_tab:
-
-:begin_tab:`pytorch`
-In PyTorch, this is `torch.optim.SGD`.
-:end_tab:
-
-:begin_tab:`tensorflow`
-In TensorFlow, this is `tf.keras.optimizers.SGD`.
-:end_tab:
-
-:begin_tab:`jax`
-In JAX, this is `optax.sgd`.
-:end_tab:
+Similarly, `configure_optimizers` returns the framework's built-in minibatch SGD optimizer, wired to the module's registered parameters and learning rate `self.lr`:
 
 ```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
 %%tab pytorch
@@ -311,9 +283,7 @@ held-out data.
 
 ## Summary
 
-- **High-level framework layers:** A single built-in dense layer allocates parameters, registers them with the module, and implements the affine forward pass $\mathbf{X}\mathbf{w} + b$.
-- **Loss scaling and learning-rate coupling:** Built-in mean squared error primitives omit the $\frac{1}{2}$ factor used in our scratch loss, doubling both the loss value (noise floor $\sigma^2 = 10^{-4}$) and its gradient; halving the learning rate ($\eta = 0.015$) reproduces the exact same parameter updates.
-- **Drop-in compatibility with `Trainer`:** Because `LinearRegression` implements the `d2l.Module` interface (`loss` and `configure_optimizers`, while inheriting `forward`), `d2l.Trainer` fits it without a single line of change to the training loop.
+Using high-level framework APIs, linear regression reduces to a single dense layer inside a `d2l.Module` subclass that delegates `loss` to built-in mean squared error and `configure_optimizers` to built-in SGD. Because standard mean squared error omits the $\frac{1}{2}$ factor of our scratch objective, both the loss (plateauing at $\sigma^2 = 10^{-4}$) and its gradient double, so halving the learning rate to $\eta = 0.015$ reproduces the parameter updates of our scratch implementation. Because `LinearRegression` satisfies the `d2l.Module` contract, `d2l.Trainer` fits it without a single change to the data pipeline or training loop.
 
 ## Exercises
 
@@ -321,9 +291,9 @@ held-out data.
    layer that has no bias (every framework's dense layer has an argument
    that turns the bias off), and train it as in this section.
     1. Before training, predict the value at which the validation loss
-       levels off, from the expected loss
-       :eqref:`eq_linreg-scratch-expected-loss` doubled for the mean
-       squared error. Then check your prediction.
+       levels off, using the expected squared error formula from
+       :numref:`sec_linear_scratch` (accounting for the factor of $2$ in the
+       mean squared error). Then check your prediction.
     1. Predict what the weights converge to and how far they end from
        $\mathbf{w}^*$. Since the features have mean zero, the missing bias
        acts on the weights like label noise of standard deviation

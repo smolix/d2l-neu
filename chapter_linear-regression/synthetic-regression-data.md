@@ -8,7 +8,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 Real-world datasets are messy, and worse yet, they never come with an answer key: when you train a new algorithm on real housing records and get a weight vector $\hat{\mathbf{w}}$, you have no way of knowing the true data-generating parameters $\mathbf{w}^*$ or the irreducible noise floor. Before unleashing an implementation on real data, a seasoned researcher first tests it on *synthetic data* generated from a known ground-truth model.
 
-On a synthetic dataset, we control the exact feature distribution, the true weights $\mathbf{w}^*$ and bias $b^*$, the sample size $n$, and the noise level $\sigma$. That gives us two priceless debugging superpowers: we can check whether our learned parameters $(\hat{\mathbf{w}}, \hat{b})$ converge to $(\mathbf{w}^*, b^*)$, and we can compare our final training loss against the exact theoretical noise floor $\frac{1}{2}\sigma^2$. In this section, we build the synthetic dataset that will serve as our testbed throughout the next three sections, inspect its scatter plots, and compute the exact least-squares fit as a reference benchmark.
+On a synthetic dataset, we control the feature distribution, the true weights $\mathbf{w}^*$ and bias $b^*$, the sample size $n$, and the noise level $\sigma$. That gives us two direct checks on our code: we can test whether the learned parameters $(\hat{\mathbf{w}}, \hat{b})$ approach $(\mathbf{w}^*, b^*)$, and we can compare the final loss against the theoretical noise floor $\frac{1}{2}\sigma^2$. In this section, we build the synthetic dataset that we use throughout the next three sections, inspect its scatter plots, and compute the least-squares fit as a reference benchmark.
 
 ```{.python .input #synthetic-regression-data}
 %%tab mxnet
@@ -62,7 +62,7 @@ $$\mathbf{w}^* = (2,\, -3.4)^\top, \qquad b^* = 4.2,$$
 and additive Gaussian noise $\epsilon^{(i)} \sim \mathcal{N}(0, \sigma^2)$ with standard deviation $\sigma = 0.01$. Notice that the signal $(\mathbf{X}\mathbf{w}^* + b^*)$ varies on a scale of several units, whereas the noise $\sigma = 0.01$ is hundreds of times smaller—so any healthy optimizer should recover $\mathbf{w}^*$ and $b^*$ to within a few thousandths.
 
 :begin_tab:`jax`
-Because JAX uses explicit functional pseudorandom keys (:numref:`sec_prob`), our data generator takes one extra argument, a `key`, which we draw from the tiny stateful key helper `d2l.get_key`.
+Because JAX uses explicit functional pseudorandom keys (:numref:`sec_ndarray`), our data generator takes one extra argument, a `key`, which we draw from the stateful key helper `d2l.get_key`.
 :end_tab:
 
 ```{.python .input #synthetic-regression-data-generating-the-data-1}
@@ -113,8 +113,8 @@ X, y = synthetic_data(w_star, b_star, noise, 2000, d2l.get_key())
 ```
 
 Each row of `X` stores a two-dimensional feature vector and each row of `y`
-stores its corresponding scalar label. Inspecting the very first example—and
-backing out its noise $\epsilon^{(1)} = y^{(1)} - (\mathbf{w}^{*\top}\mathbf{x}^{(1)} + b^*)$—gives
+stores its corresponding scalar label. Inspecting the first example and
+backing out its noise $\epsilon^{(1)} = y^{(1)} - (\mathbf{w}^{*\top}\mathbf{x}^{(1)} + b^*)$ gives
 us an immediate sanity check.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-3}
@@ -139,7 +139,7 @@ for j, ax in enumerate(axes):
     ax.set_ylabel('$y$' if j == 0 else '')
 ```
 
-Each scatter plot reveals a clear linear trend with the expected sign: $y$ climbs with $x_1$ (slope $+2$) and falls more steeply with $x_2$ (slope $-3.4$). Why does each 2D scatter plot look like a thick band rather than a razor-thin line when $\sigma = 0.01$ is so tiny? Because plotting $y$ against $x_2$ alone ignores each point's variation in $x_1$: the unplotted term $2 x_1$ has standard deviation $2$, which spreads the vertical position of the points across a band several units wide! Viewing marginal 2D projections of a multivariate relationship always folds the other coordinates into apparent vertical scatter.
+Each scatter plot reveals a clear linear trend with the expected sign: $y$ climbs with $x_1$ (slope $+2$) and falls more steeply with $x_2$ (slope $-3.4$). Why does each 2D scatter plot look like a thick band rather than a razor-thin line when $\sigma = 0.01$ is so tiny? Because plotting $y$ against $x_2$ alone ignores each point's variation in $x_1$: the unplotted term $2 x_1$ has standard deviation $2$, which spreads the vertical position of the points across a band several units wide. Viewing marginal 2D projections of a multivariate relationship always folds the unplotted coordinates into apparent vertical scatter.
 
 ## Recovering the Parameters
 :label:`subsec_synthetic-regression-data-recovery`
@@ -188,9 +188,7 @@ Even with `lstsq` solving the empirical loss to machine precision, $(\hat{\mathb
 
 ## Summary
 
-- **Synthetic benchmarks:** Generating data from a known ground-truth model $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ with $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, and $\sigma = 0.01$ lets us verify parameter recovery and loss convergence directly against known truth.
-- **Marginal projections:** Plotting $y$ against a single feature $x_j$ folds the variation of the remaining features into the vertical spread, making a nearly noiseless hyperplane look like a wide band in 2D.
-- **Statistical estimation floor:** On $n$ examples with noise standard deviation $\sigma$, even the exact least-squares solution deviates from $(\mathbf{w}^*, b^*)$ by $O(\sigma / \sqrt{n})$.
+Generating synthetic data from a known linear model $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ with $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, and $\sigma = 0.01$ gives us two quantitative checks that real data lack: an irreducible loss floor of $\frac{1}{2}\sigma^2 = 5 \times 10^{-5}$ and known ground-truth parameters. Plotting $y$ against a single coordinate $x_j$ folds the variation of the unplotted features into the vertical spread, turning a nearly noiseless plane into a wide 2D band. Even an exact least-squares solver deviates from $(\mathbf{w}^*, b^*)$ by statistical estimation error of order $\sigma/\sqrt{n}$ ($\approx 3 \times 10^{-4}$ for $n = 1{,}000$), setting the accuracy target for iterative optimization in the next section.
 
 ## Exercises
 

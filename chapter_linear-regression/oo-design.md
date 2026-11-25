@@ -568,15 +568,9 @@ class ArrayLoader:  #@save
             yield tuple(a[batch_indices] for a in self.arrays)
 ```
 
-:begin_tab:`mxnet`
-Gluon's `DataLoader` assembles minibatches one sample at a time; our `ArrayLoader`
-fetches an entire batch with a single vectorized slice per tensor, which scales
-much better with batch size.
-:end_tab:
-
 :begin_tab:`pytorch`
 `TensorDataset` aligns tensors along their leading example axis, and `DataLoader`
-slices them into minibatches—reshuffling automatically on every pass whenever
+slices them into minibatches, reshuffling automatically on every pass whenever
 `shuffle=True`.
 :end_tab:
 
@@ -586,9 +580,16 @@ buffer (using the full split size for uniform training shuffles and `1` to
 preserve validation order), and `batch` groups them into minibatches.
 :end_tab:
 
-:begin_tab:`jax, mxnet`
+:begin_tab:`jax`
 `get_tensorloader` slices the requested split and wraps the tensors in an
 `ArrayLoader`.
+:end_tab:
+
+:begin_tab:`mxnet`
+`get_tensorloader` slices the requested split and wraps the tensors in an
+`ArrayLoader` (unlike Gluon's `DataLoader`, which assembles minibatches one
+sample at a time, `ArrayLoader` fetches an entire batch with one vectorized slice
+per tensor).
 :end_tab:
 
 ```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
@@ -1058,13 +1059,11 @@ print('error in w:', ', '.join(f'{e:.1e}' for e in w_error))
 print('error in b:', ', '.join(f'{e:.1e}' for e in b_error))
 ```
 
-Both training and validation loss drop smoothly to the $0.00005$ noise floor, and the recovered parameters match $(\mathbf{w}^*, b^*)$ to within about a thousandth—confirming that our object-oriented harness reproduces our standalone scratch loop while freeing every future chapter from boilerplate. In :numref:`sec_linear_concise`, we take the next step and replace our hand-written tensors, squared loss, and `SGD` class with each framework's built-in layers, losses, and optimizers.
+Both training and validation loss drop smoothly to the $0.00005$ noise floor, and the recovered parameters match $(\mathbf{w}^*, b^*)$ to within about a thousandth, confirming that our object-oriented harness reproduces our standalone scratch loop while freeing future chapters from boilerplate. In :numref:`sec_linear_concise`, we take the next step and replace our hand-written tensors, squared loss, and `SGD` class with each framework's built-in layers, losses, and optimizers.
 
 ## Summary
 
-- **Three core abstractions:** The `d2l` library separates modeling (`Module`), data loading (`DataModule`), and optimization loops (`Trainer`), flanked by `@add_to_class`, `HyperParameters`, `Averager`, and `ProgressBoard`.
-- **Exact epoch averages:** `Averager` weights each minibatch's metrics by its example count so partial final minibatches never skew epoch-level losses or accuracies.
-- **Drop-in reuse:** Any model subclassing `Module` (whether built from raw tensors like `LinearRegressionScratch` or framework layers like `LinearRegression` in :numref:`sec_linear_concise`) trains and validates through the exact same `trainer.fit(model, data)` call.
+To keep later chapters focused on modeling rather than repetitive training boilerplate, the `d2l` library separates models (`Module`), datasets (`DataModule`), and optimization loops (`Trainer`), supported by `@add_to_class`, `HyperParameters`, `Averager`, and `ProgressBoard`. `DataModule` returns multi-epoch loaders that reshuffle training examples on every pass without exhausting after one epoch, while `Averager` weights each minibatch metric by its example count so partial final batches never skew epoch-level means. Because `Module` exposes a clean return-value contract (`training_step`, `validation_step`, and `configure_optimizers`), any model—whether built from raw tensors like `LinearRegressionScratch` or from framework layers—trains and validates through the same `trainer.fit(model, data)` call.
 
 ## Exercises
 
@@ -1299,7 +1298,7 @@ for epoch in range(num_epochs):
 ::: {.col}
 @synthetic-regression-data-concise-implementation-of-the-data-loader-2
 
-- **Why a reusable loader beats a bare generator:** A Python `yield` generator exhausts after epoch 1, whereas the framework's data loader creates a fresh reshuffled iterator on every epoch and supports `len(loader)` in $O(1)$ time.
+- **Why a reusable loader beats a bare generator:** A Python `yield` generator exhausts after epoch 1, whereas the loader returned by `get_tensorloader` creates a fresh reshuffled iterator on every epoch and supports `len(loader)` in $O(1)$ time.
 :::
 
 ::: {.col .fig}

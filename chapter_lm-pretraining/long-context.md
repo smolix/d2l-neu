@@ -57,23 +57,24 @@ import pandas as pd
 ```{.python .input #long-context-opening}
 %%tab pytorch
 model = d2l.lc_reference_model()  # trained at L = model.max_len tokens
-tok, L, s, depth = d2l.r2_tokenizer(), model.max_len, 4, 0.25
+tok, L, s, depth = d2l.lc_tokenizer(), model.max_len, 4, 0.25
 control = d2l.make_recall_task(tok, L, depth=0.5, n_items=50)
 k = d2l.score_recall(model, tok, control).sum()
-print(f'control, trained window ({L // 1024}K, {L // 2048}K back): {k} / 50')
-model.set_rope(d2l.rope_inv_freq(64, scheme='pi', s=s, L=L), scheme='pi',
-               scale=s)  # model.max_len is now s * L
+print(f'control, trained window ({L / 1024:g}K, {L / 2048:g}K back): '
+      f'{k} / 50')
+d_head = model.blks[0].attention.head_dim
+model.set_rope(d2l.rope_inv_freq(d_head, scheme='pi', s=s, L=L),
+               scheme='pi', scale=s)  # model.max_len is now s * L
 books = d2l.test_books(32, s * L)
 pos = d2l.nll_by_position(model, books, range(0, s * L + 1, L))
 print('loss by position (nats): ' + ', '.join(
     f'{b} {v:.2f}' for b, v in zip(pos['bucket'], pos['nll'])))
 far = d2l.make_recall_task(tok, s * L, depth=depth, n_items=50)
 k = d2l.score_recall(model, tok, far).sum()
-print(f'recall {(1 - depth) * s * L / 1024:.0f}K back: {k} / 50 '
-      '(chance 1/8)')
+print(f'recall {(1 - depth) * s * L / 1024:g}K back: {k} / 50 (chance 1/8)')
 rising = (pos['lo'].iloc[1:] > pos['hi'].iloc[0]).any()
 above = d2l.wilson_ci(k, 50)[0] > 1 / 8
-print(f'reading: loss {"rising" if rising else "flat"} beyond {L // 1024}K,'
+print(f'reading: loss {"rising" if rising else "flat"} beyond {L / 1024:g}K,'
       f' recall {"above" if above else "at"} chance')
 ```
 
@@ -149,29 +150,32 @@ d2l.plot(torch.arange(d_head // 2), [pi / theta, ntk / theta, ratio],
 
 ### The Cost of Length
 
-<!-- Placeholder (prose): the attention share a(T) of F(T) = 6 N_mm + 12 L H d_h T for the reference model; a progressive schedule (a stage at 8K before 16K) saves compute as well as easing optimization; the learning-rate recipe for extension (a low constant rate, fresh optimizer moments, a short final decay). -->
+<!-- Placeholder (prose): the attention share a(T) of F(T) = 6 N_mm + 12 L H d_h T for the reference model (the dense count of the attention scores; kernels that skip the masked causal half do about half of that work, printed beside it); the ×2.35 of a 16K window holds for windows without document masks (one long document, or unrelated documents attended across); a progressive schedule (a stage at 8K before 16K) saves compute as well as easing optimization; the learning-rate recipe for extension (a low constant rate, fresh optimizer moments, a short final decay). -->
 
 ```{.python .input #long-context-attention-share}
 %%tab pytorch
-arch = d2l.r2_config('r2').arch
-cost = {T: d2l.flops_per_token(arch, T) for T in (4096, 8192, 16_384)}
-share = {T: 1 - d2l.flops_per_token(arch) / c for T, c in cost.items()}
-print('F: ' + ' / '.join(f'{c / 1e9:.2f}' for c in cost.values())
-      + ' GFLOP per token at 4K / 8K / 16K (attention share '
-      + ' / '.join(f'{a:.2f}' for a in share.values()) + ')')
+arch, lengths = d2l.r2_config('r2').arch, (4096, 8192, 16_384)
+F_mm = d2l.flops_per_token(arch)  # the weight matrices, no attention scores
+cost = {T: d2l.flops_per_token(arch, T) for T in lengths}  # dense scores
+half = {T: d2l.flops_per_token(arch, T, causal_half=True) for T in lengths}
+flops = ' / '.join(f'{cost[T] / 1e9:.2f}' for T in lengths)
+share = ' / '.join(f'{1 - F_mm / cost[T]:.2f}' for T in lengths)
+share_half = ' / '.join(f'{1 - F_mm / half[T]:.2f}' for T in lengths)
+print(f'F, dense attention: {flops} GFLOP per token at 4K / 8K / 16K')
+print(f'attention share: {share} (causal half: {share_half})')
 stage, total = 40e6, 100e6  # tokens at 8K, all tokens of the arm
 saving = stage * (cost[8192] - cost[16_384]) / (total * cost[16_384])
 print(f'{stage / 1e6:.0f}M of {total / 1e6:.0f}M tokens at 8K: '
       f"{saving:+.0%} of the arm's compute")
 ratio = d2l.flop_counter_per_token(arch, 16_384) / cost[16_384]
-print(f'FlopCounterMode at 16K: ratio {ratio:.3f}')
-print(f'a 16K window of unrelated documents: ×{cost[16_384] / cost[4096]:.2f}'
-      ' the FLOPs of 4K windows')
+print(f'FlopCounterMode at 16K (dense scores as well): ratio {ratio:.3f}')
+print('16K windows, no document mask: '
+      f'×{cost[16_384] / cost[4096]:.2f} the FLOPs of 4K windows')
 ```
 
 ### Data with Long-Range Dependencies
 
-<!-- Placeholder (prose): books and long papers have dependencies across thousands of tokens; concatenated unrelated documents cost 2.35 times the FLOPs per token and teach no long-range dependence (ProLong's finding, cited, not measured here). The arms mix half long data and half short replay under document masks, so the short-context skills keep being trained; fig_lm_length_schedule shows the two stages, the learning rate and the mixture. -->
+<!-- Placeholder (prose): books and long papers have dependencies across thousands of tokens; concatenated unrelated documents attended across (no document mask) cost 2.35 times the FLOPs per token of 4K windows and teach no long-range dependence (ProLong's finding, cited, not measured here). The arms mix half long data and half short replay under document masks, so the short-context skills keep being trained; fig_lm_length_schedule shows the two stages, the learning rate and the mixture. -->
 
 <!-- Figure (generator): fig_lm_length_schedule, img/mdl-lm-pretraining-length-schedule.svg (tools/gen_mdl_lm_pretraining_figures.py): the context-length staircase (8K at scale 2, then 16K at scale 4) against tokens, the learning rate beneath, and each stage's long/short mixture as a stacked bar. -->
 
@@ -191,18 +195,17 @@ def make_recall_task(tokenizer, length, depth, n_pairs=None, n_candidates=8,
     five-digit values, the queried line at fraction depth of the prompt,
     then the query 'The value of <key> is'; the choices are n_candidates
     distinct values of the haystack, the gold value among them once."""
-    g = torch.Generator().manual_seed(
-        seed * 1_000_003 + length * 1009 + round(1000 * depth))
+    g = d2l.recall_generator(seed, length, depth)
     out = dict(prompts=[], choices=[], gold=[], depth_actual=[])
     for _ in range(n_items):
-        keys, values, lines, start = d2l._recall_haystack(
+        keys, values, lines, start = d2l.recall_haystack(
             tokenizer, length, g, n_pairs, min_lines=n_candidates)
         q = round(depth * (len(lines) - 1))  # the queried line
         others = values[:q] + values[q + 1:]
         picks = torch.randperm(len(others), generator=g)[:n_candidates - 1]
         choices = [f' {values[q]}'] + [f' {others[i]}' for i in picks]
         order = torch.randperm(n_candidates, generator=g).tolist()
-        out['prompts'].append(d2l._RECALL_HEAD + ''.join(lines)
+        out['prompts'].append(d2l.RECALL_HEAD + ''.join(lines)
                               + f'The value of {keys[q]} is')
         out['choices'].append([choices[j] for j in order])
         out['gold'].append(order.index(0))
@@ -297,7 +300,7 @@ print(f'long-context gain: oracle {gain["oracle"]:+.2f} nats, '
 
 ### The Test Data and the Zero-Shot Baseline
 
-<!-- Placeholder (prose): the long half (PG-19 books in file order, then peS2o papers of at least 8,192 tokens; licences), the short replay (a FineWeb-Edu shard the reference run never read) and the 64 held-out PG-19 test books cut to 16,385 tokens. -->
+<!-- Placeholder (prose): the long half (PG-19 books in file order, then peS2o papers of at least 8,192 tokens; licences), the short replay (a FineWeb-Edu shard the reference run never read) and the 64 held-out PG-19 test books cut to 16,385 tokens (the table counts their EOS as well, 16,386). -->
 
 ```{.python .input #long-context-data}
 %%tab pytorch
@@ -315,7 +318,7 @@ SCHEMES = {'none': dict(scheme='none', s=4), 'PI': dict(scheme='pi', s=4),
            'NTK': dict(scheme='ntk', s=4), 'YaRN': dict(scheme='yarn', s=4),
            'YaRN, mscale 1': dict(scheme='yarn', s=4, mscale=1.0)}
 zs = d2l.lc_zeroshot('r2', schemes=SCHEMES, lengths=(4096, 8192, 16_384))
-print(zs.table.round(2).to_string(index=False))
+d2l.show_lc_zeroshot(zs)
 ```
 
 ## The Trained Arms
@@ -349,7 +352,7 @@ for arm, a in ARMS.items():
 lc = d2l.lc_arms(ARMS, base='r2', tokens=TOKENS, seq_len=16_384,
                  batch_tokens=262_144, peak_lr=1e-4, warmup=20,
                  decay_frac=0.15, long_share=0.5)
-print(lc.table.round(3).to_string(index=False))
+d2l.show_lc_table(lc)
 d2l.plot_lc_train(lc.logs)
 ```
 
@@ -357,7 +360,7 @@ d2l.plot_lc_train(lc.logs)
 
 ```{.python .input #long-context-position}
 %%tab pytorch
-d2l.plot_lc_position(lc.position)
+d2l.show_lc_position(lc)
 ```
 
 <!-- Placeholder (prose): recall over the length-by-depth grid (100 items per cell); the effective context is the largest length whose recall, pooled over depths, has a lower 95% bound of at least 0.5 and whose long-context gain at gaps (L/2, L] is positive. Both thresholds are protocol parameters, not another model's. -->
@@ -365,29 +368,15 @@ d2l.plot_lc_position(lc.position)
 ```{.python .input #long-context-recall-grid}
 %%tab pytorch
 THRESHOLD = 0.5  # lower 95% bound of recall (the effective-context rule)
-eff = d2l.effective_context(lc.recall, lc.gain, threshold=THRESHOLD)
-grid = lc.recall.groupby(['model', 'length', 'depth'])['correct'].mean()
-shortest, longest = lc.recall['length'].min(), lc.recall['length'].max()
-print(f'{"model":<10} {"effective":<10} worst depth at {longest // 1024}K')
-for model, length in eff.items():
-    worst = grid[model, longest]
-    reach = f'{length // 1024}K' if length else f'below {shortest // 1024}K'
-    print(f'{model:<10} {reach:<10} {worst.idxmin():.1f} ({worst.min():.0%})')
-d2l.plot_recall_grid(lc.recall, models=('PI', 'YaRN'), threshold=THRESHOLD)
+effective = d2l.effective_context(lc.recall, lc.gain, threshold=THRESHOLD)
+d2l.show_lc_recall(lc, effective, threshold=THRESHOLD)
 ```
 
 <!-- Placeholder (prose): the long-context gain per gap bucket: how much the distant occurrence of a rare token lowers its loss. -->
 
 ```{.python .input #long-context-gain}
 %%tab pytorch
-gain = lc.gain[~lc.gain['rule'].astype(bool)]
-num = lambda x: f'{round(x, 2) + 0:.2f}'  # no '-0.00'
-ci = lambda r: f'{num(r.gain)} [{num(r.lo)}, {num(r.hi)}]'
-print(f'{"gap":<10}' + ''.join(f'{b:>20}' for b in
-                               dict.fromkeys(gain['bucket'])))
-for model, rows in gain.groupby('model', sort=False):
-    print(f'{model:<10}' + ''.join(f'{ci(r):>20}' for r in rows.itertuples()))
-d2l.plot_lc_gain(lc.gain)
+d2l.show_lc_gain(lc)
 ```
 
 ### Which Measure Moves First
@@ -397,16 +386,7 @@ d2l.plot_lc_gain(lc.gain)
 ```{.python .input #long-context-first-steps}
 %%tab pytorch
 MARGIN = 0.05  # nats above the base's loss on its trained window
-base = lc.position[lc.position['model'] == 'base']['nll']
-reached = lambda ok, steps: str(steps[ok].min()) if ok.any() else \
-    'not reached'
-print(f'{"arm":<10} {"perplexity":>12} {"recall":>12} {"gain":>12}')
-for arm, t in lc.timeline[lc.timeline['seed'] == 0].groupby('arm',
-                                                            sort=False):
-    steps = [reached(ok, t['step']) for ok in (
-        t['nll_last'] <= base.iloc[0] + MARGIN,
-        t['recall_lo'] >= THRESHOLD, t['gain_lo'] > 0)]
-    print(f'{arm:<10}' + ''.join(f'{x:>13}' for x in steps))
+d2l.show_lc_first_steps(lc, margin=MARGIN, threshold=THRESHOLD)
 ```
 
 ### The Cost at Short Context
@@ -415,7 +395,7 @@ for arm, t in lc.timeline[lc.timeline['seed'] == 0].groupby('arm',
 
 ```{.python .input #long-context-short-cost}
 %%tab pytorch
-print(lc.short.round(3).to_string(index=False))
+d2l.show_lc_short(lc)
 ```
 
 ### Seeds at Small Scale
@@ -431,22 +411,15 @@ ARMS_T1 = {  # the t1 checkpoint (trained at 1K) to 4K; seeds: data order
                                              (4096, 4, 0.6)), seeds=(0,))}
 t1 = d2l.lc_arms(ARMS_T1, base='t1', tokens=16_000_000, seq_len=4096,
                  batch_tokens=65_536)
-print(t1.table.round(3).to_string(index=False))
+d2l.show_lc_table(t1)
 ```
 
 <!-- Placeholder (prose): the scheme difference YaRN minus PI with intervals: at T1 a t interval over the three seeds, at T2 a paired resampling of items and books within the single run (labelled so). A direction is claimed only where the T1 interval excludes zero; the T2 single run is never the only evidence. -->
 
 ```{.python .input #long-context-scheme-difference}
 %%tab pytorch
-for tier, runs in (('T1', t1), ('T2', lc)):
-    if 'pending' in runs.label:
-        print(f'{tier}: pending')
-        continue
-    d = d2l.scheme_difference(runs, 'YaRN', 'PI')
-    num = lambda k, n: f'{round(d[k], n) + 0:+.{n}f}'  # no '-0.00'
-    print(f'{tier}, {d["method"]}: YaRN - PI recall {num("recall", 2)} '
-          f'[{num("recall_lo", 2)}, {num("recall_hi", 2)}], last-bucket NLL '
-          f'{num("nll", 3)} [{num("nll_lo", 3)}, {num("nll_hi", 3)}]')
+for tier, runs in (('T1', t1), ('T2', lc)):  # T2 never uses the stand-in
+    d2l.show_scheme_difference(runs, tier, 'YaRN', 'PI')
 ```
 
 ## Toward a Million Tokens

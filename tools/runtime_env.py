@@ -558,11 +558,11 @@ NOTEBOOK_ENV = {
     ("pytorch", "chapter_lm-encoders/rag-failures.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
-    # 21.5: Transformers' warning about 16K-token prompts against the
-    # reference tokenizer's nominal 4,096, and the Hub's X-HF-Warning.
+    # 21.5: the Hub's X-HF-Warning (as 18.6; the regeneration's suite
+    # reads). The 16K-token prompts use d2l.lc_tokenizer, whose raised
+    # model_max_length leaves Transformers nothing to warn about.
     ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): {
         "HF_HUB_VERBOSITY": "error",
-        "TRANSFORMERS_VERBOSITY": "error",
         "OMP_NUM_THREADS": "8",
     },
 }

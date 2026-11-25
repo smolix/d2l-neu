@@ -204,6 +204,24 @@ class RecallTaskTest(unittest.TestCase):
         t = d2l.make_recall_task(tok, 1024, 0.5, n_pairs=10, n_items=2)
         self.assertEqual(t['prompts'][0].count(' is '), 10)
 
+    def test_keys_run_out(self):
+        """2,304 keys fill about 30K tokens: a longer item raises."""
+        tok = r2_tok()
+        with self.assertRaisesRegex(ValueError, 'keys fill'):
+            d2l.make_recall_task(tok, 40_960, 0.5, n_items=1)
+
+    def test_lc_tokenizer_quiet(self):
+        """A 16K-token prompt: no warning about the nominal 4,096."""
+        r2_tok()
+        tok = d2l.lc_tokenizer()
+        prompt = d2l.make_recall_task(tok, 16_384, 0.5, n_items=1)[
+            'prompts'][0]
+        import transformers
+        transformers.logging.set_verbosity_warning()
+        with self.assertNoLogs('transformers', level='WARNING'):
+            n = len(tok(prompt)['input_ids'])
+        self.assertGreater(n, 16_000)
+
     def test_oracle_lengths(self):
         tok = r2_tok()
         for length in (2048, 8192):
@@ -312,6 +330,43 @@ class EffectiveContextTest(unittest.TestCase):
                                                threshold=0.9)['A'], 1024)
         recall['correct'] = False
         self.assertEqual(d2l.effective_context(recall, gain)['A'], 0)
+
+    def test_seeds_share_items(self):
+        """Three seeds of the same 500 items count as 500 items: 270 of
+        500 has a Wilson bound below 0.5, as one seed has (pooled as 810 of
+        1,500 it would clear 0.5)."""
+        rows = [('A', seed, 1024, d, i, i < 54)
+                for seed in range(3) for d in d2l.LC_DEPTHS
+                for i in range(100)]
+        recall = pd.DataFrame(rows, columns=d2l._LC_COLUMNS['recall'])
+        gain = pd.DataFrame([('A', d2l.bucket_name(512, 1024), True, 0.1,
+                              0.05, 0.2, 10)],
+                            columns=d2l._LC_COLUMNS['gain'])
+        one = recall[recall['seed'] == 0]
+        self.assertGreater(d2l.wilson_ci(810, 1500)[0], 0.5)
+        for r in (one, recall):
+            self.assertEqual(d2l.effective_context(r, gain)['A'], 0)
+
+
+class FirstStepsTest(unittest.TestCase):
+    def test_same_books(self):
+        """The perplexity step compares with the base on the evaluation
+        books (mean 2.0 on the first three), not on all six (2.5)."""
+        windows = pd.DataFrame(
+            [('base', 0, 'nll', '0-256', w, (2.0 if w < 3 else 3.0) * 256,
+              256) for w in range(6)], columns=d2l._LC_COLUMNS['windows'])
+        timeline = pd.DataFrame(
+            [('PI', 0, step, 0, 3.0, nll, 5, 10, 0.6, 0.1, lo)
+             for step, nll, lo in ((0, 2.6, -0.1), (4, 2.04, 0.01),
+                                   (8, 2.03, 0.02))],
+            columns=d2l._LC_COLUMNS['timeline'])
+        recall = pd.DataFrame([('PI', 0, 1024, 0.5, 0, True)],
+                              columns=d2l._LC_COLUMNS['recall'])
+        runs = d2l.LcRuns(None, None, None, recall, None, timeline, None,
+                          windows, None, None, None, None, None, None, '')
+        with mock.patch.dict(d2l._LC_TIERS, TIERS):
+            steps = d2l.lc_first_steps(runs, margin=0.05, threshold=0.5)
+        self.assertEqual(steps.values.tolist(), [['PI', '4', '0', '4']])
 
 
 class StagedStreamTest(unittest.TestCase):
@@ -492,6 +547,25 @@ class ArmsEndToEndTest(unittest.TestCase):
             stored = d2l._read_result(os.path.join(
                 root, 'rerun', d2l._next_key('lm-lc-t1-v1') + '.json.gz'),
                 'json-table')
+            shown, difference = self.displays(runs)
+        label = '[T2 run pending; showing the T1 configuration]'
+        for cell, out in shown.items():
+            lines = out.splitlines()
+            self.assertEqual(lines[0], label, cell)
+            self.assertLessEqual(max(map(len, lines)), 100, cell)
+            self.assertNotRegex(out, r'Empty|-0\.00\b|dtype', cell)
+        self.assertEqual(len(shown['position'].splitlines()), 1)
+        self.assertEqual(shown['first-steps'].splitlines()[1].split(),
+                         ['arm', 'perplexity', 'recall', 'gain'])
+        self.assertIn('±', shown['zeroshot'])
+        self.assertEqual(shown['arms'].splitlines()[1].split()[:2],
+                         ['arm', 'seeds'])
+        self.assertIn('seed range', shown['arms'])
+        lines = difference.splitlines()
+        self.assertEqual(lines[0], 'T1 (t interval, 2 seeds): YaRN - PI')
+        self.assertTrue(lines[1].startswith('  recall at 1K: '))
+        self.assertTrue(lines[2].startswith('  NLL 768-1024 (nats): '))
+        self.assertEqual(lines[3:], ['T2: pending'])
         t = runs.table
         self.assertEqual(list(t['arm']), ['base', 'PI', 'YaRN', 'YaRN-prog'])
         self.assertEqual(list(t.columns), [
@@ -520,6 +594,32 @@ class ArmsEndToEndTest(unittest.TestCase):
         self.assertEqual(list(stored.table['arm']), list(t['arm']))
         self.assertEqual(stored.table.attrs['config']['tokens'], 32768)
         self.assertEqual(stored.zs_config['lengths'], [256, 512, 1024])
+
+    def displays(self, runs):
+        """The page's displays of T2 results on runs as the T1 stand-in
+        (patches active): the output of each, and of the scheme-difference
+        cell. The toy tiers share their lengths; the T2 tier gets 16K here,
+        so that runs reads as a T1 result."""
+        t2 = dict(TIERS['t2'], lengths=(16_384,))
+        with mock.patch.object(d2l, 'load_artifact', lambda name: runs), \
+                mock.patch.dict(d2l._LC_TIERS, {'t2': t2}):
+            lc = d2l._as_tuple(d2l.LcRuns, d2l._pending_result(
+                'lc-t2-evals', 'lc-t1'), d2l._LC_COLUMNS)
+            zs = d2l._lc_zs_as_tuple(d2l._pending_result('lc-zeroshot',
+                                                         'lc-t1'))
+            ns = page_ns(lc=lc, t1=runs, zs=zs)
+            out = {}
+            for name, code in (('zeroshot', 'd2l.show_lc_zeroshot(zs)'),
+                               ('arms', 'd2l.show_lc_table(lc)')):
+                with contextlib.redirect_stdout(io.StringIO()) as buf:
+                    exec(code, ns)
+                out[name] = buf.getvalue()
+            for cell in ('position', 'recall-grid', 'gain', 'first-steps',
+                         'short-cost'):
+                out[cell] = run_cell(f'long-context-{cell}', ns)
+            difference = run_cell('long-context-scheme-difference', ns)
+        d2l.plt.close('all')
+        return out, difference
 
     def test_resume_equal(self):
         cfg = dict(d2l._lc_configs(ARMS, 't1', 12 * 2048, 1024, 2048, 1e-3,
@@ -567,11 +667,15 @@ class PageCellsTest(unittest.TestCase):
     def test_attention_share(self):
         out = run_cell('long-context-attention-share', page_ns())
         lines = out.splitlines()
-        self.assertEqual(lines[0], 'F: 1.51 / 2.19 / 3.55 GFLOP per token at '
-                         '4K / 8K / 16K (attention share 0.45 / 0.62 / 0.77)')
-        self.assertIn('-15%', lines[1])
-        self.assertEqual(lines[2], 'FlopCounterMode at 16K: ratio 1.000')
-        self.assertIn('×2.35', lines[3])
+        self.assertEqual(lines[0], 'F, dense attention: 1.51 / 2.19 / 3.55 '
+                         'GFLOP per token at 4K / 8K / 16K')
+        self.assertEqual(lines[1], 'attention share: 0.45 / 0.62 / 0.77 '
+                         '(causal half: 0.29 / 0.45 / 0.62)')
+        self.assertIn('-15%', lines[2])
+        self.assertEqual(lines[3], 'FlopCounterMode at 16K (dense scores as '
+                         'well): ratio 1.000')
+        self.assertIn('no document mask: ×2.35', lines[4])
+        self.assertLessEqual(max(map(len, lines)), 80)
 
     def test_measure_checks(self):
         torch.manual_seed(0)
@@ -602,11 +706,15 @@ class PendingPageTest(unittest.TestCase):
                 mock.patch.dict(os.environ, {'D2L_RERUN': ''}), \
                 mock.patch.dict(d2l.DATA_HUB, hub, clear=True):
             out = run_cell('long-context-zeroshot', ns)
-            self.assertEqual(out.splitlines()[0], '[lc-zeroshot pending]')
+            self.assertEqual(out.splitlines(), ['[lc-zeroshot pending]'])
             run_cell('long-context-schedule', ns)
             for cell in ('arms', 'position', 'recall-grid', 'gain',
-                         'first-steps', 'short-cost', 't1'):
-                run_cell(f'long-context-{cell}', ns)
+                         'first-steps', 'short-cost'):
+                out = run_cell(f'long-context-{cell}', ns)
+                self.assertEqual(out.splitlines(), ['[lc-t2-evals pending]'],
+                                 cell)
+            out = run_cell('long-context-t1', ns)
+            self.assertEqual(out.splitlines(), ['[lc-t1 pending]'])
             out = run_cell('long-context-scheme-difference', ns)
         self.assertEqual(out.splitlines(), ['T1: pending', 'T2: pending'])
         self.assertIn('pending', ns['lc'].label)

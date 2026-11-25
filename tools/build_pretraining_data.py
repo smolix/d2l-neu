@@ -297,6 +297,7 @@ def build_lc(stage):
                          shard_tokens=10 ** 12, eos_id=0, meta_fn=meta)
     with open(os.path.join(tmp, 'manifest.json')) as f:
         m = json.load(f)
+    m['name'] = os.path.basename(out)  # not the temporary folder's name
     m['attribution'] = LC_ATTRIBUTION
     m['sources'] = {'pg19': list(d2l.PRETRAIN_SOURCES['pg19'][1:3]),
                     'pes2o': list(d2l.PRETRAIN_SOURCES['pes2o'][1:3]) + [

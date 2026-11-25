@@ -12179,18 +12179,17 @@ def make_recall_task(tokenizer, length, depth, n_pairs=None, n_candidates=8,
     distinct values of the haystack, the gold value among them once.
 
     Defined in :numref:`sec_lm_long_context`"""
-    g = torch.Generator().manual_seed(
-        seed * 1_000_003 + length * 1009 + round(1000 * depth))
+    g = d2l.recall_generator(seed, length, depth)
     out = dict(prompts=[], choices=[], gold=[], depth_actual=[])
     for _ in range(n_items):
-        keys, values, lines, start = d2l._recall_haystack(
+        keys, values, lines, start = d2l.recall_haystack(
             tokenizer, length, g, n_pairs, min_lines=n_candidates)
         q = round(depth * (len(lines) - 1))  # the queried line
         others = values[:q] + values[q + 1:]
         picks = torch.randperm(len(others), generator=g)[:n_candidates - 1]
         choices = [f' {values[q]}'] + [f' {others[i]}' for i in picks]
         order = torch.randperm(n_candidates, generator=g).tolist()
-        out['prompts'].append(d2l._RECALL_HEAD + ''.join(lines)
+        out['prompts'].append(d2l.RECALL_HEAD + ''.join(lines)
                               + f'The value of {keys[q]} is')
         out['choices'].append([choices[j] for j in order])
         out['gold'].append(order.index(0))
@@ -26108,21 +26107,35 @@ _RECALL_NOUN = (
     'rocket', 'saddle', 'shadow', 'shell', 'signal', 'spoon', 'stone',
     'temple', 'tower', 'valley', 'wagon', 'window')
 
-_RECALL_HEAD = 'Each line below gives the value of a key.\n'
+RECALL_HEAD = 'Each line below gives the value of a key.\n'
 
-def _recall_lines(tokenizer, keys, values):
-    """The haystack lines and their token counts.
+def lc_tokenizer(max_len=65_536):
+    """The reference tokenizer with its nominal length (4,096) raised to
+    max_len tokens.
 
     Defined in :numref:`sec_lm_long_context`"""
+    tok = d2l.r2_tokenizer()
+    tok.model_max_length = max_len
+    return tok
+
+def recall_generator(seed, length, depth):
+    """The random generator of the recall items of one (seed, length,
+    depth)."""
+    return torch.Generator().manual_seed(
+        seed * 1_000_003 + length * 1009 + round(1000 * depth))
+
+def _recall_lines(tokenizer, keys, values):
+    """The haystack lines and their token counts."""
     lines = [f'The value of {k} is {v}.\n' for k, v in zip(keys, values)]
     return lines, [len(x) for x in d2l._lm_encode(tokenizer, lines)]
 
-def _recall_haystack(tokenizer, length, generator, n_pairs=None,
-                     min_lines=8, value_tokens=6):
+def recall_haystack(tokenizer, length, generator, n_pairs=None,
+                    min_lines=8, value_tokens=6):
     """(keys, values, lines, start) of one recall item: distinct two-word
     keys and five-digit values, and as many haystack lines as fit length
-    tokens with the query and a value (n_pairs lines if given, at least
-    min_lines); start: the token offset of every line and of the query."""
+    tokens after RECALL_HEAD with the query and a value (n_pairs lines if
+    given, at least min_lines); start: the token offset of every line and
+    of the query."""
     adj, noun = _RECALL_ADJ, _RECALL_NOUN
     pick = torch.randperm(len(adj) * len(noun), generator=generator).tolist()
     keys = [f'{adj[i // len(noun)]} {noun[i % len(noun)]}' for i in pick]
@@ -26130,13 +26143,16 @@ def _recall_haystack(tokenizer, length, generator, n_pairs=None,
               + 10_000).tolist()
     n_max = min(len(keys), n_pairs or length // 10 + 1)
     lines, sizes = _recall_lines(tokenizer, keys[:n_max], values[:n_max])
-    head = len(d2l._lm_encode(tokenizer, [_RECALL_HEAD])[0])
+    head = len(d2l._lm_encode(tokenizer, [RECALL_HEAD])[0])
     cum = np.cumsum(sizes)
     budget = length - head - max(sizes) - value_tokens
     n = n_pairs or int(np.searchsorted(cum, budget, side='right'))
     if n < min_lines or cum[n - 1] > budget:
         raise ValueError(f'{max(n, min_lines)} lines do not fit {length} '
                          'tokens')
+    if n_pairs is None and n == n_max and budget - cum[-1] > max(sizes):
+        raise ValueError(f'the {n_max:,} keys fill {head + cum[-1]:,} of '
+                         f'{length:,} tokens')
     start = [head] + (head + cum[:n]).tolist()
     return keys[:n], values[:n], lines[:n], start
 
@@ -26227,16 +26243,18 @@ class UnigramModel(nn.Module):
 
 def effective_context(recall, gain, threshold=0.5):
     """Per model: the largest evaluated length L whose recall, pooled over
-    depths (and seeds), has a lower 95% Wilson bound of at least threshold
-    and whose long-context gain in the gap bucket (L/2, L] has a lower 95%
-    bound above 0; 0 where no length clears both.
+    depths, has a lower 95% Wilson bound of at least threshold and whose
+    long-context gain in the gap bucket (L/2, L] has a lower 95% bound
+    above 0; 0 where no length clears both. Seeds share the items, so an
+    item counts once, with its recall averaged over the seeds.
 
     Defined in :numref:`sec_lm_long_context`"""
     out = {}
     for model, r in recall.groupby('model', sort=False):
         ok = [0]
         for L, rl in r.groupby('length'):
-            lo = d2l.wilson_ci(int(rl['correct'].sum()), len(rl))[0]
+            item = rl.groupby(['depth', 'item'])['correct'].mean()
+            lo = d2l.wilson_ci(float(item.sum()), len(item))[0]
             g = gain[(gain['model'] == model) & gain['rule'] & (
                 gain['bucket'] == bucket_name(L // 2, L))]
             if lo >= threshold and len(g) and g['lo'].iloc[0] > 0:
@@ -26414,7 +26432,7 @@ def _lc_zs_columns(trained, lengths):
 def _lc_zeroshot_compute(base, schemes, lengths):
     """LcZeroShot of base under each scheme (no training)."""
     tier = _lc_tier(base)
-    spec, dev, tok = _LC_TIERS[tier], _lc_device(), d2l.r2_tokenizer()
+    spec, dev, tok = _LC_TIERS[tier], _lc_device(), lc_tokenizer()
     books = test_books(spec['books'], max(lengths))
     windows, recall = [], []
     for name, sc in schemes.items():
@@ -26459,7 +26477,8 @@ def lc_zeroshot(base, schemes, lengths):
     position bucket of the trained length on 64 test books and recall at
     each length (five depths, 100 items each). Regeneration lc-zeroshot;
     otherwise the zero-shot part of the committed lm-lc-evals-v1; while
-    that is pending, the T1 zero-shot table under a printed label."""
+    that is pending, the T1 zero-shot table, labelled so (show_lc_zeroshot
+    prints the label)."""
     config = d2l._jsonable(dict(base=base, schemes=schemes, lengths=lengths))
     rerun = d2l._regenerating()
     if 'lc-zeroshot' in rerun:
@@ -26469,7 +26488,7 @@ def lc_zeroshot(base, schemes, lengths):
                           lambda p: d2l._write_result(p, 'json-table', res,
                                                       meta),
                           rerun_dir=d2l._rerun_dir())
-        return d2l._show_label(res)
+        return res
     key = d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'][0]
     if key in d2l.DATA_HUB:
         res = d2l.load_artifact('lc-evals')
@@ -26478,10 +26497,10 @@ def lc_zeroshot(base, schemes, lengths):
             raise ValueError(f'page configuration differs from the committed '
                              f'run {key}: zero-shot{d[0]} {d[1]!r} != '
                              f'{d[2]!r}')
-        return d2l._show_label(_lc_zs_as_tuple(res))
+        return _lc_zs_as_tuple(res)
     if rerun or 'lc-zeroshot' in d2l.PRETRAIN_PENDING:
         res = d2l._pending_result('lc-zeroshot', 'lc-t1')
-        return d2l._show_label(_lc_zs_as_tuple(res))
+        return _lc_zs_as_tuple(res)
     raise KeyError('lc-zeroshot is not committed yet')
 
 LcRuns = collections.namedtuple(
@@ -26665,7 +26684,7 @@ def _lc_train(model, stream, cfg, job, stop=None):
     stage = _lc_stage_of(cfg, run.start)
     _lc_set_stage(run.raw, cfg, stage)  # RoPE is not in the state
     evaluate = cfg.get('evaluate', True)
-    tok = d2l.r2_tokenizer() if evaluate else None
+    tok = lc_tokenizer() if evaluate else None
     timeline = os.path.join(job, 'timeline.jsonl')
 
     def log_eval(step):
@@ -26824,7 +26843,7 @@ def _lc_merge(parts, cfgs, zs, zs_config):
     final weights on the full evaluation."""
     cfg0 = next(iter(cfgs.values()))
     tier, T = cfg0['tier'], cfg0['seq_len']
-    spec, dev, tok = _LC_TIERS[tier], _lc_device(), d2l.r2_tokenizer()
+    spec, dev, tok = _LC_TIERS[tier], _lc_device(), lc_tokenizer()
     books = test_books(spec['books'], T)
     suite = d2l._cpt_suite(LC_TASKS, n_max=_LC_SUITE_N, name='lc')
     models = [('base', 0, None)] + [(a, s, c) for (a, s), c in cfgs.items()]
@@ -26898,7 +26917,7 @@ def lc_arms(arms, base, tokens, seq_len, batch_tokens, peak_lr=1e-4,
     tokens). base 'r2' (T2: one regeneration per arm, lc-t2-pi, -yarn,
     -prog, merged by lc-t2-evals) or 't1' (the regeneration lc-t1).
     Otherwise the committed result; while the T2 arms are pending, the T1
-    arms under a printed label."""
+    arms, labelled so (every show_lc_* display prints the label)."""
     config = dict(arms=arms, base=base, tokens=tokens, seq_len=seq_len,
                   batch_tokens=batch_tokens, peak_lr=peak_lr, warmup=warmup,
                   decay_frac=decay_frac, long_share=long_share)
@@ -26920,7 +26939,7 @@ def lc_arms(arms, base, tokens, seq_len, batch_tokens, peak_lr=1e-4,
                               results.items()}, cfgs, zs, zs_config)
         res = d2l._pretrain_merged('lc-t2-evals', parts, merge, config,
                                    fallback='lc-t1')
-    return d2l._show_label(d2l._as_tuple(LcRuns, res, _LC_COLUMNS))
+    return d2l._as_tuple(LcRuns, res, _LC_COLUMNS)
 
 def lc_probe(micro_batches=(1, 2), steps=10, warmup=3):
     """The D2 probe of the T2 arms on one GPU: per configuration (the PI
@@ -27066,6 +27085,174 @@ def scheme_difference(runs, a='YaRN', b='PI'):
     return dict(recall=res.mean, recall_lo=res.ci[0], recall_hi=res.ci[1],
                 nll=mn, nll_lo=lo, nll_hi=hi,
                 method='single run, paired resampling')
+
+def _lc_tier_of(runs):
+    """'t1' or 't2' from the longest length of a result's recall grid;
+    None for a pending result (no rows).
+
+    Defined in :numref:`sec_lm_long_context`"""
+    if not len(runs.recall):
+        return None
+    L = int(runs.recall['length'].max())
+    return next((t for t, s in _LC_TIERS.items() if max(s['lengths']) == L),
+                None)
+
+def _lc_head(res, table, what):
+    """Print res's label (a stand-in or pending result) and, when table has
+    no rows and res no label, '[what pending]'; whether to show table."""
+    d2l._show_label(res)
+    if not len(table) and not d2l._label_of(res):
+        print(f'[{what} pending]')
+    return bool(len(table))
+
+def _num(x, digits, sign=False):
+    """x at digits decimals (never '-0.00'), with its sign if sign."""
+    return f'{round(float(x), digits) + 0:{"+" if sign else ""}.{digits}f}'
+
+def _interval(x, lo, hi, digits, sign=False):
+    """'x [lo, hi]' at digits decimals."""
+    return (f'{_num(x, digits, sign)} [{_num(lo, digits, sign)}, '
+            f'{_num(hi, digits, sign)}]')
+
+def show_lc_zeroshot(zs):
+    """The zero-shot table (loss per position bucket; recall per length
+    with its 95% Wilson half-width) and the loss by position with 95%
+    intervals, under the result's label."""
+    if not _lc_head(zs, zs.table, 'lc-zeroshot'):
+        return
+    t = zs.table.copy()
+    for c in [c for c in t.columns if c.startswith('NLL ')]:
+        t[c] = t[c].map(lambda x: _num(x, 2))
+    acc = zs.recall.groupby(['model', 'length'])['correct'].agg(
+        ['sum', 'count'])
+    for L in sorted(zs.recall['length'].unique()):
+        cells = []
+        for name in t['scheme']:
+            k, n = (int(v) for v in acc.loc[(name, L)])
+            lo, hi = d2l.wilson_ci(k, n)
+            cells.append(f'{k / n:.2f} ± {(hi - lo) / 2:.2f}')
+        t[f'recall {_length_name(L)}'] = cells
+    print(t.to_string(index=False))
+    plot_lc_position(zs.position)
+
+def show_lc_table(runs):
+    """The arms' table: seeds, val loss at the trained length and its change
+    from the base, the loss in the last position bucket, recall at the
+    trained and the longest length with its 95% interval (Wilson for one
+    run, the range over seeds for several) and the effective context."""
+    if not _lc_head(runs, runs.table, 'arms'):
+        return
+    t = runs.table
+    multi = 'min' in t.columns
+    lo, hi = ('min', 'max') if multi else ('95% lo', '95% hi')
+    seeds = runs.recall.groupby('model')['seed'].nunique()
+    out = pd.DataFrame({'arm': t['arm'],
+                        'seeds': [int(seeds.get(a, 0)) for a in t['arm']]})
+    for c in t.columns[1:4]:  # val loss, Δ val, last-bucket NLL
+        out[c] = t[c].map(lambda x: _num(x, 3))
+    for c in [c for c in t.columns if c.startswith('recall ')]:
+        out[c] = t[c].map(lambda x: _num(x, 2))
+    out['seed range' if multi else '95% CI'] = [
+        f'[{_num(a, 2)}, {_num(b, 2)}]' for a, b in zip(t[lo], t[hi])]
+    out['effective'] = t['effective']
+    print(out.to_string(index=False))
+
+def show_lc_position(runs):
+    """The loss by position bucket of every model, under the label."""
+    if _lc_head(runs, runs.position, 'position'):
+        plot_lc_position(runs.position)
+
+def show_lc_recall(runs, effective, threshold=0.5):
+    """Per model the effective context and the worst depth at the longest
+    length, then the recall grids of PI and YaRN, under the label."""
+    if not _lc_head(runs, runs.recall, 'recall'):
+        return
+    r = runs.recall
+    lengths = sorted(r['length'].unique())
+    grid = r.groupby(['model', 'length', 'depth'])['correct'].mean()
+    rows = []
+    for model, L in effective.items():
+        worst = grid[model, lengths[-1]]
+        rows.append((model, _context_name(int(L), lengths),
+                     f'{worst.idxmin():.1f} ({worst.min():.0%})'))
+    print(pd.DataFrame(rows, columns=[
+        'model', 'effective', f'worst depth at {_length_name(lengths[-1])}'
+    ]).to_string(index=False))
+    plot_recall_grid(r, models=('PI', 'YaRN'), threshold=threshold)
+
+def show_lc_gain(runs):
+    """The long-context gain per gap bucket with 95% intervals (nats), as a
+    table and a plot, under the label."""
+    gain = runs.gain[~runs.gain['rule'].astype(bool)]
+    if not _lc_head(runs, gain, 'gain'):
+        return
+    cell = {(r.model, r.bucket): _interval(r.gain, r.lo, r.hi, 2)
+            for r in gain.itertuples()}
+    buckets = list(dict.fromkeys(gain['bucket']))
+    print(pd.DataFrame(
+        [[m] + [cell.get((m, b), '') for b in buckets]
+         for m in dict.fromkeys(gain['model'])],
+        columns=['model'] + [f'gap {b}' for b in buckets]).to_string(
+        index=False))
+    plot_lc_gain(runs.gain)
+
+def lc_first_steps(runs, margin, threshold=0.5):
+    """Per arm (its first seed): the first evaluated step at which the loss
+    in the last position bucket is within margin of the base's loss in its
+    trained window on the same books, recall at the longest length has a
+    lower 95% bound of at least threshold, and the gain at the longest gaps
+    a lower bound above 0 ('not reached' if never)."""
+    spec = _LC_TIERS[_lc_tier_of(runs)]
+    w = runs.windows
+    base = w[(w['model'] == 'base') & (w['measure'] == 'nll')
+             & (w['bucket'] == bucket_name(0, spec['trained']))
+             & (w['window'] < spec['eval_books'])]
+    ref = base['sum'].sum() / base['n'].sum()
+    tl = runs.timeline[runs.timeline['seed'] == 0]
+    rows = []
+    for arm, t in tl.groupby('arm', sort=False):
+        rows.append([arm] + [str(t['step'][ok].min()) if ok.any()
+                             else 'not reached' for ok in (
+            t['nll_last'] <= ref + margin, t['recall_lo'] >= threshold,
+            t['gain_lo'] > 0)])
+    return pd.DataFrame(rows, columns=['arm', 'perplexity', 'recall',
+                                       'gain'])
+
+def show_lc_first_steps(runs, margin, threshold=0.5):
+    """lc_first_steps under the label."""
+    if _lc_head(runs, runs.timeline, 'timeline'):
+        print(lc_first_steps(runs, margin, threshold).to_string(index=False))
+
+def show_lc_short(runs):
+    """Per arm the val loss at the trained length and the suite mean minus
+    the base's, with paired 95% intervals, under the label."""
+    if not _lc_head(runs, runs.short, 'short-context cost'):
+        return
+    s = runs.short
+    print(pd.DataFrame({
+        'arm': s['arm'],
+        'Δ val loss (nats)': [_interval(*x, 3, sign=True) for x in zip(
+            s['Δ val'], s['val lo'], s['val hi'])],
+        'Δ suite accuracy': [_interval(*x, 3, sign=True) for x in zip(
+            s['Δ suite'], s['suite lo'], s['suite hi'])]}).to_string(
+        index=False))
+
+def show_scheme_difference(runs, tier, a='YaRN', b='PI'):
+    """a minus b (scheme_difference) on recall at the longest length and on
+    the loss in the last position bucket, in three lines; 'T2: pending'
+    when runs is not a result of tier ('T1' or 'T2'), such as the T1
+    stand-in for the T2 arms."""
+    if _lc_tier_of(runs) != tier.lower():
+        print(f'{tier}: pending')
+        return
+    d = scheme_difference(runs, a, b)
+    L = _length_name(int(runs.recall['length'].max()))
+    last = runs.windows[runs.windows['measure'] == 'nll']['bucket'].iloc[-1]
+    print(f'{tier} ({d["method"]}): {a} - {b}')
+    print(f'  recall at {L}: ' + _interval(
+        d['recall'], d['recall_lo'], d['recall_hi'], 2, sign=True))
+    print(f'  NLL {last} (nats): ' + _interval(
+        d['nll'], d['nll_lo'], d['nll_hi'], 3, sign=True))
 
 d2l.PRETRAIN_ARTIFACTS['decode-rates'] = (
     'lm-decode-rates-v1', 'json-table')

@@ -14,7 +14,12 @@ against the FP32 reference (GQA, both page shapes at 1,024 tokens, a
 sequence that is not a multiple of the tiles, non-causal), the chunked
 attention against SDPA's flash kernel (BF16, 2e-2), `sdpa_causal` refusing
 FP32 (no math fallback), `_time_arms` accounting (TFLOP/s x ms = FLOPs),
-the register metadata `triton_spills` reads, and the Inductor kernel list.
+the register metadata `triton_spills` reads, and the Inductor kernel list;
+for 22.3 (workload-hardware): the benchmark attention's decode step against
+Transformers' SDPA on the same static cache (BF16 logits), the static cache
+refill (every replay attends over L + 1 positions), the CUDA-graph kernel
+count, and the decode, prefill and training benches on a two-layer
+Qwen3-0.6B (finite times, peak memory reported).
 """
 import contextlib
 import io
@@ -219,6 +224,58 @@ class TestKernelsGPU(unittest.TestCase):
         self.assertIn('x library', text)
         for line in text.splitlines():
             self.assertLessEqual(len(line), 79)
+
+
+@unittest.skipUnless(GPU, 'D2L_TEST_GPU=1 and a CUDA GPU')
+class TestWorkloadHardwareGPU(unittest.TestCase):
+    MODEL = 'Qwen/Qwen3-0.6B'
+
+    def tearDown(self):
+        d2l.lm_free()
+
+    def test_full_cache_attention(self):
+        """One decode step over a full static cache: the benchmark attention
+        (no mask, SDPA's GQA path) gives Transformers' SDPA logits."""
+        import transformers
+        model = d2l.hw_random_model(self.MODEL, n_layers=2)
+        cfg = d2l._hw_model_config(self.MODEL, 2)
+        with torch.device('cuda'):
+            ref = transformers.AutoModelForCausalLM.from_config(
+                cfg, dtype=torch.bfloat16, attn_implementation='sdpa')
+        ref.load_state_dict(model.state_dict())
+        ids = torch.randint(cfg.vocab_size, (2, 65), device='cuda')
+        out = []
+        with torch.inference_mode():
+            for m in (model, ref.eval()):
+                cache = transformers.StaticCache(config=cfg, max_cache_len=65)
+                m(ids[:, :64], past_key_values=cache,
+                  cache_position=torch.arange(64, device='cuda'))
+                out.append(m(ids[:, 64:], past_key_values=cache,
+                             cache_position=torch.tensor([64], device='cuda'),
+                             logits_to_keep=1).logits.float())
+        err = (out[0] - out[1]).abs().max().item()
+        self.assertLess(err, 0.05 * out[1].abs().max().item())
+
+    def test_refill_and_kernels(self):
+        model = d2l.hw_random_model(self.MODEL, n_layers=2)
+        cache, refill = d2l.hw_static_cache(model, 2, 128)
+        refill()
+        self.assertEqual(int(cache.layers[0].cumulative_length), 128)
+        self.assertEqual(int(cache.layers[1].cumulative_length), 128)
+        n = d2l._decode_kernels(model, 1, 128)
+        self.assertIsNotNone(n)
+        self.assertGreater(n, 20)
+        self.assertLess(n, 1000)
+
+    def test_benches(self):
+        model = d2l.hw_random_model(self.MODEL, n_layers=2)
+        for r in (d2l.hw_decode_bench(model, 2, 256, steps=8),
+                  d2l.hw_decode_bench(model, 1, 256, steps=4, graph=False),
+                  d2l.hw_prefill_bench(model, 512, repeats=2),
+                  d2l.hw_train_bench(model, 1, 256, repeats=2, warmup=1)):
+            self.assertGreater(r['ms'], 0)
+            self.assertGreaterEqual(r['mad'], 0)
+            self.assertGreater(r['peak_gib'], 0)
 
 
 if __name__ == '__main__':

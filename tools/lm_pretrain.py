@@ -134,12 +134,8 @@ def main():
     stream = d2l.PackedStream(d2l._train_shards(cfg), cfg.arch.T,
                               cfg.global_batch, seed=cfg.data_seed,
                               rank=rank, world=world)
-    hooks = []
-    if a.qk_clip:
-        def clip(step, raw, opt, batch, row, tau=a.qk_clip):
-            if cfg.stats_every and (step + 1) % cfg.stats_every == 0:
-                d2l.qk_clip_(raw, d2l.attn_logit_stats(raw, batch), tau)
-        hooks.append(clip)
+    # QK-clip after every optimizer step, as the T1 arms do
+    hooks = [d2l._qk_clip_hook(a.qk_clip)] if a.qk_clip else []
     val = d2l._val_fn(cfg) if cfg.val_every else None
     log = d2l.pretrain(model, stream, cfg, val_fn=val, hooks=hooks,
                        resume=a.resume)

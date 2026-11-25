@@ -11825,7 +11825,7 @@ def lr_sensitivity(final_losses, l0):
     min(loss, l0) - min(losses); a non-finite loss counts as l0.
 
     Defined in :numref:`sec_lm_reference_model`"""
-    x = torch.as_tensor(final_losses, dtype=torch.float64)
+    x = torch.tensor([float(v) for v in final_losses], dtype=torch.float64)
     x = torch.where(torch.isfinite(x), x, l0).clamp(max=l0)
     return float((x - x.min()).mean())
 
@@ -11855,6 +11855,14 @@ def qk_clip_(model, stats, tau, alpha=0.5):
             factors[l] = f_q * f_k.repeat_interleave(S.numel() //
                                                      S_kv.numel())
     return factors
+
+def tau_rule(log, lo, hi):
+    """QK-clip's threshold, fixed before the run that uses it: ten times the
+    ceiling of a tenth of the largest logit in log over steps lo to hi.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    rows = log[log['step'].between(lo, hi)]
+    return 10 * math.ceil(rows.filter(like='max_logit_').max().max() / 10)
 
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
@@ -21955,13 +21963,17 @@ def packing_comparison(cfg, tokens=25_000_000, seeds=(0, 1, 2),
 
 d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')
-d2l.PRETRAIN_ARTIFACTS['reference-evals'] = ('lm-r2-evals-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['reference-evals'] = (
+    'lm-r2-evals-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['ladder-logs'] = ('lm-ladder-logs-v1', 'jsonl')
-d2l.PRETRAIN_ARTIFACTS['ladder-evals'] = ('lm-ladder-evals-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['ladder-evals'] = (
+    'lm-ladder-evals-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['t1-runs'] = ('lm-r2t1-log-v1', 'jsonl')
-d2l.PRETRAIN_ARTIFACTS['instability-t1'] = ('lm-r2-inst-t1-v1', 'parquet')
-d2l.PRETRAIN_ARTIFACTS['instability-t2'] = ('lm-r2-inst-t2-v1', 'parquet')
-d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['instability-t1'] = (
+    'lm-r2-inst-t1-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['instability-t2'] = (
+    'lm-r2-inst-t2-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['throughput-probe'] = ('lm-r2-probe-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['val-domains'] = ('lm-fwedu-val-domains-v1', 'jsonl')
 
@@ -21972,6 +21984,29 @@ d2l.PRETRAIN_JOBS['reference-run'] = ('launch_pretrain', lambda: dict(
 d2l.PRETRAIN_JOBS['ladder'] = ('launch_pretrain', lambda: dict(
     cfgs=[d2l.r2_config(p) for p in ('ladder-25m', 'ladder-54m',
                                      'ladder-88m')], n_gpus=4))
+d2l.PRETRAIN_JOBS['reference-evals'] = ('reference_evals', lambda: dict(
+    steps=(500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700, 6000),
+    tasks=('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande')))
+d2l.PRETRAIN_JOBS['ladder-evals'] = ('ladder_evals', lambda: dict(
+    ladder=d2l._job_log('ladder'), log=d2l._job_log('reference-run'),
+    tasks=('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande')))
+d2l.PRETRAIN_JOBS['inst-t2'] = ('instability_arms', lambda: dict(
+    cfg=d2l.r2_config('r2'), lrs=(6e-3,), variants=('none', 'qk_clip'),
+    steps=500, tau=d2l.tau_rule(d2l._job_log('reference-run'), 300, 500)))
+d2l.PRETRAIN_JOBS['inst-t1-none'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['inst-t1-qkclip'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['inst-t1-qknorm'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['inst-t1-softcap'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['spike-replay'] = ('spike_replay', lambda: dict(
+    cfg=d2l.r2_config('t1', clip=None), bad_step=300, kind='random',
+    replays=(('from 250, same batches', 250, (), None),
+             ('from 250, skip 300', 250, (300,), None),
+             ('from 50, same batches', 50, (), None),
+             ('clip 1.0', 0, (), 1.0))))
 
 def _preset_saves(preset):
     """What a preset's run saves: bf16 checkpoints, pinned full states
@@ -22078,6 +22113,8 @@ class _PretrainRun:
         self.accum = cfg.accum(self.world)
         self.step_tokens = cfg.global_batch * cfg.arch.T
         self.peak = _peak_flops(self.device)
+        self.gpu = (torch.cuda.get_device_name(self.device) if cuda
+                    else 'cpu')
         self.out, self.rows, self.halt = cfg.out_dir, [], False
         self.grad_hist = collections.deque(maxlen=100)
         self._mem_states, self._expect = {}, None
@@ -22139,6 +22176,8 @@ class _PretrainRun:
         row['mfu'] = (d2l.mfu(row['tok_s'], cfg.arch, self.peak, self.world)
                       if self.peak else float('nan'))
         row['run'], row['seed'] = seg.name, cfg.seed
+        row['world'], row['gpu'], row['job_start'] = (self.world, self.gpu,
+                                                      self.start)
         if self._expect is not None:  # the scheduler did not restart at 0
             assert done == self._expect, (done, self._expect)
             self._expect = None
@@ -22157,6 +22196,7 @@ class _PretrainRun:
             row['val_loss'] = self.val_fn(self.raw)
         self.stream.step = done
         self._save(seg, done, last or not math.isfinite(row['loss']))
+        row['time'] = time.time()  # wall clock after the step's I/O
         if self.rank == 0:
             self.rows.append(dict(row))
             if self.log_path:
@@ -22459,7 +22499,7 @@ def launch_pretrain(cfgs, n_gpus=4):
     run, resumable).
 
     Defined in :numref:`sec_lm_reference_model`"""
-    cfgs = [cfgs] if isinstance(cfgs, d2l.PretrainConfig) else list(cfgs)
+    cfgs = [cfgs] if dataclasses.is_dataclass(cfgs) else list(cfgs)
     presets = tuple(sorted({c.preset for c in cfgs}))
     if presets not in _RUN_NAMES:
         raise ValueError(f'no committed run for presets {presets}')
@@ -22477,10 +22517,12 @@ def launch_pretrain(cfgs, n_gpus=4):
 def _job_root():
     return os.path.abspath(os.path.join('..', 'data', 'lm', 'rerun', 'ch21'))
 
-def _launch_jobs(cfgs, n_gpus, max_restarts=3):
+def _launch_jobs(cfgs, n_gpus, max_restarts=3, jobs=None, extra=None):
     """Run every config's job that is not done (D2L_PRETRAIN_ONLY limits
-    this process to one preset or job); the merged logs once all are done,
-    else None.
+    this process to one preset or job); the merged logs (a column job names
+    each run's folder) once all are done, else None. jobs: folder names
+    (default <preset>-s<seed>); extra: more lm_pretrain.py arguments per
+    config.
 
     Defined in :numref:`sec_lm_reference_model`"""
     import subprocess
@@ -22490,8 +22532,10 @@ def _launch_jobs(cfgs, n_gpus, max_restarts=3):
     for cfg in cfgs:  # extract the manifests before any rank starts
         _train_shards(cfg)
     logs, world = [], max(1, min(n_gpus, torch.cuda.device_count()))
-    for cfg in cfgs:
-        job = os.path.join(_job_root(), f'{cfg.preset}-s{cfg.seed}')
+    jobs = jobs or [f'{c.preset}-s{c.seed}' for c in cfgs]
+    extra = extra or [[] for _ in cfgs]
+    for cfg, name, args in zip(cfgs, jobs, extra):
+        job = os.path.join(_job_root(), name)
         done, bad = os.path.join(job, 'DONE'), os.path.join(job, 'NONFINITE')
         if not os.path.exists(done) and (not only or only in (
                 cfg.preset, os.path.basename(job))):
@@ -22502,7 +22546,8 @@ def _launch_jobs(cfgs, n_gpus, max_restarts=3):
             cmd = [sys.executable, '-m', 'torch.distributed.run',
                    '--standalone', f'--nproc-per-node={world}',
                    os.path.join(repo, 'tools', 'lm_pretrain.py'), '--config',
-                   os.path.join(job, 'config.json'), '--resume', 'auto']
+                   os.path.join(job, 'config.json'), '--resume', 'auto',
+                   *map(str, args)]
             for attempt in range(max_restarts + 1):
                 with open(os.path.join(job, 'train.log'), 'a') as out:
                     rc = subprocess.call(cmd, cwd=repo, stdout=out,
@@ -22515,7 +22560,7 @@ def _launch_jobs(cfgs, n_gpus, max_restarts=3):
                 raise RuntimeError(f'{job}: failed {max_restarts + 1} times '
                                    f'(exit {rc}); see train.log')
         if os.path.exists(done):
-            logs.append(_read_job_logs(job))
+            logs.append(_read_job_logs(job).assign(job=name))
     if len(logs) < len(cfgs):
         return None
     df = pd.concat(logs, ignore_index=True)
@@ -22642,6 +22687,18 @@ def _reference_key(preset, step):
         return f'lm-{preset}-v1'
     raise ValueError(f'unknown preset {preset!r}')
 
+def _job_checkpoint(preset, step):
+    """The bf16 checkpoint a campaign job folder holds for a committed
+    key (read by regenerations that follow the run before its upload).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    folders = {'r2': ('r2-s0', 6000), 't1': ('t1-s0', 1526)}
+    if preset not in folders:
+        return None
+    job, last = folders[preset]
+    return os.path.join(_job_root(), job, 'ckpt',
+                        f's{last if step is None else step}.safetensors')
+
 def load_reference_model(step=None, dtype=torch.bfloat16, device='cpu',
                          preset='r2'):
     """A committed checkpoint of the reference run (preset 'r2', steps
@@ -22653,8 +22710,11 @@ def load_reference_model(step=None, dtype=torch.bfloat16, device='cpu',
     key = _reference_key(preset, step)
     local = os.path.join(d2l._rerun_dir(), d2l._next_key(key)
                          + '.safetensors')
+    job = _job_checkpoint(preset, step)
     if d2l._regenerating() and os.path.exists(local):
         path = local
+    elif d2l._regenerating() and job and os.path.exists(job):
+        path = job  # a regeneration right after the run (E1)
     elif key in d2l.DATA_HUB:
         with d2l._quiet():
             path = d2l.download_keyed(key)
@@ -22708,6 +22768,516 @@ def packed_to_hf(model):
     if unexpected or set(missing) - {'lm_head.weight'}:
         raise ValueError(f'packed_to_hf: {missing} {unexpected}')
     return hf.to(next(model.parameters()).dtype).eval()
+
+_VAL_COUNTS = {}  # (T, tokens): (scored targets, the UTF-8 bytes they spell)
+
+def val_loss(model, cfg, tokens=None):
+    """Validation loss (nats per scored target) of model on the first tokens
+    (default cfg.val_tokens) of the validation shard, in windows of
+    cfg.arch.T tokens with the training targets; on the GPU if there is one
+    (the model moves there).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    dev = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    c = dataclasses.replace(cfg, val_tokens=tokens or cfg.val_tokens)
+    return _val_fn(c)(model.to(dev))
+
+def val_bpb(loss, cfg, tokens=None):
+    """Bits per UTF-8 byte of a val_loss(model, cfg, tokens) value (or an
+    array of them): loss x scored targets / (ln 2 x their bytes).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    T, n = cfg.arch.T, tokens or cfg.val_tokens
+    if (T, n) not in _VAL_COUNTS:
+        with d2l._quiet():
+            shards = d2l.fwedu_shards('val')
+            lengths = d2l.token_byte_lengths(d2l.r2_tokenizer())
+        W = np.stack([shards.read(i * T, T + 1) for i in range(n // T)])
+        scored = W[:, :-1] != shards.eos_id
+        _VAL_COUNTS[(T, n)] = (int(scored.sum()), int(lengths[
+            W[:, 1:][scored].astype(np.int64)].sum()))
+    count, n_bytes = _VAL_COUNTS[(T, n)]
+    return loss * count / (math.log(2) * n_bytes)
+
+def _job_log(name):
+    """The log or result a later job of the campaign reads: the committed
+    result of regeneration name if registered, else the file its
+    regeneration wrote (before the upload).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    artifact = d2l._RERUN_ARTIFACT[name]
+    key, kind = d2l.PRETRAIN_ARTIFACTS[artifact]
+    if key in d2l.DATA_HUB:
+        return d2l.load_artifact(artifact)
+    path = os.path.join(d2l._rerun_dir(), key + d2l._ARTIFACT_EXT[kind])
+    if not os.path.exists(path):
+        raise FileNotFoundError(f'{name} has not run yet (no {path})')
+    return d2l._read_result(path, kind)
+
+def _as_tuple(cls, result, tables):
+    """A computed, stored or pending result as the namedtuple cls; a pending
+    result (an empty table) gives empty tables and None values.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    label = d2l._label_of(result)
+    if isinstance(result, pd.DataFrame):
+        result = None
+    fields = {f: getattr(result, f, None) for f in cls._fields if f != 'label'}
+    for f in tables:
+        if fields[f] is None:
+            fields[f] = pd.DataFrame()
+    return cls(**fields, label=label)
+
+_PANEL_LABELS = {'loss': 'train loss', 'grad_norm': 'grad norm\n(pre-clip)',
+                 'rms': 'update RMS\n(units of lr)',
+                 'max_logit': 'largest\nattn. logit', 'mfu': 'MFU'}
+
+def plot_run_log(log, cols, marks=(), figsize=(6, 7)):
+    """Stacked panels of a run's log against steps (its main run, not the
+    branches): 'loss', 'grad_norm' (log scale), 'rms' (update RMS per module
+    kind), 'max_logit' (largest over layers), 'mfu', or any column; marks
+    are steps drawn as dashed lines (phase boundaries).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    main = log[log['run'] == log['run'].iloc[0]]
+    d2l.use_svg_display()
+    fig, axes = d2l.plt.subplots(len(cols), 1, sharex=True, figsize=figsize)
+    for ax, col in zip(np.atleast_1d(axes), cols):
+        if col == 'rms':
+            kinds = sorted(c for c in main if c.startswith('rms_'))
+            sub = main.dropna(subset=kinds, how='all')
+            for k in kinds:
+                ax.plot(sub['step'], sub[k], lw=0.8, label=k[4:])
+            ax.legend(ncol=5, fontsize=6, loc='upper right')
+        else:
+            y = (main.filter(like='max_logit_').max(axis=1)
+                 if col == 'max_logit' else main[col])
+            ok = y.notna()
+            ax.plot(main['step'][ok], y[ok], lw=0.6)
+        if col == 'grad_norm':
+            ax.set_yscale('log')
+            ax.yaxis.set_minor_formatter(d2l.plt.NullFormatter())
+        for m in marks:
+            ax.axvline(m, ls='--', color='black', lw=0.8)
+        ax.set_ylabel(_PANEL_LABELS.get(col, col), fontsize=8)
+    np.atleast_1d(axes)[-1].set_xlabel('step')
+    fig.align_ylabels()
+
+CheckpointEvals = collections.namedtuple(
+    'CheckpointEvals', ['table', 'items', 'domains', 'chance', 'label'])
+
+LadderEvals = collections.namedtuple('LadderEvals',
+                                     ['points', 'items', 'label'])
+
+FULL_VAL_TOKENS = 2 ** 23  # the whole validation shard, in 4,096-token windows
+
+def domain_texts():
+    """The per-domain validation texts (FineWeb-Edu file 012 by URL-host
+    class, and the held-out book sections): doc_id, domain, text.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return d2l.load_artifact('val-domains')
+
+def _suite_chance(suite):
+    """Accuracy of guessing uniformly, per task: the mean of 1 / choices.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    out = {}
+    for t in suite.tasks:
+        k = [len(it.get('choices') or it.get('prompts') or ())
+             for it in suite.items(t.id)]
+        out[t.id] = float(np.mean([1 / n for n in k if n]))
+    return out
+
+def _score_point(model, suite, tokenizer, cfg, tokens, texts=None):
+    """Validation loss and BPB, per-item suite scores and per-domain BPB of
+    one model: (row, items, domain rows).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    loss = val_loss(model, cfg, tokens)
+    with d2l._quiet():
+        res = suite.run(model, tokenizer)
+    items = res.per_item[['task', 'item_id', 'score']]
+    row = dict(val_loss=loss, bpb=val_bpb(loss, cfg, tokens),
+               **items.groupby('task')['score'].mean())
+    doms = []
+    for dom, g in ([] if texts is None else texts.groupby('domain')):
+        with d2l._quiet():
+            doms.append(dict(domain=dom, bpb=d2l.bits_per_byte(
+                model, tokenizer, list(g['text']), ctx_len=cfg.arch.T)))
+    return row, items, doms
+
+def _eval_setup(tasks):
+    if not torch.cuda.is_available():
+        raise RuntimeError('the checkpoint evaluations run on a GPU')
+    with d2l._quiet():
+        return d2l.r2_tokenizer(), d2l.EvalSuite(list(tasks), name='r2',
+                                                 batch_size=32)
+
+def _reference_evals(steps, tasks):
+    tok, suite = _eval_setup(tasks)
+    cfg, texts = d2l.r2_config('r2'), domain_texts()
+    rows, items, doms = [], [], []
+    for s in steps:
+        model = load_reference_model(step=s, device='cuda')
+        row, it, dm = _score_point(model, suite, tok, cfg, cfg.val_tokens,
+                                   texts)
+        rows.append(dict(step=s, **row))
+        items.append(it.assign(step=s))
+        doms += [dict(step=s, **d) for d in dm]
+        del model
+        d2l.lm_free()
+    return CheckpointEvals(pd.DataFrame(rows), pd.concat(items, ignore_index=
+                           True), pd.DataFrame(doms), _suite_chance(suite), '')
+
+def reference_evals(steps, tasks):
+    """The reference run's checkpoints at steps, scored on validation loss
+    and bits per byte (2^21 tokens), on the suite tasks (full item sets,
+    per-item scores kept) and per domain: CheckpointEvals(table, items,
+    domains, chance, label); table has one row per step.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    config = dict(steps=list(steps), tasks=list(tasks))
+    res = d2l._pretrain_result('reference-evals', lambda: _reference_evals(
+        steps, tasks), config)
+    return _as_tuple(CheckpointEvals, res, ('table', 'items', 'domains'))
+
+def _ladder_points(logs):
+    """(job, run, step, finished, source) of every point ladder_evals
+    scores: per job, the finished main run and branches (bf16 checkpoints)
+    and the plateau states its branches start from.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    pts = []
+    for job in sorted(set(logs['job'])):
+        cfg = d2l.r2_config(job.rsplit('-s', 1)[0])
+        folder = os.path.join(_job_root(), job)
+        pts.append((job, cfg.preset, cfg.steps, True, os.path.join(
+            folder, 'ckpt', f's{cfg.steps}.safetensors')))
+        for frm, dec in cfg.branches:
+            end = frm + dec
+            pts.append((job, f'b{end}', end, True, os.path.join(
+                folder, 'ckpt', f'b{end}-s{end}.safetensors')))
+            pts.append((job, cfg.preset, frm, False, _state_path(folder,
+                                                                 frm)))
+    return pts
+
+def _ladder_evals(logs, tasks):
+    tok, suite = _eval_setup(tasks)
+    rows, items = [], []
+    for job, run, step, finished, src in _ladder_points(logs):
+        cfg = d2l.r2_config(job.rsplit('-s', 1)[0])
+        if finished:
+            model = _load_bf16(src, device='cuda')
+        else:
+            model = d2l.PackedGPT.from_arch(cfg.arch)
+            model.load_state_dict(torch.load(src, map_location='cpu',
+                                             weights_only=False)['model'])
+            model = model.to('cuda', torch.bfloat16).eval()
+        P = sum(p.numel() for p in model.parameters())
+        tokens = step * cfg.global_batch * cfg.arch.T
+        row, it, _ = _score_point(model, suite, tok, cfg, FULL_VAL_TOKENS)
+        rows.append(dict(size=cfg.preset, P=P, run=run, step=step,
+                         tokens=tokens, tokens_per_param=tokens / P,
+                         finished=finished, **row))
+        items.append(it.assign(size=cfg.preset, run=run, step=step))
+        del model
+        d2l.lm_free()
+    return LadderEvals(pd.DataFrame(rows), pd.concat(items, ignore_index=
+                       True), '')
+
+def ladder_evals(ladder, log, tasks):
+    """Full-validation loss (2^23 tokens) and per-item suite scores at the
+    finished points (main run and its two branches) and the plateau points
+    (the branches' starting states) of every ladder size and of the
+    reference run (log): LadderEvals(points, items, label).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    logs = pd.concat([ladder, log], ignore_index=True)
+    config = dict(jobs=sorted(set(logs['job'])) if 'job' in logs else [],
+                  tasks=list(tasks))
+    res = d2l._pretrain_result('ladder-evals', lambda: _ladder_evals(
+        logs, tasks), config)
+    return _as_tuple(LadderEvals, res, ('points', 'items'))
+
+InstabilityRuns = collections.namedtuple(
+    'InstabilityRuns', ['table', 'traces', 'tau', 'label'])
+
+_INST_PARTS = {'none': 'inst-t1-none', 'qk_clip': 'inst-t1-qkclip',
+               'qk_norm': 'inst-t1-qknorm', 'softcap': 'inst-t1-softcap'}
+
+INST_SOFTCAP = 50.0  # Gemma 2's attention-logit cap
+
+def _qk_clip_hook(tau):
+    """A pretrain hook: QK-clip at tau after every optimizer step.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    def hook(step, model, optimizer, batch, row):
+        d2l.qk_clip_(model, d2l.attn_logit_stats(model, batch), tau)
+    return hook
+
+def _inst_config(cfg, lr, seed, steps, **kw):
+    """An arm: cfg's warmup, then a constant learning rate (no decay), logit
+    statistics every 10 steps, validation at the end only, nothing saved.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    args = dict(steps=steps, peak_lr=lr, decay=0, seed=seed, stats_every=10,
+                probe_every=0, val_every=0, ckpt_steps=(), state_steps=(),
+                state_every=0, branches=(), out_dir=None)
+    return dataclasses.replace(cfg, **dict(args, **kw))
+
+def _arm_summary(log, variant, lr, seed, tail=20):
+    """One arm's row: final loss (mean of the last tail steps; inf after a
+    non-finite loss), largest logit, first non-finite step, final
+    validation loss.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    loss = log['loss'].to_numpy(float)
+    bad = np.flatnonzero(~np.isfinite(loss))
+    first = int(log['step'].iloc[bad[0]]) if len(bad) else None
+    logits = log.filter(like='max_logit_').to_numpy(float)
+    val = log['val_loss'].dropna() if 'val_loss' in log else pd.Series([])
+    return dict(variant=variant, lr=lr, seed=seed,
+                final_loss=(math.inf if first is not None
+                            else float(loss[-tail:].mean())),
+                max_logit=float(np.nanmax(logits)) if np.isfinite(
+                    logits).any() else math.nan, first_nonfinite=first,
+                val_loss=float(val.iloc[-1]) if len(val) else math.nan,
+                steps=int(log['step'].max()))
+
+def _arm_trace(log, variant, lr, seed):
+    """Per step: loss, pre-clip norm, the largest logit per layer and over
+    layers (at the statistics steps).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    t = log[['step', 'loss', 'grad_norm']
+            + [c for c in log if c.startswith('max_logit_')]].copy()
+    t['max_logit'] = log.filter(like='max_logit_').max(axis=1)
+    return t.assign(variant=variant, lr=lr, seed=seed)
+
+def _inst_run(cfg, variant, lr, seed, steps, tau, shards, val_fn, device):
+    """One T1 arm in this process.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    arch = cfg.arch._replace(qk_norm=True) if variant == 'qk_norm' else cfg.arch
+    extra = (dict(softcap=INST_SOFTCAP, backend='math')
+             if variant == 'softcap' else {})
+    c = _inst_config(cfg, lr, seed, steps, arch=arch)
+    torch.manual_seed(seed)
+    model = d2l.PackedGPT.from_arch(arch, **extra).to(device)
+    stream = d2l.PackedStream(shards, arch.T, c.global_batch,
+                              seed=c.data_seed)
+    hooks = [_qk_clip_hook(tau)] if variant == 'qk_clip' else []
+    return d2l.pretrain(model, stream, c, val_fn=val_fn, hooks=hooks)
+
+def _inst_t1(cfg, lrs, variant, seeds, steps, tau, device=None):
+    """The T1 grid of one variant, on one GPU (device: tests only).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if device is None and not torch.cuda.is_available():
+        raise RuntimeError('the instability arms train on a GPU')
+    device, shards = torch.device(device or 'cuda'), _train_shards(cfg)
+    val = _val_fn(dataclasses.replace(cfg, val_tokens=2 ** 20))
+    rows, traces = [], []
+    for lr in lrs:
+        for seed in seeds:
+            log = _inst_run(cfg, variant, lr, seed, steps, tau, shards, val,
+                            device)
+            rows.append(_arm_summary(log, variant, lr, seed))
+            traces.append(_arm_trace(log, variant, lr, seed))
+            torch._dynamo.reset()
+            d2l.lm_free()
+    return InstabilityRuns(pd.DataFrame(rows), pd.concat(
+        traces, ignore_index=True), tau, '')
+
+def _inst_t2(cfg, lrs, variants, steps, tau):
+    """The T2 arms as torchrun jobs on every GPU, and the reference run's
+    first steps as the baseline (same recipe at its own learning rate).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if 'softcap' in variants:
+        raise ValueError('the torchrun job has no softcap variant')
+    base = _job_log('reference-run')
+    base = base[(base['run'] == cfg.preset) & (base['step'] <= steps)]
+    cfgs, jobs, extra, arms = [], [], [], []
+    for lr in lrs:
+        for v in variants:
+            arch = cfg.arch._replace(qk_norm=v == 'qk_norm')
+            cfgs.append(_inst_config(cfg, lr, cfg.seed, steps, arch=arch,
+                                     val_every=steps))
+            jobs.append(f'inst-t2-{v.replace("_", "")}-{lr:g}')
+            extra.append(['--allow-nonfinite'] + (
+                ['--qk-clip', tau] if v == 'qk_clip' else []))
+            arms.append((v, lr))
+    logs = _launch_jobs(cfgs, torch.cuda.device_count(), jobs=jobs,
+                        extra=extra)
+    if logs is None:
+        return None
+    rows = [_arm_summary(base, 'baseline', cfg.peak_lr, cfg.seed)]
+    traces = [_arm_trace(base, 'baseline', cfg.peak_lr, cfg.seed)]
+    for (v, lr), job in zip(arms, jobs):
+        g = logs[logs['job'] == job].reset_index(drop=True)
+        rows.append(_arm_summary(g, v, lr, cfg.seed))
+        traces.append(_arm_trace(g, v, lr, cfg.seed))
+    return InstabilityRuns(pd.DataFrame(rows), pd.concat(
+        traces, ignore_index=True), tau, '')
+
+def _merge_arms(parts):
+    runs = list(parts.values())
+    return InstabilityRuns(
+        pd.concat([r.table for r in runs], ignore_index=True),
+        pd.concat([r.traces for r in runs], ignore_index=True), runs[0].tau,
+        '')
+
+T1_STAND_IN_LR = 1.6e-2  # the T1 grid's rate shown while inst-t2 is pending
+
+def _t1_stand_in(res):
+    """The T1 grid's arms shown in place of a pending inst-t2: the t1 peak
+    rate as the baseline and the none and qk_clip arms at T1_STAND_IN_LR
+    (seed 0), under the pending label.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    t1_lr = d2l.r2_config('t1').peak_lr
+    out = []
+    for df in (res.table, res.traces):
+        df = df[df['seed'] == 0]
+        base = df[(df['variant'] == 'none') & (df['lr'] == t1_lr)]
+        arms = df[df['variant'].isin(['none', 'qk_clip'])
+                  & (df['lr'] == T1_STAND_IN_LR)]
+        out.append(pd.concat([base.assign(variant='baseline'), arms],
+                             ignore_index=True))
+    return InstabilityRuns(*out, res.tau, d2l._label_of(res))
+
+def instability_arms(cfg, lrs, variants, seeds=(0,), steps=400, tau=None):
+    """Short runs of cfg at each learning rate, per variant ('none';
+    'qk_clip', QK-clip at tau after every step; 'qk_norm'; 'softcap',
+    attention logits capped at INST_SOFTCAP) and seed, warmup as cfg and a
+    constant rate after it: InstabilityRuns(table, traces, tau, label), one
+    table row per arm (final loss = mean of the last 20 steps, inf after a
+    non-finite loss), traces per step. The t1 preset trains here on one GPU
+    (a regeneration name per variant); the reference preset launches
+    torchrun jobs (inst-t2) and adds the reference run's first steps as the
+    baseline.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if 'qk_clip' in variants and tau is None:  # tau comes from tau_rule
+        raise ValueError('the qk_clip variant needs tau')
+    config = dict(cfg=_cfg_json(cfg), lrs=list(lrs), variants=list(variants),
+                  seeds=list(seeds), steps=steps, tau=tau)
+    if cfg.preset == 't1':
+        parts = {_INST_PARTS[v]: (lambda v=v: _inst_t1(
+            cfg, lrs, v, seeds, steps, tau), dict(config, variants=[v]))
+            for v in variants}
+        res = d2l._pretrain_merged(None, parts, _merge_arms, config)
+        return _as_tuple(InstabilityRuns, res, ('table', 'traces'))
+    res = d2l._pretrain_result('inst-t2', lambda: _inst_t2(
+        cfg, lrs, variants, steps, tau), config, fallback='instability-t1')
+    res = _as_tuple(InstabilityRuns, res, ('table', 'traces'))
+    if res.label.startswith('T2 run pending') and len(res.table):
+        return _t1_stand_in(res)
+    return res
+
+SpikeReplay = collections.namedtuple('SpikeReplay',
+                                     ['table', 'traces', 'floor', 'label'])
+
+class _BadBatchStream(d2l.PackedStream):
+    """A PackedStream whose batch of log step bad_step (1-based, as the log
+    counts) is make_bad_batch(kind); skipping that step removes it, and
+    bad_step=None gives the plain stream.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    def __init__(self, shards, seq_len, global_batch, bad_step, kind, vocab,
+                 **kw):
+        super().__init__(shards, seq_len, global_batch, **kw)
+        self.bad_step, self.kind, self.vocab = bad_step, kind, vocab
+
+    def batch(self, step):
+        b = super().batch(step)
+        if (self.bad_step is not None
+                and self.physical_index(step) == self.bad_step - 1):
+            b = d2l.make_bad_batch(b, self.kind, self.vocab,
+                                   seed=self.bad_step)
+        return b
+
+def _spike(cfg, bad_step, kind, replays, steps=400, window=(200, 400),
+           device=None):
+    """The spiked run (full states kept at the replays' starts), each
+    replay (from a state of the spiked run, skip set in log steps, clip),
+    and two same-state replays without the bad batch (the floor); device:
+    tests only.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    import shutil
+    if device is None and not torch.cuda.is_available():
+        raise RuntimeError('the spike protocol trains on a GPU')
+    device = device or 'cuda'
+    shards, folder = _train_shards(cfg), os.path.join(_job_root(), 'spike')
+    shutil.rmtree(folder, ignore_errors=True)  # this driver's own states
+    starts = tuple(sorted({s for _, s, _, _ in replays if s}))
+    base = _inst_config(cfg, cfg.peak_lr, cfg.seed, steps, stats_every=0)
+
+    def run(start=0, skip=(), clip=None, bad=bad_step, save=False):
+        c = dataclasses.replace(base, clip=base.clip if clip is None
+                                else clip, state_steps=starts if save
+                                else (), out_dir=folder if save else None)
+        torch.manual_seed(cfg.seed)
+        model = d2l.PackedGPT.from_arch(cfg.arch).to(device)
+        stream = _BadBatchStream(shards, cfg.arch.T, cfg.global_batch, bad,
+                                 kind, cfg.arch.vocab, seed=cfg.data_seed,
+                                 skip=[s - 1 for s in skip])
+        state = None
+        if start:
+            state = torch.load(_state_path(folder, start), map_location='cpu',
+                               weights_only=False)
+            state['stream'] = dict(state['stream'], skip=[s - 1 for s in skip])
+        log = d2l.pretrain(model, stream, c, resume=state)
+        torch._dynamo.reset()
+        return log.set_index('step')
+    spiked = run(save=True)
+    logs = {'spiked run': spiked}
+    for label, start, skip, clip in replays:
+        logs[label] = run(start, skip, clip)
+    floor = (run(starts[-1], bad=None)['loss']
+             - run(starts[-1], bad=None)['loss']).abs().max()
+    rows, traces = [], []
+    for label, g in logs.items():
+        near = g.loc[bad_step - 5:bad_step + 5, 'grad_norm']
+        after = (g['loss'] - spiked['loss']).loc[bad_step + 1:steps]
+        rows.append(dict(run=label, loss_at_bad=g['loss'].get(bad_step),
+                         peak_grad_norm=near.max(),
+                         max_dloss=math.nan if g is spiked
+                         else after.abs().max()))
+        traces.append(g.loc[window[0]:window[1], ['loss', 'grad_norm']]
+                      .reset_index().assign(run=label))
+    return SpikeReplay(pd.DataFrame(rows), pd.concat(traces, ignore_index=
+                       True), float(floor), '')
+
+def spike_replay(cfg, bad_step=300, kind='random', replays=()):
+    """The spike protocol at cfg: a bad batch (make_bad_batch(kind)) at log
+    step bad_step of a run with a constant rate after warmup, then each
+    replay (label, from_step, skipped steps, clip or None) from the spiked
+    run's state at from_step (0: from the start), and the replay floor (two
+    same-state replays without the bad batch): SpikeReplay(table, traces,
+    floor, label).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    config = dict(cfg=_cfg_json(cfg), bad_step=bad_step, kind=kind,
+                  replays=d2l._jsonable(replays))
+    res = d2l._pretrain_result('spike-replay', lambda: _spike(
+        cfg, bad_step, kind, replays), config)
+    return _as_tuple(SpikeReplay, res, ('table', 'traces'))
+
+def _inst_t1_job():
+    """The page's T1 grid call (cell 25) for tools/lm_regen.py, with tau
+    from the t1 run's seed-0 log by the page's rule.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    t1 = _job_log('t1-runs')
+    return dict(cfg=d2l.r2_config('t1', clip=None),
+                lrs=(1e-3, 2e-3, 4e-3, 8e-3, 1.6e-2, 3.2e-2),
+                variants=('none', 'qk_clip', 'qk_norm', 'softcap'),
+                seeds=(0, 1), steps=400,
+                tau=d2l.tau_rule(t1[t1['seed'] == 0], 76, 400))
 
 d2l.PRETRAIN_ARTIFACTS['gemm-sweep'] = (
     'lm-fp8-gemm-sweep-v1', 'json-table')

@@ -1,0 +1,15 @@
+$ gdsio -D /mnt/nvme1n1/gdstest -d 0 -w 4 -x 1 -I 1 -s 1g -i 1m -V
+IoType: WRITE XferType: CPUONLY Threads: 4 DataSetSize: 4156416/4194304(KiB) IOSize: 1024(KiB) Throughput: 1.049312 GiB/sec, Avg_Latency: 3721.307952 usecs ops: 4059 total_time 3.777586 secs
+IoType: READ XferType: CPUONLY Threads: 4 DataSetSize: 4069376/4194304(KiB) IOSize: 1024(KiB) Throughput: 2.698050 GiB/sec, Avg_Latency: 1443.841342 usecs ops: 3974 total_time 1.438394 secs
+$ gdsio -D /mnt/nvme1n1/gdstest -d 0 -w 4 -x 1 -I 0 -s 1g -i 1m
+IoType: READ XferType: CPUONLY Threads: 4 DataSetSize: 4187136/4194304(KiB) IOSize: 1024(KiB) Throughput: 3.227660 GiB/sec, Avg_Latency: 1209.149901 usecs ops: 4089 total_time 1.237170 secs
+$ gdsio -D /mnt/nvme1n1/gdstest -d 0 -w 4 -x 2 -I 1 -s 1g -i 1m -V
+IoType: WRITE XferType: CPU_GPU Threads: 4 DataSetSize: 4191232/4194304(KiB) IOSize: 1024(KiB) Throughput: 1.054915 GiB/sec, Avg_Latency: 3702.944992 usecs ops: 4093 total_time 3.788999 secs
+IoType: READ XferType: CPU_GPU Threads: 4 DataSetSize: 4178944/4194304(KiB) IOSize: 1024(KiB) Throughput: 3.135021 GiB/sec, Avg_Latency: 1244.475969 usecs ops: 4081 total_time 1.271236 secs
+$ gdsio -D /mnt/nvme1n1/gdstest -d 0 -w 4 -x 2 -I 0 -s 1g -i 1m
+IoType: READ XferType: CPU_GPU Threads: 4 DataSetSize: 4188160/4194304(KiB) IOSize: 1024(KiB) Throughput: 3.191077 GiB/sec, Avg_Latency: 1223.118288 usecs ops: 4090 total_time
+$ gdsio -D /mnt/nvme1n1/gdstest -d 0 -w 4 -x 0 -I 1 -s 1g -i 1m -V
+IoType: WRITE XferType: GPUD Threads: 4 DataSetSize: 4184064/4194304(KiB) IOSize: 1024(KiB) Throughput: 1.048155 GiB/sec, Avg_Latency: 3726.404280 usecs ops: 4086 total_time 3.806913 secs
+IoType: READ XferType: GPUD Threads: 4 DataSetSize: 4179968/4194304(KiB) IOSize: 1024(KiB) Throughput: 3.184993 GiB/sec, Avg_Latency: 1224.346146 usecs ops: 4082 total_time 1.251597 secs
+$ gdsio -D /mnt/nvme1n1/gdstest -d 0 -w 4 -x 0 -I 0 -s 1g -i 1m
+IoType: READ XferType: GPUD Threads: 4 DataSetSize: 4190208/4194304(KiB) IOSize: 1024(KiB) Throughput: 3.229036 GiB/sec, Avg_Latency: 1208.627088 usecs ops: 4092 total_time 1.237550 secs

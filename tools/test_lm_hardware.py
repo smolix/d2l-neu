@@ -18,6 +18,12 @@ namedtuples, arrays, tuples; `_hw_pack`/`_hw_unpack` for tar and jsonl);
 `HW_SHAPES['dense-70b']` (70.6B parameters); `fit_alpha_beta` (recovers
 synthetic alpha and beta with 1% noise to 2%, seed 0); `show_table`
 (rounding, headers, row cap, width check); the Triton stand-in.
+Section 22.4: the tier table's contract and display, the fio, nvbandwidth
+and gdsio parsers on raw outputs (tools/lm_data/hw/samples), the topology
+parser and the four-card groups, the fio command, fit_h2d, the offload
+thresholds and kv_load_vs_recompute, the measurements, displays and the
+shard rule on synthetic frames of known parameters, the offload crossover,
+_CPUAdam against torch's AdamW, the scratch-file disk check.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -1688,6 +1694,282 @@ class TestCommittedClaims(unittest.TestCase):
             theirs = float(rows[rows[b_col] == b][tps].iloc[0])
             mine = b * 1e3 / ours.ms[b]
             self.assertLessEqual(max(mine / theirs, theirs / mine), 1.5, b)
+
+
+# Section 22.4 (memory-tiers.md and memory-tiers-lib.md).
+HW_DATA = os.path.join(REPO, 'tools', 'lm_data', 'hw')
+SAMPLES = os.path.join(HW_DATA, 'samples')
+
+
+def committed_tiers():
+    return pd.read_csv(os.path.join(HW_DATA, 'tiers.csv'))
+
+
+def synthetic_storage(seed=0):
+    """Frames shaped like the box-storage entries, from known parameters:
+    host link alpha 10 us and beta 25 GB/s (pinned), 10 GB/s (pageable);
+    drives 6 GB/s at depth, 400K IOPS; object store alpha 70 ms, beta
+    60 MB/s."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for mode, beta in (('pinned', 25e9), ('pageable', 10e9)):
+        for d in ('h2d', 'd2h'):
+            for s in 2**np.arange(12, 31, 2):
+                ms = (1e-5 + s / beta) * 1e3 * (1 + 0.01 * rng.standard_normal())
+                rows.append(dict(mode=mode, direction=d, bytes=int(s), ms=ms,
+                                 mad=0.01 * ms, gbs=s / ms / 1e6))
+    h2d = pd.DataFrame(rows)
+    h2d.attrs.update(pcie_gen=4, pcie_width=16, pcie_gen_idle=1,
+                     pcie_width_idle=16)
+    agg = pd.DataFrame([
+        dict(group=g, n_cards=k, direction=d, gbs=k * 24.0 * f, mad_gbs=0.1)
+        for g, k, f in (('one card', 1, 1.0),
+                        ('two cards, one host bridge', 2, 0.95),
+                        ('two cards, two host bridges', 2, 1.0),
+                        ('all 4 cards', 4, 0.9))
+        for d in ('h2d', 'd2h')])
+    agg.attrs['nvbandwidth'] = {'host_to_device': [25.4, 25.7, 25.7, 26.0]}
+    dram = dict(gbs=110.0, mad=0.01, threads=32, nbytes=2**33)
+    frows = []
+    for rw in ('read', 'randread'):
+        for qd, jobs in ((1, 1), (64, 4)):
+            for bs in 2**np.arange(12, 23, 2):
+                t = 8e-5 / (qd * jobs) + bs / 6e9  # seconds per request
+                bw = min(bs / t, 6e9)
+                frows.append(dict(rw=rw, bs=int(bs), qd=qd, jobs=jobs,
+                                  bw_gbs=bw / 1e9, iops=min(bw / bs, 4e5),
+                                  lat_mean_us=80.0, lat_p99_us=200.0,
+                                  mirror_share=0.49))
+    fio = pd.DataFrame(frows)
+    orows = []
+    for rep in range(3):
+        for s in 2**np.arange(16, 27, 2):
+            orows.append(dict(stream='single', bytes=int(s), rep=rep,
+                              first_s=0.07, seconds=0.07 + s / 60e6))
+        orows.append(dict(stream='8 streams', bytes=2**27, rep=rep,
+                          first_s=math.nan, seconds=2**27 / 95e6))
+    obj = pd.DataFrame(orows)
+    obj.attrs['streams'] = 8
+    return h2d, agg, dram, fio, obj
+
+
+class TestMemoryTiers(unittest.TestCase):
+    def setUp(self):
+        patcher = mock.patch.object(d2l, '_hw_static',
+                                    side_effect=lambda n: committed_tiers())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(d2l.plt.close, 'all')
+
+    def test_tier_table_contract(self):
+        t = committed_tiers()
+        self.assertEqual(len(t), t.tier.nunique())
+        self.assertTrue(t.source_url.str.startswith('https://').all())
+        self.assertTrue(t.retrieved.str.match(r'\d{4}-\d\d-\d\d$').all())
+        ranks = t.cost_rank.dropna()
+        self.assertTrue(((ranks >= 1) & (ranks <= 9)).all())
+        self.assertTrue((t.bw_gbs.dropna() > 0).all())
+        for tier in ('pcie_host', 'host_dram', 'nvme', 'object_store'):
+            self.assertIn(tier, set(t.tier))  # the measured tiers
+        self.assertAlmostEqual(t.set_index('tier').bw_gbs['pcie_host'],
+                               d2l.pcie_ceiling(4, 16) / 1e9, places=1)
+
+    def test_tier_table_display(self):
+        lines, tiers = lines_of(self, d2l.tier_table)
+        self.assertLessEqual(len(lines), 15)
+        self.assertEqual(len(tiers), len(committed_tiers()))
+        pending = d2l.CampaignPending('node-storage', 'C-T3', 'one node')
+        lines, _ = lines_of(self, d2l.tier_table, pending)
+        self.assertEqual(lines, ['one node: campaign C-T3 not run yet'])
+        measured = d2l.tier_measurements(
+            d2l.fit_h2d(synthetic_storage()[0]), *synthetic_storage()[1:])
+        lines, t = lines_of(self, d2l.tier_table, {'tiers': measured})
+        self.assertIn('measured GB/s', lines[0])
+        self.assertAlmostEqual(
+            t.set_index('tier').measured_bw_gbs['host_dram'], 110.0)
+
+    def test_parse_fio(self):
+        r = d2l.parse_fio(read(os.path.join(SAMPLES, 'box_fio_seqread.json')))
+        self.assertAlmostEqual(r['bw_gbs'], 6.766, places=2)
+        self.assertAlmostEqual(r['iops'], 6452.8, delta=1)
+        self.assertEqual((r['rw'], r['bs'], r['qd'], r['jobs']),
+                         ('read', 2**20, 32, 1))
+        self.assertGreater(r['lat_p99_us'], r['lat_mean_us'] / 2)
+        drives = r['drive_bytes']
+        self.assertEqual(sorted(drives), ['nvme0n1', 'nvme1n1'])
+        share = min(drives.values()) / sum(drives.values())
+        self.assertGreater(share, 0.45)  # RAID 1 reads from both mirrors
+
+    def test_parse_nvbandwidth(self):
+        r = d2l.parse_nvbandwidth(read(os.path.join(SAMPLES,
+                                                    'box_nvbandwidth.txt')))
+        h = r['host_to_device_memcpy_ce']
+        self.assertEqual(h.shape, (1, 4))
+        self.assertAlmostEqual(h.sum(), r['host_to_device_memcpy_ce_sum'],
+                               delta=0.05)
+        self.assertAlmostEqual(r['host_to_device_memcpy_ce_sum'], 102.76)
+        self.assertAlmostEqual(r['device_to_host_memcpy_ce'][0, 3], 24.83)
+        self.assertNotIn('device_to_device_memcpy_read_ce', r)  # waived
+
+    def test_parse_gdsio(self):
+        g = d2l.parse_gdsio(read(os.path.join(SAMPLES, 'doc_gdsio.txt')))
+        self.assertEqual(len(g), 9)
+        self.assertEqual(set(g.xfer), {'CPUONLY', 'CPU_GPU', 'GPUD'})
+        r = g[(g.io == 'READ') & (g.xfer == 'GPUD')].iloc[-1]
+        self.assertEqual((r.threads, r.io_size), (4, 2**20))
+        self.assertAlmostEqual(r.gib_s, 3.229036)
+        self.assertAlmostEqual(r.lat_us, 1208.627088)
+
+    def test_topology(self):
+        rel = d2l._topo_relations(read(os.path.join(SAMPLES,
+                                                    'box_topo_m.txt')))
+        self.assertEqual(rel[(0, 1)], 'PHB')
+        self.assertEqual(rel[(2, 3)], 'PHB')
+        self.assertEqual(rel[(0, 2)], 'NODE')
+        groups = d2l._bridge_groups(4, rel)
+        self.assertEqual([g[1] for g in groups],
+                         [(0,), (0, 1), (0, 2), (0, 1, 2, 3)])
+        self.assertEqual(len(d2l._bridge_groups(2, {(0, 1): 'PHB'})), 2)
+
+    def test_fio_command(self):
+        with mock.patch.object(d2l, 'hw_bin', return_value='fio'):
+            cmd = d2l._fio_cmd('f.dat', 2**34, 'randread', 4096, 64, 4)
+        self.assertIn('--direct=1', cmd)
+        self.assertIn('--ioengine=io_uring', cmd)
+        self.assertIn(f'--offset_increment={2**32}', cmd)
+        self.assertIn('--time_based', cmd)
+
+    def test_fit_h2d(self):
+        links = d2l.fit_h2d(synthetic_storage()[0])
+        for mode, beta in (('pinned', 25e9), ('pageable', 10e9)):
+            r = links.loc[(mode, 'h2d')]
+            self.assertAlmostEqual(r.beta / beta, 1, delta=0.03)
+            self.assertLessEqual(r.beta_lo, r.beta)
+            self.assertGreaterEqual(r.beta_hi, r.beta)
+            self.assertAlmostEqual(r.alpha * 1e6, 10, delta=1)
+
+    def test_offload_breakeven(self):
+        # The plan's A100 example: 250 TFLOP/s, 25 GB/s, 2 bytes each way.
+        self.assertAlmostEqual(d2l.offload_breakeven(250e12, 25e9), 3333.33,
+                               places=1)
+        self.assertAlmostEqual(d2l.offload_breakeven(1e12, 1e9, 4),
+                               4e12 / 6e9)
+
+    def test_kv_load_vs_recompute(self):
+        cfg = cached_config(self, 'Qwen/Qwen3-8B')
+        n = 2**np.arange(8, 14)
+        fast = d2l.kv_load_vs_recompute(cfg, n, 1e15, 1e14)
+        self.assertEqual(fast['crossover'], 1)
+        slow = d2l.kv_load_vs_recompute(cfg, n, 1e3, 1e14)
+        self.assertEqual(slow['crossover'], np.inf)
+        k = fast['k_kv']  # 36 layers x 8 heads x 128 x 2 (K, V) x 2 bytes
+        self.assertEqual(k, 36 * 8 * 128 * 2 * 2)
+        r = d2l.kv_load_vs_recompute(cfg, n, 25e9, 1.5e14, alpha=1e-3)
+        np.testing.assert_allclose(r['load_s'], 1e-3 + n * k / 25e9)
+        self.assertTrue(np.all(np.diff(r['recompute_s']) > 0))
+        # Above the crossover loading wins, below it recomputing does.
+        c = r['crossover']
+        self.assertTrue(np.isfinite(c) and c > 1)
+        at = d2l.kv_load_vs_recompute(cfg, np.array([c, c // 2]), 25e9,
+                                      1.5e14, alpha=1e-3)
+        self.assertLessEqual(at['load_s'][0], at['recompute_s'][0])
+        self.assertGreater(at['load_s'][1], at['recompute_s'][1])
+        self.assertEqual([d2l.prefix_words(x) for x in (1, 5e4, np.inf)],
+                         ['any', '50,000 tokens', 'never'])
+
+    def test_measurements_and_displays(self):
+        h2d, agg, dram, fio, obj = synthetic_storage()
+        links = d2l.fit_h2d(h2d)
+        lines, _ = lines_of(self, d2l.plot_h2d, h2d, links)
+        self.assertEqual(len(lines), 4)
+        self.assertIn('Gen 4 x16', lines[-1])
+        lines, _ = lines_of(self, d2l._show_concurrent, agg)
+        self.assertEqual(len(lines), 5)
+        self.assertIn('(90% of 4 x one card)', lines[3])
+        lines, _ = lines_of(self, d2l._show_dram, dram)
+        self.assertIn('54% of 204.8', lines[0])
+        lines, _ = lines_of(self, d2l._show_fio, fio)
+        self.assertEqual(len(lines), 3)
+        self.assertIn('49%', lines[1])
+        beta, iops, knee = d2l._fio_knee(fio)
+        self.assertAlmostEqual(beta / 6e9, 1, delta=0.01)
+        self.assertAlmostEqual(knee, beta / iops)
+        o = d2l.object_fit(obj)
+        self.assertAlmostEqual(o['alpha'], 0.07, delta=0.005)
+        self.assertAlmostEqual(o['beta'] / 60e6, 1, delta=0.02)
+        self.assertAlmostEqual(o['beta_streams'], 95e6)
+        lines, _ = lines_of(self, d2l._show_object, obj)
+        self.assertEqual(len(lines), 2)
+        m = d2l.tier_measurements(links, agg, dram, fio, obj)
+        self.assertEqual(m.attrs['n_cards'], 4)
+        self.assertAlmostEqual(m.measured_bw_gbs['pcie_host_all'], 86.4)
+        self.assertAlmostEqual(m.measured_bw_gbs["nvme"], 6.0, delta=0.05)
+        compare = d2l.plot_tiers(committed_tiers(), m)
+        self.assertEqual(len(compare), 4)  # the object store has no sheet
+        self.assertAlmostEqual(compare.fraction['host link (PCIe)'], 25 / 31.5,
+                               delta=0.02)
+        lines, _ = lines_of(self, d2l.show_table, compare)
+        lines, rule = lines_of(self, d2l.shard_rule, links, fio, obj)
+        self.assertEqual(len(lines), 4)
+        self.assertAlmostEqual(rule.s_90.iloc[-1], 9 * 0.07 * 60e6,
+                               delta=0.05 * 9 * 0.07 * 60e6)
+        self.assertAlmostEqual(rule.s_90.iloc[0], 9 * 1e-5 * 25e9,
+                               delta=0.1 * 9 * 1e-5 * 25e9)
+        recs = d2l._tiers_json(links, fio, obj)
+        self.assertEqual({r['tier'] for r in recs},
+                         {'h2d_pinned', 'd2h_pinned', 'h2d_pageable',
+                          'd2h_pageable', 'nvme_seq_read', 'object_store'})
+        json.dumps(recs)  # the blueprint's file is JSON
+        lines, _ = lines_of(self, d2l._show_shard, dict(
+            bytes=2**27, drive_bps=3e9, loader_tps=4e8, itemsize=2))
+        self.assertEqual(len(lines), 2)
+
+    def test_offload_crossover_and_plot(self):
+        # Stalled at 1 s up to 10,000 tokens, then 0.1 ms per token.
+        T = np.array([2500, 5000, 10000, 20000, 40000])
+        rows = [dict(tokens=t, arm='offload', seconds=max(1.0, 1e-4 * t))
+                for t in T]
+        rows += [dict(tokens=t, arm='compute', seconds=0.8e-4 * t)
+                 for t in T]
+        rows += [dict(tokens=0, arm='transfer', seconds=0.1),
+                 dict(tokens=0, arm='cpu', seconds=0.9)]
+        run = pd.DataFrame(rows)
+        run.attrs.update(N=1e9, peak_gib=14.0)
+        self.assertAlmostEqual(d2l.offload_crossover(run), 10000)
+        lines, _ = lines_of(self, d2l.plot_offload, run, 2000.0, 8000.0)
+        self.assertEqual(len(lines), 1)
+        self.assertIn('(1.25x)', lines[0])
+        lines, _ = lines_of(self, d2l.plot_offload, run, 2000.0, 8000.0,
+                            p_eff=1.5e14)
+        self.assertEqual(len(lines), 2)
+        self.assertIn("run's own 75 TFLOP/s", lines[1])
+
+    @unittest.skipUnless(torch.cuda.is_available(), 'pinned memory')
+    def test_cpu_adam_matches_adamw(self):
+        torch.manual_seed(0)
+        w = [torch.randn(1000), torch.randn(10, 30)]
+        adam = d2l._CPUAdam([x.shape for x in w], w, lr=1e-2)
+        ref = [x.clone().requires_grad_() for x in w]
+        opt = torch.optim.AdamW(ref, lr=1e-2)
+        for _ in range(3):
+            g = [torch.randn_like(x).bfloat16() for x in w]
+            for i in range(2):
+                adam.g16[i].copy_(g[i])
+                adam.update(i)
+                ref[i].grad = g[i].float()
+            opt.step()
+        for i in range(2):
+            torch.testing.assert_close(adam.master[i], ref[i].detach())
+            torch.testing.assert_close(adam.w16[i],
+                                       ref[i].detach().bfloat16())
+
+    def test_scratch_refuses_full_disk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(d2l, '_HW_SCRATCH', tmp):
+                self.assertIsNone(d2l._scratch(2**30, free_gb=1e9))
+                path = d2l._scratch(2**30, free_gb=0)
+                self.assertTrue(path.startswith(tmp))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -8,6 +8,7 @@
   "box_nvbandwidth.txt": "nvbandwidth v0.11.0 -t host_to_device_memcpy_ce device_to_host_memcpy_ce host_to_device_memcpy_sm device_to_device_memcpy_read_ce (the last is waived: no peer access)",
   "box_all_reduce_perf_g4.txt": "nccl-tests v2.21.1 all_reduce_perf -b 8 -e 256M -f 2 -g 4 -n 20 (NCCL 2.28.9 of the torch wheel)",
   "box_alltoall_perf_g4.txt": "nccl-tests v2.21.1 alltoall_perf -b 8 -e 256M -f 2 -g 4 -n 20",
-  "box_fio_seqread.json": "fio-3.43 --rw=read --bs=1M --iodepth=32 --ioengine=io_uring --direct=1 --size=4G --runtime=20 --time_based --output-format=json (root volume, LVM)"
+  "box_fio_seqread.json": "fio-3.43 --rw=read --bs=1M --iodepth=32 --ioengine=io_uring --direct=1 --size=4G --runtime=20 --time_based --output-format=json (root volume, LVM)",
+  "doc_gdsio.txt": "gdsio example output (commands and IoType lines) copied from NVIDIA, \"Verifying GDS\" (GPUDirect Storage for NVMe), https://docs.nvidia.com/deploy/gds-support-for-nvme/latest/test-gds.html, retrieved 2026-11-25; documentation sample, not measured here"
  }
 }

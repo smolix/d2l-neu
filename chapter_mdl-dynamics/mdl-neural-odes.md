@@ -1522,7 +1522,7 @@ Training an invertible discrete layer $\mathbf{g} : \mathbb{R}^d \to \mathbb{R}^
 $$\log p_{\text{out}}(\mathbf{g}(\mathbf{x})) = \log p_{\text{in}}(\mathbf{x}) - \log\left|\det \mathbf{J}_{\mathbf{g}}(\mathbf{x})\right|$$
 
 - **The $O(d^3)$ determinant wall:** For a $32 \times 32$ RGB image ($d = 3072$), $\det\mathbf{J}_{\mathbf{g}}$ costs $\approx 2 \times 10^{10}$ FLOPs/layer, forcing triangular/coupling restrictions.
-- **Continuous-time escape:** Replacing discrete layers with $\dot{\mathbf{x}} = \mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ converts $\log|\det\mathbf{J}|$ into the **trace** integral $-\int_0^T \operatorname{tr}(\mathbf{J})\,dt$, estimated unbiasedly in 1 VJP!
+- **Continuous-time escape:** Replacing discrete layers with $\dot{\mathbf{x}} = \mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ converts $\log|\det\mathbf{J}|$ into the **trace** integral $-\int_0^T \operatorname{tr}(\mathbf{J})\,dt$, estimated unbiasedly in 1 VJP.
 :::
 
 ::: {.col .fig}
@@ -1617,9 +1617,9 @@ What happens if we evaluate the trained vector fields at finer step counts ($N =
 
 ::: {.cols .vc}
 ::: {.col}
-- **Unrolled Forward Euler ($N = 10$):** Costs $10$ fwd $+ 10$ bwd evaluations and $O(N)$ memory, but fits the coarse 10-step discretization (refining $N$ at test time increases error!).
+- **Unrolled Forward Euler ($N = 10$):** Costs $10$ fwd $+ 10$ bwd evaluations and $O(N)$ memory, but fits the coarse 10-step discretization (refining $N$ at test time increases error).
 - **Unrolled Classical RK4 ($N = 10$):** Costs $40$ fwd $+ 40$ bwd evaluations, matching the true continuous flow to $O(h^4)$ across all test-time solvers.
-- **Score & Flow Matching (§§{sec_mdl-score-matching-diffusion-flow}–§{num:sec_mdl-flow-matching-transport}):** Regresses directly onto closed-form targets in **1 fwd + 1 bwd evaluation** and $O(1)$ memory with no ODE solver in the training loop!
+- **Score & Flow Matching (§§{sec_mdl-score-matching-diffusion-flow}–§{num:sec_mdl-flow-matching-transport}):** Regresses directly onto closed-form targets in **1 fwd + 1 bwd evaluation** and $O(1)$ memory with no ODE solver in the training loop.
 :::
 
 ::: {.col .fig .big}
@@ -1695,7 +1695,7 @@ Why does the minus sign and transposed Jacobian $-(\frac{\partial\mathbf{f}}{\pa
 ::: {.cols .vc}
 ::: {.col}
 - **Discretize-then-optimize (Backprop):** Differentiates the $N$-step Euler program exactly via $\mathbf{a}_n = (\mathbf{I} + h\mathbf{J}(\mathbf{x}_n))^\top\mathbf{a}_{n+1}$ (stored with $2\sqrt{N}$ activation checkpoints).
-- **Optimize-then-discretize (Continuous adjoint):** Integrates $\dot{\mathbf{a}} = -\mathbf{J}^\top\mathbf{a}$ backward; if $\mathbf{x}(t)$ is re-integrated backward without checkpoints, a contracting mode $\lambda = 50$ amplifies `fp64` rounding by $e^{50T} \approx 5 \times 10^{21}$!
+- **Optimize-then-discretize (Continuous adjoint):** Integrates $\dot{\mathbf{a}} = -\mathbf{J}^\top\mathbf{a}$ backward; if $\mathbf{x}(t)$ is re-integrated backward without checkpoints, a contracting mode $\lambda = 50$ amplifies `fp64` rounding by $e^{50T} \approx 5 \times 10^{21}$.
 :::
 
 ::: {.col .fig .big}
@@ -1720,7 +1720,7 @@ Evaluating the Jacobian $\mathbf{J}(\mathbf{x}(t))$ during the backward adjoint 
 - **Contracting Forward = Exploding Backward:** A stable forward mode $\dot{x} = -\lambda x$ ($\lambda > 0$) becomes an unstable backward mode $\dot{x} = +\lambda x$ when integrated from $T$ down to $0$.
 - **Catastrophic Amplification of Float64 Rounding:** On a stiff mode $\lambda = 50$, `float64` rounding of magnitude $\delta \approx 10^{-16}$ in the stored terminal state $\mathbf{x}(T)$ grows to $e^{50T}\delta$:
   - At $T = 0.25$: drift is $e^{12.5} \cdot 10^{-16} \approx 2.7 \times 10^{-11}$.
-  - At $T = 1.00$: drift is $e^{50} \cdot 10^{-16} \approx 5 \times 10^{5}$ (completely destroying the trajectory and gradient!).
+  - At $T = 1.00$: drift is $e^{50} \cdot 10^{-16} \approx 5 \times 10^{5}$ (completely destroying the trajectory and gradient).
 
 ::: {.d2l-note .rule}
 **Systems Best Practice:** Use **discretize-then-optimize** (backprop through the solver) with **activation checkpointing** every $\sqrt{N}$ steps—storing only $2\sqrt{N} \approx 63$ states for $N = 1000$ and recomputing segments *forward* in time so no mode is ever integrated against its stable direction.
@@ -1810,7 +1810,7 @@ What if we keep discrete residual steps $F(\mathbf{x}) = \mathbf{x} + \mathbf{g}
 - **Banach Contraction Invertibility ($c < 1$):** If $\mathbf{g}$ has Lipschitz constant $c = \|\mathbf{J}_{\mathbf{g}}\|_2 < 1$ (spectral normalization), then $\mathbf{x} = \mathbf{y} - \mathbf{g}(\mathbf{x})$ is a contraction mapping, making $F$ a global bijection whose inverse is computed by fixed-point iteration at geometric rate $c^k$.
 - **Power-Series Log-Determinant (i-ResNet):** When $\|\mathbf{J}_{\mathbf{g}}\|_2 \le c < 1$, expanding $\log(1 + \lambda_i)$ in the eigenvalues of $\mathbf{J}_{\mathbf{g}}$ expresses the discrete log-determinant as an infinite trace series:
   $$\log\det(\mathbf{I} + \mathbf{J}_{\mathbf{g}}) = \sum_{k=1}^\infty \frac{(-1)^{k+1}}{k}\operatorname{tr}\!\left(\mathbf{J}_{\mathbf{g}}^k\right)$$
-- **Why Continuous Flows Win:** A discrete invertible ResNet must restrict $\|\mathbf{J}_{\mathbf{g}}\|_2 < 1$ and pay $K$ sequential VJPs per layer to truncate the power series, whereas a Continuous Normalizing Flow needs **only the $k = 1$ linear trace term** $h\operatorname{tr}(\mathbf{J})$ with no Lipschitz cap!
+- **Why Continuous Flows Win:** A discrete invertible ResNet must restrict $\|\mathbf{J}_{\mathbf{g}}\|_2 < 1$ and pay $K$ sequential VJPs per layer to truncate the power series, whereas a Continuous Normalizing Flow needs **only the $k = 1$ linear trace term** $h\operatorname{tr}(\mathbf{J})$ with no Lipschitz cap.
 :::
 
 ::: {.slide title="Running-Cost Adjoints and Kinetic Energy Regularization"}
@@ -1837,7 +1837,7 @@ Test your grasp of Neural ODEs and Continuous Normalizing Flows:
 
 1. In 1D, continuous trajectories of $-1$ and $+1$ would have to cross at some intermediate time $s \in (0, T)$ to reverse order, violating Picard–Lindelöf uniqueness. A discrete step with $hL = 3 > 1$ teleports across the origin in a single jump.
 2. Checkpointing saves states along the forward pass and only recomputes short segments **forward** in time ($e^{-50\Delta t}$ contracts errors), never integrating backward where $e^{+50T} \approx 5 \times 10^{21}$ explodes rounding errors.
-3. **Zero!** For a diagonal matrix, $S_{ij} = 0$ for all $i \ne j$, and $\sum_i \epsilon_i^2 c_i = \sum_i (\pm 1)^2 c_i = \sum_i c_i = \operatorname{tr}(\mathbf{J})$ is exact in a single Rademacher probe.
+3. **Zero.** For a diagonal matrix, $S_{ij} = 0$ for all $i \ne j$, and $\sum_i \epsilon_i^2 c_i = \sum_i (\pm 1)^2 c_i = \sum_i c_i = \operatorname{tr}(\mathbf{J})$ is exact in a single Rademacher probe.
 :::
 :::
 

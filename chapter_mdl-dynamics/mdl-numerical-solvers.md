@@ -1021,7 +1021,7 @@ Evaluating the vector field **twice per step** matches the $O(h^2)$ second deriv
 
 ::: {.cols .vc}
 ::: {.col}
-**Classical RK4** probes four slopes per step—start $\mathbf{k}_1$, two midpoints $\mathbf{k}_2, \mathbf{k}_3$, and endpoint $\mathbf{k}_4$—combined with Simpson's weights:
+**Classical RK4** probes four slopes per step (start $\mathbf{k}_1$, two midpoints $\mathbf{k}_2, \mathbf{k}_3$, and endpoint $\mathbf{k}_4$) combined with Simpson's weights:
 
 $$\mathbf{x}_{n+1} = \mathbf{x}_n + \frac{h}{6}\left(\mathbf{k}_1 + 2\mathbf{k}_2 + 2\mathbf{k}_3 + \mathbf{k}_4\right)$$
 
@@ -1067,7 +1067,7 @@ Both explicit solvers require only a loop over $n$ steps of size $h = T/n$ and v
 On the planar spiral $\mathbf{A} = -\frac{1}{2}\mathbf{I} + \mathbf{K}$ ($\lambda = -0.5 \pm \mathrm{i}$, $|\lambda T|^2 = 5$ at $T = 2$), $R(z)$ predicts global errors of $1.84/n$ for Euler and $0.343/n^4$ for RK4:
 
 - **Measured Log–Log Slopes:** Linear regression confirms order $1.04$ for Euler and $4.02$ for RK4.
-- **Equal Budget (512 Evaluations):** $512$ Euler steps give error $3.6 \times 10^{-3}$, whereas $128$ RK4 steps ($4 \times 128 = 512$ evaluations) reach $1.3 \times 10^{-9}$—six orders of magnitude more accurate!
+- **Equal Budget (512 Evaluations):** $512$ Euler steps give error $3.6 \times 10^{-3}$, whereas $128$ RK4 steps ($4 \times 128 = 512$ evaluations) reach $1.3 \times 10^{-9}$—six orders of magnitude more accurate.
 - **Euler Cost to Match RK4:** Achieving $1.3 \times 10^{-9}$ with Euler requires $n \approx 1.4 \times 10^9$ evaluations.
 :::
 
@@ -1101,7 +1101,7 @@ A system is **stiff** when a fast decaying mode forces tiny explicit steps long 
 
 $$\dot{\mathbf{x}} = \begin{pmatrix}-50 & 0 \\ 0 & -1\end{pmatrix}\mathbf{x} \;\Longrightarrow\; \mathbf{x}(t) = \begin{pmatrix}e^{-50t} \\ e^{-t}\end{pmatrix}$$
 
-- **The stability trap:** By $t = 0.1$, $x_1(t) = e^{-50t}$ is gone, and $h = 0.1$ tracks $e^{-t}$ to $5\%$. Yet forward Euler multiplies $x_1$ by $1 - 50(0.1) = -4$ per step, exploding unless $h < 2/50 = 0.04$!
+- **The stability trap:** By $t = 0.1$, $x_1(t) = e^{-50t}$ is gone, and $h = 0.1$ tracks $e^{-t}$ to $5\%$. Yet forward Euler multiplies $x_1$ by $1 - 50(0.1) = -4$ per step, exploding unless $h < 2/50 = 0.04$.
 :::
 
 ::: {.col .fig}
@@ -1188,7 +1188,7 @@ Integrating the gradient flow $\dot{\mathbf{x}} = -\mathbf{H}\mathbf{x}$ on $\ma
 
 ::: {.cols .vc}
 ::: {.col}
-- **Max flow time per gradient:** On $\lambda_{\max} = 10$, Euler advances $0.200$ units of flow time per gradient evaluation, whereas 4-stage RK4 advances only $0.279/4 = 0.070$ units per gradient!
+- **Max flow time per gradient:** On $\lambda_{\max} = 10$, Euler advances $0.200$ units of flow time per gradient evaluation, whereas 4-stage RK4 advances only $0.279/4 = 0.070$ units per gradient.
 - **Endpoints vs. paths:** Optimization only cares about reaching $\mathbf{x}^\star$, and Euler's backward error implicitly regularizes $\mathcal{L}(\mathbf{x}) + \frac{\eta}{4}\|\nabla\mathcal{L}(\mathbf{x})\|^2$.
 - **Momentum changes the ODE:** Heavy-ball momentum discretizes a second-order damped oscillator $m\ddot{\mathbf{x}} + c\dot{\mathbf{x}} = -\nabla\mathcal{L}$ to achieve $\sqrt{\kappa}$ scaling at $1$ gradient/step.
 :::

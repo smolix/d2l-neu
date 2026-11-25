@@ -107,8 +107,7 @@ deterministic.
 
 Our running process is the Ornstein--Uhlenbeck (OU) process of
 :numref:`sec_mdl-ornstein-uhlenbeck`, $dX = -\theta X\,dt + g\,dW$. Started
-from a point $X_0 = x_0$, its marginal is the Gaussian kernel
-:eqref:`eq_mdl-sde-ou-kernel`, which we write as
+from a point $X_0 = x_0$, its marginal is the Gaussian kernel, which we write as
 
 $$
 X_t \sim \mathcal{N}\big(\alpha_t x_0,\; \sigma_t^2\big),
@@ -1880,7 +1879,7 @@ Evolving $20{,}000$ particles from our bimodal mixture $p_0 = \frac{1}{2}\mathca
 [Bimodal Evolution]{.kicker}
 
 ::: {.d2l-note}
-Why is `KS(ODE)` the same at every $t$? In 1D, the ODE flow map $\Phi_t$ is strictly increasing and maps the true CDF $F_0$ to $F_t$, so it transports the initial sample's empirical quantiles without adding any stochastic resampling noise!
+Why is `KS(ODE)` the same at every $t$? In 1D, the ODE flow map $\Phi_t$ is strictly increasing and maps the true CDF $F_0$ to $F_t$, so it transports the initial sample's empirical quantiles without adding any stochastic resampling noise.
 :::
 :::
 
@@ -1921,7 +1920,7 @@ $$d\mathbf{X} = \Big[\mathbf{f}(\mathbf{X}, t) - g(t)^2\,\nabla_{\mathbf{x}}\log
   $$d\mathbf{Y}_{\bar{t}} = \Big[-\mathbf{f}(\mathbf{Y}_{\bar{t}}, T - \bar{t}) + g(T - \bar{t})^2\,\nabla\log p_{T-\bar{t}}(\mathbf{Y}_{\bar{t}})\Big]\,d\bar{t} + g(T - \bar{t})\,d\mathbf{W}_{\bar{t}}$$
 - **Sanity Check on Stationary OU ($p_t \equiv \mathcal{N}(0, 1)$, $f = -x$, $g = \sqrt{2}$, $s_t = -x$):**
   - **Probability-Flow ODE:** $u_t(x) = f - \frac{1}{2}g^2 s_t = -x - 1(-x) = 0$ (particles stand still).
-  - **Reverse SDE in $\bar{t}$:** Drift is $-f + g^2 s_t = +x + 2(-x) = -x$ with noise $\sqrt{2}$ (stationary OU is its own time reversal!). With only $\frac{1}{2}g^2$, the reverse drift would be $0$ and the cloud would explode like pure Brownian motion.
+  - **Reverse SDE in $\bar{t}$:** Drift is $-f + g^2 s_t = +x + 2(-x) = -x$ with noise $\sqrt{2}$ (stationary OU is its own time reversal). With only $\frac{1}{2}g^2$, the reverse drift would be $0$ and the cloud would explode like pure Brownian motion.
 :::
 
 ::: {.slide title="The λ-Family of Reverse Samplers Sharing Marginals"}
@@ -1956,7 +1955,7 @@ Starting $20{,}000$ particles from symmetric prior noise $\mathcal{N}(0, 1)$ at 
 - **When Does the Score Allocate the 80% / 20% Mode Weights?**
   - **Not at $t = 0$:** In each mode, $r_k(x) \in \{0, 1\}$, so $s_0(x) \approx -(x \pm 2)/0.25$ is blind to the mixture weights $(0.8, 0.2)$.
   - **Not at $t = 3$:** Both components overlap near $\mathcal{N}(0, 1)$, so their springs nearly coincide.
-  - **At Intermediate Noise ($t \approx 1$):** The equal-responsibility watershed $x_t^* = \frac{v_t}{2m_t}\ln\frac{0.8}{0.2}$ sweeps across $+0.85$, steering particles at $x \in (0, 0.85)$ into the heavier left mode as the two peaks separate!
+  - **At Intermediate Noise ($t \approx 1$):** The equal-responsibility watershed $x_t^* = \frac{v_t}{2m_t}\ln\frac{0.8}{0.2}$ sweeps across $+0.85$, steering particles at $x \in (0, 0.85)$ into the heavier left mode as the two peaks separate.
 :::
 
 ::: {.slide title="Discretization Bias and Step Placement Near t = 0"}

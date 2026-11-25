@@ -6,8 +6,8 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Pooling
 :label:`sec_pooling`
 
-Convolutional layers answer local questions—whether an edge sits at pixel
-$(i, j)$—whereas a classifier must answer a global question about the whole
+Convolutional layers answer local questions (whether an edge sits at pixel
+$(i, j)$), whereas a classifier must answer a global question about the whole
 image. Bridging from local feature maps to a global prediction requires both
 wide spatial reach (:numref:`subsec_stride_rf`) and robustness to tiny spatial
 shifts so a one-pixel camera jitter does not alter the prediction.
@@ -64,8 +64,8 @@ from functools import partial
 
 ## Maximum Pooling and Average Pooling
 
-Like a convolutional layer, a pooling operator slides a fixed-shape window---the
-*pooling window*---across its input and computes a single scalar output at
+Like a convolutional layer, a pooling operator slides a fixed-shape window (the
+*pooling window*) across its input and computes a single scalar output at
 each position. Unlike a convolution, however, a pooling layer has no
 learnable kernel weights: it applies a fixed deterministic reduction to the
 elements inside the window. *Maximum pooling* (*max-pooling* for short)
@@ -89,7 +89,7 @@ $$
 \end{aligned}
 $$
 
-Notice that five of the nine input entries---0, 1, 2, 3, and 6---are never the
+Notice that five of the nine input entries (0, 1, 2, 3, and 6) are never the
 maximum of any window. Perturbing them slightly leaves the output completely
 unchanged, because max-pooling depends only on the winning element in each
 window. The same sliding-window construction generalizes immediately to any
@@ -162,7 +162,7 @@ Just how much spatial shift can pooling absorb? Let us test the simplest
 possible setting. A $2\times2$ pooling layer with stride 2 partitions its
 input into non-overlapping $2\times2$ blocks and summarizes each block by a
 single value. Imagine a $4\times4$ feature map containing a single nonzero
-response of 1---like an edge detector firing at an isolated edge---and slide
+response of 1 (like an edge detector firing at an isolated edge), and slide
 that response one pixel at a time across row 1. Below we compare the
 max-pooled and average-pooled outputs across three consecutive column
 positions.
@@ -185,7 +185,7 @@ completely unchanged because both locations fall inside the same $2\times2$
 block. Shifting it one pixel further to column 2 crosses a block boundary,
 causing the pooled response to jump to the adjacent output cell. Thus, a
 one-pixel horizontal shift is absorbed whenever the response remains within
-its block---half of all starting columns---and shifts the output by one
+its block (half of all starting columns) and shifts the output by one
 position otherwise. Local pooling therefore makes a representation *tolerant*
 to certain small shifts, not strictly invariant to them.
 :numref:`fig_pooling_shift` illustrates the max-pooled outputs across all
@@ -205,8 +205,8 @@ Subsampling with stride 2 also introduces a subtle signal-processing hazard
 whenever a feature crosses a sampling boundary. In the extreme case, taking
 every second sample of a high-frequency alternating signal $1, 0, 1, 0, \ldots$
 produces either all ones or all zeros depending on a single-pixel shift. This
-distortion---occurring whenever a signal varies faster than the sampling rate
-can resolve---is called *aliasing*, and it affects every stride-2 downsampler,
+distortion, occurring whenever a signal varies faster than the sampling rate
+can resolve, is called *aliasing*, and it affects every stride-2 downsampler,
 whether pooled or convolutional. Applying a small smoothing filter before
 subsampling mitigates aliasing :cite:`zhang2019making`, a technique explored
 in the exercises below.
@@ -416,7 +416,7 @@ by side in the last axis.
 :end_tab:
 
 Because pooling has no learnable weights, it discovers no patterns on its
-own---it can only summarize the features detected by preceding convolutional
+own; it can only summarize the features detected by preceding convolutional
 layers. With convolutions, padding, stride, dilation, multi-channel feature
 maps, and pooling all in hand, we now have every building block needed to
 assemble and train a complete convolutional neural network and compare it
@@ -610,7 +610,7 @@ Tracing the impulse across all four columns of the $4 \times 4$ grid contrasts l
 
 ::: {.cols .vc}
 ::: {.col}
-- **Nyquist aliasing:** On $\mathbf{x} = (1,0,1,0,1,0)$, naive stride-2 subsampling outputs $(1,1,1)$, whereas a 1-pixel shift $T_1 \mathbf{x} = (0,1,0,1,0,1)$ flips the output to $(0,0,0)$!
+- **Nyquist aliasing:** On $\mathbf{x} = (1,0,1,0,1,0)$, naive stride-2 subsampling outputs $(1,1,1)$, whereas a 1-pixel shift $T_1 \mathbf{x} = (0,1,0,1,0,1)$ flips the output to $(0,0,0)$.
 - **BlurPool fix (Zhang, 2019):** Low-pass box filtering $[\tfrac{1}{2}, \tfrac{1}{2}]$ before stride-2 subsampling (i.e., $2 \times 2$ AvgPool) maps both to $(0.5, 0.5, 0.5)$.
 :::
 
@@ -715,7 +715,7 @@ Test your understanding of pooling shapes, compute cost, and shift tolerance:
 
 1. **LeNet first pooling layer:** Takes a feature map of shape $6 \times 28 \times 28$ and applies $2 \times 2$ pooling with stride $2$ and padding $0$. What are the output shape, parameter count, and total number of pairwise comparisons (for max-pooling)?
 2. **Shift-absorption probability:** An isolated peak activation sits at a uniformly random pixel $(i, j)$ in a large feature map and shifts by $+1$ row and $+1$ column (diagonally). What fraction of starting positions leave the output of a $3 \times 3$, stride-3 max-pooling layer unchanged?
-3. **Expressing min-pooling and softmax pooling:** How can you compute minimum pooling $\min_{x \in W} x$ using only `MaxPool2d`, and what do the temperature limits $\tau \to 0^+$ and $\tau \to \infty$ of softmax pooling $\sum_i x_i e^{x_i/\tau} / \sum_j e^{x_j/\tau}$ recover?
+3. **Expressing min-pooling and softmax pooling:** How can you compute minimum pooling $\min_{x \in W} x$ using only max-pooling, and what do the temperature limits $\tau \to 0^+$ and $\tau \to \infty$ of softmax pooling $\sum_i x_i e^{x_i/\tau} / \sum_j e^{x_j/\tau}$ recover?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**

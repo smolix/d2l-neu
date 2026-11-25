@@ -29,8 +29,8 @@ developed it with colleagues at AT&T Bell Labs to recognize handwritten digits
 :cite:`LeCun.Bottou.Bengio.ea.1998`. It marked the culmination of a decade of
 research that began with one of the earliest end-to-end convolutional networks
 trained by backpropagation :cite:`LeCun.Boser.Denker.ea.1989`. By 1998,
-LeNet-5 achieved error rates below 1% on handwritten digits—rivaling the
-support vector machines that dominated machine learning at the time—and
+LeNet-5 achieved error rates below 1% on handwritten digits, rivaling the
+support vector machines that dominated machine learning at the time, and
 variants of it were deployed commercially to read handwritten amounts on bank
 checks and ATM deposits. LeNet provided early, compelling proof that an
 end-to-end learned network could replace carefully hand-engineered vision
@@ -100,7 +100,7 @@ To connect the convolutional encoder to the dense block, we flatten each
 example's spatial feature maps into a single vector, producing a
 two-dimensional matrix with one row per minibatch example. Three fully
 connected layers then project this vector through 120 and 84 hidden units to
-10 output logits---one per class, just as in softmax regression.
+10 output logits, one per class, just as in softmax regression.
 
 Note that this is the standard pedagogical version of LeNet-5 rather than a
 bit-for-bit historical replica. It preserves the 1998 network's alternating
@@ -375,7 +375,7 @@ For softmax regression, we could visualize each class's weights directly as a
 $28\times28$ template image (:numref:`sec_softmax_scratch`), and similarly
 each hidden unit of an MLP weighted fixed pixel locations
 (:numref:`sec_mlp-implementation`). A convolutional kernel, by contrast, is
-not tied to any particular pixel—it is just a $5\times5$ patch of weights that
+not tied to any particular pixel: it is just a $5\times5$ patch of weights that
 is hard to interpret in isolation. To understand what the first convolutional
 layer has discovered, we first pull one sneaker (class 7) and one shirt
 (class 6) from a validation minibatch into a two-image tensor `X`.
@@ -439,7 +439,7 @@ Across training runs, two distinct families of feature maps consistently
 emerge. Some channels act as local brightness or foreground detectors,
 reproducing the filled silhouette of the garment (either bright on dark or
 inverted). The remaining channels light up selectively along the garment's
-contours—especially its left or right boundaries. Examining their $5\times5$
+contours, especially its left or right boundaries. Examining their $5\times5$
 kernels reveals how they do it: bright columns paired beside dark columns,
 forming learned, multi-row relatives of the hand-crafted $(1, -1)$ vertical
 edge kernel from :numref:`subsec_edge_detection`. Earlier, we had to supply
@@ -526,7 +526,7 @@ for name, acc in curves.items():  # A single epoch can land a point low
 ```
 
 On shuffled pixels, LeNet drops several percentage points to around 85--86% in
-a typical run—at or slightly below the MLP. Once spatial neighborhood
+a typical run, at or slightly below the MLP. Once spatial neighborhood
 structure is destroyed, LeNet's advantage vanishes, confirming that its edge
 over the MLP comes directly from its convolutional inductive bias.
 
@@ -545,7 +545,7 @@ output, yet LeNet achieves neither exactly: padded convolutions break
 equivariance near borders, pooling absorbs only shifts that stay within a
 pooling block (:numref:`sec_pooling`), and flattening the final $5\times5$
 maps assigns distinct dense weights to every spatial cell. LeNet's shift
-tolerance is therefore only partial—sufficient for Fashion-MNIST, where every
+tolerance is therefore only partial: sufficient for Fashion-MNIST, where every
 garment is neatly centered, though inadequate for unconstrained scenes.
 
 Taken together, our two experiments demonstrate that a CNN can match and
@@ -555,14 +555,14 @@ detect it anywhere on the grid. On tiny $28\times28$ images, that efficiency
 is a modest bonus; on the megapixel photographs discussed in
 :numref:`sec_why-conv`, where a single dense layer demands a billion weights,
 the same principle determines whether a model can be built at all. Making deep
-convolutional networks *easy to train* at scale is the next challenge—and the
+convolutional networks *easy to train* at scale is the next challenge, and the
 sluggish, erratic convergence of LeNet's four sigmoid layers already hints at
 why modern architectures had to evolve far beyond 1998.
 
 ## Summary
 
-LeNet pairs a convolutional encoder—which progressively trades spatial
-resolution for deeper channel representations—with a three-layer fully
+LeNet pairs a convolutional encoder (which progressively trades spatial
+resolution for deeper channel representations) with a three-layer fully
 connected classifier head. Its convolutional layers hold just 4% of the
 parameters yet perform 86% of the multiply-adds, whereas the first dense layer
 alone accounts for 78% of the parameters. Trained under the same 30-epoch SGD
@@ -889,7 +889,7 @@ Every permuted image still contains the exact same 784 pixel intensities in a co
 ::: {.col}
 - **1. Padded borders:** Shifting near the frame alters zero counts in Conv1 ($p=2$).
 - **2. Local pool blocks:** $2 \times 2$ AvgPool jumps whenever a peak crosses a block boundary.
-- **3. Flattened dense head ($400 \to 120$):** Assigns separate weights to each of the $5 \times 5$ spatial cells!
+- **3. Flattened dense head ($400 \to 120$):** Assigns separate weights to each of the $5 \times 5$ spatial cells.
 :::
 
 ::: {.col .fig .big}
@@ -918,7 +918,7 @@ Every permuted image still contains the exact same 784 pixel intensities in a co
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Global Average Pooling head:** Replacing `Flatten + 3 Dense` ($59{,}134$ params) with GAP ($16 \times 5 \times 5 \to 16$) + `Linear(16, 10)` ($170$ params) cuts total LeNet parameters $22.5\times$ ($61{,}706 \to 2{,}742$)!
+- **1. Global Average Pooling head:** Replacing `Flatten + 3 Dense` ($59{,}134$ params) with GAP ($16 \times 5 \times 5 \to 16$) + a $16 \to 10$ linear layer ($170$ params) cuts total LeNet parameters $22.5\times$ ($61{,}706 \to 2{,}742$).
 - **2. Why lower LR with ReLU:** ReLU has unit slope ($\sigma' = 1$ for $x>0$), removing the four $\sigma' \le \tfrac{1}{4}$ factors, so $\eta = 2.0$ explodes.
 :::
 

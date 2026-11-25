@@ -28,41 +28,34 @@ LeCun and collaborators showed how to train such architectures end to end via
 backpropagation to recognize handwritten ZIP codes
 :cite:`LeCun.Boser.Denker.ea.1989,LeCun.Jackel.Bottou.ea.1995`. Deeper layers of
 trained vision networks even exhibit representational parallels with higher
-stages of the primate visual pathway :cite:`Kuzovkin.Vicente.Petton.ea.2018`—though
+stages of the primate visual pathway :cite:`Kuzovkin.Vicente.Petton.ea.2018`, though
 biology served as architectural inspiration rather than a blueprint for silicon
 computation.
 
 At the heart of these architectures lies the *convolutional layer*, which slides
 a small shared kernel of weights across every neighborhood of an image. Each
 output unit depends only on nearby pixels, and shifting the input simply shifts
-the output—building locality and translation equivariance directly into the
+the output, building locality and translation equivariance directly into the
 network while slashing parameter counts by orders of magnitude. These
 *convolutional neural networks* (CNNs) drove the watershed breakthrough on
 ImageNet :cite:`Deng.Dong.Socher.ea.2009,Krizhevsky.Sutskever.Hinton.2012` and
 remain a cornerstone of computer vision alongside vision transformers
 (:numref:`chap_transformers`).
 
-In this chapter, we derive and build CNNs from first principles:
-
-* :numref:`sec_why-conv` proves that enforcing locality and translation
-  equivariance on a fully connected layer leaves essentially no linear choice
-  but convolution.
-* :numref:`sec_conv_layer` implements two-dimensional cross-correlation,
-  trains a single kernel to discover an edge detector from data, and introduces
-  *im2col* matrix multiplication and receptive fields.
-* :numref:`sec_padding` introduces padding, stride, and dilation to control
-  output resolution and expand receptive fields exponentially with depth.
-* :numref:`sec_channels` extends convolutions to multiple input and output
-  channels, accounting for parameter, FLOP, and activation-memory costs and
-  introducing $1 \times 1$ bottleneck convolutions.
-* :numref:`sec_pooling` introduces max-pooling, average pooling, and global
-  pooling to downsample feature maps and build tolerance to small spatial shifts.
-* :numref:`sec_lenet` assembles a complete CNN—LeNet—pits it against our MLP on
-  Fashion-MNIST, visualizes its learned filters, and runs the pixel-shuffling
-  experiment to isolate the value of spatial inductive bias.
-
-Modern deep convolutional architectures (AlexNet, VGG, NiN, GoogLeNet, BatchNorm,
-ResNet, DenseNet, and ConvNeXt) follow in :numref:`chap_modern_cnn`.
+This chapter derives and builds CNNs from first principles in three steps. We
+begin by showing that enforcing locality and translation equivariance on a dense
+layer leaves convolution as the unique linear choice (:numref:`sec_why-conv`),
+then implement two-dimensional cross-correlation, learn an edge-detecting kernel
+by gradient descent, recast convolution as matrix multiplication (*im2col*), and
+trace how stacked layers widen receptive fields (:numref:`sec_conv_layer`). Next,
+we control spatial resolution, field of view, and feature capacity through
+padding, stride, and dilation (:numref:`sec_padding`), multi-channel filter
+banks and $1 \times 1$ bottlenecks (:numref:`sec_channels`), and local and
+global pooling (:numref:`sec_pooling`). Finally, we assemble these pieces into
+LeNet (:numref:`sec_lenet`), compare it against our MLP on Fashion-MNIST,
+inspect its learned first-layer filters, and test both models on pixel-shuffled
+images to isolate the contribution of spatial inductive bias. Modern deep
+convolutional architectures follow in :numref:`chap_modern_cnn`.
 
 ```toc
 :maxdepth: 2
@@ -82,30 +75,30 @@ section it goes with. All are freely accessible online except where noted.
 
 **Books**
 
-- [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 9 develops sparse interactions, parameter sharing, and equivariance in detail (:numref:`sec_why-conv`, :numref:`sec_pooling`).
-- [Understanding Deep Learning — Simon J. D. Prince](https://udlbook.github.io/udlbook/) — free PDF; Chapter 10 covers convolutions, stride, dilation, and receptive fields with unusually good figures (:numref:`sec_conv_layer`, :numref:`sec_padding`).
-- [Neural Networks and Deep Learning — Michael Nielsen](http://neuralnetworksanddeeplearning.com/chap6.html) — free online; Chapter 6 introduces convolutional layers, shared weights, and pooling from first principles (:numref:`sec_conv_layer`, :numref:`sec_pooling`).
+- [Deep Learning (Goodfellow, Bengio & Courville)](https://www.deeplearningbook.org/): free HTML; Chapter 9 develops sparse interactions, parameter sharing, and equivariance in detail (:numref:`sec_why-conv`, :numref:`sec_pooling`).
+- [Understanding Deep Learning (Simon J. D. Prince)](https://udlbook.github.io/udlbook/): free PDF; Chapter 10 covers convolutions, stride, dilation, and receptive fields with clear geometric figures (:numref:`sec_conv_layer`, :numref:`sec_padding`).
+- [Neural Networks and Deep Learning (Michael Nielsen)](http://neuralnetworksanddeeplearning.com/chap6.html): free online; Chapter 6 introduces convolutional layers, shared weights, and pooling from first principles (:numref:`sec_conv_layer`, :numref:`sec_pooling`).
 
 **Courses and video lectures**
 
-- [Stanford CS231n: Deep Learning for Computer Vision](https://cs231n.github.io/convolutional-networks/) — free notes; the "Convolutional Networks" module (layer arithmetic, parameter counting, layer patterns) is the most widely used online companion to this chapter (:numref:`sec_padding`, :numref:`sec_channels`).
-- [Michigan EECS 498-007: Deep Learning for Computer Vision — Justin Johnson](https://web.eecs.umich.edu/~justincj/teaching/eecs498/) — free lecture videos; the convolution and pooling lectures work through kernel/stride/padding arithmetic on the board at exactly this chapter's pace (:numref:`sec_conv_layer`, :numref:`sec_pooling`).
+- [Stanford CS231n: Deep Learning for Computer Vision](https://cs231n.github.io/convolutional-networks/): free notes; the "Convolutional Networks" module (layer arithmetic, parameter counting, layer patterns) is a widely used online companion to this chapter (:numref:`sec_padding`, :numref:`sec_channels`).
+- [Michigan EECS 498-007: Deep Learning for Computer Vision (Justin Johnson)](https://web.eecs.umich.edu/~justincj/teaching/eecs498/): free lecture videos working through convolution and pooling arithmetic at this chapter's pace (:numref:`sec_conv_layer`, :numref:`sec_pooling`).
 
 **Tutorials, notes, and interactive**
 
-- [A guide to convolution arithmetic for deep learning — Dumoulin & Visin (2016)](https://arxiv.org/abs/1603.07285) — free, with the famous [animations](https://github.com/vdumoulin/conv_arithmetic); the definitive visual reference for padding, stride, dilation, and transposed convolutions (:numref:`sec_padding`).
-- [CNN Explainer — Wang et al. (Polo Club)](https://poloclub.github.io/cnn-explainer/) — free, zero-install; an interactive convnet running in the browser where you can inspect every activation, kernel, and receptive field (:numref:`sec_channels`, :numref:`sec_lenet`).
-- [Computing Receptive Fields of Convolutional Neural Networks — Araujo, Norris & Sim (2019), *Distill*](https://distill.pub/2019/computing-receptive-fields/) — free; derives the closed-form receptive-field arithmetic that :numref:`sec_conv_layer` introduces, including strided and multi-path cases.
-- [Conv Nets: A Modular Perspective — Chris Olah](https://colah.github.io/posts/2014-07-Conv-Nets-Modular/) — free; a short classic building the "convolution as structured weight sharing" intuition (:numref:`sec_why-conv`).
-- [Image Kernels Explained Visually — Victor Powell](https://setosa.io/ev/image-kernels/) — free, interactive; slide hand-designed kernels over an image, a perfect warm-up for the edge-detection example in :numref:`sec_conv_layer`.
-- [Feature Visualization — Olah, Mordvintsev & Schubert (2017), *Distill*](https://distill.pub/2017/feature-visualization/) — free; what convnet units actually respond to, a companion to the activation-visualization exercise in :numref:`sec_lenet`.
+- [A guide to convolution arithmetic for deep learning (Dumoulin & Visin, 2016)](https://arxiv.org/abs/1603.07285): free, with companion [animations](https://github.com/vdumoulin/conv_arithmetic); visual reference for padding, stride, dilation, and transposed convolutions (:numref:`sec_padding`).
+- [CNN Explainer (Wang et al., Polo Club)](https://poloclub.github.io/cnn-explainer/): interactive browser convnet for inspecting activations, kernels, and receptive fields (:numref:`sec_channels`, :numref:`sec_lenet`).
+- [Computing Receptive Fields of Convolutional Neural Networks (Araujo, Norris & Sim, 2019, *Distill*)](https://distill.pub/2019/computing-receptive-fields/): derives the closed-form receptive-field arithmetic introduced in :numref:`sec_conv_layer`, including strided and multi-path cases.
+- [Conv Nets: A Modular Perspective (Chris Olah)](https://colah.github.io/posts/2014-07-Conv-Nets-Modular/): short classic building intuition for convolution as structured weight sharing (:numref:`sec_why-conv`).
+- [Image Kernels Explained Visually (Victor Powell)](https://setosa.io/ev/image-kernels/): interactive tool for sliding hand-designed kernels over an image, complementing :numref:`sec_conv_layer`.
+- [Feature Visualization (Olah, Mordvintsev & Schubert, 2017, *Distill*)](https://distill.pub/2017/feature-visualization/): visual exploration of what convnet units respond to, accompanying :numref:`sec_lenet`.
 
 **Foundational papers**
 
-- [Gradient-Based Learning Applied to Document Recognition — LeCun, Bottou, Bengio & Haffner (1998), *Proc. IEEE*](http://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf) — free PDF; the LeNet-5 paper behind :numref:`sec_lenet`, still worth reading for its systems-level completeness.
-- [Backpropagation Applied to Handwritten Zip Code Recognition — LeCun et al. (1989), *Neural Computation*](https://doi.org/10.1162/neco.1989.1.4.541) — the first convnet trained end-to-end with backprop (paywalled, noted; widely reproduced online) (:numref:`sec_lenet`).
-- [Neocognitron — Fukushima (1980), *Biological Cybernetics*](https://doi.org/10.1007/BF00344251) — the pre-backprop ancestor of alternating convolution/pooling stages (paywalled, noted) (:numref:`sec_pooling`).
-- [Receptive fields, binocular interaction and functional architecture in the cat's visual cortex — Hubel & Wiesel (1962), *J. Physiology*](https://pmc.ncbi.nlm.nih.gov/articles/PMC1359523/) — free (PMC); the biological root of local receptive fields and hierarchical feature detection (:numref:`sec_why-conv`).
+- [Gradient-Based Learning Applied to Document Recognition (LeCun, Bottou, Bengio & Haffner, 1998, *Proc. IEEE*)](http://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf): free PDF; the LeNet-5 paper behind :numref:`sec_lenet`.
+- [Backpropagation Applied to Handwritten Zip Code Recognition (LeCun et al., 1989, *Neural Computation*)](https://doi.org/10.1162/neco.1989.1.4.541): the first convnet trained end to end with backpropagation (paywalled) (:numref:`sec_lenet`).
+- [Neocognitron (Fukushima, 1980, *Biological Cybernetics*)](https://doi.org/10.1007/BF00344251): the pre-backpropagation ancestor of alternating convolution and pooling stages (paywalled) (:numref:`sec_pooling`).
+- [Receptive fields, binocular interaction and functional architecture in the cat's visual cortex (Hubel & Wiesel, 1962, *J. Physiology*)](https://pmc.ncbi.nlm.nih.gov/articles/PMC1359523/): free (PMC); the biological root of local receptive fields and hierarchical feature detection (:numref:`sec_why-conv`).
 
 <!-- slides -->
 

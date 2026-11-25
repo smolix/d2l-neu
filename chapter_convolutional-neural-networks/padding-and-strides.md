@@ -81,7 +81,7 @@ center of its input.
 ### Zero Padding
 
 The simplest remedy is to surround the input with a border of extra filler
-pixels—typically zeros—before sliding the kernel across it, a technique known
+pixels (typically zeros) before sliding the kernel across it, a technique known
 as *padding*. In :numref:`img_conv_pad`, adding one row of zeros to the top
 and bottom and one column to the left and right expands a $3\times 3$ input
 into a $5\times 5$ grid, allowing a $2\times 2$ kernel to produce a
@@ -110,7 +110,7 @@ layers maintains the same spatial resolution at every depth, making network
 architectures much easier to design and reason about.
 
 Notice that dividing $k-1$ by two explains why CNNs almost always use odd
-kernel sizes---such as 1, 3, 5, or 7, paired with paddings of 0, 1, 2, or 3.
+kernel sizes, such as 1, 3, 5, or 7, paired with paddings of 0, 1, 2, or 3.
 An odd kernel has a well-defined center pixel, so symmetric padding places the
 window computing output `Y[i, j]` directly centered on input pixel `X[i, j]`,
 keeping the input and output grids aligned. For an even kernel, $k_\textrm{h}-1$
@@ -201,7 +201,7 @@ Keras `Conv2D` takes `padding='valid'` (no padding) or `padding='same'` (output 
 :label:`subsec_padding_values`
 
 Zero padding implicitly assumes that the image is surrounded by black pixels
-outside its frame. More formally, padding specifies a *boundary condition*---a
+outside its frame. More formally, padding specifies a *boundary condition*: a
 rule for supplying values beyond the image border where no measurement exists.
 To see how zero padding affects the output, let us pad a uniform $5\times 5$
 image of all ones with one pixel of zeros on each side and cross-correlate it
@@ -384,8 +384,8 @@ than double the reach to $r = 1+2+4+8 = 15$.
 
 Because each stride multiplies the effective reach of every layer above it,
 the receptive field grows geometrically whenever downsampling continues. After
-five stride-2 stages---typical in image classifiers operating on
-$224\times 224$ inputs---a single step in the feature map spans 32 input
+five stride-2 stages (typical in image classifiers operating on
+$224\times 224$ inputs), a single step in the feature map spans 32 input
 pixels, enabling top-level units to view the entire image in only a handful of
 layers.
 
@@ -803,7 +803,7 @@ Replacing $k_i - 1$ with $k'_i - 1 = d_i(k_i - 1)$ in our receptive-field formul
 
 ::: {.cols .vc}
 ::: {.col}
-- **The gridding hazard:** Constant dilation $d = (4, 4, 4, 4)$ samples only offsets $(i+4a, j+4b)$—reading just $81$ of $1{,}089$ pixels ($7.4\%$) inside its $33 \times 33$ box!
+- **The gridding hazard:** Constant dilation $d = (4, 4, 4, 4)$ samples only offsets $(i+4a, j+4b)$, reading just $81$ of $1{,}089$ pixels ($7.4\%$) inside its $33 \times 33$ box.
 - **Blind to thin structures:** Small objects falling between the $4$-pixel lattice lines never touch a weight.
 - **Exponential fix:** Doubling schedule $d = (1, 2, 4, 8)$ bridges every gap for $100\%$ dense coverage ($r = 31$).
 :::

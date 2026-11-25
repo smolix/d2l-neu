@@ -10,7 +10,7 @@
   "box_alltoall_perf_g4.txt": "nccl-tests v2.21.1 alltoall_perf -b 8 -e 256M -f 2 -g 4 -n 20",
   "box_fio_seqread.json": "fio-3.43 --rw=read --bs=1M --iodepth=32 --ioengine=io_uring --direct=1 --size=4G --runtime=20 --time_based --output-format=json (root volume, LVM)",
   "doc_gdsio.txt": "gdsio example output (commands and IoType lines) copied from NVIDIA, \"Verifying GDS\" (GPUDirect Storage for NVMe), https://docs.nvidia.com/deploy/gds-support-for-nvme/latest/test-gds.html, retrieved 2026-11-25; documentation sample, not measured here",
-  "doc_nvswitch_node_topo_m.txt": "nvidia-smi topo -m of an 8 x A100-SXM4-80GB node (NVSwitch, every GPU pair NV12; two NICs) copied from NVIDIA/nccl-tests issue 149, https://github.com/NVIDIA/nccl-tests/issues/149, retrieved 2026-11-25; documentation sample, not measured here",
-  "doc_bridged_pair_topo_m.txt": "nvidia-smi topo -m of a workstation with A100 80GB PCIe cards, two of its pairs joined by NVLink bridges (NV12) and the rest over PCIe (PXB, SYS), copied from jax-ml/jax issue 11478, https://github.com/jax-ml/jax/issues/11478, retrieved 2026-11-25; documentation sample, not measured here"
+  "doc_nvswitch_node_topo_m.txt": "nvidia-smi topo -m of an 8 x A100-SXM4-80GB node (NVSwitch, every GPU pair NV12; two NICs) copied from a user post on NVIDIA/nccl-tests issue 149, https://github.com/NVIDIA/nccl-tests/issues/149, retrieved 2026-11-25; published sample (GitHub issue), not measured here",
+  "doc_bridged_pair_topo_m.txt": "nvidia-smi topo -m of a 5-GPU workstation with A100 80GB PCIe cards, two of its pairs joined by NVLink bridges (NV12) and the rest over PCIe (PXB, SYS), copied from a user post on jax-ml/jax issue 11478, https://github.com/jax-ml/jax/issues/11478, retrieved 2026-11-25; published sample (GitHub issue), not measured here; not the 8-GPU bridged node of fig_lm_hw_server_graph"
  }
 }

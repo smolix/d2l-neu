@@ -11,10 +11,11 @@ explains in a sentence but does not show (docs/code-guide.md 7.1): the
 section's registry entries, one statement each (the link table, the box's
 topology and NCCL sweeps, the campaign logs C-T3 and C-T2pair), its
 regeneration job and the campaign configurations; the captures of the
-machine (`nvidia-smi topo`, `numactl`, `lspci`) and the two documentation
-samples of other nodes; the parsers of `nvidia-smi topo`,
+machine (`nvidia-smi topo`, `numactl`, `lspci`) and the two published
+samples of other machines; the parsers of `nvidia-smi topo`,
 `p2pBandwidthLatencyTest` and nccl-tests; the link table; the topology
-graph and its displays; the GPU-to-GPU matrix and the concurrent pairs;
+graph and its displays; the GPU-to-GPU matrix, the concurrent pairs and
+the D2 patterns as concurrent staged copies;
 the NCCL sweeps (nccl-tests, or a torch.distributed fallback through
 torchrun with its own timeout), the NCCL transport digest, the copy-engine
 microbenchmark; the alpha-beta fits per collective, `alpha_beta.json` and
@@ -30,15 +31,15 @@ the box's alpha-beta reader; the driver `regen_p2p`. Blocks are tagged
 ```{.python .input #server-paths-lib-data-hub}
 %%tab pytorch
 #@save
-d2l.DATA_HUB['lm-hw-links-v1'] = (
-    d2l.LM_DATA_URL + 'lm-hw-links-v1.csv',
-    '1ef216a1dd49b7a136e191d2a1d71ab9899d0b66')
+d2l.DATA_HUB['lm-hw-links-v2'] = (
+    d2l.LM_DATA_URL + 'lm-hw-links-v2.csv',
+    '25dd72b975f488deb4cbd54c7607d75d6135fd91')
 ```
 
 ```{.python .input #server-paths-lib-entries}
 %%tab pytorch
 #@save
-d2l.HW_STATIC['links'] = ('lm-hw-links-v1', 'csv')
+d2l.HW_STATIC['links'] = ('lm-hw-links-v2', 'csv')
 d2l.HW_ARTIFACTS['box-p2p'] = ('lm-hw-buildbox-p2p-v1', 'tar')
 d2l.HW_CAMPAIGNS['node-p2p'] = (
     'lm-hw-node-p2p-v1', 'tar', 'C-T3', 'one 8 x A100 40 GB node')
@@ -68,6 +69,10 @@ all-gather and reduce-scatter on all four cards, and all-reduce again with
 `NCCL_ALGO=Ring`. Campaign C-T3 adds g = 4 and 8, `NCCL_ALGO=Tree` and the
 `NCCL_P2P_DISABLE=1` emulation of a host-staged node; C-T2pair runs the
 bridged pair with and without peer-to-peer and with the copy-engine knob.
+`alpha_below` and `plateau_from` are the two regimes of the fits (alpha
+from the messages up to the first, beta from the messages of the second
+and more): 4 MiB is on the box's plateau, an NVLink pair reaches its own
+only near 256 MiB.
 
 ```{.python .input #server-paths-lib-configs}
 %%tab pytorch
@@ -82,7 +87,8 @@ _HW_P2P = {
         ('reduce_scatter', 'all', 'default', ''),
         ('all_reduce', 'pairs', 'Ring', ''),
         ('all_reduce', 'all', 'Ring', '')],
-        max_bytes=2**28, iters=20, warmup=5, copy_engine=True),
+        max_bytes=2**28, iters=20, warmup=5, copy_engine=True,
+        patterns=True, alpha_below=2**16, plateau_from=2**22),
     't3': dict(series=[
         (op, place, 'default', '') for op in ('all_reduce', 'alltoall')
         for place in ('pairs', 4, 'all')] + [
@@ -92,7 +98,8 @@ _HW_P2P = {
         ('all_reduce', 'all', 'Tree', ''),
         ('all_reduce', 'all', 'default', 'NCCL_P2P_DISABLE=1'),
         ('alltoall', 'all', 'default', 'NCCL_P2P_DISABLE=1')],
-        max_bytes=2**32, iters=50, warmup=10, copy_engine=False),
+        max_bytes=2**32, iters=50, warmup=10, copy_engine=False,
+        patterns=False, alpha_below=2**16, plateau_from=2**28),
     't2pair': dict(series=[
         ('all_reduce', 'pairs', 'default', ''),
         ('alltoall', 'pairs', 'default', ''),
@@ -100,7 +107,8 @@ _HW_P2P = {
         ('alltoall', 'pairs', 'default', 'NCCL_P2P_DISABLE=1'),
         ('all_reduce', 'pairs', 'default',
          'NCCL_P2P_DISABLE=1 NCCL_SHM_USE_CUDA_MEMCPY=1')],
-        max_bytes=2**32, iters=50, warmup=10, copy_engine=False)}
+        max_bytes=2**32, iters=50, warmup=10, copy_engine=False,
+        patterns=False, alpha_below=2**16, plateau_from=2**28)}
 
 #@save
 _HW_P2P_TIMEOUTS = dict(p2p_test=300, capture=60, info=120)  # seconds
@@ -111,10 +119,12 @@ _HW_P2P_TIMEOUTS = dict(p2p_test=300, capture=60, info=120)  # seconds
 `hw_capture(name)` runs one read-only command and returns its text (scrubbed
 of the host name and addresses); where the command is missing, it returns
 the box's committed capture and says so in one line. Two further names are
-documentation samples of other machines, committed with the box result and
-labelled "sample, not measured here": an 8 x A100 SXM node behind NVSwitch
-(nccl-tests issue 149) and a workstation with two NVLink-bridged pairs of
-A100 80 GB PCIe cards (JAX issue 11478).
+published samples of other machines, user posts on GitHub issues committed
+with the box result and labelled "published sample, not measured here": an
+8 x A100 SXM node behind NVSwitch (nccl-tests issue 149) and a 5-GPU
+workstation with two NVLink-bridged pairs of A100 80 GB PCIe cards (JAX
+issue 11478), which is not the 8-GPU bridged node of
+`fig_lm_hw_server_graph`.
 
 ```{.python .input #server-paths-lib-captures}
 %%tab pytorch
@@ -131,7 +141,7 @@ _HW_CAPTURES = {
 _HW_SAMPLES = {  # name: (file in tools/lm_data/hw/samples, source)
     'nvswitch-node': ('doc_nvswitch_node_topo_m.txt',
                       'https://github.com/NVIDIA/nccl-tests/issues/149'),
-    'bridged-pair-node': ('doc_bridged_pair_topo_m.txt',
+    'bridged-workstation': ('doc_bridged_pair_topo_m.txt',
                           'https://github.com/jax-ml/jax/issues/11478')}
 
 #@save
@@ -173,8 +183,8 @@ def _hw_capture_all():
 #@save
 def hw_capture(name):
     """The text of a machine capture ('topo', 'topo-p2p', 'numactl',
-    'lspci', 'pcie'), taken now, or of a documentation sample
-    ('nvswitch-node', 'bridged-pair-node'). Without the command (and for a
+    'lspci', 'pcie'), taken now, or of a published sample
+    ('nvswitch-node', 'bridged-workstation'). Without the command (and for a
     sample) the committed text of the box result is returned, with a
     one-line note for a missing command."""
     if name not in _HW_CAPTURES and name not in _HW_SAMPLES:
@@ -307,7 +317,7 @@ def parse_nccl_tests(text):
 
 ## The Link Table
 
-`links_table` reads the sourced table (`lm-hw-links-v1`) and computes the
+`links_table` reads the sourced table (`lm-hw-links-v2`) and computes the
 PCIe rows from lanes, rate and encoding: Gen 3 to 5 carry 128 bits of data
 in every 130 on the wire, Gen 6's FLIT overhead is left out (its row says
 so). Rates per direction; the vendors' NVLink figures are both directions
@@ -459,7 +469,7 @@ def _pair_counts(topo):
 def show_topo(topo, p2p=None, samples=()):
     """The GPU rows of a topology matrix beside the P2P read matrix (if
     given), one line on CPU and NUMA affinity, and one line per
-    documentation sample (an hw_capture name): its GPUs, NICs and the
+    published sample (an hw_capture name): its GPUs, NICs and the
     relation of every GPU pair."""
     gpus = [i for i, l in enumerate(topo.labels) if l.startswith('GPU')]
     names = [topo.labels[i] for i in gpus]
@@ -485,7 +495,7 @@ def show_topo(topo, p2p=None, samples=()):
         print('NUMA node: ' + ', '.join(
             f'{topo.labels[i]} {topo.numa_affinity[i]}' for i in gpus))
     if samples:
-        print('documentation samples, not measured here:')
+        print('published samples (GitHub issues), not measured here:')
     for name in samples:
         s = parse_topo_matrix(hw_capture(name))
         n_gpu = sum(l.startswith('GPU') for l in s.labels)
@@ -502,8 +512,12 @@ buffer for the latency: wall clock from before the copies until both cards
 have synchronized, the median of five rounds. The concurrent pairs copy at
 the same moment from their own streams (threads released together); their
 aggregate is the bytes moved over the wall time from the first start to
-the last finish. `p2pBandwidthLatencyTest` runs as a cross-check where it
-was built.
+the last finish. The number of back-to-back copies per round comes from
+one timed warm-up copy (about 50 ms per round on any link). The patterns
+of derivation D2 run the same way (`hw_staged_patterns`): the all-to-all as
+k (k - 1) flows of S / k, the ring all-reduce as k flows of 2 (k - 1) S / k
+in the groups' order. `p2pBandwidthLatencyTest` runs as a cross-check
+where it was built.
 
 ```{.python .input #server-paths-lib-matrix}
 %%tab pytorch
@@ -552,13 +566,23 @@ def _sync_pair(i, j):
     torch.cuda.synchronize(j)
 
 #@save
-def _staged_copy_s(i, j, nbytes, copies, repeats=5):
+def _copies_for(seconds, target_s=0.05):
+    """Back-to-back copies that fill about target_s, one taking seconds."""
+    return max(1, int(target_s / max(seconds, 1e-9)))
+
+#@save
+def _staged_copy_s(i, j, nbytes, copies=None, repeats=5):
     """(median, MAD) seconds per copy_ of nbytes from GPU i to GPU j (wall
-    clock, both cards synchronized)."""
+    clock, both cards synchronized); copies per round from a timed warm-up
+    copy unless given."""
     src = torch.ones(nbytes, dtype=torch.uint8, device=i)
     dst = torch.empty(nbytes, dtype=torch.uint8, device=j)
     dst.copy_(src)  # warm: the first copy sets up the staging path
     _sync_pair(i, j)
+    t = time.perf_counter()
+    dst.copy_(src)
+    _sync_pair(i, j)
+    copies = copies or _copies_for(time.perf_counter() - t)
     times = []
     for _ in range(repeats):
         t = time.perf_counter()
@@ -569,44 +593,48 @@ def _staged_copy_s(i, j, nbytes, copies, repeats=5):
     return d2l._hw_stats(times)
 
 #@save
-def _copies_for(nbytes, target_s=0.05, rate=20e9):
-    """Back-to-back copies of nbytes for about target_s at rate bytes/s."""
-    return max(1, int(target_s * rate / nbytes))
-
-#@save
-def _concurrent_staged(pairs, nbytes, repeats=5):
-    """(median, MAD) aggregate GB/s of the pairs (src, dst) copying at
-    once, each from its own stream."""
+def _concurrent_staged(flows, repeats=5, target_s=0.05):
+    """(median, MAD) seconds per round of the flows (src, dst, nbytes)
+    copying at once, each from its own stream and thread: the wall time
+    from the first start to the last finish over the round's back-to-back
+    copies (their number from one timed warm-up round)."""
     import threading
-    copies = _copies_for(nbytes)
-    bufs = {p: (torch.ones(nbytes, dtype=torch.uint8, device=p[0]),
-                torch.empty(nbytes, dtype=torch.uint8, device=p[1]))
-            for p in pairs}
+    bufs = [(torch.ones(n, dtype=torch.uint8, device=i),
+             torch.empty(n, dtype=torch.uint8, device=j))
+            for i, j, n in flows]
 
-    def once():
-        barrier, spans = threading.Barrier(len(pairs)), {}
+    def once(copies):
+        barrier, spans = threading.Barrier(len(flows)), [None] * len(flows)
 
-        def work(p):
-            src, dst = bufs[p]
-            with torch.cuda.device(p[0]), torch.cuda.stream(
-                    torch.cuda.Stream(p[0])):
+        def work(f):
+            (i, j, _), (src, dst) = flows[f], bufs[f]
+            with torch.cuda.device(i), torch.cuda.stream(
+                    torch.cuda.Stream(i)):
                 dst.copy_(src)
-                _sync_pair(*p)
+                _sync_pair(i, j)
                 barrier.wait()
                 t = time.perf_counter()
                 for _ in range(copies):
                     dst.copy_(src)
-                _sync_pair(*p)
-                spans[p] = (t, time.perf_counter())
-        threads = [threading.Thread(target=work, args=(p,)) for p in pairs]
+                _sync_pair(i, j)
+                spans[f] = (t, time.perf_counter())
+        threads = [threading.Thread(target=work, args=(f,))
+                   for f in range(len(flows))]
         for th in threads:
             th.start()
         for th in threads:
             th.join()
-        wall = (max(b for _, b in spans.values())
-                - min(a for a, _ in spans.values()))
-        return len(pairs) * copies * nbytes / wall / 1e9
-    return d2l._hw_stats([once() for _ in range(repeats)])
+        return (max(b for _, b in spans) - min(a for a, _ in spans)) / copies
+    copies = _copies_for(once(1), target_s)
+    return d2l._hw_stats([once(copies) for _ in range(repeats)])
+
+#@save
+def _concurrent_gbs(pairs, nbytes):
+    """(median, MAD) aggregate GB/s of the pairs (src, dst) copying nbytes
+    each at once."""
+    s, mad = _concurrent_staged([(a, b, nbytes) for a, b in pairs])
+    gbs = len(pairs) * nbytes / s / 1e9
+    return gbs, gbs * mad / s
 
 #@save
 def _p2p_test():
@@ -630,14 +658,14 @@ def _gpu_matrix_compute(nbytes, lat_bytes=4):
     for i in range(n):
         for j in range(n):
             if i != j:
-                t, m = _staged_copy_s(i, j, nbytes, _copies_for(nbytes))
+                t, m = _staged_copy_s(i, j, nbytes)
                 gbs[i, j], mad[i, j] = nbytes / t / 1e9, m / t
                 lat[i, j] = _staged_copy_s(i, j, lat_bytes, 100)[0] * 1e6
     groups, pats = _bridge_pairs(rel, n)
     conc = pd.DataFrame([
         dict(pattern=k, pairs=', '.join(f'{a}->{b}' for a, b in v),
              gbs=s[0], mad_gbs=s[1])
-        for k, v in pats.items() for s in [_concurrent_staged(v, nbytes)]])
+        for k, v in pats.items() for s in [_concurrent_gbs(v, nbytes)]])
     peer = np.array([[int(i != j and torch.cuda.can_device_access_peer(i, j))
                       for j in range(n)] for i in range(n)])
     p2p, raw = _p2p_test()
@@ -653,13 +681,22 @@ def _offdiag(m):
     return m[~np.eye(len(m), dtype=bool)]
 
 #@save
+def _by_relation(r):
+    """{relation: median GB/s} of the copies of a GPU matrix."""
+    rel, gbs = np.array(r['relation']), np.asarray(r['gbs'], dtype=float)
+    off = ~np.eye(len(gbs), dtype=bool)
+    return {c: float(np.median(gbs[off & (rel == c)]))
+            for c in sorted(set(rel[off]))}
+
+#@save
 def _show_gpu_matrix(r):
-    g, lat = _offdiag(r['gbs']), _offdiag(r['lat_us'])
+    lat = _offdiag(r['lat_us'])
     peer = 'refused' if not _offdiag(r['peer']).any() else 'available'
     print(f"peer access between the GPUs: {peer}")
-    print(f"{d2l._hw_bytes(r['nbytes'])} copies GPU to GPU: "
-          f"{g.min():.0f}-{g.max():.0f} GB/s (median {np.median(g):.0f}); "
-          f"{r['lat_bytes']} B copies: {lat.min():.0f}-{lat.max():.0f} us")
+    print(f"{d2l._hw_bytes(r['nbytes'])} copies GPU to GPU, median: "
+          + ', '.join(f'{c} pairs {v:.1f} GB/s'
+                      for c, v in _by_relation(r).items()))
+    print(f"{r['lat_bytes']} B copies: {lat.min():.0f}-{lat.max():.0f} us")
     for _, c in r['concurrent'].iterrows():
         print(f'{c.pattern} ({c.pairs}): {c.gbs:.0f} GB/s together')
     test = r['p2p_test'].get('Unidirectional P2P=Disabled Bandwidth Matrix '
@@ -670,6 +707,29 @@ def _show_gpu_matrix(r):
               f'{t.max():.0f} GB/s')
 
 #@save
+def plot_gpu_matrix(mat):
+    """The GB/s of the copies between every ordered pair of GPUs as a heat
+    map, each cell labelled with its rate and the pair's relation
+    (nvidia-smi topo -m); the diagonal is empty."""
+    gbs = np.asarray(mat['gbs'], dtype=float)
+    n = len(gbs)
+    d2l.use_svg_display()
+    fig, ax = d2l.plt.subplots(figsize=(3.6, 2.8))
+    im = ax.imshow(np.ma.masked_invalid(gbs), cmap='Reds', vmin=0,
+                   vmax=2 * np.nanmax(gbs))  # mid tones: black labels read
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                ax.text(j, i, f"{gbs[i, j]:.1f}\n{mat['relation'][i][j]}",
+                        ha='center', va='center', fontsize=9,
+                        color='black')
+    ax.set_xticks(range(n))
+    ax.set_yticks(range(n))
+    ax.set_xlabel('to GPU')
+    ax.set_ylabel('from GPU')
+    fig.colorbar(im, ax=ax, label='GB/s')
+
+#@save
 def _gpu_matrix_live(r, same):
     n = torch.cuda.device_count()
     if n < 2:
@@ -677,10 +737,14 @@ def _gpu_matrix_live(r, same):
     rel = _smi_relations()
     pairs = [(0, 1)] + [(0, j) for j in range(2, n)
                         if rel(0, j) != rel(0, 1)][:1]
+    pairs = [(i, j) for i, j in pairs if max(i, j) < len(r['relation'])
+             and rel(i, j) == r['relation'][i][j]]
+    if not pairs:
+        return 'no pair of the committed relation classes here'
     nbytes = int(r['nbytes'])
     pts = []
     for i, j in pairs:
-        t = _staged_copy_s(i, j, nbytes, _copies_for(nbytes))[0]
+        t = _staged_copy_s(i, j, nbytes)[0]
         pts.append((f'{i}->{j}', r['gbs'][i][j], nbytes / t / 1e9,
                     r['mad_rel'][i][j]))
     return d2l._hw_agreement(pts, same, 'GB/s')
@@ -697,6 +761,57 @@ def hw_gpu_matrix(nbytes=2**28):
                           dict(nbytes=nbytes), entry='gpu-matrix',
                           live_check=_gpu_matrix_live,
                           show=_show_gpu_matrix, live_label='two pairs')
+
+#@save
+def _pattern_flows(groups, pattern, S):
+    """The flows (src, dst, bytes) of pattern on S bytes per GPU, the ring
+    in the groups' order (as tree_link_loads routes them)."""
+    gpus = [i for grp in groups for i in grp]
+    k = len(gpus)
+    if pattern == 'alltoall':
+        return [(i, j, S // k) for i in gpus for j in gpus if i != j]
+    return [(i, j, 2 * (k - 1) * S // k)
+            for i, j in zip(gpus, gpus[1:] + gpus[:1])]
+
+#@save
+def _patterns_compute(S):
+    n = torch.cuda.device_count()
+    groups, _ = _bridge_pairs(_smi_relations(), n)
+    rows = []
+    for p in ('alltoall', 'allreduce'):
+        flows = _pattern_flows(groups, p, S)
+        s, mad = _concurrent_staged(flows)
+        rows.append(dict(pattern=p, flows=len(flows), bytes=flows[0][2],
+                         seconds=s, mad_rel=mad / s,
+                         gbs=sum(f[2] for f in flows) / s / 1e9))
+    return pd.DataFrame(rows).set_index('pattern')
+
+#@save
+def _patterns_live(r, same):
+    n = torch.cuda.device_count()
+    groups, _ = _bridge_pairs(_smi_relations(), n) if n > 1 else ([], {})
+    if sum(map(len, groups)) != int(r.flows['allreduce']):
+        return 'needs the committed run\'s GPUs: the box run is shown'
+    flows = _pattern_flows(groups, 'alltoall', int(r.attrs['S']))
+    s = _concurrent_staged(flows)[0]
+    return d2l._hw_agreement([('all-to-all', r.seconds['alltoall'] * 1e3,
+                               s * 1e3, r.mad_rel['alltoall'])], same, 'ms')
+
+#@save
+def hw_staged_patterns(S=2**28):
+    """The two patterns of derivation D2 on S bytes per GPU as concurrent
+    staged copies (copy_ between devices, one thread and stream per flow):
+    the all-to-all (k (k - 1) flows of S / k) and the ring all-reduce (k
+    flows of 2 (k - 1) S / k, in the order of the bridge groups). A table
+    by pattern: flows, bytes per flow, seconds per round, its relative
+    MAD and the aggregate GB/s. It needs every GPU of the host; a normal
+    run shows the committed box result and re-runs the all-to-all."""
+    def compute():
+        out = _patterns_compute(S)
+        out.attrs['S'] = S
+        return out
+    return d2l._hw_result('box-p2p', compute, dict(S=S), entry='patterns',
+                          live_check=_patterns_live, live_label='all-to-all')
 ```
 
 ## NCCL Sweeps
@@ -902,6 +1017,10 @@ def _p2p_check(config):
         raise RuntimeError(f'config {config} needs {need} GPUs'
                            + ('' if config == 'box' else ' (A100)')
                            + f', not {n} x {name}')
+    host = len(d2l._hw_smi('--query-gpu=index'))
+    if config == 'box' and n != host:
+        raise RuntimeError(f'the box result needs every GPU of the host '
+                           f'({host}), not {n}: lock them all')
 
 #@save
 def _nccl_compute(config):
@@ -928,7 +1047,9 @@ def _nccl_compute(config):
     info = {path: _nccl_info(gpus) for path, gpus in places.items()}
     out.attrs.update(tool=frames[0].attrs['tool'], info=info,
                      nccl=next(iter(info.values()))['version'],
-                     max_bytes=spec['max_bytes'])
+                     max_bytes=spec['max_bytes'],
+                     alpha_below=spec['alpha_below'],
+                     plateau_from=spec['plateau_from'])
     return out
 
 #@save
@@ -938,6 +1059,13 @@ def _show_nccl(nccl):
     version = str(nccl.attrs.get('nccl')).split('+')[0]  # no '+cuda12.9'
     print(f"{nccl.attrs.get('tool')}, NCCL {version}; transport between "
           f"the cards: {', '.join(via) or 'not recorded'}")
+
+#@save
+def busbw_at(nccl, op, path='all', size=None, algo='default', env=''):
+    """Bus bandwidth (GB/s) of one row of a sweep table: op on placement
+    path at message size (bytes; None: the largest)."""
+    size = int(nccl['size'].max()) if size is None else size
+    return _busbw_at(nccl, op, path, size, algo, env)[0]
 
 #@save
 def _busbw_at(nccl, op, path, size, algo='default', env=''):
@@ -1033,15 +1161,22 @@ def plot_nccl(nccl, host_link=None):
 
 ## Fits per Collective
 
-`fit_collectives` fits `t = alpha + S / B` to each sweep (sizes above zero)
-with `fit_alpha_beta`, then reports alpha, the collective's fixed cost, and
-beta = phi(op, k) B, the rate each GPU's link carries (bus bandwidth's
-convention, phi = `nccl_busbw_factor`), with 95% intervals from 2,000
-bootstrap draws over the sizes (seed 0; each draw one weighted
-least-squares solve), the half-bandwidth message size `n_1/2 = alpha B`,
-the median relative residual and `alpha_step`, alpha over the ring's number
-of steps, so that `coll_time(op, S, k, alpha_step, beta)` reproduces the
-fit.
+The sweeps are not alpha-beta shaped on this box: bus bandwidth peaks near
+1 MiB and settles lower, so one line through every size overstates beta by
+up to 20%. `fit_collectives` therefore uses two regimes, as
+`fit_h2d` does for the host link: alpha is the intercept of
+`fit_alpha_beta` on the messages of at most `alpha_below` bytes (the
+collective's fixed cost), beta = phi(op, k) B the median rate of the
+messages of at least `plateau_from` bytes (bus bandwidth's convention, the
+rate each GPU's link carries; phi = `nccl_busbw_factor`). The 95% intervals
+are run-to-run noise: each regeneration process's own two-regime fit
+(`attrs['proc_us']`, which `regen_p2p_finish` keeps with the combined
+sweeps), Student t over the processes, centred on the combined fit; NaN
+with one process. The table also holds `beta_fit` (the slope of one fit
+over every size, for comparison), the half-bandwidth message size
+`n_1/2 = alpha B`, the median relative residual of the two-regime model
+over every size and `alpha_step`, alpha over the ring's number of steps,
+so that `coll_time(op, S, k, alpha_step, beta)` reproduces the model.
 
 ```{.python .input #server-paths-lib-fits}
 %%tab pytorch
@@ -1051,26 +1186,40 @@ def _ring_steps(op, k):
     return 2 * (k - 1) if op.replace('_', '') == 'allreduce' else k - 1
 
 #@save
-def _wls_draws(s, t, draws, rng):
-    """(alpha, 1/B) of the weighted least-squares fit (weights 1/t^2) of
-    t = alpha + s/B to `draws` resamples of the points, all at once."""
-    idx = rng.integers(0, len(s), size=(draws, len(s)))
-    S, T = s[idx], t[idx]
-    W = 1 / T**2
-    a, b, c = W.sum(1), (W * S).sum(1), (W * S * S).sum(1)
-    y0, y1 = (W * T).sum(1), (W * S * T).sum(1)
-    det = a * c - b * b
-    ok = det > 1e-9 * a * c  # a resample with one distinct size is singular
-    return ((c * y0 - b * y1) / det)[ok], ((a * y1 - b * y0) / det)[ok]
+def _two_regimes(s, t, alpha_below, plateau_from):
+    """(alpha, B): alpha (s) from fit_alpha_beta on the messages of at most
+    alpha_below bytes, B (bytes/s, algorithm bandwidth) the median rate of
+    the messages of at least plateau_from bytes."""
+    small, big = s <= alpha_below, s >= plateau_from
+    if small.sum() < 2 or not big.any():
+        raise ValueError(f'a sweep needs two sizes up to {alpha_below} B '
+                         f'and one from {plateau_from} B')
+    alpha = d2l.fit_alpha_beta(s[small], t[small])[0]
+    return alpha, float(np.median(s[big] / t[big]))
 
 #@save
-def fit_collectives(nccl, algo='default', env='', draws=2000, seed=0):
-    """alpha (s) and beta (bytes/s per link, bus-bandwidth convention) with
-    95% bootstrap intervals, n_half (message bytes), alpha_step, the
-    median relative residual and the number of points, per (op, g, path)
-    of a sweep table (nccl_sweeps), of a campaign log holding one
-    ('nccl'), or for a pending campaign log an empty table whose
-    attrs['status'] is the log's status line."""
+def _t_interval(est, x, level=0.95):
+    """(lo, hi): est plus and minus Student t times the standard error of
+    the per-process estimates x; NaN with fewer than two."""
+    x = np.asarray(x, dtype=float)
+    if len(x) < 2:
+        return float('nan'), float('nan')
+    from scipy import stats
+    half = (stats.t.ppf((1 + level) / 2, len(x) - 1) * x.std(ddof=1)
+            / math.sqrt(len(x)))
+    return float(est - half), float(est + half)
+
+#@save
+def fit_collectives(nccl, algo='default', env='', alpha_below=None,
+                    plateau_from=None):
+    """alpha (s) and beta (bytes/s per link, bus-bandwidth convention) per
+    (op, g, path) of a sweep table (nccl_sweeps), of a campaign log
+    holding one ('nccl'), or for a pending campaign log an empty table
+    whose attrs['status'] is the log's status line. Two regimes: alpha
+    from the messages up to alpha_below bytes, beta from those of
+    plateau_from bytes and more (None: the sweep's configuration, else 64
+    KiB and 4 MiB); 95% intervals over the regeneration's processes;
+    n_half (message bytes), alpha_step, beta_fit, resid_rel, n_points."""
     if isinstance(nccl, d2l.CampaignPending):
         out = d2l._hw_pending(nccl.name)
         out.attrs['status'] = d2l.hw_status_line(nccl)
@@ -1079,18 +1228,26 @@ def fit_collectives(nccl, algo='default', env='', draws=2000, seed=0):
         nccl = nccl['nccl']
     if nccl.empty:
         return d2l._hw_pending('nccl')
-    rng, rows = np.random.default_rng(seed), {}
-    d = nccl[(nccl.algo == algo) & (nccl.env == env) & (nccl['size'] > 0)]
-    for (op, g, path), x in d.groupby(['op', 'g', 'path'], sort=False):
+    alpha_below = alpha_below or nccl.attrs.get('alpha_below', 2**16)
+    plateau_from = plateau_from or nccl.attrs.get('plateau_from', 2**22)
+    procs = np.asarray(nccl.attrs.get('proc_us', []), dtype=float)
+    keep = ((nccl.algo == algo) & (nccl.env == env)
+            & (nccl['size'] > 0)).to_numpy()
+    rows = {}
+    for (op, g, path), x in nccl[keep].groupby(['op', 'g', 'path'],
+                                               sort=False):
         s, t = x['size'].to_numpy(float), x.oop_us.to_numpy() / 1e6
-        alpha, B, _ = d2l.fit_alpha_beta(s, t)
         phi = d2l.nccl_busbw_factor(op, int(g))
-        a_b, inv_b = _wls_draws(s, t, draws, rng)
+        alpha, B = _two_regimes(s, t, alpha_below, plateau_from)
+        pos = nccl.index.get_indexer(x.index)
+        per = [_two_regimes(s, p[pos] / 1e6, alpha_below, plateau_from)
+               for p in procs]
+        a_lo, a_hi = _t_interval(alpha, [a for a, _ in per])
+        b_lo, b_hi = _t_interval(phi * B, [phi * b for _, b in per])
         rows[(op, int(g), path)] = dict(
-            alpha=alpha, alpha_lo=np.percentile(a_b, 2.5),
-            alpha_hi=np.percentile(a_b, 97.5), beta=phi * B,
-            beta_lo=phi / np.percentile(inv_b, 97.5),
-            beta_hi=phi / np.percentile(inv_b, 2.5), n_half=alpha * B,
+            alpha=alpha, alpha_lo=a_lo, alpha_hi=a_hi, beta=phi * B,
+            beta_lo=b_lo, beta_hi=b_hi,
+            beta_fit=phi * d2l.fit_alpha_beta(s, t)[1], n_half=alpha * B,
             alpha_step=alpha / _ring_steps(op, int(g)),
             resid_rel=float(np.median(np.abs(t - alpha - s / B) / t)),
             n_points=len(s), algo=algo, env=env)
@@ -1098,25 +1255,29 @@ def fit_collectives(nccl, algo='default', env='', draws=2000, seed=0):
     out.index = pd.MultiIndex.from_tuples(out.index, names=['op', 'g', 'path'])
     out = out.sort_index()
     out.attrs.update(tool=nccl.attrs.get('tool'), nccl=nccl.attrs.get('nccl'),
-                     draws=draws, seed=seed)
+                     alpha_below=int(alpha_below),
+                     plateau_from=int(plateau_from),
+                     n_proc=len(procs) or nccl.attrs.get('n_proc', 1))
     return out
 
 #@save
 def show_fits(ab, max_rows=10):
     """The fits as the text reads them: op, g, path, alpha (us), beta
-    (GB/s) with its 95% interval, n_1/2 (KiB); for a pending log its
-    status line."""
+    (GB/s) with its 95% interval over the processes ('-' with one), n_1/2
+    (KiB); for a pending log its status line."""
     if ab.empty:
         print(ab.attrs.get('status') or ab.attrs.get('label', 'no fits'))
         return
+    ci = lambda lo, hi: ('-' if np.isnan(lo) else
+                         f'{lo / 1e9:.2f}-{hi / 1e9:.2f}')
     show = pd.DataFrame({
         'op': [_OP_NAME.get(i[0], i[0]) for i in ab.index],
         'g': [i[1] for i in ab.index],
         'path': [i[2] for i in ab.index],
         'alpha (us)': ab.alpha.to_numpy() * 1e6,
         'beta (GB/s)': ab.beta.to_numpy() / 1e9,
-        '95% interval': [f'{lo / 1e9:.2f}-{hi / 1e9:.2f}' for lo, hi in
-                         zip(ab.beta_lo, ab.beta_hi)],
+        '95% interval': [ci(lo, hi) for lo, hi in zip(ab.beta_lo,
+                                                      ab.beta_hi)],
         'n_1/2 (KiB)': ab.n_half.to_numpy() / 2**10})
     d2l.show_table(show, digits={'alpha (us)': 0, 'beta (GB/s)': 2,
                                  'n_1/2 (KiB)': 0}, max_rows=max_rows,
@@ -1136,22 +1297,45 @@ def _transport(info):
     return None
 
 #@save
-def alpha_beta_records(ab, info=None, scope='intra_node',
-                       link='pcie_host_staged'):
+def _p2p_off(env):
+    return 'NCCL_P2P_DISABLE=1' in (env or '').split()
+
+#@save
+def _record_link(gpus, mat, env=''):
+    """alpha_beta.json's link of a placement (GPU indices of the GPU
+    matrix mat): 'nvlink' when every pair is NVLinked, 'pcie_p2p' when the
+    driver grants peer access between every pair, else
+    'pcie_host_staged', which is also the link whenever env sets
+    NCCL_P2P_DISABLE=1."""
+    pairs = [(i, j) for i in gpus for j in gpus if i != j]
+    if _p2p_off(env):
+        return 'pcie_host_staged'
+    if all(str(mat['relation'][i][j]).startswith('NV') for i, j in pairs):
+        return 'nvlink'
+    if all(mat['peer'][i][j] for i, j in pairs):
+        return 'pcie_p2p'
+    return 'pcie_host_staged'
+
+#@save
+def alpha_beta_records(ab, links, info=None, scope='intra_node'):
     """The rows of alpha_beta.json (01_interfaces schema plus proto,
     transport, path and env): alpha_s, beta_Bps per link (bus-bandwidth
-    convention), 95% intervals, n_half_bytes, resid_rel, n_points; info
-    ({path: _nccl_info record}) gives each path's transport."""
+    convention), 95% intervals (None with one process), n_half_bytes,
+    resid_rel, n_points. links: {path: link} (_record_link); info ({path:
+    _nccl_info record}) gives each path's transport, 'shm' where the env
+    disables peer-to-peer."""
     info, recs = info or {}, []
+    num = lambda x: None if np.isnan(x) else float(x)
     for (op, g, path), r in ab.iterrows():
         recs.append(dict(
-            scope=scope, link=link, op=_A2A_OP.get(op, op), g=int(g),
+            scope=scope, link=links[path], op=_A2A_OP.get(op, op), g=int(g),
             algo=None if r.algo == 'default' else r.algo, proto=None,
-            transport=_transport(info.get(path) or info.get('all')),
+            transport='shm' if _p2p_off(r.env) else _transport(
+                info.get(path) or info.get('all')),
             path=path, env=r.env or None, alpha_s=float(r.alpha),
             beta_Bps=float(r.beta),
-            alpha_ci95=[float(r.alpha_lo), float(r.alpha_hi)],
-            beta_ci95=[float(r.beta_lo), float(r.beta_hi)],
+            alpha_ci95=[num(r.alpha_lo), num(r.alpha_hi)],
+            beta_ci95=[num(r.beta_lo), num(r.beta_hi)],
             n_half_bytes=float(r.n_half), resid_rel=float(r.resid_rel),
             n_points=int(r.n_points)))
     return recs
@@ -1161,7 +1345,7 @@ def box_alpha_beta(op='all_reduce', g=None, path=None, algo=None):
     """One row of the box's committed alpha_beta.json (sec_lm_server_paths):
     by default the all-reduce on the most GPUs with NCCL's default
     algorithm. The record's fields plus 'alpha' (s) and 'beta' (bytes/s
-    per link)."""
+    per link). A g with several placements needs path (ValueError)."""
     file = d2l._hw_box_file('box-p2p', 'alpha_beta.json')
     if file is None or not os.path.exists(file):
         raise KeyError('box-p2p has no alpha_beta.json yet')
@@ -1173,18 +1357,24 @@ def box_alpha_beta(op='all_reduce', g=None, path=None, algo=None):
             and (path is None or r.get('path') == path)]
     if not hits:
         raise KeyError(f'no alpha-beta row for {op}, g = {g}, {path}')
-    r = max(hits, key=lambda r: r['g'])
-    return dict(r, alpha=r['alpha_s'], beta=r['beta_Bps'])
+    top = max(r['g'] for r in hits)
+    hits = [r for r in hits if r['g'] == top]
+    if len(hits) > 1:
+        raise ValueError(f'{op} at g = {top} has the placements '
+                         f'{sorted(r.get("path") for r in hits)}: pass path')
+    return dict(hits[0], alpha=hits[0]['alpha_s'], beta=hits[0]['beta_Bps'])
 ```
 
 ## The Copy-Engine Knob
 
 The microbenchmark of the workaround (ruling H2): the same 256 MiB
-all-reduce on two cards, alternating without and with
-`NCCL_SHM_USE_CUDA_MEMCPY=1` (NCCL's shared-memory transport then moves the
-data with the copy engines instead of SM loads and stores across PCIe),
-three times each. It is never set in a training job: at the torch 2.11 pin
-it deadlocks DDP.
+all-reduce on one pair of GPUs per relation class (on the box a pair
+behind one host bridge and a pair across the bridges), alternating without
+and with `NCCL_SHM_USE_CUDA_MEMCPY=1` (NCCL's shared-memory transport then
+moves the data with the copy engines instead of SM loads and stores across
+PCIe), three times each. The ratio is computed from the two medians when
+shown. It is never set in a training job: at the torch 2.11 pin it
+deadlocks DDP.
 
 ```{.python .input #server-paths-lib-copy-engine}
 %%tab pytorch
@@ -1192,51 +1382,74 @@ it deadlocks DDP.
 _KNOB = 'NCCL_SHM_USE_CUDA_MEMCPY=1'
 
 #@save
-def _copy_engine_compute(gpus, nbytes, repeats=3):
-    arms = {'default': [], 'knob': []}
-    for _ in range(repeats):
-        for arm, env in (('default', ''), ('knob', _KNOB)):
-            df = nccl_sweep('all_reduce', gpus, env=env, min_bytes=nbytes,
-                            max_bytes=nbytes, timeout_s=60)
-            _write_raw(f'copy-engine-{arm}', df.attrs['raw'])
-            arms[arm].append(float(df.oop_busbw.iloc[-1]))
-    med = {a: float(np.median(v)) for a, v in arms.items()}
-    return dict(gpus=list(gpus), nbytes=nbytes, busbw=arms,
-                default=med['default'], knob=med['knob'],
-                ratio=med['knob'] / med['default'])
+def _knob_busbw(gpus, nbytes, env):
+    """busbw (GB/s) of one all-reduce of nbytes on gpus with env; None and
+    the reason when the run was refused."""
+    df = nccl_sweep('all_reduce', gpus, env=env, min_bytes=nbytes,
+                    max_bytes=nbytes, timeout_s=60)
+    return (None, df.attrs['refused']) if df.empty else (
+        float(df.oop_busbw.iloc[-1]), df.attrs['raw'])
+
+#@save
+def _copy_engine_compute(nbytes, repeats=3):
+    places = _placements(_smi_relations(), torch.cuda.device_count())
+    rows = []
+    for path, gpus in places.items():
+        if path == 'all':
+            continue
+        arms = {'default': [], 'knob': []}
+        for _ in range(repeats):
+            for arm, env in (('default', ''), ('knob', _KNOB)):
+                busbw, raw = _knob_busbw(gpus, nbytes, env)
+                if busbw is None:
+                    raise RuntimeError(f'copy-engine {path} {arm}: {raw}')
+                _write_raw(f'copy-engine-{path}-{arm}', raw)
+                arms[arm].append(busbw)
+        st = {arm: d2l._hw_stats(v) for arm, v in arms.items()}
+        rows.append(dict(path=path, gpus=','.join(map(str, gpus)),
+                         default=st['default'][0], knob=st['knob'][0],
+                         mad_default=st['default'][1] / st['default'][0],
+                         mad_knob=st['knob'][1] / st['knob'][0]))
+    out = pd.DataFrame(rows).set_index('path')
+    out.attrs['nbytes'] = nbytes
+    return out
 
 #@save
 def _show_copy_engine(r):
-    print(f"all-reduce of {d2l._hw_bytes(r['nbytes'])} on GPUs "
-          f"{r['gpus'][0]} and {r['gpus'][1]}: {r['default']:.1f} GB/s "
-          f"busbw by default")
-    print(f"with {_KNOB}: {r['knob']:.1f} GB/s ({r['ratio']:.1f}x)")
+    print(f"{d2l._hw_bytes(r.attrs['nbytes'])} all-reduce busbw, default "
+          f"and with {_KNOB}:")
+    for path, x in r.iterrows():
+        print(f"  {path} pair (GPUs {x.gpus.replace(',', ' and ')}): "
+              f"{x.default:.1f} and {x.knob:.1f} GB/s "
+              f"({x.knob / x.default:.1f}x)")
 
 #@save
 def _copy_engine_live(r, same):
-    gpus = tuple(r['gpus'])
+    path, x = next(iter(r.iterrows()))
+    gpus = tuple(int(i) for i in x.gpus.split(','))
     if torch.cuda.device_count() <= max(gpus):
         return f'needs GPUs {gpus[0]} and {gpus[1]}: the box run is shown'
+    if _smi_relations()(*gpus) != path:
+        return f'GPUs {gpus[0]} and {gpus[1]} are not {path} here'
     pts = []
     for arm, env in (('default', ''), ('knob', _KNOB)):
-        df = nccl_sweep('all_reduce', gpus, env=env, min_bytes=r['nbytes'],
-                        max_bytes=r['nbytes'], timeout_s=60)
-        if df.empty:
-            return f"{arm}: {df.attrs['refused']}"
-        v = np.asarray(r['busbw'][arm], dtype=float)
-        pts.append((arm, r[arm], float(df.oop_busbw.iloc[-1]),
-                    float(np.median(np.abs(v - np.median(v))) / np.median(v))))
+        busbw, why = _knob_busbw(gpus, int(r.attrs['nbytes']), env)
+        if busbw is None:
+            return f'{arm}: {why}'
+        pts.append((f'{path} {arm}', x[arm], busbw, x[f'mad_{arm}']))
     return d2l._hw_agreement(pts, same, 'GB/s busbw')
 
 #@save
-def copy_engine_effect(gpus=(0, 1), nbytes=2**28):
-    """busbw of one all-reduce of nbytes on two GPUs, NCCL's default
-    against NCCL_SHM_USE_CUDA_MEMCPY=1 (a bare microbenchmark, never a
-    training job): the median of three alternating runs each, and their
-    ratio."""
+def copy_engine_effect(nbytes=2**28):
+    """busbw of one all-reduce of nbytes on one pair of GPUs per relation
+    class, NCCL's default against NCCL_SHM_USE_CUDA_MEMCPY=1 (a bare
+    microbenchmark, never a training job): a table by relation class with
+    the GPUs, the median of three alternating runs per arm and their
+    relative MADs. It needs every GPU of the host; a normal run shows the
+    committed box result and re-runs both arms on the first pair."""
     return d2l._hw_result(
-        'box-p2p', lambda: _copy_engine_compute(gpus, nbytes),
-        dict(gpus=list(gpus), nbytes=nbytes), entry='copy-engine',
+        'box-p2p', lambda: _copy_engine_compute(nbytes),
+        dict(nbytes=nbytes), entry='copy-engine',
         live_check=_copy_engine_live, show=_show_copy_engine,
         live_label='both arms')
 ```
@@ -1244,25 +1457,32 @@ def copy_engine_effect(gpus=(0, 1), nbytes=2**28):
 ## The Regeneration Driver
 
 `tools/hw_regen.py box-p2p` runs `regen_p2p` in each of its three processes
-with every card of the box locked (a quiet box: nothing else on any card).
-It makes the page's calls on the full configuration and keeps the raw
-outputs; after the processes are combined, `regen_p2p_finish` writes the
-captures as text files and `alpha_beta.json` from the combined sweeps.
+with every card of the box locked (a quiet box: nothing else on any card;
+the box configuration refuses a subset of the cards). It makes the page's
+calls on the full configuration and keeps the raw outputs; after the
+processes are combined, `regen_p2p_finish` writes the captures as text
+files, keeps every process's sweep times with the combined sweeps (the
+fits' intervals) and writes `alpha_beta.json` from them, each record's
+link read from the placement's relations and peer access (an NVLink
+campaign's records say `nvlink`).
 
 ```{.python .input #server-paths-lib-driver}
 %%tab pytorch
 #@save
 def regen_p2p(config='box'):
     """Driver of box-p2p (and of the campaigns C-T3 and C-T2pair with
-    config 't3' and 't2pair'): the captures, the GPU matrix, the NCCL
-    sweeps and, on the box, the copy-engine microbenchmark."""
+    config 't3' and 't2pair'): the captures, the GPU matrix, on the box
+    the D2 patterns, the NCCL sweeps and, on the box, the copy-engine
+    microbenchmark."""
     _p2p_check(config)
+    spec = _HW_P2P[config]
     d2l._hw_result('box-p2p', _hw_capture_all, {}, entry='captures')
     hw_gpu_matrix(nbytes=2**28)
+    if spec['patterns']:
+        hw_staged_patterns(S=2**28)
     nccl = nccl_sweeps(config)
-    if _HW_P2P[config]['copy_engine']:
-        places = _placements(_smi_relations(), torch.cuda.device_count())
-        copy_engine_effect(gpus=next(iter(places.values())), nbytes=2**28)
+    if spec['copy_engine']:
+        copy_engine_effect(nbytes=2**28)
     return nccl
 
 #@save
@@ -1273,8 +1493,10 @@ _CAPTURE_FILES = {'topo': 'topo.txt', 'topo-p2p': 'topo-p2p.txt',
 #@save
 def regen_p2p_finish(folder):
     """After tools/hw_regen.py combined the processes: the captures as
-    text files, p2pBandwidthLatencyTest's output, and alpha_beta.json (the
-    fits of the combined sweeps, every algorithm and environment)."""
+    text files, p2pBandwidthLatencyTest's output, every process's sweep
+    times kept with the combined sweeps (attrs['proc_us']), and
+    alpha_beta.json (the fits of the combined sweeps, every algorithm and
+    environment)."""
     caps, _ = d2l._hw_read(os.path.join(folder, 'captures.json.gz'))
     for name, file in _CAPTURE_FILES.items():
         with open(os.path.join(folder, file), 'w') as f:
@@ -1282,11 +1504,18 @@ def regen_p2p_finish(folder):
     mat, _ = d2l._hw_read(os.path.join(folder, 'gpu-matrix.json.gz'))
     with open(os.path.join(folder, 'p2pBandwidthLatencyTest.txt'), 'w') as f:
         f.write(mat.get('p2p_test_raw', ''))
-    nccl, _ = d2l._hw_read(os.path.join(folder, 'nccl.json.gz'))
+    path = os.path.join(folder, 'nccl.json.gz')
+    nccl, meta = d2l._hw_read(path)
+    procs = sorted(glob.glob(os.path.join(folder, 'proc*', 'nccl.json.gz')))
+    nccl.attrs['proc_us'] = [d2l._hw_read(p)[0].oop_us.tolist()
+                             for p in procs]
+    d2l._hw_write(path, nccl, meta)
     recs = []
-    for (algo, env), _ in nccl.groupby(['algo', 'env'], sort=False):
+    for (algo, env), sub in nccl.groupby(['algo', 'env'], sort=False):
+        links = {p: _record_link([int(i) for i in gpus.split(',')], mat, env)
+                 for p, gpus in zip(sub.path, sub.gpus)}
         recs += alpha_beta_records(fit_collectives(nccl, algo=algo, env=env),
-                                   info=nccl.attrs.get('info'))
+                                   links, info=nccl.attrs.get('info'))
     with open(os.path.join(folder, 'alpha_beta.json'), 'w') as f:
         json.dump(recs, f, indent=1)
     return recs

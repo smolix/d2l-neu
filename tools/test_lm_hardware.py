@@ -25,13 +25,15 @@ thresholds and kv_load_vs_recompute, the measurements, displays and the
 shard rule on synthetic frames of known parameters, the offload crossover,
 _CPUAdam against torch's AdamW, the scratch-file disk check.
 Section 22.5: the link table (PCIe rows computed), the topology parser on
-the box's matrices and the two documentation samples (ANSI escapes, a
+the box's matrices and the two published samples (ANSI escapes, a
 header whose names run together), topo_graph and the displays, the
 p2pBandwidthLatencyTest and nccl-tests parsers on raw outputs, the busbw
 factors, coll_time, tree_link_loads exact for k = 4, 8, 16 and the D2
 ratio, the bridge groups and placements, fit_collectives on synthetic
 sweeps of known parameters, the pending campaign path, alpha_beta.json's
-records and box_alpha_beta, the scrubber.
+records (links, transports, no NaN) and box_alpha_beta (a tie needs a
+path), the two-regime fits and their intervals over processes, the D2
+pattern flows and times, the medians per relation class, the scrubber.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -2177,14 +2179,16 @@ class TestServerPaths(unittest.TestCase):
     def test_show_topo(self):
         topo, p2p = self.box()
         samples = {'nvswitch-node': 'doc_nvswitch_node_topo_m.txt',
-                   'bridged-pair-node': 'doc_bridged_pair_topo_m.txt'}
+                   'bridged-workstation': 'doc_bridged_pair_topo_m.txt'}
         with mock.patch.object(d2l, 'hw_capture',
                                side_effect=lambda n: sample(samples[n])):
             lines, _ = lines_of(self, d2l.show_topo, topo, p2p,
                                 samples=tuple(samples))
         self.assertEqual(len(lines), 10)
         self.assertIn('CNS', lines[2])
-        self.assertIn('not measured here', lines[-3])
+        self.assertIn('published samples (GitHub issues), not measured '
+                      'here', lines[-3])
+        self.assertIn('bridged-workstation: 5 GPUs', lines[-1])
         self.assertIn('28 NV12', lines[-2])
         self.assertIn('2 NV12', lines[-1])
         with self.assertRaises(KeyError):
@@ -2234,6 +2238,9 @@ class TestServerPaths(unittest.TestCase):
                                    2 * (k - 1), delta=0.01)
         self.assertAlmostEqual(d2l.coll_time('allreduce', S, 8, 0, beta,
                                              algo='tree'), 6 * S / beta)
+        for op in ('broadcast', 'reduce'):  # not modelled: refused
+            with self.assertRaises(ValueError):
+                d2l.coll_time(op, S, 4, 0, beta)
 
     def test_tree_link_loads(self):
         S = 1.0
@@ -2256,6 +2263,20 @@ class TestServerPaths(unittest.TestCase):
             8, [tuple(range(4)), tuple(range(4, 8))], 1, 1), 64 / 28)
         one = [tuple(range(8))]  # one switch: the crossbar
         self.assertAlmostEqual(d2l.a2a_busbw_ratio(8, one, 1, 0.01), 1.0)
+        # the box's numbers: the tree's all-to-all is GPU-link bound, the
+        # star's uplink bound, 1.5 times apart
+        box, beta, beta_u = [(0, 1), (2, 3)], 22e9, 28e9
+        tree = d2l.pattern_time(4, box, 'alltoall', beta, beta_u, 2**28)
+        star = d2l.pattern_time(4, box, 'alltoall', beta, beta_u, 2**28,
+                                staged=True)
+        self.assertAlmostEqual(tree, 2**28 / 28e9)
+        self.assertAlmostEqual(star, 1.5 * 2**28 / 28e9)
+        flows = d2l._pattern_flows(box, 'alltoall', 2**28)
+        self.assertEqual((len(flows), flows[0][2]), (12, 2**26))
+        ring = d2l._pattern_flows(box, 'allreduce', 2**28)
+        self.assertEqual([f[:2] for f in ring],
+                         [(0, 1), (1, 2), (2, 3), (3, 0)])
+        self.assertEqual(ring[0][2], 3 * 2**28 // 2)
         with self.assertRaises(AssertionError):
             d2l.tree_link_loads(4, [(0, 1)], 'alltoall')
         with self.assertRaises(ValueError):
@@ -2272,6 +2293,20 @@ class TestServerPaths(unittest.TestCase):
                          {'PHB': (0, 1), 'NODE': (0, 2), 'all': (0, 1, 2, 3)})
         self.assertEqual(d2l._placements(rel, 2), {'PHB': (0, 1)})
         self.assertEqual(d2l._bridge_pairs(rel, 2)[1], {})
+        gbs = np.array([[np.nan, 19.4, 22.0, 21.9], [19.5, np.nan, 22.0, 22.0],
+                        [22.0, 22.0, np.nan, 19.6], [22.0, 22.0, 19.6, np.nan]])
+        mat = dict(gbs=gbs, relation=[[topo.link[i][j] for j in range(4)]
+                                      for i in range(4)])
+        self.assertEqual(d2l._by_relation(mat), {'NODE': 22.0, 'PHB': 19.55})
+        mat['peer'] = np.zeros((4, 4))
+        self.assertEqual(d2l._record_link((0, 1), mat), 'pcie_host_staged')
+        mat['peer'] = 1 - np.eye(4)
+        self.assertEqual(d2l._record_link((0, 1, 2, 3), mat), 'pcie_p2p')
+        self.assertEqual(d2l._record_link((0, 1), mat, 'NCCL_P2P_DISABLE=1'),
+                         'pcie_host_staged')
+        mat['relation'] = [['X' if i == j else 'NV12' for j in range(4)]
+                           for i in range(4)]
+        self.assertEqual(d2l._record_link((0, 2), mat), 'nvlink')
 
     def test_fit_collectives(self):
         nccl = pd.concat([
@@ -2282,21 +2317,38 @@ class TestServerPaths(unittest.TestCase):
         r = ab.loc[('all_reduce', 2, 'PHB')]
         self.assertAlmostEqual(r.alpha / 20e-6, 1, delta=0.05)
         self.assertAlmostEqual(r.beta / (2e9 * 1.0), 1, delta=0.03)
-        self.assertLess(r.alpha_lo, r.alpha)
-        self.assertLess(r.alpha, r.alpha_hi)
-        self.assertLess(r.beta_lo, r.beta_hi)
+        self.assertTrue(np.isnan(r.beta_lo))  # one process: no interval
         self.assertAlmostEqual(r.n_half, r.alpha * 2e9, delta=0.1 * r.n_half)
         self.assertAlmostEqual(r.alpha_step, r.alpha / 2)
         self.assertLess(r.resid_rel, 0.02)
         a = ab.loc[('alltoall', 4, 'all')]
         self.assertAlmostEqual(a.beta / (0.75 * 1e9), 1, delta=0.03)
         self.assertEqual(int(a.n_points), 26)
-        again = d2l.fit_collectives(nccl)
-        pd.testing.assert_frame_equal(ab, again)  # seeded
         self.assertTrue(d2l.fit_collectives(nccl, algo='Ring').empty)
         lines, _ = lines_of(self, d2l.show_fits, ab)
         self.assertEqual(len(lines), 3)
         self.assertIn('all-reduce', lines[1])
+        self.assertIn(' - ', lines[1] + ' ')
+        # three processes: intervals around the combined fit
+        rng = np.random.default_rng(2)
+        nccl.attrs['proc_us'] = [
+            (nccl.oop_us * (1 + 0.02 * rng.standard_normal())).tolist()
+            for _ in range(3)]
+        r = d2l.fit_collectives(nccl).loc[('all_reduce', 2, 'PHB')]
+        self.assertLess(r.beta_lo, r.beta)
+        self.assertLess(r.beta, r.beta_hi)
+        self.assertLess(r.alpha_lo, r.alpha_hi)
+        # a plateau that is not alpha-beta shaped: the two regimes read it,
+        # one line through every size would not
+        bent = synthetic_sweep('all_reduce', 4, 'all', 30e-6, 1.6e9, noise=0)
+        mid = (bent["size"] > 2**16) & (bent["size"] < 2**22)
+        bent.loc[mid, 'oop_us'] *= 0.7  # a bump of bandwidth near 1 MiB
+        r = d2l.fit_collectives(bent).loc[('all_reduce', 4, 'all')]
+        self.assertAlmostEqual(r.beta / (1.5 * 1.6e9), 1, delta=0.02)
+        self.assertGreater(r.beta_fit, 1.05 * r.beta)
+        self.assertAlmostEqual(r.alpha / 30e-6, 1, delta=0.05)
+        with self.assertRaisesRegex(ValueError, 'sizes'):
+            d2l.fit_collectives(bent, plateau_from=2**30)
 
     def test_fit_pending(self):
         log = d2l.CampaignPending('node-p2p', 'C-T3', 'one 8 x A100 node')
@@ -2312,7 +2364,8 @@ class TestServerPaths(unittest.TestCase):
             synthetic_sweep('alltoall', 4, 'all', 27e-6, 2.7e9)],
             ignore_index=True)
         info = {'all': dict(transports=['SHM/direct/direct'])}
-        recs = d2l.alpha_beta_records(d2l.fit_collectives(nccl), info=info)
+        recs = d2l.alpha_beta_records(d2l.fit_collectives(nccl),
+                                      {'all': 'pcie_host_staged'}, info=info)
         fields = {'scope', 'link', 'op', 'g', 'algo', 'alpha_s', 'beta_Bps',
                   'alpha_ci95', 'beta_ci95', 'n_half_bytes', 'resid_rel',
                   'n_points', 'proto', 'transport'}
@@ -2321,7 +2374,14 @@ class TestServerPaths(unittest.TestCase):
             self.assertEqual((r['scope'], r['link'], r['transport'],
                               r['algo']),
                              ('intra_node', 'pcie_host_staged', 'shm', None))
-            json.dumps(r)
+            self.assertEqual(r['beta_ci95'], [None, None])  # one process
+            json.dumps(r, allow_nan=False)
+        off = nccl.assign(env='NCCL_P2P_DISABLE=1')
+        nv = d2l.alpha_beta_records(
+            d2l.fit_collectives(off, env='NCCL_P2P_DISABLE=1'),
+            {'all': 'nvlink'}, info={'all': dict(transports=['P2P/CUMEM'])})
+        self.assertEqual({(r['link'], r['transport']) for r in nv},
+                         {('nvlink', 'shm')})
         self.assertEqual({r['op'] for r in recs}, {'all_reduce',
                                                    'all_to_all'})
         self.assertEqual(d2l._transport({'transports': ['P2P/CUMEM']}),
@@ -2338,6 +2398,13 @@ class TestServerPaths(unittest.TestCase):
                 self.assertEqual(d2l.box_alpha_beta(g=2)['path'], 'PHB')
                 self.assertEqual(d2l.box_alpha_beta('alltoall')['op'],
                                  'all_to_all')
+            with open(path, 'w') as f:
+                json.dump([two, dict(two, path='NODE')] + recs, f)
+            with mock.patch.object(d2l, '_hw_box_file', return_value=path):
+                with self.assertRaisesRegex(ValueError, 'pass path'):
+                    d2l.box_alpha_beta(g=2)
+                self.assertEqual(d2l.box_alpha_beta(g=2, path='NODE')['path'],
+                                 'NODE')
                 with self.assertRaises(KeyError):
                     d2l.box_alpha_beta(algo='Ring')
             with mock.patch.object(d2l, '_hw_box_file', return_value=None):

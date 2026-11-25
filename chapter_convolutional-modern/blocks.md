@@ -18,8 +18,8 @@ in turn. Even though practitioners rarely deploy these exact models today, the
 structural ideas they introduced appear in virtually every modern convnet.
 
 First, *VGG* :cite:`Simonyan.Zisserman.2014` shifted design from individual
-layers to repeatable *blocks*—stacks of small $3 \times 3$ convolutions
-followed by pooling—turning an entire architecture into a compact list of
+layers to repeatable *blocks* of small $3 \times 3$ convolutions
+followed by pooling, turning an entire architecture into a compact list of
 block specifications. Second, *Network in Network* (NiN)
 :cite:`Lin.Chen.Yan.2013` eliminated the bloated fully connected head
 altogether, mixing channels at every pixel via $1 \times 1$ convolutions and
@@ -147,8 +147,8 @@ channel width doubles from stage to stage until reaching 512.
 ![AlexNet (left) and VGG-11 (right) for single-channel $224 \times 224$ images and ten classes; the input is at the bottom. AlexNet's layers are chosen one by one; VGG repeats one block, several $3 \times 3$ convolutions followed by max-pooling, at growing channel counts.](../img/arch-vgg.svg)
 :label:`fig_vgg`
 
-Because every VGG block is completely specified by two integers—its number of
-convolutions and its output channel count—the entire convolutional trunk can
+Because every VGG block is completely specified by two integers (its number of
+convolutions and its output channel count), the entire convolutional trunk can
 be passed in as a list of `(num_convs, out_channels)` tuples (`arch`). Rather
 than defining one rigid architecture, VGG defines a *parameterized family*:
 VGG-11, VGG-16, and VGG-19 share the exact same class and differ only in
@@ -311,7 +311,7 @@ Fashion-MNIST demonstration, we train a quarter-width VGG-11 with channel
 counts 16, 32, 64, 128, and 128, which executes 512 million multiply-adds per
 image—roughly half of AlexNet's 938 million. All other training settings match
 :numref:`sec_alexnet`: $224 \times 224$ upsampled images, batch size 128, and
-10 epochs of SGD with the warmup-and-cosine schedule :eqref:`eq_cosine_warmup`,
+10 epochs of SGD with the warmup-and-cosine schedule of :numref:`sec_alexnet`,
 reusing AlexNet's `configure_optimizers`.
 
 The only hyperparameter that varies across networks in this section is the
@@ -372,7 +372,7 @@ trainer.fit(model, data)
 val_acc = {'VGG': trainer.history['val_acc']}  # for the comparison below
 ```
 
-Our quarter-width VGG reaches roughly 93% validation accuracy—two percentage
+Our quarter-width VGG reaches roughly 93% validation accuracy, two percentage
 points ahead of AlexNet with roughly half the arithmetic. To be fair, much of
 that lead reflects the higher learning rate: at AlexNet's peak of 0.03, the
 same VGG finishes just under 92%, as we verify shortly. Notice, however, what
@@ -603,8 +603,8 @@ NiN().layer_summary((1, 224, 224, 1))
 Just as in AlexNet, the spatial dimensions step down from 224 to 54, 26, 12,
 and 5, after which the final NiN block emits ten $5 \times 5$ score maps that
 global average pooling collapses to ten logits. Eliminating the dense head
-slashes the parameter count to just 3.4 million—only 7% of AlexNet's
-footprint—while total arithmetic stays comparable at 798 million multiply-adds
+slashes the parameter count to just 3.4 million (only 7% of AlexNet's
+footprint), while total arithmetic stays comparable at 798 million multiply-adds
 per image (versus 938 million for AlexNet), because the added $1 \times 1$
 convolutions shift computation into the convolutional body.
 
@@ -972,9 +972,9 @@ class GoogLeNet(d2l.Classifier):
                                   body[2], head)
 ```
 
-With five stride-2 downsampling operations in total—three inside the stem
+With five stride-2 downsampling operations in total, three inside the stem
 (the initial $7 \times 7$ convolution plus two max-poolings) and two between
-the Inception stages—GoogLeNet shrinks spatial resolution by a factor of 32.
+the Inception stages, GoogLeNet shrinks spatial resolution by a factor of 32.
 To keep Fashion-MNIST training brisk, we resize inputs to $96 \times 96$, so
 the three Inception stages operate at $12 \times 12$, $6 \times 6$, and
 $3 \times 3$ while channel depth climbs from 192 after the stem to 480, 832,
@@ -1008,8 +1008,8 @@ trainer.fit(model, data)
 val_acc['GoogLeNet'] = trainer.history['val_acc']
 ```
 
-After 10 epochs, GoogLeNet finishes near 91% validation accuracy—matching
-AlexNet at the same peak learning rate—with a slightly lower training loss
+After 10 epochs, GoogLeNet finishes near 91% validation accuracy, matching
+AlexNet at the same peak learning rate, with a slightly lower training loss
 (just below 0.20) and a matching validation loss (~0.25).
 
 ## Comparing the Networks
@@ -1331,7 +1331,7 @@ Objects in natural images appear at wildly different spatial scales. Rather than
 ::: {.cols .vc}
 ::: {.col}
 - **Direct $5 \times 5$ branch ($192 \to 32$):** Costs $25 \cdot 192 \cdot 32 = 153{,}600$ weights ($120.4\textrm{M}$ MACs at $28 \times 28$).
-- **With $1 \times 1$ bottleneck ($192 \to 16 \to 32$):** Costs $3{,}072 + 12{,}800 = 15{,}872$ weights ($12.4\textrm{M}$ MACs)—a **$9.7\times$ reduction** in both parameters and compute!
+- **With $1 \times 1$ bottleneck ($192 \to 16 \to 32$):** Costs $3{,}072 + 12{,}800 = 15{,}872$ weights ($12.4\textrm{M}$ MACs)—a **$9.7\times$ reduction** in both parameters and compute.
 :::
 
 ::: {.col .fig .big}

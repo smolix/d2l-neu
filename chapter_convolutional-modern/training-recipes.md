@@ -14,9 +14,9 @@ peak learning rate shifted VGG's accuracy by 1.5 percentage points
 newly proposed network is trained with the latest optimization and
 regularization tricks, then compared against a classic baseline whose accuracy
 is copied from a paper written years earlier. How much of a reported
-breakthrough actually comes from the *training recipe*—the optimizer,
+breakthrough actually comes from the *training recipe* (the optimizer,
 learning-rate schedule, data augmentation, regularization, and training
-duration—rather than from the architecture itself?
+duration) rather than from the architecture itself?
 
 ResNet-50, the deeper sibling of the ResNet-18 we built in
 :numref:`sec_resnet`, supplies a striking answer. Without altering a single
@@ -31,8 +31,8 @@ we cannot tell whether the architecture or the recipe deserves the credit.
 In this section, we examine what changed between 2015 and 2022, implement
 each core ingredient in a few lines of code, and train an identical ResNet-18
 under both a classic and a modern recipe to observe the difference directly.
-None of these techniques is tied to convolutions—the exact same toolkit powers
-modern Transformer training—making this a general foundation for modern deep
+None of these techniques is tied to convolutions: the exact same toolkit powers
+modern Transformer training, making this a general foundation for modern deep
 learning practice.
 
 ```{.python .input #training-recipes-training-recipes-matter}
@@ -220,12 +220,12 @@ as extra hyperparameters to tune. The modern default
 :cite:`Loshchilov.Hutter.2016` is already familiar from AlexNet onward
 (:numref:`sec_alexnet`): a linear *warmup* from 0 to the peak rate $\eta_0$
 over $t_\textrm{w}$ steps, followed by a smooth half-cosine *decay*
-:eqref:`eq_cosine_warmup` down to 0 at step $T$. Beyond preventing early
+down to 0 at step $T$. Beyond preventing early
 divergence, warmup gives running batch-normalization statistics and adaptive
 optimizer moments time to settle before full-size steps begin, while cosine
 decay removes abrupt drop thresholds altogether. Below we plot `step_decay`
 (30 epochs, with a two-epoch warmup) alongside `d2l.cosine_warmup` (45 epochs,
-three-epoch warmup) at 79 minibatches per epoch—the exact horizons used in
+three-epoch warmup) at 79 minibatches per epoch, matching the exact horizons used in
 our experiment later in this section.
 
 ```{.python .input #training-recipes-cosine-schedules-with-warmup}
@@ -527,7 +527,7 @@ iterates lands closer to the basin's center than any single checkpoint.
 Whereas *stochastic weight averaging* (SWA)
 :cite:`Izmailov.Podoprikhin.Garipov.ea.2018` averages snapshots uniformly late
 in training, modern vision recipes commonly maintain an *exponential moving
-average* (EMA)---the exact same recursion batch normalization uses for its
+average* (EMA), the exact same recursion batch normalization uses for its
 running statistics (:numref:`sec_batch_norm`). After every optimizer step, a
 *shadow copy* $\bar{\theta}$ of the trainable parameters blends in the latest
 weights $\theta$ with decay $\rho$:
@@ -1285,7 +1285,7 @@ Inspecting the training and validation curves of `ModernRecipe` reveals a diagno
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why `train_loss > val_loss` under `ModernRecipe`:** `train_loss` is evaluated onMixup-blended images with label-smoothed targets (whose theoretical minimum is bounded well above $0$), whereas `val_loss` is plain cross-entropy on clean unmixed validation images.
+- **Why `train_loss > val_loss` under `ModernRecipe`:** `train_loss` is evaluated on Mixup-blended images with label-smoothed targets (whose theoretical minimum is bounded well above $0$), whereas `val_loss` is plain cross-entropy on clean unmixed validation images.
 - **Better calibration:** Under `ClassicRecipe`, training loss hits $\approx 0$ while overconfident validation loss rebounds to $0.4\text{--}0.5$; `ModernRecipe` keeps validation loss below $0.4$.
 :::
 

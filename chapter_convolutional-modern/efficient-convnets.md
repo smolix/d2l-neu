@@ -888,7 +888,7 @@ objects. *Compound scaling* :cite:`tan2019efficientnet` scales all three
 dimensions in lockstep: each scaling step multiplies depth by 1.2, width by
 1.1, and resolution by 1.15, roughly doubling total compute
 ($1.2 \cdot 1.1^2 \cdot 1.15^2 \approx 1.92$). A single integer knob now
-generates an entire family—three steps produce a network $1.7\times$ deeper
+generates an entire family: three steps produce a network $1.7\times$ deeper
 and $1.3\times$ wider on $1.5\times$ larger images at roughly $7\times$ the
 compute.
 
@@ -917,7 +917,7 @@ gate lets the network dynamically reweight entire feature channels using
 global image context. It *squeezes* each of the $c$ channels to a single
 scalar via global average pooling, passes that $c$-dimensional summary through
 a tiny two-layer bottleneck MLP (hidden width $c/r$ with ReLU, output width
-$c$ with sigmoid—the *excitation*), and scales every channel of the feature
+$c$ with sigmoid, the *excitation*), and scales every channel of the feature
 map by its predicted gate in $(0, 1)$. With reduction ratio $r$, the MLP adds
 only ~$2c^2/r$ parameters and operates on a single vector per image rather
 than every pixel, making its arithmetic cost negligible. Conceptually, SE
@@ -1019,7 +1019,7 @@ stack of $3 \times 3$ convolutions, by contrast, is ideal for accelerators—one
 dense, highly optimized kernel per layer and a single live activation buffer.
 *RepVGG* :cite:`ding2021repvgg` achieves the best of both worlds by decoupling
 training topology from inference topology. During training, every layer sums
-three parallel branches before the ReLU—a $3 \times 3$ convolution, a
+three parallel branches before the ReLU: a $3 \times 3$ convolution, a
 $1 \times 1$ convolution, and an identity path, each with its own batch
 normalization (:numref:`fig_repvgg_reparam`). Once training finishes, every
 branch is purely linear in its input, so all three are algebraically *fused
@@ -1304,8 +1304,8 @@ Y = nnx.view(blk, use_running_average=True)(X)
 float(jnp.abs(Y - nnx.relu(fused(X))).max())
 ```
 
-The maximum discrepancy is on the order of $10^{-6}$—pure single-precision
-floating-point roundoff—confirming exact functional equivalence. While weight
+The maximum discrepancy is on the order of $10^{-6}$ (pure single-precision
+floating-point roundoff), confirming exact functional equivalence. While weight
 count drops by only a tenth (from $10c^2$ to $9c^2$), the runtime execution
 simplifies dramatically: one dense convolution and one live activation tensor
 replace two convolutions, three normalizations, two additions, and three

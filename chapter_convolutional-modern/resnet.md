@@ -7,7 +7,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`sec_resnet`
 
 Up to this point on ImageNet, deeper networks consistently meant higher
-accuracy—from AlexNet's 8 layers to GoogLeNet's 22—and batch normalization
+accuracy, from AlexNet's 8 layers to GoogLeNet's 22, and batch normalization
 (:numref:`sec_batch_norm`) seemed to clear the remaining barrier to scaling
 depth even further. Naturally, one would expect stacking still more layers to
 keep lowering training error, at worst until overfitting sets in. Yet when
@@ -547,7 +547,7 @@ including those inside `Residual`, receives He initialization
 (`variance_scaling(2.0, 'fan_in', 'normal')`) as its `kernel_init`.
 :end_tab:
 
-We train all four configurations—plain vs. residual at 20 and 56 layers—for
+We train all four configurations (plain vs. residual at 20 and 56 layers) for
 five epochs with batch size 128 and record their full training histories.
 
 ```{.python .input #resnet-plain-and-residual-networks-compared-3}
@@ -582,8 +582,8 @@ We also inspect the final epoch's `train_loss` and `val_acc` recorded in
 ```
 
 The degradation phenomenon appears unmistakably in the plain networks. The
-56-layer plain network finishes with a training loss around 0.25--0.30—higher
-than the 20-layer plain network's ~0.20—and sits strictly *above* the
+56-layer plain network finishes with a training loss around 0.25--0.30, higher
+than the 20-layer plain network's ~0.20, and sits strictly *above* the
 shallower curve at every single epoch. Because its training loss is worse,
 overfitting is ruled out. Turning on residual shortcuts flips the ordering
 completely: the 56-layer residual network drops to roughly 0.15--0.17,

@@ -6,9 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # AlexNet and Learned Image Representations
 :label:`sec_alexnet`
 
-In :numref:`sec_lenet`, LeNet trained every stage of its pipeline—both convolutional filters and final classifier—end to end from raw pixels. Yet for two decades after LeCun's 1989 results, mainstream computer vision split feature extraction from classification: hand-engineered descriptors such as SIFT :cite:`Lowe.2004`, SURF :cite:`Bay.Tuytelaars.Van-Gool.2006`, HOG :cite:`Dalal.Triggs.2005`, and bags of visual words :cite:`Sivic.Zisserman.2003` mapped pixels into fixed feature vectors that fed a linear or kernel classifier. Because the training loss updated only the classifier and never the features, progress relied on human feature engineering.
+In :numref:`sec_lenet`, LeNet trained every stage of its pipeline, from convolutional filters to the final classifier, end to end from raw pixels. Yet for two decades after LeCun's 1989 results, mainstream computer vision split feature extraction from classification: hand-engineered descriptors such as SIFT :cite:`Lowe.2004`, SURF :cite:`Bay.Tuytelaars.Van-Gool.2006`, HOG :cite:`Dalal.Triggs.2005`, and bags of visual words :cite:`Sivic.Zisserman.2003` mapped pixels into fixed feature vectors that fed a linear or kernel classifier. Because the training loss updated only the classifier and never the features, progress relied on human feature engineering.
 
-The watershed came at the 2012 ImageNet challenge (1,000 object categories evaluated by *top-5 error*, the fraction of validation images whose true label falls outside the model's top five predictions). *AlexNet* :cite:`Krizhevsky.Sutskever.Hinton.2012` trained an eight-layer convolutional network end to end on raw pixels. Its competition entry, an ensemble of seven such networks, cut top-5 error from 26.2% (for the best hand-engineered pipeline) to 15.3% in a single leap, and one network alone already reached about 18%. Architecturally, AlexNet is LeNet scaled up, so its sudden triumph points straight to three catalysts that converged in 2012: a million-image labeled dataset (ImageNet), GPUs fast enough to train tens of millions of weights in days rather than months, and key modeling practices—ReLU activations, dropout, and data augmentation—that made deep networks trainable and resistant to memorization.
+The watershed came at the 2012 ImageNet challenge (1,000 object categories evaluated by *top-5 error*, the fraction of validation images whose true label falls outside the model's top five predictions). *AlexNet* :cite:`Krizhevsky.Sutskever.Hinton.2012` trained an eight-layer convolutional network end to end on raw pixels. Its competition entry, an ensemble of seven such networks, cut top-5 error from 26.2% (for the best hand-engineered pipeline) to 15.3% in a single leap, and one network alone already reached about 18%. Architecturally, AlexNet is LeNet scaled up, so its sudden triumph points straight to three catalysts that converged in 2012: a million-image labeled dataset (ImageNet), GPUs fast enough to train tens of millions of weights in days rather than months, and key modeling practices (ReLU activations, dropout, and data augmentation) that made deep networks trainable and resistant to memorization.
 
 ```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet  n=2}
 %%tab mxnet
@@ -71,8 +71,8 @@ $$10^9 \cdot 3 \cdot 2 \cdot 1.2 \times 10^6 \cdot 90 \approx 6.5 \times 10^{17}
 
 :numref:`fig_alexnet` compares LeNet (:numref:`sec_lenet`) side by side with
 the AlexNet variant we train on Fashion-MNIST below. Both follow the same
-high-level design—a stack of convolutional stages feeding into a dense
-classification head—but AlexNet scales up every dimension and modernizes three
+high-level design, a stack of convolutional stages feeding into a dense
+classification head, but AlexNet scales up every dimension and modernizes three
 critical components: the activation function, pooling, and regularization.
 
 ![LeNet as built in :numref:`sec_lenet` (left) and AlexNet as built in this section (right), both for single-channel Fashion-MNIST images and ten classes; the input is at the bottom. AlexNet is deeper and wider, uses ReLU activations and max-pooling, and regularizes its dense layers with dropout.](../img/arch-alexnet.svg)
@@ -276,8 +276,8 @@ single-channel, ten-class AlexNet.
 The split between parameters and computation is even more lopsided than in
 LeNet. The five convolutional layers account for only 8% of AlexNet's 47
 million parameters yet execute 95% of its multiply-adds. Meanwhile, the three
-fully connected layers consume 92% of the parameters—roughly 170 MB in 32-bit
-floating point—while performing just 5% of the arithmetic. Compared with
+fully connected layers consume 92% of the parameters (roughly 170 MB in 32-bit
+floating point) while performing just 5% of the arithmetic. Compared with
 LeNet's 61,706 parameters and 416,520 multiply-adds per image, AlexNet scales
 parameters up by roughly $760\times$ and arithmetic by $2{,}250\times$. On
 ImageNet (3 RGB channels and 1000 classes), the full model reaches roughly 60
@@ -646,7 +646,7 @@ Minimizing cross-entropy loss alone forces early convolutional layers to learn s
 ::: {.slide title="Comparing LeNet and AlexNet Side by Side"}
 [Macro Architecture]{.kicker}
 
-AlexNet preserves LeNet's macro template—a convolutional feature trunk feeding a fully connected classifier head—while scaling depth, width, and input resolution:
+AlexNet preserves LeNet's macro template, a convolutional feature trunk feeding a fully connected classifier head, while scaling depth, width, and input resolution:
 
 ::: {.cols .vc}
 ::: {.col}

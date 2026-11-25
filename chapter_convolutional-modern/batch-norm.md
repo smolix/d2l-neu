@@ -133,8 +133,8 @@ normalization does not reduce the expressive power of the network.
 
 Stripping away feature scale produces two powerful effects on optimization.
 The first is immediate and directly explains how batch normalization rescues
-LeNet: whenever a feature varies very little across a minibatch—for instance,
-after passing through saturating sigmoids clustered near $1/2$—dividing by
+LeNet: whenever a feature varies very little across a minibatch (for instance,
+after passing through saturating sigmoids clustered near $1/2$), dividing by
 its tiny standard deviation $\hat{\sigma}_\mathcal{B}$ restores unit variance
 on the forward pass, and by the chain rule amplifies its backpropagated
 gradient by the same factor $1/\hat{\sigma}_\mathcal{B}$. Vanishing signals
@@ -684,7 +684,7 @@ prediction-mode validation accuracy can suddenly dip by 10 percentage points
 or more on individual epochs, including the final one. Decaying the learning
 rate smoothly to zero fixes this cleanly: as the step size shrinks, the
 weights settle and the running averages lock onto the final network. We
-therefore reuse the warmup-and-cosine schedule :eqref:`eq_cosine_warmup` from
+therefore reuse the warmup-and-cosine schedule from
 :numref:`sec_alexnet` (studied further in :numref:`chap_optimization`), warming
 up over the first tenth of `num_steps`, and wrap `d2l.LeNet` in a subclass
 `CosineLeNet` so both models share the exact same schedule.
@@ -755,8 +755,8 @@ class CosineLeNet(d2l.LeNet):
     configure_optimizers = BNLeNet.configure_optimizers
 ```
 
-Let us train both `CosineLeNet` and `BNLeNet` under identical settings—peak
-learning rate 0.1 (the MLP's rate), batch size 128, and 10 epochs—and track
+Let us train both `CosineLeNet` and `BNLeNet` under identical settings (peak
+learning rate 0.1, batch size 128, and 10 epochs) and track
 validation accuracy epoch by epoch.
 
 ```{.python .input #batch-norm-concise-implementation-2}
@@ -798,7 +798,7 @@ simply brought every layer's activations and gradients onto a healthy scale.
 
 Comparing at a single learning rate, however, leaves open an important
 question: did batch normalization merely shift the sweet spot to a different
-step size, or does it genuinely widen the range of workable learning rates? To
+step size, or does it truly widen the range of workable learning rates? To
 find out, we sweep peak learning rates across a 300-fold span from 0.03 to 10
 and plot final 10-epoch validation accuracy for both models.
 
@@ -958,9 +958,9 @@ behaved in deep convnets. *Normalizer-free networks* (NFNets)
 :cite:`brock2021nfnet` trained deep ResNet-style architectures without a single
 normalization layer to state-of-the-art ImageNet accuracy (among models
 trained solely on ImageNet). Rather than normalizing activations, NFNets
-standardize each convolutional kernel's weights directly—preserving throughout
+standardize each convolutional kernel's weights directly, preserving throughout
 training the variance balance that initialization (:numref:`subsec_he_init`)
-establishes only at step zero—and pair this with adaptive gradient clipping
+establishes only at step zero, and pair this with adaptive gradient clipping
 relative to each weight tensor's norm. Although we will not implement NFNets
 here, their success offers illuminating evidence: the fact that deep convnets
 train just as well when signal scale is controlled through weights instead of
@@ -969,8 +969,8 @@ normalization layer.
 
 ## Summary
 
-Batch normalization standardizes each feature of a dense layer—or each channel
-of a convolutional layer—using the mean and variance of the current minibatch,
+Batch normalization standardizes each feature of a dense layer, or each channel
+of a convolutional layer, using the mean and variance of the current minibatch,
 followed by a learned scale and shift. By keeping forward signals and backward
 gradients properly scaled and making normalized layers invariant to weight
 norms, it lets LeNet train smoothly across peak learning rates spanning 0.03
@@ -1118,7 +1118,7 @@ $$\textrm{BN}(a\mathbf{w}^\top \mathbf{h}_i) = \textrm{BN}(\mathbf{w}^\top \math
 $$\hat{\mu} \leftarrow \rho\,\hat{\mu} + (1 - \rho)\,\hat{\mu}_\mathcal{B}, \qquad \hat{\sigma}^2 \leftarrow \rho\,\hat{\sigma}^2 + (1 - \rho)\,\hat{\sigma}^2_\mathcal{B}$$
 
 - **Train vs. eval split:** Training uses live batch stats $(\hat{\mu}_\mathcal{B}, \hat{\sigma}^2_\mathcal{B})$ and updates running buffers; eval freezes $(\hat{\mu}, \hat{\sigma}^2)$ for deterministic $N=1$ scoring.
-- **Pitfall:** Framework BatchNorm layers call the mixing weight `momentum`, but some mean $1-\rho$ (e.g. $0.1$) and others $\rho$ (e.g. $0.9$); check which one yours uses.
+- **Pitfall:** Framework BatchNorm layers call the mixing weight `momentum`, but some define it as $1-\rho$ (e.g., $0.1$) and others as $\rho$ (e.g., $0.9$), so we pass explicit values whenever defaults differ.
 :::
 
 ::: {.col .fig}
@@ -1204,7 +1204,7 @@ Sweeping the peak learning rate $\eta_0 \in \{0.03, 0.1, 0.3, 1, 3, 10\}$ over 1
 
 ::: {.cols .vc}
 ::: {.col}
-- **Micro-batch collapse ($m \le 2$):** In a dense layer at $m=1$, $x_1 = \hat{\mu}_\mathcal{B} \implies \textrm{BN}(x_1) \equiv \beta$ (zero gradient). On ImageNet at 2 images/GPU, BN ResNet-50 error spikes from $23.6\%$ to **$34.7\%$**!
+- **Micro-batch collapse ($m \le 2$):** In a dense layer at $m=1$, $x_1 = \hat{\mu}_\mathcal{B} \implies \textrm{BN}(x_1) \equiv \beta$ (zero gradient). On ImageNet at 2 images/GPU, BN ResNet-50 error spikes from $23.6\%$ to **$34.7\%$**.
 - **Train–test drift & sequences:** Running stats drift during domain fine-tuning, and causal autoregressive sequences cannot pool across tokens or examples.
 :::
 
@@ -1273,9 +1273,9 @@ $$\hat{W}_{o,i,k} = \gamma \cdot \frac{W_{o,i,k} - \mu_{W_o}}{\sqrt{N_{\text{in}
 
 Work out these three concrete normalization problems:
 
-1. **Element counts per mean:** A convolutional layer outputs shape $(N, C, H, W) = (16, 64, 32, 32)$. How many scalar activations are averaged to compute a single mean $\hat{\mu}$ in (a) `BatchNorm2d`, (b) `GroupNorm(G=16)`, and (c) per-pixel channel `LayerNorm` (as in ConvNeXt)?
-2. **Trainable parameters vs. buffers:** How many trainable parameters and how many non-trainable running buffers does `BatchNorm2d(64)` add?
-3. **Training mode at $N=1$:** What happens if you accidentally evaluate a dense `BatchNorm1d` network in `model.train()` mode with batch size $N=1$?
+1. **Element counts per mean:** A convolutional layer has $N = 16$ examples, $C = 64$ channels, and $H \times W = 32 \times 32$ spatial positions. How many scalar activations are averaged to compute a single mean $\hat{\mu}$ in (a) 2D batch normalization, (b) group normalization ($G = 16$), and (c) per-pixel channel layer normalization (as in ConvNeXt)?
+2. **Trainable parameters vs. buffers:** How many trainable parameters and how many non-trainable running buffers does a 64-channel 2D batch-normalization layer add?
+3. **Training mode at $N=1$:** What happens if you accidentally evaluate a dense 1D batch-normalized network in training mode with batch size $N=1$?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**

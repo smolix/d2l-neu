@@ -128,11 +128,11 @@ convolution. Global average pooling and a linear classifier form the head.
 
 Each stage therefore exposes four degrees of freedom: depth $d_i$, output
 width $c_i$, bottleneck ratio $b_i \geq 1$, and *group width* $g_i$ (the
-number of channels per group—careful not to confuse this with the *group
+number of channels per group; do not confuse this with the *group
 count* $g$ in :numref:`subsec_resnext`, which remains the meaning of the
 `groups` argument in `d2l.ResNeXtBlock`). Across four stages, these 16 free
-numbers—sampling depths up to 16, widths up to 1024 in steps of 8, bottleneck
-ratios in $\{1, 2, 4\}$, and power-of-two group widths up to 32—span roughly
+numbers (sampling depths up to 16, widths up to 1024 in steps of 8, bottleneck
+ratios in $\{1, 2, 4\}$, and power-of-two group widths up to 32) span roughly
 $(16 \cdot 128 \cdot 3 \cdot 6)^4 \approx 2 \times 10^{18}$ candidate
 architectures: impossible to enumerate, yet trivial to sample randomly. On
 $224 \times 224$ ImageNet inputs, the stem and four stages perform five
@@ -425,7 +425,7 @@ working assumptions so that a modestly sized sample of briefly trained models
 can faithfully represent an entire space:
 
 1. **Good principles are abundant.** Many networks satisfying sound design
-   rules perform well—there are many good needles in the haystack—so
+   rules perform well (there are many good needles in the haystack), so
    optimizing a *distribution* over architectures is meaningful.
 1. **Short-run ranking transfers.** Validation accuracy after a brief training
    run correlates well with final converged accuracy (enabling 10-epoch
@@ -436,8 +436,8 @@ can faithfully represent an entire space:
 1. **Design factors roughly decouple.** Individual structural constraints can
    be evaluated sequentially without severe hidden interactions.
 
-None of these four assumptions is guaranteed a priori—the second and third are
-especially strong—and the exercises below test them directly at small scale.
+None of these four assumptions is guaranteed a priori (the second and third are
+especially strong), and the exercises below test them directly at small scale.
 
 Accepting these assumptions, we draw $n$ random networks from a space, train
 each briefly, and record their validation errors $e_1, \ldots, e_n$. The
@@ -460,7 +460,7 @@ for 10 ImageNet epochs, and plotted the resulting CDFs in
 rule at a time. Sharing a single bottleneck ratio $b$ across all four stages
 (AnyNetX$_B$) and then sharing a single group width $g$ (AnyNetX$_C$) leaves
 the error distribution untouched (mean error ~49%)—a major win in its own
-right, eliminating 6 of the 16 free hyperparameters for free. The dramatic
+right, eliminating 6 of the 16 free hyperparameters without accuracy loss. The dramatic
 breakthrough comes from constraining *stage widths*: requiring nondecreasing
 widths ($c_{i+1} \geq c_i$) slashes mean population error by six full points
 to ~43%, whereas constant or shrinking widths degrade mean error to 56% and
@@ -615,8 +615,8 @@ $$u_j = u_0 + a j,$$
 
 parameterized by an initial width $u_0$ and slope $a > 0$. Because every block
 inside a stage shares one width, RegNet quantizes each $u_j$ onto a geometric
-grid—just like the doubling widths of hand-crafted networks in
-:numref:`tab_hand_designed_stages`—grouping consecutive blocks that snap to
+grid, much like the doubling widths of hand-crafted networks in
+:numref:`tab_hand_designed_stages`, grouping consecutive blocks that snap to
 the same quantized width into a single stage to form a clean staircase.
 :numref:`fig_regnet_staircase` shows the staircase of one RegNet, and problem
 :exref:`ex_cnn-design-quantized-widths` asks you to work out another.
@@ -637,9 +637,9 @@ Fashion-MNIST images originate from $28 \times 28$ thumbnails, running four
 stages (five halvings) would shrink the final stages to tiny $6 \times 6$ and
 $3 \times 3$ grids; we therefore use two stages operating at $24 \times 24$
 and $12 \times 12$ (problem :exref:`ex_cnn-design-four-stages` tests four
-stages). Behind a 32-channel stem, we hand-pick increasing depths and widths—stage
-1 with $d_1 = 4$, $c_1 = 64$ and stage 2 with $d_2 = 6$, $c_2 = 160$—together
-with $b = 1$ and shared group width $g = 16$ (giving $64/16 = 4$ and
+stages). Behind a 32-channel stem, we hand-pick increasing depths and widths
+(stage 1 with $d_1 = 4$, $c_1 = 64$ and stage 2 with $d_2 = 6$, $c_2 = 160$)
+together with $b = 1$ and shared group width $g = 16$ (giving $64/16 = 4$ and
 $160/16 = 10$ groups). One stem convolution, ten three-layer blocks, and one
 linear classifier total 32 layers, giving `RegNetX32`.
 
@@ -870,7 +870,7 @@ Both architectures finish near 94% validation accuracy (93.7--94.2% across runs)
 
 ## Summary
 
-Comparing *design spaces* shifts architectural analysis from single point estimates to error distributions over populations sampled from a parameterized template (`AnyNet`). Across 500 briefly trained ImageNet samples per space, tying a single bottleneck ratio $b = 1$ and group width $g$ across stages costs nothing while enforcing nondecreasing stage widths ($u_j = u_0 + a j$ quantized to a staircase) and depths cuts mean population error from 49% to 43%, yielding the RegNetX family. On Fashion-MNIST, `RegNetX32` matches ResNet-18's ~94% accuracy with under 5% of its parameters and a third of its multiply-adds. Across the entire chapter, a small core of structural primitives—repeatable blocks, activation normalization, and residual shortcuts—and the discipline of separating architectural gains from training-recipe gains form the foundation of modern vision backbones.
+Comparing *design spaces* shifts architectural analysis from single point estimates to error distributions over populations sampled from a parameterized template (`AnyNet`). Across 500 briefly trained ImageNet samples per space, tying a single bottleneck ratio $b = 1$ and group width $g$ across stages costs nothing while enforcing nondecreasing stage widths ($u_j = u_0 + a j$ quantized to a staircase) and depths cuts mean population error from 49% to 43%, yielding the RegNetX family. On Fashion-MNIST, `RegNetX32` matches ResNet-18's ~94% accuracy with under 5% of its parameters and a third of its multiply-adds. Across the entire chapter, a small core of structural primitives (repeatable blocks, activation normalization, and residual shortcuts) and the discipline of separating architectural gains from training-recipe gains form the foundation of modern vision backbones.
 
 ## Exercises
 
@@ -985,14 +985,14 @@ $$\hat{F}(e) = \frac{1}{n} \sum_{j=1}^n \mathbf{1}(e_j \le e)$$
 ::: {.slide title="Design-Space Refinement: AnyNetXA to AnyNetXE"}
 [ImageNet Population Evidence]{.kicker}
 
-Sampling $n = 500$ models per space at $\approx 400\text{M}$ multiply-adds and training each for 10 ImageNet epochs distills four structural rules:
+Sampling $n = 500$ models per space at $\approx 400\text{M}$ multiply-adds (10 ImageNet epochs) distills four structural rules:
 
 ::: {.cols .vc}
 ::: {.col}
-- **$\text{AnyNetX}_A \to \text{AnyNetX}_B$ (shared $b_i = b$):** Tying one bottleneck ratio across all 4 stages leaves the error CDF unchanged (mean error $49.3\% \to 49.1\%$), removing 3 knobs for free.
-- **$\text{AnyNetX}_B \to \text{AnyNetX}_C$ (shared $g_i = g$):** Tying one group width across stages also preserves the CDF ($49.1\%$, removing 3 more knobs).
-- **$\text{AnyNetX}_C \to \text{AnyNetX}_D$ (growing widths $c_{i+1} \ge c_i$):** Slashes mean error by **6 full points to $43.3\%$** (whereas shrinking widths $c_{i+1} < c_i$ crash to $63.0\%$).
-- **$\text{AnyNetX}_D \to \text{AnyNetX}_E$ (growing depths $d_{i+1} \ge d_i$):** Trims mean error further to **$42.8\%$** (down from $16$ free stage knobs to $10$ constrained ones).
+- **$\text{AnyNetX}_A \to \text{AnyNetX}_B$ (shared $b_i = b$):** Tying one bottleneck ratio across stages preserves the CDF ($49.3\% \to 49.1\%$ mean error), dropping 3 knobs.
+- **$\text{AnyNetX}_B \to \text{AnyNetX}_C$ (shared $g_i = g$):** Tying one group width across stages also preserves the CDF ($49.1\%$, dropping 3 more knobs).
+- **$\text{AnyNetX}_C \to \text{AnyNetX}_D$ (growing widths $c_{i+1} \ge c_i$):** Cuts mean error by **6 points to $43.3\%$** (shrinking widths $c_{i+1} < c_i$ degrade to $63.0\%$).
+- **$\text{AnyNetX}_D \to \text{AnyNetX}_E$ (growing depths $d_{i+1} \ge d_i$):** Trims mean error to **$42.8\%$** ($16 \to 10$ constrained stage knobs).
 :::
 
 ::: {.col .fig .narrow}

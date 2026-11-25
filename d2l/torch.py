@@ -24034,8 +24034,9 @@ def regen_microbench(config='box'):
             json.dump(_hw_encode(log.env), f, indent=1)
         ladder = d2l.hw_bandwidth_ladder(sizes=2**np.arange(18, 33),
                                          kinds=('read', 'copy'))
-        dtypes = d2l.hw_dtype_ladder(
-            n=8192, formats=('fp32', 'tf32', 'bf16', 'fp16', 'fp8'))
+        fp8 = ('fp8',) if torch.cuda.get_device_capability() >= (8, 9) else ()
+        dtypes = d2l.hw_dtype_ladder(  # no FP8 matrix units before Ada/Hopper
+            n=8192, formats=('fp32', 'tf32', 'bf16', 'fp16') + fp8)
         smem = hw_smem_bench()
         lat = hw_latency_bench(sizes=2**np.arange(12, 31, 2))
         for cmd, df in (('hw_copy_bench', ladder), ('hw_matmul_bench', dtypes),

@@ -200,7 +200,7 @@ update via $\mathbf{x}_k + \alpha_k\mathbf{p}_k$ along the Newton direction
 $\mathbf{p}_k = -(\nabla^2 f(\mathbf{x}_k))^{-1}\mathbf{g}_k$, choosing
 $\alpha_k \le 1$ by backtracking until the Armijo condition
 $f(\mathbf{x}_k + \alpha\mathbf{p}_k) \le f(\mathbf{x}_k) + c\,\alpha\,\mathbf{g}_k^\top\mathbf{p}_k$
-holds (the general-direction form of :eqref:`eq_mdl-opt-armijo`). Near a
+holds (the general-direction form of the Armijo rule in :numref:`sec_mdl-gradient-based-optimization`). Near a
 minimizer with a positive definite Hessian, the full step $\alpha = 1$
 automatically passes this test whenever $c < \tfrac12$, so damping adds no
 overhead once quadratic convergence kicks in.
@@ -851,11 +851,11 @@ $$\mathbf{T}\mathbf{y}_{k+1} = \mathbf{x}_k - \big(\nabla^2 f(\mathbf{x}_k)\big)
 
 Near a non-quadratic minimizer $\mathbf{x}^\star$ where $\nabla f(\mathbf{x}^\star) = \mathbf{0}$, how rapidly does the error $\mathbf{e}_k = \mathbf{x}_k - \mathbf{x}^\star$ shrink?
 
-- **Step 1 — Express the new error via the Hessian at $\mathbf{x}_k$:** Subtract $\mathbf{x}^\star$ from the Newton update and factor out $(\nabla^2 f_k)^{-1}$:
+- **Step 1: Express the new error via the Hessian at $\mathbf{x}_k$:** Subtract $\mathbf{x}^\star$ from the Newton update and factor out $(\nabla^2 f_k)^{-1}$:
   $$\mathbf{e}_{k+1} = \mathbf{e}_k - (\nabla^2 f_k)^{-1}\mathbf{g}_k = (\nabla^2 f_k)^{-1}\Big[\nabla^2 f_k\,\mathbf{e}_k - \big(\nabla f(\mathbf{x}_k) - \nabla f(\mathbf{x}^\star)\big)\Big]$$
-- **Step 2 — Apply the fundamental theorem of calculus:** Write the gradient difference as an integral of the Hessian along the segment $\mathbf{x}^\star + t\mathbf{e}_k$:
+- **Step 2: Apply the fundamental theorem of calculus:** Write the gradient difference as an integral of the Hessian along the segment $\mathbf{x}^\star + t\mathbf{e}_k$:
   $$\nabla f(\mathbf{x}_k) - \nabla f(\mathbf{x}^\star) = \int_0^1 \nabla^2 f(\mathbf{x}^\star + t\mathbf{e}_k)\,\mathbf{e}_k\,dt$$
-- **Step 3 — Combine inside the integral:** The bracketed residual is $\int_0^1 \big[\nabla^2 f(\mathbf{x}_k) - \nabla^2 f(\mathbf{x}^\star + t\mathbf{e}_k)\big]\mathbf{e}_k\,dt$.
+- **Step 3: Combine inside the integral:** The bracketed residual is $\int_0^1 \big[\nabla^2 f(\mathbf{x}_k) - \nabla^2 f(\mathbf{x}^\star + t\mathbf{e}_k)\big]\mathbf{e}_k\,dt$.
 :::
 
 ::: {.slide title="Local Quadratic Convergence: Doubling Digits"}
@@ -913,7 +913,7 @@ Because Newton jumps to $\nabla m_k(\mathbf{p}) = \mathbf{0}$, it is attracted t
 
 $$y_{k+1} = y_k - \frac{-\sin y_k}{-\cos y_k} = y_k - \tan y_k \approx -\frac{y_k^3}{3}$$
 
-- **Wrong-way step:** On $f(x,y) = \tfrac12 x^2 + \cos y$ at $(0.5, 0.3)$, dividing $-\sin y$ by $f_{yy} = -\cos y < 0$ flips the update sign and pulls Newton uphill into the saddle $(0, 0)$!
+- **Wrong-way step:** On $f(x,y) = \tfrac12 x^2 + \cos y$ at $(0.5, 0.3)$, dividing $-\sin y$ by $f_{yy} = -\cos y < 0$ flips the update sign and pulls Newton uphill into the saddle $(0, 0)$.
 :::
 
 ::: {.col .fig}
@@ -997,7 +997,7 @@ On $\mathbf{A} = \mathrm{diag}(1, 10)$ from $(1, 1)$ with $\mathbf{M}_0 = \mathb
 ::: {.slide title="Trust-Region Methods: Bounding the Model Radius"}
 [Trust Regions]{.kicker}
 
-Newton's method ran into the saddle of $\tfrac12 x^2 + \cos y$ because it trusted its local Taylor approximation across all of $\mathbb{R}^d$. A **trust-region method** keeps the full quadratic model—including directions of negative curvature—but restricts the step $\mathbf{p}$ to a ball of radius $\Delta_k$:
+Newton's method ran into the saddle of $\tfrac12 x^2 + \cos y$ because it trusted its local Taylor approximation across all of $\mathbb{R}^d$. A **trust-region method** keeps the full quadratic model, including directions of negative curvature, while restricting the step $\mathbf{p}$ to a ball of radius $\Delta_k$:
 
 $$\min_{\|\mathbf{p}\| \le \Delta_k} m_k(\mathbf{p}) = f(\mathbf{x}_k) + \mathbf{g}_k^\top\mathbf{p} + \tfrac12\,\mathbf{p}^\top\mathbf{B}_k\mathbf{p}$$
 
@@ -1053,8 +1053,8 @@ $$r_k = \frac{f(\mathbf{x}_k) - f(\mathbf{x}_k + \mathbf{p}_k)}{m_k(\mathbf{0}) 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Panel (a) — Local saddle surface:** At $(0.5, 0.3)$, the quadratic model $m_0(\mathbf{p})$ is a hyperbolic saddle. Pure Newton jumps to its stationary point at the origin, while minimizing $m_0$ inside the ball $\|\mathbf{p}\| \le 0.5$ follows the downward-curving $y$-axis.
-- **Panel (b) — Global trajectory:** Trust region escapes the indefinite region in three steps, expands $\Delta$, and enjoys quadratic convergence to the global minimum $(0, \pi)$.
+- **Panel (a): Local saddle surface:** At $(0.5, 0.3)$, the quadratic model $m_0(\mathbf{p})$ is a hyperbolic saddle. Pure Newton jumps to its stationary point at the origin, while minimizing $m_0$ inside the ball $\|\mathbf{p}\| \le 0.5$ follows the downward-curving $y$-axis.
+- **Panel (b): Global trajectory:** Trust region escapes the indefinite region in three steps, expands $\Delta$, and enjoys quadratic convergence to the global minimum $(0, \pi)$.
 :::
 
 ::: {.col .fig}

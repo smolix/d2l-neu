@@ -331,7 +331,7 @@ why both are needed.
 
 **Proposition (Slater's condition implies strong duality).** *Suppose the
 problem is convex ($f$ and every $g_i$ convex, every $h_j$ affine) and
-satisfies Slater's condition :eqref:`eq_mdl-opt-slater`: there exists a
+satisfies Slater's condition (:numref:`subsec_mdl-constraint-qualifications`): there exists a
 feasible point $\bar{\mathbf{x}}$ in the relative interior of $\mathcal{D}$
 such that $g_i(\bar{\mathbf{x}}) < 0$ for every inequality constraint $g_i$
 that is not affine. Then $d^\star = p^\star$, and whenever $p^\star$ is finite,
@@ -395,7 +395,7 @@ is the same geometric fact that produces subgradients in
 and to the right, we must have $\gamma \ge 0$ and $\lambda \ge 0$.
 
 Could $\gamma = 0$? If so, the supporting line is vertical and $\lambda > 0$,
-forcing $\lambda u \ge 0$—and thus $u \ge 0$—throughout $\mathcal{A}$. That
+forcing $\lambda u \ge 0$ (and thus $u \ge 0$) throughout $\mathcal{A}$. That
 contradicts the strictly feasible point $\bar{\mathbf{x}}$, which contributes
 $u = g(\bar{\mathbf{x}}) < 0$. Therefore $\gamma > 0$. Dividing by $\gamma$
 yields $t + (\lambda/\gamma)\,u \ge p^\star$ for all $(u, t) \in \mathcal{A}$,
@@ -521,7 +521,7 @@ Strong duality brings three practical benefits:
 - *The dual solution helps recover the primal solution.* By
   :eqref:`eq_mdl-opt-saddle-point`, $\mathbf{x}^\star$ is *among* the
   minimizers of $\mathcal{L}(\cdot, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$.
-  When that minimizer is unique—for instance, when $f$ is strictly convex—it
+  When that minimizer is unique (for instance, when $f$ is strictly convex), it
   immediately gives $\mathbf{x}^\star$, as in the clipping problem where
   $\mathbf{x}(4) = \mathbf{x}_0 / 5 = \mathbf{x}^\star$. When the minimizer is
   not unique, feasibility and complementary slackness pick $\mathbf{x}^\star$
@@ -1331,9 +1331,9 @@ one, of slope $-1$, certifies only $-\tfrac12$.
 Two open challenges remain. First, for a nonconvex problem, the dual can bound
 the optimum but need not reach it. Second, even when a saddle point exists,
 updating $\mathbf{x}$ and $\boldsymbol{\lambda}$ simultaneously can fail to
-converge—a central difficulty in minimax training. While training an entire
-deep network is nonconvex, many of its building blocks—projections, clipped
-updates, last-layer fits, and convex trust-region subproblems—are convex, and
+converge, a central difficulty in minimax training. While training an entire
+deep network is nonconvex, many of its building blocks (projections, clipped
+updates, last-layer fits, and convex trust-region subproblems) are convex, and
 everything in this section applies directly to them. So far, however, every
 derivation in this chapter has assumed exact real arithmetic; in the next
 section we turn to what happens when finite floating-point precision, rather
@@ -1351,7 +1351,7 @@ duality closes the gap ($d^\star = p^\star$) and attained primal--dual optima
 form a saddle point of the Lagrangian. For linear constraints, the dual reduces
 to the convex conjugate,
 $q(\boldsymbol{\lambda}) = -f^*(-\mathbf{A}^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda}$,
-which turns conjugate pairs—such as log-sum-exp and negative entropy—directly
+which turns conjugate pairs such as log-sum-exp and negative entropy directly
 into dual formulations. Under strong duality, the optimal multipliers act as
 shadow prices ($\lambda_i^\star = -\partial p^\star / \partial u_i$ and
 $\nu_j^\star = -\partial p^\star / \partial v_j$ wherever $p^\star$ is
@@ -1604,7 +1604,7 @@ Duality<br>**Lagrange dual function · weak & strong duality · Slater's conditi
 Suppose an iterative solver for $\min_{\|\mathbf{x}\|_2 \le 1}\tfrac12\|\mathbf{x} - \mathbf{x}_0\|_2^2$ ($\mathbf{x}_0 = (3, 4)$) halts at feasible $\mathbf{x} = (0.55, 0.835)$ with $f(\mathbf{x}) = 8.01 \ge p^\star$:
 
 - **Why unconstrained checks fail:** At the constrained optimum $\mathbf{x}^\star = (0.6, 0.8)$, $\nabla f(\mathbf{x}^\star) = (-2.4, -3.2) \neq \mathbf{0}$.
-- **Dual lower-bound certificate:** For any $\lambda \ge 0$, $\lambda g(\mathbf{x}) \le 0$ on the disk, so minimizing $f(\mathbf{x}) + \lambda g(\mathbf{x})$ over all of $\mathbb{R}^2$ certifies an ironclad lower bound $q(\lambda) \le p^\star$!
+- **Dual lower-bound certificate:** For any $\lambda \ge 0$, $\lambda g(\mathbf{x}) \le 0$ on the disk, so minimizing $f(\mathbf{x}) + \lambda g(\mathbf{x})$ over all of $\mathbb{R}^2$ certifies an ironclad lower bound $q(\lambda) \le p^\star$.
 :::
 
 ::: {.col .fig .big}
@@ -1623,7 +1623,7 @@ $$\min_{\mathbf{x} \in \mathbb{R}^2} \big[f(\mathbf{x}) + \lambda\,g(\mathbf{x})
 - **Closed-form unconstrained minimization:** Setting $\nabla_{\mathbf{x}}\mathcal{L}(\mathbf{x}, \lambda) = (\mathbf{x} - \mathbf{x}_0) + \lambda\mathbf{x} = \mathbf{0}$ yields the unique minimizer $\mathbf{x}(\lambda) = \frac{\mathbf{x}_0}{1 + \lambda}$.
 - **Evaluating the lower bound $q(\lambda) = \mathcal{L}(\mathbf{x}(\lambda), \lambda)$:**
   $$q(\lambda) = \frac{25}{2}\frac{\lambda^2}{(1+\lambda)^2} + \frac{\lambda}{2}\left(\frac{25}{(1+\lambda)^2} - 1\right) = \frac{25}{2}\frac{\lambda}{1 + \lambda} - \frac{\lambda}{2}$$
-- **Tightest lower bound:** Setting $q'(\lambda) = \frac{25}{2(1+\lambda)^2} - \frac12 = 0$ selects $\lambda^\star = 4$, where $q(4) = 10 - 2 = \mathbf{8 = p^\star}$, proving immediately that $8.01$ is within $0.01$ of optimal!
+- **Tightest lower bound:** Setting $q'(\lambda) = \frac{25}{2(1+\lambda)^2} - \frac12 = 0$ selects $\lambda^\star = 4$, where $q(4) = 10 - 2 = \mathbf{8 = p^\star}$, proving immediately that $8.01$ is within $0.01$ of optimal.
 :::
 
 ::: {.slide title="Visualizing the Dual Function on the Unit Disk"}
@@ -1684,7 +1684,7 @@ $$d^\star = \sup_{\boldsymbol{\lambda} \succeq \mathbf{0},\, \boldsymbol{\nu}} q
 ::: {.cols .vc}
 ::: {.col}
 - **Slater's Condition ($\Rightarrow d^\star = p^\star$):** If the primal problem is convex ($f, g_i$ convex, $h_j$ affine) and there exists a point $\bar{\mathbf{x}} \in \mathrm{relint}(\mathcal{D})$ with $g_i(\bar{\mathbf{x}}) < 0$ (for non-affine $g_i$), $g_i(\bar{\mathbf{x}}) \le 0$ (for affine $g_i$), and $h_j(\bar{\mathbf{x}}) = 0$, then **strong duality holds ($d^\star = p^\star$)** and dual optimal multipliers $(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$ exist.
-- **Affine shortcut:** When all inequalities are linear/affine (LPs, SVMs), mere feasibility suffices!
+- **Affine shortcut:** When all inequalities are linear/affine (LPs, SVMs), mere feasibility suffices.
 :::
 
 ::: {.col .fig .big}
@@ -1703,7 +1703,7 @@ For a single inequality $g(\mathbf{x}) \le 0$, form the epigraph set of attainab
 $$\mathcal{A} = \big\{(u, t) : u \ge g(\mathbf{x}),\; t \ge f(\mathbf{x})\text{ for some }\mathbf{x} \in \mathcal{D}\big\}$$
 
 - **Visualizing $p^\star$ and $q(\lambda)$:** $p^\star$ is the lowest height $t$ of $\mathcal{A}$ on the vertical axis $u = 0$. Evaluating $q(\lambda) = \inf_{(u,t)\in\mathcal{A}}(t + \lambda u)$ pushes a line of slope $-\lambda$ up from below until it supports $\mathcal{A}$; its intercept at $u = 0$ is $q(\lambda)$.
-- **Why convexity + Slater work:** Convexity makes $\mathcal{A}$ convex so a supporting line exists at $(0, p^\star)$; Slater's point $u = g(\bar{\mathbf{x}}) < 0$ prevents that line from being vertical!
+- **Why convexity + Slater work:** Convexity makes $\mathcal{A}$ convex so a supporting line exists at $(0, p^\star)$; Slater's point $u = g(\bar{\mathbf{x}}) < 0$ prevents that line from being vertical.
 :::
 
 ::: {.col .fig}

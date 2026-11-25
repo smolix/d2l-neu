@@ -139,7 +139,7 @@ $-\|\nabla f\| = -10.198$. The coordinate direction $(-1, 0)$ also points
 downhill, but with a much gentler slope of $-2$. In fact, descent directions
 fill the entire open half-space of vectors making an acute angle with
 $-\nabla f$; the negative gradient simply picks out the steepest one. Because
-this result governs slopes—the limit of vanishingly short steps—let us check
+this result governs slopes (the limit of vanishingly short steps), we next check
 how faithfully those slopes predict the actual decrease over a small finite
 step, $\eta = 0.01$, across four unit directions.
 
@@ -301,7 +301,7 @@ develops the same geometric argument in one variable.
 
 ### Stationary Points Without Convexity
 
-Surprisingly, the descent lemma alone—without any convexity assumption—already
+Surprisingly, the descent lemma alone, without any convexity assumption, already
 places a quantitative limit on a long run: the gradient cannot stay large
 forever.
 
@@ -410,7 +410,7 @@ fixed step from $x_0 = 3$ converges for $\eta < 2/9 \approx 0.22$ and diverges
 above it. Notice
 that this stability threshold is $2/9$, not $2/f''(x_0) = 2/27$; the
 $2/f''(x_0)$ rule belongs to quadratics. A step toward the origin experiences
-the average of $f''$ between $0$ and $x$—which is $x^2$—rather than its peak
+the average of $f''$ between $0$ and $x$ (which is $x^2$) rather than its peak
 value $3x^2$. The descent lemma must guard against the worst-case curvature
 along the segment and therefore certifies only a third of the true safe range.
 
@@ -418,7 +418,7 @@ Backtracking, by contrast, accepts $0.031$ on the first step. Its previous
 trial, $0.0625$, fails the Armijo test, which on this quartic holds if and only
 if $\eta x^2 \le 0.456$ (roughly $\eta \le 0.05$ at $x_0 = 3$). As the iterate
 moves toward the origin and the curvature flattens, the accepted steps grow
-automatically—$0.0625, 0.125, 0.25, 0.5, 1.0$, each close to $0.3/x^2$—because
+automatically ($0.0625, 0.125, 0.25, 0.5, 1.0$, each close to $0.3/x^2$) because
 the line search probes the local curvature on the fly. Deep learning training
 rarely uses backtracking, since a minibatch loss is too noisy to compare two
 candidate steps reliably and each trial costs an extra forward pass. Instead,
@@ -678,7 +678,7 @@ single step, not just on average.
 :label:`subsec_mdl-edge-of-stability`
 
 The stability ceiling suggests a simple recipe for neural networks: compute the
-**sharpness**—the largest Hessian eigenvalue $\lambda_{\max}(\nabla^2 f)$—and
+**sharpness**, the largest Hessian eigenvalue $\lambda_{\max}(\nabla^2 f)$, and
 set $\eta < 2/\lambda_{\max}$. In practice, training a neural network does not
 cooperate, because the Hessian evolves along the trajectory. Under full-batch
 gradient descent, the sharpness typically climbs until it hits roughly
@@ -981,12 +981,12 @@ for kappa in [10.0, 100.0, 1000.0]:
 The table confirms every prediction. Gradient descent's step count divided by
 $\kappa$ stays pinned at $6.9$, reaching $6{,}908$ iterations at
 $\kappa = 1000$, while heavy ball finishes in just $315$. Notice that heavy
-ball's ratio $k/\sqrt\kappa$ drifts gently upward—$8.5$, $9.3$, $10.0$—because
+ball's ratio $k/\sqrt\kappa$ drifts gently upward ($8.5$, $9.3$, $10.0$) because
 each extreme mode has a double root: its $2\times 2$ iteration matrix forms a
 Jordan block, a repeated eigenvalue with only a single eigenvector
 (:numref:`subsec_mdl-jordan`), whose $k$-th power brings in the factor $k$.
 The refined prediction $k \approx \tfrac{\sqrt\kappa}{2}(\log 10^6 + \log k)$
-matches closely—$8.6$, $9.2$, $9.8$—and at $\kappa = 10^4$, heavy ball takes
+matches closely ($8.6$, $9.2$, $9.8$), and at $\kappa = 10^4$, heavy ball takes
 $1{,}056$ steps, a ratio of $10.6$ (exercise
 :exref:`ex_mdl-gradient-based-optimization-write-heavy-ball-eqref`).
 Nesterov's $508$ iterations at $\kappa = 1000$ sit cleanly between the two,
@@ -1157,7 +1157,7 @@ what changes when gradients are noisy
 
 1. [code] **A lower bound for first-order methods.** ● This problem derives
    the $O(1/k^2)$ part of the bound of :citet:`Nemirovski.Yudin.1983` quoted
-   in :numref:`subsec_mdl-momentum-acceleration`—the smooth convex case—following
+   in :numref:`subsec_mdl-momentum-acceleration` (the smooth convex case), following
    the construction of :citet:`Nesterov.2018`. Here, a first-order method is
    any algorithm whose iterates satisfy
    $\mathbf{x}_k \in \mathbf{x}_0 + \mathrm{span}\{\nabla f(\mathbf{x}_0), \ldots, \nabla f(\mathbf{x}_{k-1})\}$;

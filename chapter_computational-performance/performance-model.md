@@ -1053,7 +1053,7 @@ Comparing wall-clock time per call (`d2l.Benchmark`) against actual GPU kernel e
 @!performance-model-matrix-products-across-sizes-3
 
 ::: {.d2l-note}
-The GPU finishes either operation in $\sim 2\,\mu\text{s}$; the remaining $10\text{--}100\,\mu\text{s}$ is **host dispatch latency $h$** (Python interpreter, framework dispatcher, and CUDA driver launch). For a $256 \times 256$ product, the most expensive part is the line of Python that asks for it.
+The GPU finishes either operation in $1\text{--}4\,\mu\text{s}$; the remaining $10\text{--}100\,\mu\text{s}$ is **host dispatch latency $h$** (Python interpreter, framework dispatcher, and CUDA driver launch). For a $256 \times 256$ product, the most expensive part is the line of Python that asks for it.
 :::
 :::
 

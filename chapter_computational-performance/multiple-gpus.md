@@ -1087,7 +1087,7 @@ LeNet has $10$ parameter tensors (5 weights, 5 biases) totaling $61{,}706$ `floa
 @!multiple-gpus-latency-and-bandwidth-of-the-allreduce-1
 
 ::: {.d2l-note .rule}
-**The price is in the envelopes ($9\alpha$):** For a $247\text{ KB}$ gradient, $S\beta_{\textrm{link}} \lesssim 100\,\mu\text{s}$, so launching $9$ extra allreduces costs more time in start-up latency than transferring all the gradient bytes! Always fuse or bucket small gradients before communicating.
+**The price is in the envelopes ($9\alpha$):** For a $247\text{ KB}$ gradient, $S\beta_{\textrm{link}} \lesssim 100\,\mu\text{s}$, so launching $9$ extra allreduces costs more time in start-up latency than transferring all the gradient bytes. Always fuse or bucket small gradients before communicating.
 :::
 :::
 
@@ -1111,7 +1111,7 @@ Before timing LeNet on two GPUs at global batch size $B = 256$, we profile its l
 
 ::: {.col}
 - **Halving an overhead-bound batch saves nothing:** On $1$ GPU, $b = 128$ takes nearly the exact same time $h_{\textrm{step}}$ as $b = 256$.
-- **One host thread driving $k$ GPUs:** When a single Python loop dispatches kernels to GPU 0 and then to GPU 1, host launch time scales as $k \cdot h_{\textrm{step}}$!
+- **One host thread driving $k$ GPUs:** When a single Python loop dispatches kernels to GPU 0 and then to GPU 1, host launch time scales as $k \cdot h_{\textrm{step}}$.
 
 @!multiple-gpus-lenet-on-one-and-two-gpus-1
 :::
@@ -1128,7 +1128,7 @@ $$t_{\textrm{step}}(k) \;\approx\; \max\!\bigl(k\,h_{\textrm{step}},\; t_{\textr
 @!multiple-gpus-data-parallelism-by-hand-6
 
 ::: {.d2l-note .warn}
-At global batch $B = 256$, two GPUs run **nearly $2\times$ slower** than one GPU—not because of the $247\text{ KB}$ gradient exchange ($\sim 0.1\text{ ms}$), but because the single host launcher takes $2h_{\textrm{step}}$ to issue work to two cards!
+At global batch $B = 256$, two GPUs run **nearly $2\times$ slower** than one GPU—not because of the $247\text{ KB}$ gradient exchange ($\sim 0.1\text{ ms}$), but because the single host launcher takes $2h_{\textrm{step}}$ to issue work to two cards.
 :::
 :::
 

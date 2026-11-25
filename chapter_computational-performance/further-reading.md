@@ -76,7 +76,7 @@ The roofline analysis applies unchanged to accelerators beyond
 :numref:`tab_gpu_specs`. AMD's Instinct MI355X, Google's TPU7x, Intel's
 Gaudi 3, and AWS's Trainium2 all pair stacked HBM with matrix units. Their
 bf16 ridge points range from about 230 FLOP/byte (Trainium2) to over 450
-(Gaudi 3)—$1.4\times$ to $3\times$ the 164 FLOP/byte of our RTX 4090—making
+(Gaudi 3), $1.4\times$ to $3\times$ the 164 FLOP/byte of our RTX 4090, making
 fusion and narrow formats even more important.
 
 ### Unified Memory

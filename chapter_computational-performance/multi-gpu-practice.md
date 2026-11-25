@@ -1027,7 +1027,7 @@ $$t_{\textrm{exposed (ideal)}} \;=\; \frac{2(k-1)}{k}\, S_{\textrm{last\_bucket}
 PyTorch DDP closes the first bucket at $1\text{ MiB}$ (so communication starts almost immediately) and subsequent buckets at `bucket_cap_mb = 25` ($25\text{ MiB} = 26.2\text{ MB}$):
 
 - **ResNet-18 bucket layout ($S = 44.7\text{ MB}$ total):** Walking `reversed(list(net.parameters()))` forms three buckets of **$9.4\text{ MB}$, $26.2\text{ MB}$, and $9.0\text{ MB}$** (a single $9.4\text{ MB}$ late-stage `Conv2d` weight tensor overshoots the $1\text{ MiB}$ first cap on its own).
-- **Ideal overlap prediction:** If the first two buckets ($9.4$ and $26.2\text{ MB}$) finish behind backpropagation, only the final **$S_{\textrm{last}} = 9.0\text{ MB}$** bucket (holding the earliest layers, computed last) remains exposed—cutting exposed communication by **$5\times$**!
+- **Ideal overlap prediction:** If the first two buckets ($9.4$ and $26.2\text{ MB}$) finish behind backpropagation, only the final **$S_{\textrm{last}} = 9.0\text{ MB}$** bucket (holding the earliest layers, computed last) remains exposed, cutting exposed communication by **$5\times$**.
 :::
 
 ::: {.slide title="Asynchronous Allreduce Combining in XLA (30 MiB)" only="jax"}
@@ -1046,7 +1046,7 @@ Unlike LeNet, ResNet-18 contains `BatchNorm2d` layers. Comparing one 2-GPU DDP s
 
 @!multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5
 
-- **Local per-shard statistics by default:** PyTorch DDP normalizes each GPU's $128$-image shard using its **own local mean and variance**, matching the two accumulated halves to $10^{-7}$ while differing from global 256-image BatchNorm by $\sim 6\%$ of the update!
+- **Local per-shard statistics by default:** PyTorch DDP normalizes each GPU's $128$-image shard using its **own local mean and variance**, matching the two accumulated halves to $10^{-7}$ while differing from global 256-image BatchNorm by $\sim 6\%$ of the update.
 :::
 
 ::: {.slide title="One-Step Check: Global BatchNorm Under JAX Auto Mesh" only="jax"}
@@ -1056,7 +1056,7 @@ Comparing one 2-GPU `nnx.jit` step on $256$ images against (a) one GPU on all $2
 
 @!multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5
 
-- **Global batch statistics under `Auto` sharding:** Because the batch dimension is sharded across `'data'` in `AxisType.Auto` mode, XLA partitions the BatchNorm mean and variance reductions across **all GPUs globally**, matching the single-GPU 256-image update to `float32` rounding ($\sim 10^{-7}$)!
+- **Global batch statistics under `Auto` sharding:** Because the batch dimension is sharded across `'data'` in `AxisType.Auto` mode, XLA partitions the BatchNorm mean and variance reductions across **all GPUs globally**, matching the single-GPU 256-image update closely ($\sim 10^{-5}$, versus $1.7 \times 10^{-2}$ against two independent halves).
 :::
 
 ::: {.slide title="Local BatchNorm vs. SyncBatchNorm Trade-Offs" only="pytorch"}
@@ -1075,7 +1075,7 @@ Parsing the compiled HLO text (`compiled.as_text()`) with `allreduce_megabytes` 
 
 @!multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3
 
-- **Two large buffers + 74 tiny calls:** The two large allreduces ($25.8\text{ MB}$ and $18.9\text{ MB}$) carry the $44.7\text{ MB}$ of parameter gradients; the $74$ small allreduces ($0.24\text{ MB}$ total) synchronize per-channel BatchNorm means, variances, and activation gradients across all 20 BatchNorm layers in the forward and backward passes.
+- **Two large buffers + 74 tiny calls:** The two large allreduces ($25.8\text{ MB}$ and $18.9\text{ MB}$) carry the $44.7\text{ MB}$ of parameter gradients; the $74$ small allreduces ($0.10\text{ MB}$ total) synchronize per-channel BatchNorm means, variances, and activation gradients across all 20 BatchNorm layers in the forward and backward passes.
 :::
 
 ::: {.slide title="Silent Data-Sharding Bugs in Distributed Training"}
@@ -1083,8 +1083,8 @@ Parsing the compiled HLO text (`compiled.as_text()`) with `allreduce_megabytes` 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Bug 1 — Identical shards across ranks:** Omitting `rank` in the slice offset (or sharding indices with `P()`) makes all $k$ GPUs compute on the exact same $b$ examples—wasting $k-1$ GPUs!
-- **Bug 2 — Unseeded per-rank shuffles:** Independent random permutations sample examples *with replacement* across ranks instead of partitioning the epoch.
+- **Bug 1 (identical shards across ranks):** Omitting `rank` in the slice offset (or sharding indices with `P()`) makes all $k$ GPUs compute on the exact same $b$ examples, wasting $k-1$ GPUs.
+- **Bug 2 (unseeded per-rank shuffles):** Independent random permutations sample examples *with replacement* across ranks instead of partitioning the epoch.
 - **Step-1 defense:** Assert that minibatch checksums differ across ranks while sharing the epoch seed.
 :::
 
@@ -1101,7 +1101,7 @@ First, we measure $\beta_{\textrm{link}}$ on a bare $256\text{ MB}$ NCCL allredu
 
 @!multi-gpu-practice-ddp-really-run-5
 
-- **Two clear predictions:** Without overlap, exposed communication should be **$\sim 18\text{ ms}$** ($k=2$) and **$\sim 28\text{ ms}$** ($k=4$); with ideal bucket overlap, only the last bucket/buffer should be exposed (**$4\text{--}8\text{ ms}$** at $k=2$, **$6\text{--}12\text{ ms}$** at $k=4$).
+- **Two clear predictions:** Without overlap, exposed communication should be **$\sim 18\text{ ms}$** ($k=2$) and **$\sim 28\text{ ms}$** ($k=4$); with ideal bucket overlap, only the last bucket/buffer should be exposed (**$4\text{--}8\text{ ms}$** at $k=2$, **$5\text{--}12\text{ ms}$** at $k=4$).
 :::
 
 ::: {.slide title="Weak Scaling on Four GPUs: 3.1–3.3× Throughput"}
@@ -1112,7 +1112,7 @@ Fixing the per-GPU batch size at $b = 256$ images/GPU across $k \in \{1, 2, 4\}$
 @!multi-gpu-practice-ddp-really-run-3
 
 ::: {.d2l-note .warn}
-Four GPUs achieve **$3.1\text{--}3.3\times$ single-GPU throughput** ($77\text{--}83\%$ scaling efficiency), and the measured exposed communication matches the **no-overlap prediction** ($\sim 18\text{ ms}$ at $k=2$, $\sim 28\text{ ms}$ at $k=4$) rather than the ideal bucket model!
+Four GPUs achieve **$3.1\text{--}3.3\times$ single-GPU throughput** ($77\text{--}83\%$ scaling efficiency), and the measured exposed communication matches the **no-overlap prediction** ($\sim 18\text{ ms}$ at $k=2$, $\sim 28\text{ ms}$ at $k=4$) rather than the ideal bucket model.
 :::
 :::
 
@@ -1134,7 +1134,7 @@ To discover why exposed communication matched the no-overlap formula even though
 @!multi-gpu-practice-predicted-and-measured-communication-1
 
 ::: {.d2l-note .rule}
-**Assumption 3 of the bucket model failed:** While NCCL's communication kernels overlap in time with backpropagation, **the backward compute kernels running alongside NCCL slow down by $8\text{--}13\text{ ms}$**, clawing back most of the time saved by overlap!
+**Assumption 3 of the bucket model failed:** While NCCL's communication kernels overlap in time with backpropagation, **the backward compute kernels running alongside NCCL slow down by $8\text{--}13\text{ ms}$**, clawing back most of the time saved by overlap.
 :::
 :::
 
@@ -1149,7 +1149,7 @@ Why does running an NCCL allreduce slow down concurrent convolution kernels on o
 @!multi-gpu-practice-ddp-really-run-6
 
 ::: {.d2l-note .warn}
-Offloading host-staged copies to DMA copy engines (`NCCL_SHM_USE_CUDA_MEMCPY=1`) boosts bare allreduce bandwidth $4\text{--}5\times$, but deadlocks PyTorch DDP when overlapped with backward compute—always verify transport flags on the actual training loop!
+Offloading host-staged copies to DMA copy engines (`NCCL_SHM_USE_CUDA_MEMCPY=1`) boosts bare allreduce bandwidth $4\text{--}5\times$, but deadlocks PyTorch DDP when overlapped with backward compute; always verify transport flags on the actual training loop.
 :::
 :::
 
@@ -1164,7 +1164,7 @@ Why does running an NCCL allreduce slow down concurrent convolution kernels on o
 @!multi-gpu-practice-ddp-really-run-6
 
 ::: {.d2l-note .warn}
-Offloading host-staged copies to DMA copy engines (`NCCL_SHM_USE_CUDA_MEMCPY=1`) boosts bare allreduce bandwidth $4\text{--}5\times$, but a bare microbenchmark says nothing about the overlapped training loop—always verify transport flags on the actual training loop!
+Offloading host-staged copies to DMA copy engines (`NCCL_SHM_USE_CUDA_MEMCPY=1`) boosts bare allreduce bandwidth $4\text{--}5\times$, whereas a bare microbenchmark says nothing about the overlapped training loop; always verify transport flags on the actual training loop.
 :::
 :::
 

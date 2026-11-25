@@ -75,7 +75,7 @@ wire, but $24\times$ fewer wires.
 Distance sets the wire count. HBM stacks sit inside the GPU package
 millimeters from the die, connected by thousands of short wires; board traces
 support hundreds of wires, and slots or cables a few dozen lanes. **Each step
-away from the die cuts the wire count—and with it the bandwidth—by roughly an
+away from the die cuts the wire count, and with it the bandwidth, by roughly an
 order of magnitude.** A B200 reads HBM at 8 TB/s, reaches peer GPUs over
 NVLink 5 at 0.9 TB/s (using ~36 lanes at 200 Gb/s each), and reaches the host
 over PCIe 5.0 at 64 GB/s.
@@ -141,7 +141,7 @@ print(f'random / identity: {times["random"] / times["identity"]:.1f}x')
 ```
 
 The identity gather streams at ~0.9 TB/s, whereas the random gather takes
-~37 ms—roughly an order of magnitude slower—and achieves only a third of peak
+~37 ms ($8\text{--}11\times$ slower) and achieves only a third of peak
 bandwidth even when credited with a full 32-byte sector per read. Beyond
 32-byte sectors, DRAM serves data from open *rows* of a few kilobytes;
 consecutive addresses share an open row, whereas random addresses repeatedly
@@ -530,7 +530,7 @@ Hardware Anatomy: CPUs, GPUs, Tensor Cores, and Memory Hierarchy<br>**memory hie
 ::: {.cols .vc}
 ::: {.col}
 - **Arithmetic time ($12\,\mu\text{s}$):** Executing $2N = 2 \times 10^9\text{ FLOPs}$ per token on a 1B GPT takes $12\,\mu\text{s}$ at $165\text{ TFLOP/s}$.
-- **Memory transfer time ($2.2\text{ ms}$):** Streaming all $2\text{ GB}$ of `bf16` weights from GDDR6X at $0.9\text{ TB/s}$ takes $2.2\text{ ms}$—nearly **$200\times$ longer**!
+- **Memory transfer time ($2.2\text{ ms}$):** Streaming all $2\text{ GB}$ of `bf16` weights from GDDR6X at $0.9\text{ TB/s}$ takes $2.2\text{ ms}$—nearly **$200\times$ longer**.
 - **Throughput ceiling ($\sim 450\text{ tok/s}$):** Single-stream decoding leaves Tensor Cores idle over $99\%$ of the time.
 :::
 
@@ -589,7 +589,7 @@ GPU DRAM achieves its rated bandwidth $\beta$ only on sequential, coalesced addr
 @!hardware-bandwidth-and-latency
 
 ::: {.d2l-note .warn}
-**Why random gathers lose $10\times$ in speed:** Memory transactions fetch **32-byte sectors** (wasting $28$ of $32\text{ B}$ per random 4-byte read), and random addresses repeatedly miss open **kilobyte-scale DRAM rows** and address-translation caches.
+**Why random gathers lose $8\text{--}10\times$ in speed:** Memory transactions fetch **32-byte sectors** (wasting $28$ of $32\text{ B}$ per random 4-byte read), and random addresses repeatedly miss open **kilobyte-scale DRAM rows** and address-translation caches.
 :::
 :::
 
@@ -633,7 +633,7 @@ $$t(n) \;=\; \alpha + \frac{n}{\beta}, \qquad \beta_{\textrm{eff}}(n) \;=\; \fra
 ::: {.col}
 - **Disproportionate scaling (2017–2024):** Across V100 $\to$ A100 $\to$ H100 $\to$ B200, 16-bit Tensor Core peak $P$ grew $18\times$ while HBM bandwidth $\beta$ grew $8.9\times$.
 - **Doubled ridge point ($I^* = P/\beta$):** The threshold intensity to saturate compute rose from $139\text{ FLOP/B}$ (V100) to $281\text{--}295\text{ FLOP/B}$ (B200/H100).
-- **Systems consequence:** An operation at $I = 200\text{ FLOP/B}$ that was compute-bound on V100 is **bandwidth-bound** on H100 and B200!
+- **Systems consequence:** An operation at $I = 200\text{ FLOP/B}$ that was compute-bound on V100 is **bandwidth-bound** on H100 and B200.
 :::
 
 ::: {.col .fig .big}
@@ -653,7 +653,7 @@ $$t(n) \;=\; \alpha + \frac{n}{\beta}, \qquad \beta_{\textrm{eff}}(n) \;=\; \fra
 ::: {.col}
 - **Off-chip memory dominates power:** In $45\text{ nm}$ CMOS (Horowitz, 2014), an `fp32` multiply costs $3.7\text{ pJ}$, whereas reading $64\text{ bits}$ from off-chip DRAM costs $1.3\text{--}2.6\text{ nJ}$—roughly **500 `fp32` multiplications**.
 - **On-chip SRAM is $20\text{--}100\times$ cheaper** ($10\text{--}100\text{ pJ}$).
-- **Power caps bandwidth:** Every technique that saves memory traffic—operator fusion, narrower formats, on-chip tiling—saves watts for the exact same physical reason it saves milliseconds.
+- **Power caps bandwidth:** Every technique that saves memory traffic (operator fusion, narrower formats, on-chip tiling) saves watts for the exact same physical reason it saves milliseconds.
 :::
 :::
 :::
@@ -781,8 +781,8 @@ Work out the following hardware estimates on the RTX 4090 ($\beta_{\textrm{achie
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **(a) $2\times$ faster** (bandwidth-bound: halves bytes moved); **(b) $2\times$ faster** (compute-bound: doubles Tensor Core $P$ from $165 \to 330\text{ TFLOP/s}$). Neither gains $4\times$ because only one roof binds at a time!
-2. **1 stream ($B = 1$):** Streaming $16\text{ GB}$ at $0.9\text{ TB/s}$ takes $17.8\text{ ms/step}$ $\to$ **$\approx 56\text{ tokens/s}$**. **Batch $B = 64$:** Still bandwidth-bound ($I \approx 64 < 164$), so each step still takes $\sim 17.8\text{ ms}$ $\to$ **$64 \times 56 \approx 3{,}600\text{ tokens/s}$** total!
+1. **(a) $2\times$ faster** (bandwidth-bound: halves bytes moved); **(b) $2\times$ faster** (compute-bound: doubles Tensor Core $P$ from $165 \to 330\text{ TFLOP/s}$). Neither gains $4\times$ because only one roof binds at a time.
+2. **1 stream ($B = 1$):** Streaming $16\text{ GB}$ at $0.9\text{ TB/s}$ takes $17.8\text{ ms/step}$ $\to$ **$\approx 56\text{ tokens/s}$**. **Batch $B = 64$:** Still bandwidth-bound ($I \approx 64 < 164$), so each step still takes $\sim 17.8\text{ ms}$ $\to$ **$64 \times 56 \approx 3{,}600\text{ tokens/s}$** total.
 :::
 :::
 

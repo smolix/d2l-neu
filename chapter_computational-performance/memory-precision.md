@@ -566,7 +566,7 @@ for name, (fixed, per_token) in budgets.items():  # M(n) <= M_gpu
 ```
 
 With per-block checkpointing, the 18 blocks together store only
-$18 \times 8 = 144$ KiB/token—less than the output layer and loss alone—raising
+$18 \times 8 = 144$ KiB/token (less than the output layer and loss alone), raising
 the token budget more than threefold (to 10,000–15,000 tokens). Notice that under checkpointing, bf16 actually fits slightly *fewer*
 tokens than fp32 because the extra $2N$ bytes of bf16 weight copies outweigh
 the activation savings on the single recomputed block. At that point, the
@@ -979,7 +979,7 @@ The memory occupied by model parameters, gradients, and optimizer state depends 
 ::: {.col}
 - **Linear layer ($\mathbf{Y} = \mathbf{X}\mathbf{W}$):** Must save input $\mathbf{X}$ because the weight gradient $\nabla_{\mathbf{W}}\mathcal{L} = \mathbf{X}^\top(\nabla_{\mathbf{Y}}\mathcal{L})$ multiplies by $\mathbf{X}$.
 - **Elementwise nonlinearity ($\mathbf{y} = f(\mathbf{x})$):** Saves $\mathbf{x}$ (or $\mathbf{y}$) to evaluate the derivative $f'(\mathbf{x})$.
-- **Hadamard product ($\mathbf{z} = \mathbf{p} \odot \mathbf{q}$):** Saves **both** $\mathbf{p}$ and $\mathbf{q}$, which is why SwiGLU alone stores four hidden vectors ($\approx 10.7d$ values/token)!
+- **Hadamard product ($\mathbf{z} = \mathbf{p} \odot \mathbf{q}$):** Saves **both** $\mathbf{p}$ and $\mathbf{q}$, which is why SwiGLU alone stores four hidden vectors ($\approx 10.7d$ values/token).
 :::
 
 ::: {.col .fig .big}
@@ -1033,7 +1033,7 @@ $$M(n) \;\approx\; 16N \;+\; n\,(L a + a_{\textrm{out}}) \;\le\; M_{\textrm{GPU}
 
 - **Fixed parameter floor ($N = 1.01 \times 10^9$):** $16N = 15.1\text{ GiB}$, leaving only $M_{\textrm{GPU}} - 16N = \mathbf{8.9\text{ GiB}}$ for activations and backward temporaries on a $24\text{ GiB}$ RTX 4090.
 - **Maximum micro-batch token count ($L = 18$ blocks):** At $La + a_{\textrm{out}} \approx 2.8\text{--}4.3\text{ MiB/token}$, at most **$2{,}000\text{--}3{,}200$ tokens** (2 or 3 sequences of length $1{,}024$) can fit in a single micro-batch.
-- **Doubling depth to 36 blocks ($N = 1.92\text{B}$):** Fixes $16N = 28.6\text{ GiB} > 24\text{ GiB}$—not even a single token fits without sharding the $16N$ state across multiple GPUs (§{sec_sharding})!
+- **Doubling depth to 36 blocks ($N = 1.92\text{B}$):** Fixes $16N = 28.6\text{ GiB} > 24\text{ GiB}$—not even a single token fits without sharding the $16N$ state across multiple GPUs (§{sec_sharding}).
 :::
 
 ::: {.slide title="Measured Peak Memory: The 8V Cross-Entropy Excess" only="pytorch"}
@@ -1128,7 +1128,7 @@ Evaluating $M(n) \le 24\text{ GiB}$ for our 18-block, 1B-parameter GPT shows how
 @!memory-precision-activation-checkpointing-1
 
 - **More than $3\times$ larger micro-batches:** Per-block checkpointing expands capacity from $\sim 2{,}800$ tokens to **$\sim 10{,}000\text{--}15{,}000$ tokens**.
-- **Surprising interaction:** Under full per-block checkpointing, `bf16` fits slightly *fewer* tokens than `fp32` because its extra $2N = 1.9\text{ GiB}$ of `bf16` weight copies outweigh the $60\text{ KiB/token}$ saved on the single currently recomputed block!
+- **Surprising interaction:** Under full per-block checkpointing, `bf16` fits slightly *fewer* tokens than `fp32` because its extra $2N = 1.9\text{ GiB}$ of `bf16` weight copies outweigh the $60\text{ KiB/token}$ saved on the single currently recomputed block.
 :::
 
 ::: {.slide title="Measuring Checkpointing: 40 KiB/Token and +25% Time"}
@@ -1188,8 +1188,8 @@ Apply the memory and timing formulas of this section to two design questions for
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **2 sequences without checkpointing ($m = 256$) is faster:** Its accumulator overhead is $\frac{2 I^*}{n} = \frac{2 \times 164}{2048} \approx \mathbf{16\%}$, whereas 4 sequences with checkpointing pays $8\%$ accumulator overhead plus $\sim 25\%$ recomputation ($\approx \mathbf{33\%}$ total overhead). Never turn on checkpointing if a large enough micro-batch already fits!
-2. **$6 \times (1.01 \times 10^9) \times 524{,}288 \approx 3.18 \times 10^{15}\text{ FLOPs/step}$**, taking at least **$\ge 19.2\text{ s/step}$** at $100\%$ peak ($\sim 22\text{ s}$ with accumulation)—over 25 days for $100{,}000$ steps! One GPU can hold the step, but finishing the run requires multiple GPUs.
+1. **2 sequences without checkpointing ($m = 256$) is faster:** Its accumulator overhead is $\frac{2 I^*}{n} = \frac{2 \times 164}{2048} \approx \mathbf{16\%}$, whereas 4 sequences with checkpointing pays $8\%$ accumulator overhead plus $\sim 25\%$ recomputation ($\approx \mathbf{33\%}$ total overhead). Never turn on checkpointing if a large enough micro-batch already fits.
+2. **$6 \times (1.01 \times 10^9) \times 524{,}288 \approx 3.18 \times 10^{15}\text{ FLOPs/step}$**, taking at least **$\ge 19.2\text{ s/step}$** at $100\%$ peak ($\sim 22\text{ s}$ with accumulation), or over 25 days for $100{,}000$ steps. One GPU can hold the step, but finishing the run requires multiple GPUs.
 :::
 :::
 

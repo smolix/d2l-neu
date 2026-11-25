@@ -3,7 +3,7 @@
 
 Regression is the tool we reach for when answering *how much?* or *how many?* questions. Many supervised learning problems, however, ask *which category?* instead: a spam filter sorts email into two classes, a clinical tool chooses among candidate diagnoses, and a language model predicts the next token from a vocabulary of tens of thousands of words.
 
-Suppose an online retailer wants to sort product photos into ten apparel categories: T-shirt, trouser, pullover, dress, coat, sandal, shirt, sneaker, bag, and ankle boot. Why not number those categories $1$ through $10$ and apply linear regression directly? Because integer codes for unordered categories are arbitrary names, not numerical quantities: a prediction of $5.5$ would place a photo halfway between a coat and a sandal, and squared error would penalize mistaking a T-shirt ($1$) for an ankle boot ($10$) $81$ times more heavily than mistaking it for a trouser ($2$). Moreover, even when we ultimately need a *hard assignment* (picking a single category), we almost always want a model that outputs *soft assignments*—a calibrated probability for every candidate class—so downstream decisions can weigh confidence against the cost of a mistake.
+Suppose an online retailer wants to sort product photos into ten apparel categories: T-shirt, trouser, pullover, dress, coat, sandal, shirt, sneaker, bag, and ankle boot. Why not number those categories $1$ through $10$ and apply linear regression directly? Because integer codes for unordered categories are arbitrary names, not numerical quantities: a prediction of $5.5$ would place a photo halfway between a coat and a sandal, and squared error would penalize mistaking a T-shirt ($1$) for an ankle boot ($10$) $81$ times more heavily than mistaking it for a trouser ($2$). Moreover, even when we ultimately need a *hard assignment* (picking a single category), we almost always want a model that outputs *soft assignments* (a calibrated probability for every candidate class) so downstream decisions can weigh confidence against the cost of a mistake.
 
 *Softmax regression* (also called *multinomial logistic regression*) solves both problems cleanly: it computes one affine score per class and maps those scores into a valid probability distribution via the softmax operator. Following the maximum-likelihood recipe of :numref:`sec_linear_regression`, minimizing the negative log-likelihood of the observed categories yields the *cross-entropy loss*.
 
@@ -14,7 +14,7 @@ Suppose an online retailer wants to sort product photos into ten apparel categor
 
 Let us start with a concrete $2 \times 2$ grayscale image classification problem with four scalar pixel features $x_1, x_2, x_3, x_4$ and three categories: cat ($1$), chicken ($2$), and dog ($3$). In general, with $q$ classes, an example's label is an integer $y \in \{1, \ldots, q\}$.
 
-To represent unordered categories without imposing a false numerical ordering, statisticians use a *one-hot encoding*: a vector $\mathbf{y} \in \{0, 1\}^q$ with a $1$ in the coordinate of the true class ($y_y = 1$) and $0$ everywhere else. In our three-class example, a cat is $(1, 0, 0)$, a chicken is $(0, 1, 0)$, and a dog is $(0, 0, 1)$. Every pair of distinct classes now sits at the exact same Euclidean distance $\sqrt{2}$, and better yet, $\mathbf{y}$ is itself a valid probability distribution—the degenerate distribution placing $100\%$ of its mass on the true class—which we can compare directly against our model's predicted distribution $\hat{\mathbf{y}}$. (In equations we use $1$-based class index $y$ and one-hot vector $\mathbf{y}$; in Python code we store the $0$-based integer index directly.)
+To represent unordered categories without imposing a false numerical ordering, statisticians use a *one-hot encoding*: a vector $\mathbf{y} \in \{0, 1\}^q$ with a $1$ in the coordinate of the true class ($y_y = 1$) and $0$ everywhere else. In our three-class example, a cat is $(1, 0, 0)$, a chicken is $(0, 1, 0)$, and a dog is $(0, 0, 1)$. Every pair of distinct classes now sits at the same Euclidean distance $\sqrt{2}$, and $\mathbf{y}$ is itself a valid probability distribution—the degenerate distribution placing all of its mass on the true class—which we can compare directly against our model's predicted distribution $\hat{\mathbf{y}}$. (In equations we use $1$-based class index $y$ and one-hot vector $\mathbf{y}$; in Python code we store the $0$-based integer index directly.)
 
 ### Linear Scores
 
@@ -42,7 +42,7 @@ where $o_j = \mathbf{w}_j^\top \mathbf{x} + b_j$. On the $28 \times 28$ Fashion-
 ### The Softmax
 :label:`subsec_softmax_operation`
 
-Suppose our linear layer outputs the logits $\mathbf{o} = (1.0, 2.2, 0.3)$ for cat, chicken, and dog. The chicken has the highest score, yet raw logits are not probabilities: they sum to $3.5$ rather than $1$, and nothing stops an affine score from turning negative or exceeding $1$. To convert any real vector $\mathbf{o} \in \mathbb{R}^q$ into a valid probability distribution $\hat{\mathbf{y}}$—$q$ strictly positive numbers summing to $1$—while preserving the ranking of the scores, the *softmax* function exponentiates each logit and divides by their sum:
+Suppose our linear layer outputs the logits $\mathbf{o} = (1.0, 2.2, 0.3)$ for cat, chicken, and dog. The chicken has the highest score, yet raw logits are not probabilities: they sum to $3.5$ rather than $1$, and nothing stops an affine score from turning negative or exceeding $1$. To convert any real vector $\mathbf{o} \in \mathbb{R}^q$ into a valid probability distribution $\hat{\mathbf{y}}$ ($q$ positive numbers summing to $1$) while preserving the ranking of the scores, the *softmax* function exponentiates each logit and divides by their sum:
 
 $$\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o}) \quad \textrm{where} \quad \hat{y}_j = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)}.$$
 :eqlabel:`eq_softmax_y_and_o`
@@ -155,7 +155,7 @@ which ranges from $0$ (when one outcome is certain) to $\log q$ (when all $q$ ou
 
 $$H(\mathbf{p}, \hat{\mathbf{p}}) = -\sum_{j=1}^q p_j \log \hat{p}_j.$$
 
-By *Gibbs' inequality*, $H(\mathbf{p}, \hat{\mathbf{p}}) \geq H(\mathbf{p})$ with equality if and only if $\hat{\mathbf{p}} = \mathbf{p}$ (their gap is the Kullback--Leibler divergence $D_{\mathrm{KL}}(\mathbf{p} \,\|\, \hat{\mathbf{p}}) = H(\mathbf{p}, \hat{\mathbf{p}}) - H(\mathbf{p}) \geq 0$). Comparing $H(\mathbf{p}, \hat{\mathbf{p}})$ with :eqref:`eq_l_cross_entropy`, our per-example loss $l(\mathbf{y}, \hat{\mathbf{y}}) = H(\mathbf{y}, \hat{\mathbf{y}})$ is literally the cross-entropy between the empirical label distribution $\mathbf{y}$ and the predicted distribution $\hat{\mathbf{y}}$! Better still, when an input is genuinely ambiguous—say a blurry photo that is $60\%$ likely to be a shirt and $40\%$ likely to be a T-shirt—Gibbs' inequality guarantees that the expected cross-entropy loss is uniquely minimized when the model reports the true calibrated probabilities $(0.6, 0.4)$ rather than an overconfident guess.
+By *Gibbs' inequality*, $H(\mathbf{p}, \hat{\mathbf{p}}) \geq H(\mathbf{p})$ with equality if and only if $\hat{\mathbf{p}} = \mathbf{p}$ (their gap is the Kullback--Leibler divergence $D_{\mathrm{KL}}(\mathbf{p} \,\|\, \hat{\mathbf{p}}) = H(\mathbf{p}, \hat{\mathbf{p}}) - H(\mathbf{p}) \geq 0$). Comparing $H(\mathbf{p}, \hat{\mathbf{p}})$ with :eqref:`eq_l_cross_entropy`, our per-example loss $l(\mathbf{y}, \hat{\mathbf{y}}) = H(\mathbf{y}, \hat{\mathbf{y}})$ is literally the cross-entropy between the empirical label distribution $\mathbf{y}$ and the predicted distribution $\hat{\mathbf{y}}$. Better still, when an input is inherently ambiguous, say a blurry photo that is $60\%$ likely to be a shirt and $40\%$ likely to be a T-shirt, Gibbs' inequality guarantees that the expected cross-entropy loss is uniquely minimized when the model reports the true calibrated probabilities $(0.6, 0.4)$ rather than an overconfident guess.
 
 ## Accuracy and Confidence
 
@@ -172,23 +172,20 @@ The classifier makes an error ($m < 0$) or a correct prediction ($m > 0$) accord
 
 ### Calibration and Temperature
 
-Notice one consequence of the smooth curve in :numref:`fig_mdl-clf-margin-losses`: cross-entropy keeps decreasing even after $m > 0$ and the classification decision is already correct. If a training dataset is *linearly separable*—meaning some $(\mathbf{W}, \mathbf{b})$ classifies every training example correctly ($m^{(i)} > 0$ for all $i$)—then multiplying $(\mathbf{W}, \mathbf{b})$ by any scale factor $c > 1$ multiplies every margin by $c$ and drives the training loss toward zero without bound (Exercise :exref:`ex_softmax-regression-separable`), pushing all predicted probabilities toward $0$ and $1$ without moving the decision boundary at all!
+Notice one consequence of the smooth curve in :numref:`fig_mdl-clf-margin-losses`: cross-entropy keeps decreasing even after $m > 0$ and the classification decision is already correct. If a training dataset is *linearly separable*, meaning some $(\mathbf{W}, \mathbf{b})$ classifies every training example correctly ($m^{(i)} > 0$ for all $i$), then multiplying $(\mathbf{W}, \mathbf{b})$ by any scale factor $c > 1$ multiplies every margin by $c$ and drives the training loss toward zero without bound (Exercise :exref:`ex_softmax-regression-separable`), pushing all predicted probabilities toward $0$ and $1$ without moving the decision boundary at all.
 
 More generally, scaling all logits by the inverse of a positive *temperature* $T > 0$ before applying the softmax,
 
 $$\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o} / T),$$
 
-sharpens the distribution toward a one-hot argmax as $T \to 0$ and flattens it toward the uniform distribution $(1/q, \ldots, 1/q)$ as $T \to \infty$ (:numref:`fig_mdl-clf-temperature`), while leaving the ranking of the logits—and therefore the classifier's accuracy—completely unchanged. Whether a trained model's predicted probabilities match true empirical accuracy (*calibration*) is an empirical question we will test on held-out data in :numref:`sec_classification`.
+sharpens the distribution toward a one-hot argmax as $T \to 0$ and flattens it toward the uniform distribution $(1/q, \ldots, 1/q)$ as $T \to \infty$ (:numref:`fig_mdl-clf-temperature`), while leaving the ranking of the logits (and therefore the classifier's accuracy) unchanged. Whether a trained model's predicted probabilities match true empirical accuracy (*calibration*) is an empirical question we test on held-out data in :numref:`sec_classification`.
 
 ![Softmax probabilities for logits $\mathbf{o} = (1.0, 2.2, 0.3)$ at three temperatures: $T = 0.25$ (peaked), $T = 1$ (standard softmax), and $T = 4$ (nearly uniform).](../img/mdl-clf-temperature.svg)
 :label:`fig_mdl-clf-temperature`
 
 ## Summary
 
-- **Softmax model:** Softmax regression maps a $d$-dimensional input $\mathbf{x}$ to $q$ class logits $\mathbf{o} = \mathbf{W}^\top\mathbf{x} + \mathbf{b}$ and normalizes them into probabilities $\hat{y}_j = \exp(o_j)/\sum_k \exp(o_k)$, carving input space into convex polyhedral decision regions bounded by hyperplanes.
-- **Shift invariance and logistic regression:** Softmax depends only on pairwise logit differences $o_i - o_j = \log(\hat{y}_i / \hat{y}_j)$ and reduces to binary logistic regression $\hat{y}_1 = \sigma(o_1 - o_2)$ when $q = 2$.
-- **Cross-entropy loss and gradient:** Maximizing the categorical likelihood of one-hot labels $\mathbf{y}$ minimizes the convex cross-entropy loss $l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_j y_j \log \hat{y}_j = \log\sum_k \exp(o_k) - o_y$, whose gradient with respect to the logits is the residual $\nabla_{\mathbf{o}}\, l = \hat{\mathbf{y}} - \mathbf{y}$.
-- **Surrogate loss and temperature:** Cross-entropy provides a smooth convex surrogate for the flat zero-one error rate; scaling logits by $1/T$ adjusts prediction confidence without altering class rankings or accuracy.
+Softmax regression predicts unordered discrete categories by computing one affine logit per class, $\mathbf{o} = \mathbf{W}^\top\mathbf{x} + \mathbf{b}$, and normalizing them into probabilities $\hat{y}_j = \exp(o_j)/\sum_k \exp(o_k)$, partitioning input space into convex polyhedral decision regions bounded by hyperplanes. Because the softmax operator depends only on pairwise logit differences $o_i - o_j = \log(\hat{y}_i/\hat{y}_j)$, it is invariant to uniform shifts of $\mathbf{o}$ and reduces to binary logistic regression when $q = 2$. Maximizing the categorical likelihood of one-hot targets $\mathbf{y}$ yields the convex cross-entropy loss $l(\mathbf{y}, \hat{\mathbf{y}}) = -\log \hat{y}_y = \log\sum_k \exp(o_k) - o_y$, a smooth upper bound on zero-one classification error whose gradient with respect to the logits collapses to the residual $\hat{\mathbf{y}} - \mathbf{y}$. Dividing the logits by a temperature $T > 0$ tunes prediction confidence between a deterministic argmax and a uniform distribution without altering class rankings or accuracy.
 
 ## Exercises
 
@@ -520,7 +517,7 @@ $$l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \ha
 Minimizing squared error $\frac{1}{2}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$ on softmax outputs stalls on confident blunders:
 
 - **Softmax Jacobian saturation:** Because $\partial \hat{y}_k / \partial o_j = \hat{y}_k(\mathbf{1}_{j=k} - \hat{y}_j)$ carries a factor of $\hat{y}_k$, any class with $\hat{y}_y \to 0$ has a vanishing logit derivative.
-- **Log cancels exp in cross-entropy:** For two-class margin $m = o_y - o_{\text{other}} \ll 0$, squared-loss gradient $-2\sigma(m)(1-\sigma(m))^2 \to 0$, whereas cross-entropy gradient $-(1-\sigma(m)) \to -1$ supplies a full unit restoring force!
+- **Log cancels exp in cross-entropy:** For two-class margin $m = o_y - o_{\text{other}} \ll 0$, squared-loss gradient $-2\sigma(m)(1-\sigma(m))^2 \to 0$, whereas cross-entropy gradient $-(1-\sigma(m)) \to -1$ supplies a full unit restoring force.
 :::
 
 ::: {.col .fig .big}
@@ -613,7 +610,7 @@ Because cross-entropy keeps decreasing for $m > 0$, minimizing it pushes predict
 
 ::: {.cols .vc}
 ::: {.col}
-- **Runaway weights on linearly separable data:** If $(\mathbf{W}, \mathbf{b})$ classifies every training point correctly ($m^{(i)} > 0$), scaling $(c\mathbf{W}, c\mathbf{b})$ with $c \to \infty$ drives the loss to $0$ without bound while leaving the decision boundary unchanged! Weight decay ($\frac{\lambda}{2}\|\mathbf{W}\|_F^2$) restores a finite minimizer.
+- **Runaway weights on linearly separable data:** If $(\mathbf{W}, \mathbf{b})$ classifies every training point correctly ($m^{(i)} > 0$), scaling $(c\mathbf{W}, c\mathbf{b})$ with $c \to \infty$ drives the loss to $0$ without bound while leaving the decision boundary unchanged; weight decay ($\frac{\lambda}{2}\|\mathbf{W}\|_F^2$) restores a finite minimizer.
 - **Temperature scaling:** Dividing logits by $T > 0$ before softmax:
   $$\hat{\mathbf{y}}(T) = \mathrm{softmax}(\mathbf{o} / T)$$
   sharpens toward argmax as $T \to 0$ and flattens toward $(1/q, \ldots, 1/q)$ as $T \to \infty$ without altering $\operatorname{argmax}_j o_j$ or accuracy.

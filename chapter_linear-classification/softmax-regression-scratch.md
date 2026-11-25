@@ -6,10 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Softmax Regression Implementation
 :label:`sec_softmax_scratch`
 
-Just as we implemented linear regression both from scratch and concisely in :numref:`sec_linear_scratch`, we now build softmax regression on Fashion-MNIST both ways:
-
-1. **From scratch:** We implement the rowwise softmax, vectorized cross-entropy loss, and `SoftmaxRegressionScratch` parameters ($\mathbf{W} \in \mathbb{R}^{784 \times 10}, \mathbf{b} \in \mathbb{R}^{10}$) by hand, while introducing the reusable `Classifier(d2l.Module)` base class that tracks both cross-entropy loss and classification accuracy across the rest of the book. Along the way, we expose the floating-point overflow of the naive softmax formula, train to $\sim 83\%$ validation accuracy, and dissect what the linear model learned via its $10 \times 10$ confusion matrix and its ten $28 \times 28$ weight templates.
-2. **Concisely with a numerically stable fused loss (:numref:`sec_softmax_concise`):** We then replace our manual parameters and clamped loss with a built-in framework linear layer and the shifted *log-sum-exp* cross-entropy loss computed directly from raw logits—eliminating both overflow and underflow while preserving intact gradients for arbitrary logits.
+Just as we implemented linear regression both from scratch and concisely in :numref:`chap_regression`, we now build softmax regression on Fashion-MNIST both ways. We start from raw tensors—implementing the rowwise softmax, vectorized cross-entropy loss, and `SoftmaxRegressionScratch` parameters ($\mathbf{W} \in \mathbb{R}^{784 \times 10}, \mathbf{b} \in \mathbb{R}^{10}$) alongside the reusable `Classifier(d2l.Module)` base class—train to roughly $83\%$ validation accuracy, and inspect what the linear model learned through its $10 \times 10$ confusion matrix and $28 \times 28$ weight templates. In :numref:`sec_softmax_concise`, we then replace manual tensors and probability clamping with a built-in linear layer and a shifted *log-sum-exp* cross-entropy loss computed directly from raw logits, eliminating floating-point overflow and underflow at once.
 
 ```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
 %%tab mxnet
@@ -59,7 +56,7 @@ For a minibatch of $n$ examples, the logits form an $n \times q$ matrix $\mathbf
 
 $$\mathrm{softmax}(\mathbf{O})_{ij} = \frac{\exp(O_{ij})}{\sum_{k=1}^q \exp(O_{ik})}.$$
 
-In code, we exponentiate `O`, sum across columns (`axis=1`) with `keepdims=True` so the row sums keep shape `(n, 1)`, and divide via broadcasting. Let us test `softmax` on our cat/chicken/dog logits $(1.0, 2.2, 0.3)$ from :numref:`sec_softmax` and on a row of zeros:
+In code, we exponentiate `O`, sum across columns (`axis=1`) with `keepdims=True` so the row sums keep shape `(n, 1)`, and divide via broadcasting:
 
 ```{.python .input #softmax-regression-scratch-the-softmax-2}
 def softmax(O):
@@ -80,7 +77,7 @@ Y_hat, d2l.reduce_sum(Y_hat, 1)
 
 ### Overflow
 
-Why should you never deploy this three-line `softmax` formula in production? Because in 32-bit floating point (`float32`), numbers top out near $3.4 \times 10^{38}$, so $\exp(o)$ overflows to `inf` as soon as $o > 88.7$! Feed `softmax` the logits $(1000, 0, 0)$ and $\infty / \infty$ immediately evaluates to `NaN`—even though the true probability distribution is $(1, 0, 0)$ to machine precision.
+Why should you never deploy this three-line `softmax` formula in production? Because in 32-bit floating point (`float32`), numbers top out near $3.4 \times 10^{38}$, so $\exp(o)$ overflows to `inf` as soon as $o > 88.7$. Feed `softmax` the logits $(1000, 0, 0)$ and $\infty / \infty$ evaluates to `NaN`, even though the true probability distribution is $(1, 0, 0)$ to machine precision.
 
 As we proved in :numref:`sec_softmax`, softmax is invariant to shifting every logit in a row by the same constant. Subtracting the row maximum $o_{\max} = \max_k o_k$ before exponentiating ensures every exponent $o_j - o_{\max}$ is $\leq 0$ (and the largest is $0$), making overflow impossible. Every framework's built-in softmax applies this shift internally:
 
@@ -275,7 +272,7 @@ def forward(self, X):
 
 ### The Cross-Entropy Loss
 
-Recall from :eqref:`eq_l_cross_entropy` that $l(\mathbf{y}, \hat{\mathbf{y}}) = -\log \hat{y}_y$. Instead of materializing one-hot matrices and taking inner products, we pluck out the true-class probability $\hat{y}^{(i)}_{y^{(i)}}$ for every row $i$ in one vectorized indexing step. In our scratch `cross_entropy`, we clamp probabilities below at $10^{-12}$ as a temporary guard against $\log 0$:
+Recall from :numref:`subsec_softmax-regression-loss-func` that $l(\mathbf{y}, \hat{\mathbf{y}}) = -\log \hat{y}_y$. Instead of materializing one-hot matrices and taking inner products, we pluck out the true-class probability $\hat{y}^{(i)}_{y^{(i)}}$ for every row $i$ in one vectorized indexing step:
 
 :begin_tab:`tensorflow`
 TensorFlow gathers them with `tf.gather(y_hat, y, batch_dims=1)`.
@@ -399,7 +396,7 @@ After 10 epochs, validation accuracy settles near $83\%$ (varying by $\pm 1\%$ a
 
 ### Misclassified Images
 
-To see *how* the model errs, let us pull the first validation minibatch of $256$ images, count the mistakes, and display the first eight misclassified garments with their true and predicted labels (`true → pred`):
+To see *how* the model errs, let us pull the first validation minibatch of $256$ images and count the mistakes:
 
 ```{.python .input #softmax-regression-scratch-prediction-1}
 X, y = next(iter(data.val_dataloader()))
@@ -409,7 +406,7 @@ print(f'{int(d2l.reduce_sum(d2l.astype(wrong, d2l.int32)))} of {len(y)} wrong')
 ```
 
 Let us display the first eight misclassified images, showing the true label
-above the model's prediction.
+above the model's prediction (`true → pred`):
 
 ```{.python .input #softmax-regression-scratch-prediction-2}
 labels = [f'{true}\n→ {pred}' for true, pred in zip(
@@ -425,7 +422,7 @@ To summarize the error pattern across all $10{,}000$ validation images, we tally
 $$N_{ij} = \sum_{m=1}^n \mathbf{1}\big(\hat{c}^{(m)} = i\big)\, \mathbf{1}\big(y^{(m)} = j\big).$$
 :eqlabel:`eq_confusion-matrix`
 
-(Placing true classes in the columns and predicted classes in the rows makes column-normalized conditional probabilities multiply cleanly as $\boldsymbol{\mu} = \mathbf{C}\mathbf{p}$ when we study label shift in :numref:`sec_environment-and-distribution-shift`.) Using one-hot matrices $\mathbf{P}, \mathbf{Y} \in \{0, 1\}^{n \times q}$ for a minibatch's predicted and true classes, the product $\mathbf{P}^\top\mathbf{Y}$ accumulates all $100$ counts in a single matrix multiplication per minibatch. Let us compute $\mathbf{N}$, normalize each column to sum to $1$ to obtain $C_{ij} = P(\hat{c} = i \mid y = j)$, plot $\mathbf{C}$ as a heatmap, and print the five most frequent confusions:
+(Placing true classes in the columns and predicted classes in the rows makes column-normalized conditional probabilities multiply cleanly as $\boldsymbol{\mu} = \mathbf{C}\mathbf{p}$ when we study label shift in :numref:`sec_environment-and-distribution-shift`.) Using one-hot matrices $\mathbf{P}, \mathbf{Y} \in \{0, 1\}^{n \times q}$ for a minibatch's predicted and true classes, the product $\mathbf{P}^\top\mathbf{Y}$ accumulates all $100$ counts in a single matrix multiplication per minibatch:
 
 ```{.python .input #softmax-regression-scratch-the-confusion-matrix-1}
 def one_hot(y, q):
@@ -584,32 +581,16 @@ class SoftmaxRegression(d2l.Classifier):  #@save
 Why does `SoftmaxRegression.forward` stop at the logits instead of returning probabilities? Recall the twin floating-point hazards of computing $\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o})$ first and $-\log \hat{y}_y$ second in `float32`:
 
 1. **Overflow:** $\exp(o)$ overflows to `inf` for $o > 88.7$. Subtracting $o_{\max} = \max_k o_k$ from every logit fixes overflow because every shifted exponent $o_k - o_{\max}$ is $\leq 0$.
-2. **Underflow:** Even after shifting by $o_{\max}$, any class whose logit sits more than $104$ below $o_{\max}$ (such as class 1 in $\mathbf{o} = (0, -200, 0)$) has $\exp(o_y - o_{\max})$ underflow to exact `0.0` in float32! Taking $\log(0.0)$ then produces `-inf` (or, with our scratch `1e-12` clamp, caps the loss at $27.6$ and **zeroes out the gradient**, leaving the model unable to learn from a confident blunder!).
+2. **Underflow:** Even after shifting by $o_{\max}$, any class whose logit sits more than $104$ below $o_{\max}$ (such as class 1 in $\mathbf{o} = (0, -200, 0)$) has $\exp(o_y - o_{\max})$ underflow to exact `0.0` in float32. Taking $\log(0.0)$ then produces `-inf` (or, with our scratch `1e-12` clamp, caps the loss at $27.6$ and **zeroes out the gradient**, leaving the model unable to learn from a confident blunder).
 
-We avoid both overflow and underflow by *never materializing intermediate probabilities at all*. Combining the logarithm and the shifted softmax algebraically—the classic *LogSumExp trick*—turns the division into a subtraction:
+We avoid both overflow and underflow by *never materializing intermediate probabilities at all*. Combining the logarithm and the shifted softmax algebraically via the *LogSumExp trick* turns the division into a subtraction:
 
 $$l(y, \mathbf{o}) = \log \sum_{k=1}^q \exp(o_k) - o_y = o_{\max} + \log \sum_{k=1}^q \exp(o_k - o_{\max}) - o_y.$$
 :eqlabel:`eq_softmax-concise-lse-loss`
 
-Because every shifted exponent $o_k - o_{\max}$ is $\leq 0$ and at least one equals $0$, the sum inside the logarithm is trapped strictly inside $[1, q]$, and its logarithm lies strictly inside $[0, \log q]$! Neither overflow nor $\log 0$ can ever occur, and automatic differentiation yields the exact finite gradient $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$.
+Because every shifted exponent $o_k - o_{\max}$ is $\leq 0$ and at least one equals $0$, the sum inside the logarithm is trapped strictly inside $[1, q]$, and its logarithm lies strictly inside $[0, \log q]$. Neither overflow nor $\log 0$ can occur, and automatic differentiation yields the finite gradient $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$.
 
-Every framework provides this fused log-sum-exp cross-entropy. We install it once on `d2l.Classifier.loss` so every classifier in the rest of the book inherits it, and verify on our extreme logits $(1000, 0, 0)$ with true labels $0$ and $1$ that it returns the exact finite losses $0$ and $1000$:
-
-:begin_tab:`mxnet`
-MXNet provides it as `gluon.loss.SoftmaxCrossEntropyLoss`.
-:end_tab:
-
-:begin_tab:`pytorch`
-PyTorch provides it as `F.cross_entropy`.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Keras provides it as `SparseCategoricalCrossentropy(from_logits=True)`.
-:end_tab:
-
-:begin_tab:`jax`
-Optax provides it as `optax.softmax_cross_entropy_with_integer_labels`.
-:end_tab:
+Every framework provides this fused log-sum-exp cross-entropy. We install it once on `d2l.Classifier.loss` so every classifier in the rest of the book inherits it:
 
 ```{.python .input #softmax-regression-concise-softmax-revisited}
 %%tab pytorch
@@ -680,9 +661,7 @@ trainer.fit(model, data)
 
 ## Summary
 
-- **From-scratch pipeline and `Classifier`:** Implementing rowwise `softmax`, indexed `cross_entropy`, and `SoftmaxRegressionScratch` alongside the reusable `Classifier` base class (which logs both validation loss and accuracy) reaches $\sim 83\%$ validation accuracy and $\sim 84\%$ training accuracy on Fashion-MNIST in 10 epochs.
-- **Error analysis via confusion matrix and templates:** Accumulating $\mathbf{P}^\top\mathbf{Y}$ across minibatches builds the $10 \times 10$ confusion matrix without Python loops over examples, revealing that errors concentrate among the four upper-body tops whose learned $28 \times 28$ weight templates overlap heavily.
-- **Fused LogSumExp loss (`sec_softmax_concise`):** Evaluating $l(y, \mathbf{o}) = o_{\max} + \log\sum_k \exp(o_k - o_{\max}) - o_y$ directly from raw logits prevents both `exp` overflow and `log(0)` underflow while keeping gradients intact across arbitrary logit magnitudes.
+Implementing softmax regression from scratch introduces the reusable `Classifier` base class, which pairs smooth cross-entropy optimization during training with discrete $\operatorname{argmax}$ accuracy during validation, reaching roughly $83\%$ validation accuracy on Fashion-MNIST in ten epochs. Accumulating one-hot products $\mathbf{P}^\top\mathbf{Y}$ builds the $10 \times 10$ confusion matrix and reveals that linear errors concentrate among the four upper-body garments whose learned $28 \times 28$ weight templates overlap strongly. Because computing `softmax` and `log` separately overflows for large positive logits and underflows to $\log 0$ for large negative logits, our concise implementation returns raw logits from `forward` and evaluates the shifted log-sum-exp cross-entropy $o_{\max} + \log\sum_k \exp(o_k - o_{\max}) - o_y$, guaranteeing finite values and intact gradients across all logit magnitudes.
 
 ## Exercises
 
@@ -734,7 +713,7 @@ trainer.fit(model, data)
     1. Find the smallest value this loss can take over all probability
        vectors $\mathbf{p}$ and labels $y$, as a function of the number of
        classes $q$. Evaluate it for $q = 10$.
-    1. Copy the from-scratch `softmax` of :numref:`sec_softmax_scratch`,
+    1. Use the from-scratch `softmax` defined earlier in this section,
        which is not part of the `d2l` package. Subclass
        `SoftmaxRegression` so that `forward` applies this `softmax` to the
        logits. Train it with `lr=0.1`, `d2l.FashionMNIST(batch_size=256)`,
@@ -955,7 +934,7 @@ Instead of an $n \times q$ one-hot matrix, one $O(n)$ integer-indexing gather pl
 ::: {.cols .vc}
 ::: {.col}
 - **Linear cost:** The gather touches $n$ entries, while a one-hot product multiplies all $nq$ entries, almost all of them zero.
-- **Why the `1e-12` clamp is only a stopgap:** Wherever $\max(\hat{y}_y, 10^{-12})$ triggers, the derivative is **zero**—killing the gradient on the worst mistakes!
+- **Why the `1e-12` clamp is only a stopgap:** Wherever $\max(\hat{y}_y, 10^{-12})$ triggers, the derivative is **zero**, killing the gradient on the worst mistakes.
 :::
 
 ::: {.col .fig}
@@ -971,7 +950,7 @@ We train `SoftmaxRegressionScratch` for $10$ epochs on Fashion-MNIST with miniba
 
 ::: {.cols .vc}
 ::: {.col}
-- **Rapid convergence:** Validation accuracy climbs past $75\%$ in the first epoch and settles near $83\%$ by epoch $10$, while cross-entropy loss drops from $\approx 2.30$ to $\approx 0.45$.
+- **Rapid convergence:** Validation accuracy climbs past $75\%$ in the first epoch and settles near $83\%$ by epoch $10$, while validation cross-entropy loss drops from $\approx 2.30$ to $\approx 0.50$ (and training loss to $\approx 0.46$).
 - **Evaluation on full splits:** Evaluating across all $10{,}000$ validation images and $60{,}000$ training images shows a tiny $\sim 1\%$ generalization gap:
 
 @!softmax-regression-scratch-prediction-accuracy
@@ -1060,7 +1039,7 @@ In `SoftmaxRegression(d2l.Classifier)`, a flattening layer and a single built-in
 
 ::: {.cols .vc}
 ::: {.col}
-- **Critical invariant — `forward` returns raw logits $\mathbf{O}$:** Both `Classifier.accuracy` ($\operatorname{argmax}_j O_{ij}$) and fused cross-entropy consume unnormalized logits directly. Putting softmax inside `forward` would apply softmax **twice**!
+- **Critical invariant — `forward` returns raw logits $\mathbf{O}$:** Both `Classifier.accuracy` ($\operatorname{argmax}_j O_{ij}$) and fused cross-entropy consume unnormalized logits directly. Putting softmax inside `forward` would apply softmax **twice**.
 :::
 
 ::: {.col .fig}
@@ -1079,7 +1058,7 @@ Fusing $\mathrm{softmax}(\mathbf{o})_y$ and $-\log(\cdot)$ algebraically in log 
 $$l(y, \mathbf{o}) = o_{\max} + \log \sum_{k=1}^q \exp(o_k - o_{\max}) - o_y$$
 
 - **Overflow impossible:** Every $o_k - o_{\max} \le 0$, so $\exp(o_k - o_{\max}) \in (0, 1]$.
-- **Underflow $\log(0)$ impossible:** At $k = \operatorname{argmax} o_k$, $\exp(0) = 1$, trapping the sum inside $[1, q]$ and its log inside $[0, \log q]$ with exact gradient $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$!
+- **Underflow $\log(0)$ impossible:** At $k = \operatorname{argmax} o_k$, $\exp(0) = 1$, trapping the sum inside $[1, q]$ and its log inside $[0, \log q]$ with exact gradient $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$.
 :::
 
 ::: {.col .fig}
@@ -1125,7 +1104,7 @@ Test your understanding of numerical stability and implementation pitfalls:
 3. **Vocabulary scaling:** In a language model with hidden size $d = 1024$, batch size $n = 256$, and vocabulary $q = 10^6$ tokens, how much `float32` memory do the output weight matrix $\mathbf{W} \in \mathbb{R}^{d \times q}$ and logit matrix $\mathbf{O} \in \mathbb{R}^{n \times q}$ occupy?
 
 ::: {.d2l-note .fragment .fade-up}
-**Answers:** **(1)** Unshifted: $\exp(-1000) = 0.0$ in all three slots, giving $0.0 / 0.0 = \texttt{NaN}$; shifted by $o_{\max} = -1000$: $\mathrm{softmax}(0, 0, 0) = (1/3, 1/3, 1/3)$. **(2)** Feeding $\mathbf{p} = (1, 0, \ldots, 0)$ into $-\log\mathrm{softmax}(\mathbf{p})_1$ gives $-\log(e^1 / (e^1 + 9e^0)) = \log(e + 9) - 1 \approx 1.46\text{ nats}$—the training loss is trapped above $1.46$! **(3)** $\mathbf{W}$ takes $1024 \times 10^6 \times 4\text{ B} \approx 4.10\text{ GB}$, and a single batch of logits $\mathbf{O}$ takes $256 \times 10^6 \times 4\text{ B} \approx 1.02\text{ GB}$.
+**Answers:** **(1)** Unshifted: $\exp(-1000) = 0.0$ in all three slots, giving $0.0 / 0.0 = \texttt{NaN}$; shifted by $o_{\max} = -1000$: $\mathrm{softmax}(0, 0, 0) = (1/3, 1/3, 1/3)$. **(2)** Feeding $\mathbf{p} = (1, 0, \ldots, 0)$ into $-\log\mathrm{softmax}(\mathbf{p})_1$ gives $-\log(e^1 / (e^1 + 9e^0)) = \log(e + 9) - 1 \approx 1.46\text{ nats}$, trapping the training loss above $1.46$. **(3)** $\mathbf{W}$ takes $1024 \times 10^6 \times 4\text{ B} \approx 4.10\text{ GB}$, and a single batch of logits $\mathbf{O}$ takes $256 \times 10^6 \times 4\text{ B} \approx 1.02\text{ GB}$.
 :::
 :::
 
@@ -1135,7 +1114,7 @@ Test your understanding of numerical stability and implementation pitfalls:
 | Component | From-Scratch Implementation | Concise Framework Implementation |
 |:--|:--|:--|
 | **Parameters** | Manual $\mathbf{W} \in \mathbb{R}^{784\times 10},\; \mathbf{b} \in \mathbb{R}^{10}$ ($7{,}850$ params) | Built-in linear layer with $10$ outputs |
-| **Forward output** | Probability matrix $\hat{\mathbf{Y}} = \mathrm{softmax}(\mathbf{X}\mathbf{W}+\mathbf{b})$ | Raw logit matrix $\mathbf{O} = \mathbf{X}\mathbf{W}+\mathbf{b}$ (no softmax!) |
+| **Forward output** | Probability matrix $\hat{\mathbf{Y}} = \mathrm{softmax}(\mathbf{X}\mathbf{W}+\mathbf{b})$ | Raw logit matrix $\mathbf{O} = \mathbf{X}\mathbf{W}+\mathbf{b}$ (no softmax) |
 | **Cross-entropy loss** | $-\log \max(\hat{Y}_{i, y_i}, 10^{-12})$ (clamped indexing) | Fused LogSumExp: $o_{\max} + \log\sum_k \exp(o_k - o_{\max}) - o_y$ |
 | **Numerical stability** | Overflows for $o > 88.7$; clamp zeroes gradient on underflow | Immune to overflow & underflow; exact gradient $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$ |
 | **`Classifier` base class** | Logs validation `'loss'` and `'acc'`; default SGD optimizer | Inherited unchanged by all classifiers across the book |

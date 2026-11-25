@@ -4,7 +4,6 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Generalization in Classification
-
 :label:`chap_classification_generalization`
 
 Our Fashion-MNIST classifier achieved roughly $83\%$ accuracy on $10{,}000$ validation images. How far can we trust that number as a guarantee of performance on future garments? Two fundamental obstacles stand in the way:
@@ -81,7 +80,7 @@ To convert the standard error into a $95\%$ confidence interval $\epsilon_{\math
    :eqlabel:`eq_generalization-classification-hoeffding`
    Setting the right-hand side to $\delta = 0.05$ yields the $95\%$ Hoeffding radius $r = \sqrt{\log(2/\delta)/(2n)}$ (requiring $n \geq \log(40)/(2 \times 0.01^2) \approx 18{,}445$ examples for $r \leq 0.01$, roughly twice the normal prescription: both assume the worst-case variance $1/4$, but Hoeffding's exponential tail bound holds for every $n$ and is looser than the exact normal quantile).
 
-Let us simulate $10{,}000$ independent test sets across sizes $n \in [100, 10{,}000]$ for two classifiers—one with $\epsilon = 0.17$ and one with $\epsilon = 0.01$—and plot the empirical coverage of both $95\%$ intervals:
+Let us simulate $10{,}000$ independent test sets across sizes $n \in [100, 10{,}000]$ for two classifiers (one with $\epsilon = 0.17$ and one with $\epsilon = 0.01$) and plot the empirical coverage of both $95\%$ intervals:
 
 ```{.python .input #generalization-classification-the-test-set-2}
 rng = np.random.default_rng()
@@ -109,14 +108,14 @@ At $\epsilon = 0.17$, the plug-in normal interval stays close to $95\%$ coverage
 
 ### Selection Among Many Classifiers
 
-What happens when we evaluate $k$ fixed candidate classifiers $f_1, \ldots, f_k$ on the *same* test set $\mathcal{D}$ and report the winner? Even if all $k$ candidates were fixed before $\mathcal{D}$ was drawn, picking the best score cherry-picks whichever candidate got luckiest on $\mathcal{D}$. Applying the *union bound*—the probability that at least one of $k$ bad events occurs is at most the sum of their individual probabilities—to :eqref:`eq_generalization-classification-hoeffding` gives
+What happens when we evaluate $k$ fixed candidate classifiers $f_1, \ldots, f_k$ on the *same* test set $\mathcal{D}$ and report the winner? Even if all $k$ candidates were fixed before $\mathcal{D}$ was drawn, picking the best score cherry-picks whichever candidate got luckiest on $\mathcal{D}$. Applying the *union bound* (the probability that at least one of $k$ bad events occurs is at most the sum of their individual probabilities) to :eqref:`eq_generalization-classification-hoeffding` gives
 
 $$
 P\left(\max_{j=1,\ldots,k} |\epsilon_\mathcal{D}(f_j) - \epsilon(f_j)| \geq t\right) \leq 2k\exp\left(-2nt^2\right).
 $$
 :eqlabel:`eq_generalization-classification-union`
 
-Setting the right-hand side to $\delta$ shows that simultaneous $1 - \delta$ accuracy across all $k$ models widens the confidence radius to $\sqrt{\log(2k/\delta)/(2n)}$. Notice the reassuring $\sqrt{\log k}$ growth: comparing $k = 1{,}000$ fixed models increases the radius by only a modest logarithmic factor—yet on $n = 1{,}000$ coin-flip test labels scored by $k = 10{,}000$ purely random coin-flipping guessers (every single one having true accuracy $0.50$), the luckiest guesser's test accuracy climbs steadily along $0.5 + \sqrt{\log(k)/(2n)}$ to $\sim 0.56$:
+Setting the right-hand side to $\delta$ shows that simultaneous $1 - \delta$ accuracy across all $k$ models widens the confidence radius to $\sqrt{\log(2k/\delta)/(2n)}$. Notice the benign $\sqrt{\log k}$ growth: comparing $k = 1{,}000$ fixed models increases the radius by only a logarithmic factor, yet on $n = 1{,}000$ coin-flip test labels scored by $k = 10{,}000$ purely random coin-flipping guessers (every single one having true accuracy $0.50$), the luckiest guesser's test accuracy climbs steadily along $0.5 + \sqrt{\log(k)/(2n)}$ to $\sim 0.56$:
 
 ```{.python .input #generalization-classification-test-set-reuse-1}
 n, k = 1000, 10000
@@ -144,7 +143,7 @@ print(f'majority vote: {(vote == labels).mean():.3f}, '
 ```
 
 
-Without ever seeing an individual test label—using only $1{,}000$ scalar accuracy queries—the majority vote of pure coin flippers jumps to $\sim 70\%$ test accuracy while still having $50\%$ population accuracy on any new data! (In fact, $O(n)$ queries can reconstruct every test label; see Exercise :exref:`ex_generalization-classification-leaking-test-set`.) This is why hyperparameter tuning and architecture exploration belong on a validation split (Exercise :exref:`ex_generalization-classification-validation-split`), leaving the test set for one-shot final evaluation.
+Without ever seeing an individual test label, using only $1{,}000$ scalar accuracy queries, the majority vote of pure coin flippers jumps to $\sim 70\%$ test accuracy while still having $50\%$ population accuracy on any new data. (In fact, $O(n)$ queries can reconstruct every test label; see Exercise :exref:`ex_generalization-classification-leaking-test-set`.) This is why hyperparameter tuning and architecture exploration belong on a validation split (Exercise :exref:`ex_generalization-classification-validation-split`), leaving the test set for one-shot final evaluation.
 
 How much damage has a decade of reuse done to the standard benchmarks? When :citet:`Recht.Roelofs.Schmidt.ea.2019` collected fresh test sets for CIFAR-10 and ImageNet, accuracies fell by $3$ to $15$ points, yet the ranking of the models barely changed. The worst case above is possible, but ordinary model development had overfit these test sets far less than the theory permits. The drop itself is better explained by a small change in the data distribution, which is the subject of :numref:`sec_environment-and-distribution-shift`.
 
@@ -177,13 +176,11 @@ $$
 $$
 :eqlabel:`eq_generalization-classification-vc`
 
-This theorem answers our conceptual puzzle: because linear classifiers in $\mathbb{R}^d$ have finite VC dimension $v = d + 1$, driving training error low when $n \gg d$ guarantees low population error for *any* distribution $P$, whereas an infinite-VC memorizer enjoys no bound at all. At the same time, because worst-case uniform convergence bounds must hold even for adversarial distributions, :eqref:`eq_generalization-classification-vc` is numerically loose on natural images (for a single one-vs-rest halfspace $\sqrt{785 / 60{,}000} \approx 0.11$ before the constant $c$, and the capacity of all ten classes together is larger still, vs. our empirical $0.01$ train--test gap on Fashion-MNIST) and becomes completely vacuous ($v \geq n$) for overparameterized deep neural networks capable of memorizing random labels :cite:`zhang2021understanding`—a mystery we return to in :numref:`sec_generalization_deep` while relying on held-out test sets for sharp empirical measurement.
+This theorem answers our conceptual puzzle: because linear classifiers in $\mathbb{R}^d$ have finite VC dimension $v = d + 1$, driving training error low when $n \gg d$ guarantees low population error for *any* distribution $P$, whereas an infinite-VC memorizer enjoys no bound at all. At the same time, because worst-case uniform convergence bounds must hold even for adversarial distributions, :eqref:`eq_generalization-classification-vc` is numerically loose on natural images (for a single one-vs-rest halfspace $\sqrt{785 / 60{,}000} \approx 0.11$ before the constant $c$, and the capacity of all ten classes together is larger still, versus our empirical $0.01$ train--test gap on Fashion-MNIST) and becomes vacuous ($v \geq n$) for overparameterized deep neural networks capable of memorizing random labels :cite:`zhang2021understanding`. We return to that puzzle in :numref:`sec_generalization_deep` while relying on held-out test sets for sharp empirical measurement.
 
 ## Summary
 
-- **Test-set error bars:** On a fresh $n$-example test set, empirical error $\epsilon_{\mathcal{D}}(f)$ has standard error $\sqrt{\epsilon(1-\epsilon)/n} \leq 0.5/\sqrt{n}$; pinning accuracy to $\pm 1\%$ at $95\%$ confidence requires $n \approx 10{,}000$ under the normal approximation or $n \approx 18{,}500$ under Hoeffding's finite-sample bound.
-- **Test-set reuse:** Selecting the best of $k$ fixed models inflates accuracy by up to $\sqrt{\log(2k/\delta)/(2n)}$ via the union bound, while adaptive model design guided by past test scores can overfit a test set far more rapidly.
-- **VC dimension and uniform convergence:** The VC dimension $v$ is the largest number of points a hypothesis class $\mathcal{F}$ can shatter ($v = d + 1$ for linear halfspaces in $\mathbb{R}^d$), bounding the uniform generalization gap by $O(\sqrt{v/n})$.
+On an untouched test set of $n$ examples, a fixed classifier's empirical error $\epsilon_{\mathcal{D}}(f)$ has standard error $\sqrt{\epsilon(1-\epsilon)/n} \leq 0.5/\sqrt{n}$, so pinning accuracy to within one percentage point at $95\%$ confidence requires roughly $10{,}000$ test examples under the normal approximation or $18{,}500$ under Hoeffding's finite-sample bound. Reusing the same test set to select among $k$ fixed models widens that uncertainty slowly as $\sqrt{\log(2k/\delta)/(2n)}$, whereas adaptive design guided by past test scores can overfit a test set in far fewer queries. To bound generalization from training error alone, statistical learning theory measures hypothesis-class capacity by the VC dimension $v$—the largest set of points the class can shatter ($v = d + 1$ for linear halfspaces in $\mathbb{R}^d$)—yielding a uniform $O(\sqrt{v/n})$ bound that explains why linear models cannot memorize large datasets while remaining vacuous for overparameterized deep networks.
 
 ## Exercises
 
@@ -425,7 +422,7 @@ When engineers use test-set feedback to design the next model (*adaptive reuse*)
 
 @generalization-classification-adaptive-overfitting
 
-- **From $50\%$ to $\sim 70\%$ in $1{,}000$ queries:** Majority-voting the coin-flippers that scored $> 0.50$ on the test set reaches **$\sim 70\%$ test accuracy** while remaining at $50\%$ on fresh data!
+- **From $50\%$ to $\sim 70\%$ in $1{,}000$ queries:** Majority-voting the coin-flippers that scored $> 0.50$ on the test set reaches **$\sim 70\%$ test accuracy** while remaining at $50\%$ on fresh data.
 - **Three-way split discipline:** Train on `train`, select on `val`, and touch `test` **once**.
 :::
 
@@ -479,7 +476,7 @@ Consider oriented linear halfplanes $f(\mathbf{x}) = \operatorname{sign}(w_1 x_1
 ![](../img/mdl-clf-shattering.svg){.nostretch width=78% fig-align="center"}
 
 - **$\mathrm{VC} \ge 3$ (left):** Any $3$ non-collinear points in $\mathbb{R}^2$ can be partitioned in all $2^3 = 8$ ways by a straight line.
-- **$\mathrm{VC} < 4$ (middle & right):** *No* set of $4$ points in $\mathbb{R}^2$ can ever be shattered! If the $4$ points form a convex quadrilateral (middle), a straight line cannot separate opposite diagonal corners (`+` vs. `-`); if one point lies inside the triangle of the other three (right), any halfplane containing the three vertices contains the interior point. Thus $\mathrm{VC} = 3$.
+- **$\mathrm{VC} < 4$ (middle & right):** *No* set of $4$ points in $\mathbb{R}^2$ can be shattered. If the $4$ points form a convex quadrilateral (middle), a straight line cannot separate opposite diagonal corners (`+` vs. `-`); if one point lies inside the triangle of the other three (right), any halfplane containing the three vertices contains the interior point. Thus $\mathrm{VC} = 3$.
 :::
 
 ::: {.slide title="VC Dimension of Linear Classifiers in d Dimensions"}
@@ -493,7 +490,7 @@ $$\mathrm{VC}\big(\text{linear halfspaces in }\mathbb{R}^d\big) = d + 1$$
 
 - **Lower bound ($v \ge d + 1$):** The origin $\mathbf{0}$ and the $d$ standard basis vectors $\mathbf{e}_1, \ldots, \mathbf{e}_d$ are shattered independently.
 - **Upper bound ($v \le d + 1$, Radon's theorem):** Any $d + 2$ lifted points $[\mathbf{x}_i, 1] \in \mathbb{R}^{d+1}$ are linearly dependent, splitting into two subsets whose intersecting convex hulls cannot be separated by any hyperplane.
-- **VC $\neq$ parameter count:** $f_\omega(x) = \operatorname{sign}(\sin(\omega x))$ has $1$ parameter but $v = \infty$!
+- **VC $\neq$ parameter count:** $f_\omega(x) = \operatorname{sign}(\sin(\omega x))$ has $1$ parameter but $v = \infty$.
 :::
 
 ::: {.col .fig}
@@ -509,7 +506,7 @@ $$\mathrm{VC}\big(\text{linear halfspaces in }\mathbb{R}^d\big) = d + 1$$
 ::: {.col}
 Why does finite VC dimension $v < \infty$ guarantee uniform convergence?
 
-- **Sauer–Shelah lemma:** For $n \ge v$, the number of distinct binary labelings $\mathcal{F}$ can induce on *any* $n$ points is bounded by $\sum_{i=0}^v \binom{n}{i} \le (en/v)^v = O(n^v)$ instead of $2^n$!
+- **Sauer–Shelah lemma:** For $n \ge v$, the number of distinct binary labelings $\mathcal{F}$ can induce on *any* $n$ points is bounded by $\sum_{i=0}^v \binom{n}{i} \le (en/v)^v = O(n^v)$ instead of $2^n$.
 - **VC generalization bound:** With probability $\ge 1 - \delta$, simultaneously for **every** $f \in \mathcal{F}$:
   $$\epsilon(f) \;\le\; \epsilon_{\mathcal{S}}(f) + c\sqrt{\frac{v + \log(1/\delta)}{n}}$$
 :::

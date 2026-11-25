@@ -22392,6 +22392,9 @@ d2l.DATA_HUB['lm-r2t1-evals-v1'] = (
 d2l.DATA_HUB['lm-r2-spike-v1'] = (
     d2l.LM_DATA_URL + 'lm-r2-spike-v1.json.gz',
     'b5616a662d8eeb4a04c41cc3e3637f4d80563aa3')
+d2l.DATA_HUB['lm-r2-inst-t1-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-inst-t1-v1.json.gz',
+    '7095f284a524f7a21512483cfe5ecc7093762638')
 
 d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')

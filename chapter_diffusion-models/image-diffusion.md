@@ -1433,9 +1433,9 @@ For $\gamma > 1$, $\hat{\mathbf{x}}_0^\gamma = \hat{\mathbf{x}}_0^\varnothing + 
 :::
 
 ::: {.slide title="The Guidance Trade-Off: Diversity vs. Typicality"}
-[Empirical Sweep Across Guidance Scales γ]{.kicker}
+[5,000 samples per guidance scale γ, shared noise]{.kicker}
 
-Generating $5{,}000$ images from shared initial noise across seven guidance scales $\gamma \in [0.0, 4.0]$ reveals the trade-off between distributional coverage (FD) and class adherence:
+Guidance trades coverage (FD) for class adherence:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1443,9 +1443,9 @@ Generating $5{,}000$ images from shared initial noise across seven guidance scal
 :::
 
 ::: {.col}
-- **Unconditional ($\gamma = 0.0$):** Agreement is random chance ($10.0\%$) and FD triples to $\approx 2.75$.
-- **Mild guidance sweet spot ($\gamma = 1.25$):** Boosts class agreement by about five points (from nearly $90\%$ to **$93\%$–$94\%$**, matching real test data!) with **zero FD penalty** ($\approx 0.82$).
-- **Strong guidance ($\gamma \ge 3.0$):** Pushes class agreement past **$99.5\%$**, but FD climbs to $5.5$–$6.0$ as within-class diversity collapses onto canonical prototypes.
+- **$\gamma = 0$:** agreement at chance (10%), FD near $2.7$.
+- **$\gamma \approx 1$:** lowest FD (about $0.8$); agreement near $90\%$, close to the feature network's $93\%$ on real test images.
+- **$\gamma \ge 3$:** agreement above $99\%$, but FD rises to $4$–$6$ as samples collapse onto class prototypes.
 :::
 :::
 :::
@@ -1453,13 +1453,15 @@ Generating $5{,}000$ images from shared initial noise across seven guidance scal
 ::: {.slide title="Visualizing Unconditional (γ = 0) vs. Guided (γ = 4)" layout="tight"}
 [Canonical Prototypes vs. Ambiguous Samples]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-Comparing the $40$ samples generated from the exact same initial noise at $\gamma = 0.0$ (top) and $\gamma = 4.0$ (bottom) shows why human users often prefer high $\gamma$ despite worse FD:
+The same $40$ initial noises at $\gamma = 0$ (left) and $\gamma = 4$ (right) show why people often prefer high $\gamma$ despite its worse FD:
+
+::: {.cols}
+::: {.col .fig}
+@!image-diffusion-classifier-free-guidance-2[out=1]
 :::
 
 ::: {.col .fig}
-@!image-diffusion-classifier-free-guidance-2
+@!image-diffusion-classifier-free-guidance-2[out=2]
 :::
 :::
 :::

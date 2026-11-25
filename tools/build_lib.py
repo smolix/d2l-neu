@@ -77,7 +77,9 @@ LIB_ONLY_FILES = [
     # Chapter 21: the chapter's registries and load-or-regenerate plumbing,
     # the packed-attention and stream internals (21.1), the run behind
     # pretrain, its jobs and checkpoint readers (21.2), and each later
-    # section's registry entries and drivers (21.3-21.6).
+    # section's registry entries and drivers (21.3-21.6); early-lib.md holds
+    # the `dataclasses` import PretrainConfig needs at import time (early).
+    'chapter_lm-pretraining/early-lib.md',
     'chapter_lm-pretraining/data-path-lib.md',
     'chapter_lm-pretraining/reference-model-lib.md',
     'chapter_lm-pretraining/low-precision-lib.md',
@@ -102,6 +104,10 @@ LIB_ONLY_EARLY_FILES = {
     # `d2l.HyperParameters`, the import-time base class of the classes in
     # sec_oo-design; the book shows only its method (utils.md).
     'chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md',
+    # `import dataclasses` for 21.2's `@dataclasses.dataclass PretrainConfig`,
+    # attached to a named block (`_jsonable`) so that it stays out of the
+    # `_preamble` shard every notebook depends on.
+    'chapter_lm-pretraining/early-lib.md',
 }
 
 # Source files whose saved blocks keep the "Defined in" label of the file

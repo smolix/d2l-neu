@@ -23,7 +23,7 @@ show (docs/code-guide.md 7.1):
   lm-evaluation-harness cross-check;
 - the drivers behind the page's one-line calls: the opening's
   `gradient_event`, the plot helpers (`plot_run_log`, `plot_traces`,
-  `plot_ladder`), the checkpoint evaluations, the instability arms and the
+  `plot_ladder_runs`), the checkpoint evaluations, the instability arms and the
   spike protocol. While the reference run is pending, each shows the T1
   configuration under a printed label (the T1 run keeps checkpoints at the
   reference run's fractions of training for this).
@@ -139,9 +139,10 @@ def _arch_fields(arch):
     if get('num_hidden_layers') is not None:
         L, d, H = (get('num_hidden_layers'), get('hidden_size'),
                    get('num_attention_heads'))
+        tied = get('tie_word_embeddings')  # absent: Transformers' default
         return (L, d, H, get('num_key_value_heads') or H,
                 get('head_dim') or d // H, get('intermediate_size'),
-                get('vocab_size'), bool(get('tie_word_embeddings')))
+                get('vocab_size'), True if tied is None else bool(tied))
     return (arch.L, arch.d, arch.H, arch.H_kv, arch.d_h, arch.f, arch.vocab,
             arch.tie)
 
@@ -1060,7 +1061,7 @@ def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
     fig.align_ylabels()
 
 #@save
-def plot_ladder(*logs, figsize=(5, 3)):
+def plot_ladder_runs(*logs, figsize=(5, 3)):
     """Validation loss against tokens of every job in the logs (column
     job): the main run as a line, the ends of its branches as dots in the
     same colour."""

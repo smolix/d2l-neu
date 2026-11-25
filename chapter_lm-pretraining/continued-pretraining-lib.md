@@ -63,9 +63,9 @@ the stand-in for the Qwen arms) instead of failing.
 ```{.python .input #continued-pretraining-lib-artifacts}
 %%tab pytorch
 #@save
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {
-    'cpt-t1', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2',
-    'smollm3-3', 'smollm3-4', 'smollm3-5'}
+_CPT_PENDING = {'cpt-t1', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1',
+                'smollm3-2', 'smollm3-3', 'smollm3-4', 'smollm3-5'}
+d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _CPT_PENDING
 
 #@save
 d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'] = (

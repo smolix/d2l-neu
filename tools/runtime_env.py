@@ -562,6 +562,11 @@ NOTEBOOK_ENV = {
     ("pytorch", "chapter_lm-encoders/rag-failures.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
+    # 21.4: the Hub's "unauthenticated requests" warning on the first
+    # load_qwen3 of a fresh environment (as 21.5 and 21.6).
+    ("pytorch", "chapter_lm-pretraining/continued-pretraining.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
     # 21.5: the Hub's X-HF-Warning (as 18.6; the regeneration's suite
     # reads). The 16K-token prompts use d2l.lc_tokenizer, whose raised
     # model_max_length leaves Transformers nothing to warn about.

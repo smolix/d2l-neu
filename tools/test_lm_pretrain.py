@@ -130,6 +130,10 @@ class FlopsTest(unittest.TestCase):
         self.assertEqual(d2l.flops_per_token(cfg, T=2048), 4_985_192_448)
         self.assertEqual(d2l.flops_per_token(cfg.to_dict(), T=2048),
                          4_985_192_448)
+        # A raw config.json without the key is tied (Transformers' default)
+        raw = {k: v for k, v in cfg.to_dict().items()
+               if k != 'tie_word_embeddings'}
+        self.assertEqual(d2l.flops_per_token(raw), 3_575_906_304)
 
     def test_mfu(self):
         a = d2l.r2_config().arch
@@ -729,7 +733,7 @@ class MeasurementTest(unittest.TestCase):
         log = toy_log(200).assign(job='ladder-25m-s0')
         log.loc[log['step'] > 150, 'run'] = 'b150'
         empty = pd.DataFrame()
-        d2l.plot_ladder(empty, log)
+        d2l.plot_ladder_runs(empty, log)
         self.assertEqual(len(d2l.plt.gca().get_lines()), 2)
         d2l.plt.close('all')
 
@@ -873,6 +877,57 @@ class ResultTest(unittest.TestCase):
         os.environ['D2L_RERUN'] = ''
         with self.assertRaises(KeyError):
             call()
+
+
+class LibraryStructureTest(unittest.TestCase):
+    """The chapter's #@save blocks against two freshness hazards (lib
+    review findings 1 and 2): a block that defines no name and is no
+    registry entry lands in the `_preamble` shard, on which every notebook
+    of the book depends; and a name defined in two Language Models files
+    with different code keeps only the later one, silently."""
+
+    @staticmethod
+    def _blocks(pattern):
+        import glob
+        import build_lib
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        out = []
+        for path in sorted(glob.glob(os.path.join(root, pattern))):
+            with contextlib.redirect_stdout(io.StringIO()):
+                blocks = build_lib.extract_save_blocks(path, 'pytorch')
+            out += [(b[0], os.path.relpath(path, root)) for b in blocks]
+        return build_lib, out
+
+    def test_no_block_in_preamble_shard(self):
+        import re
+        build_lib, blocks = self._blocks('chapter_lm-pretraining/*.md')
+        self.assertGreater(len(blocks), 100)
+        bad = []
+        for code, path in blocks:
+            names = [n for n in build_lib._block_shard_names(code)
+                     if n != 'd2l']
+            entries, rest = build_lib.registry_entries(code)
+            if names or (entries and not rest):
+                continue
+            if not re.match(r'(?:d2l\.)?(\w+)\[', code.lstrip()):
+                bad.append(f'{path}: {code.splitlines()[0]}')
+        self.assertEqual(bad, [])
+
+    def test_no_name_redefined_across_files(self):
+        import re
+        build_lib, blocks = self._blocks('chapter_lm-*/*.md')
+        seen, bad = {}, []
+        for code, path in blocks:
+            names = re.findall(r'^(?:def|class)\s+(\w+)', code, re.MULTILINE)
+            if len(set(names)) != 1:
+                continue
+            # A method added to a class is keyed by its class
+            cls = re.match(r'@(?:d2l\.)?add_to_class\(([\w.]+)\)', code)
+            key = f'{cls.group(1)}.{names[0]}' if cls else names[0]
+            first = seen.setdefault(key, (path, code))
+            if first[0] != path and first[1] != code:
+                bad.append(f'{key}: {first[0]} and {path}')
+        self.assertEqual(bad, [])
 
 
 if __name__ == '__main__':

@@ -184,21 +184,6 @@ def _regenerates(artifact):
                for name in _regenerating())
 
 #@save
-def _jsonable(x):
-    """x as plain JSON values (tuples become lists, namedtuples dicts)."""
-    if hasattr(x, '_asdict'):
-        x = x._asdict()
-    if dataclasses.is_dataclass(x) and not isinstance(x, type):
-        x = {f.name: getattr(x, f.name) for f in dataclasses.fields(x)}
-    if isinstance(x, dict):
-        return {str(k): _jsonable(v) for k, v in x.items()}
-    if isinstance(x, (list, tuple)):
-        return [_jsonable(v) for v in x]
-    if isinstance(x, (np.integer, np.floating, np.bool_)):
-        return x.item()
-    return x
-
-#@save
 def _label_of(result):
     if hasattr(result, 'attrs'):
         return result.attrs.get('label', '')
@@ -694,15 +679,10 @@ loaded `d2l.Qwen3GPT`). Until `set_rope` is called a model uses base RoPE.
 ```{.python .input #data-path-lib-packed-rope}
 %%tab pytorch
 #@save
-d2l.PackedAttention.rope_inv_freq, d2l.PackedAttention.rope_mscale = None, 1.0
-
-#@save
-d2l.PackedGPT.rope_inv_freq, d2l.PackedGPT.rope_mscale = None, 1.0
-
-#@save
+_BASE_ROPE = None, 1.0  # (rope_inv_freq, rope_mscale) until set_rope
+d2l.PackedAttention.rope_inv_freq, d2l.PackedAttention.rope_mscale = _BASE_ROPE
+d2l.PackedGPT.rope_inv_freq, d2l.PackedGPT.rope_mscale = _BASE_ROPE
 d2l.PackedGPT.rope_scheme, d2l.PackedGPT.rope_scale = 'none', 1.0
-
-#@save
 d2l.PackedGPT.trained_len = None  # max_len before the first set_rope
 
 #@save

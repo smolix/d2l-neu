@@ -56,7 +56,7 @@ from d2l import torch as d2l
 ```{.python .input #reference-model-the-reference-pretraining-run-1}
 %%tab pytorch
 import collections
-import dataclasses  #@save
+import dataclasses
 import pandas as pd
 import tempfile
 import time
@@ -662,7 +662,7 @@ print(f'best-of-11 on half the items: {chosen.mean():+.1f} points; on the '
 LADDER = ('ladder-25m', 'ladder-54m', 'ladder-88m')
 ladder = d2l.launch_pretrain([r2_config(p) for p in LADDER], n_gpus=4)
 pts = d2l.ladder_evals(ladder, log, tasks=SUITE)
-d2l.plot_ladder(ladder, log)
+d2l.plot_ladder_runs(ladder, log)
 ```
 
 <!-- Placeholder (prose): the finished points as a table: validation loss at about 5, 10 and 20 tokens per parameter (r2's points are 5.7N, 11.4N and 22.7N). -->

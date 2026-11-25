@@ -43,8 +43,8 @@ builder's local output (`tools/build_pretraining_data.py --stage lc-long`,
 ```{.python .input #long-context-lib-artifacts}
 %%tab pytorch
 #@save
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {
-    'lc-t1', 'lc-zeroshot', 'lc-t2-evals'}
+_LC_PENDING = {'lc-t1', 'lc-zeroshot', 'lc-t2-evals'}
+d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _LC_PENDING
 
 #@save
 d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'] = (  # the zero-shot part

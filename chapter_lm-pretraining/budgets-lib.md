@@ -29,10 +29,8 @@ d2l.PRETRAIN_ARTIFACTS['decode-rates'] = (
     'lm-decode-rates-v1', 'json-table')
 
 #@save
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {'decode-rates'}
-
-#@save
 DECODE_LIMIT_GIB = 22.5  # a configuration above this is infeasible
+d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {'decode-rates'}
 
 #@save
 def _decode_call():

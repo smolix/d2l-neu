@@ -37,6 +37,24 @@ class HyperParameters:
         for k, v in self.hparams.items():
             setattr(self, k, v)
 
+import dataclasses
+
+def _jsonable(x):
+    """x as plain JSON values (tuples become lists, namedtuples dicts).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if hasattr(x, '_asdict'):
+        x = x._asdict()
+    if dataclasses.is_dataclass(x) and not isinstance(x, type):
+        x = {f.name: getattr(x, f.name) for f in dataclasses.fields(x)}
+    if isinstance(x, dict):
+        return {str(k): _jsonable(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_jsonable(v) for v in x]
+    if isinstance(x, (np.integer, np.floating, np.bool_)):
+        return x.item()
+    return x
+
 import inspect
 import collections
 from collections import defaultdict
@@ -11604,8 +11622,6 @@ class PackedStream:
         Defined in :numref:`sec_lm_data_path`"""
         self.skipped = tuple(sorted(set(self.skipped) | {step}))
 
-import dataclasses
-
 Arch = collections.namedtuple('Arch',
                               'L d H H_kv d_h f vocab T rope_base qk_norm tie')
 
@@ -21364,22 +21380,6 @@ def _regenerates(artifact):
     return any(d2l._RERUN_ARTIFACT.get(name) == artifact
                for name in _regenerating())
 
-def _jsonable(x):
-    """x as plain JSON values (tuples become lists, namedtuples dicts).
-
-    Defined in :numref:`sec_lm_data_path`"""
-    if hasattr(x, '_asdict'):
-        x = x._asdict()
-    if dataclasses.is_dataclass(x) and not isinstance(x, type):
-        x = {f.name: getattr(x, f.name) for f in dataclasses.fields(x)}
-    if isinstance(x, dict):
-        return {str(k): _jsonable(v) for k, v in x.items()}
-    if isinstance(x, (list, tuple)):
-        return [_jsonable(v) for v in x]
-    if isinstance(x, (np.integer, np.floating, np.bool_)):
-        return x.item()
-    return x
-
 def _label_of(result):
     if hasattr(result, 'attrs'):
         return result.attrs.get('label', '')
@@ -21869,12 +21869,10 @@ def _check_same_tensors(mine, theirs):
                              f'{tuple(theirs[name].shape)}, PackedGPT '
                              f'expects {tuple(mine[name].shape)}')
 
-d2l.PackedAttention.rope_inv_freq, d2l.PackedAttention.rope_mscale = None, 1.0
-
-d2l.PackedGPT.rope_inv_freq, d2l.PackedGPT.rope_mscale = None, 1.0
-
+_BASE_ROPE = None, 1.0  # (rope_inv_freq, rope_mscale) until set_rope
+d2l.PackedAttention.rope_inv_freq, d2l.PackedAttention.rope_mscale = _BASE_ROPE
+d2l.PackedGPT.rope_inv_freq, d2l.PackedGPT.rope_mscale = _BASE_ROPE
 d2l.PackedGPT.rope_scheme, d2l.PackedGPT.rope_scale = 'none', 1.0
-
 d2l.PackedGPT.trained_len = None  # max_len before the first set_rope
 
 def _packed_rope_tables(model, pos):
@@ -22425,9 +22423,10 @@ def _arch_fields(arch):
     if get('num_hidden_layers') is not None:
         L, d, H = (get('num_hidden_layers'), get('hidden_size'),
                    get('num_attention_heads'))
+        tied = get('tie_word_embeddings')  # absent: Transformers' default
         return (L, d, H, get('num_key_value_heads') or H,
                 get('head_dim') or d // H, get('intermediate_size'),
-                get('vocab_size'), bool(get('tie_word_embeddings')))
+                get('vocab_size'), True if tied is None else bool(tied))
     return (arch.L, arch.d, arch.H, arch.H_kv, arch.d_h, arch.f, arch.vocab,
             arch.tie)
 
@@ -23322,7 +23321,7 @@ def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
     axes[-1].set_xlabel('step')
     fig.align_ylabels()
 
-def plot_ladder(*logs, figsize=(5, 3)):
+def plot_ladder_runs(*logs, figsize=(5, 3)):
     """Validation loss against tokens of every job in the logs (column
     job): the main run as a line, the ends of its branches as dots in the
     same colour.
@@ -24655,9 +24654,9 @@ d2l.DATA_HUB['lm-fwedu-replay-12m-v1'] = (
     d2l.LM_DATA_URL + 'lm-fwedu-replay-12m-v1.tar',
     '46232cacbe8b9eb30ca7ce6a2d3f7e14ac765c24')
 
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {
-    'cpt-t1', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2',
-    'smollm3-3', 'smollm3-4', 'smollm3-5'}
+_CPT_PENDING = {'cpt-t1', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1',
+                'smollm3-2', 'smollm3-3', 'smollm3-4', 'smollm3-5'}
+d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _CPT_PENDING
 
 d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'] = (
     'lm-cpt-qwen-manifest-v1', 'json-table')
@@ -25792,8 +25791,8 @@ def plot_smollm3(traj):
         ax.legend(fontsize=7)
     fig.tight_layout()
 
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {
-    'lc-t1', 'lc-zeroshot', 'lc-t2-evals'}
+_LC_PENDING = {'lc-t1', 'lc-zeroshot', 'lc-t2-evals'}
+d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _LC_PENDING
 
 d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'] = (  # the zero-shot part
     'lm-lc-evals-v1', 'json-table')
@@ -27257,9 +27256,8 @@ def show_scheme_difference(runs, tier, a='YaRN', b='PI'):
 d2l.PRETRAIN_ARTIFACTS['decode-rates'] = (
     'lm-decode-rates-v1', 'json-table')
 
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {'decode-rates'}
-
 DECODE_LIMIT_GIB = 22.5  # a configuration above this is infeasible
+d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {'decode-rates'}
 
 def _decode_call():
     """The page's decode_rates call (budgets.md, 'Measured Decode Rates').

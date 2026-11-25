@@ -21267,6 +21267,13 @@ def _rolling_ngram_hashes(ids, n, eos=None):
         valid = c[n:n + m] == c[:m]
     return h, valid
 
+d2l.DATA_HUB['lm-pdp-throughput-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pdp-throughput-v1.parquet',
+    '5fbb3d679b29faee9cb5c299ecf1131c399b8ff4')
+d2l.DATA_HUB['lm-pdp-mask-runs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pdp-mask-runs-v1.json.gz',
+    '17ed3675834450ad7c0bfaf6b6183095880ec525')
+
 PRETRAIN_SOURCES = {}  # name: (kind, Hub repository, revision, licence)
 
 d2l.PRETRAIN_SOURCES['smollm3-stage1'] = (

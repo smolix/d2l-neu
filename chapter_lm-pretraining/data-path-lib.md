@@ -47,6 +47,19 @@ library preamble inside its functions (`torch.distributed`, FlexAttention,
 
 ## Registries
 
+The hosted results (d2l-data R2), one entry per upload.
+
+```{.python .input #data-path-lib-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-pdp-throughput-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pdp-throughput-v1.parquet',
+    '5fbb3d679b29faee9cb5c299ecf1131c399b8ff4')
+d2l.DATA_HUB['lm-pdp-mask-runs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pdp-mask-runs-v1.json.gz',
+    '17ed3675834450ad7c0bfaf6b6183095880ec525')
+```
+
 ```{.python .input #data-path-lib-sources}
 %%tab pytorch
 #@save

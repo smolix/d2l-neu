@@ -24,7 +24,7 @@ method: count the arithmetic and the bytes of a step, predict its time,
 measure it, and explain the difference.
 
 Everything rests on :numref:`sec_perf_model`, which introduces *arithmetic
-intensity*—the FLOPs an operation performs per byte it moves—and puts the
+intensity* (the FLOPs an operation performs per byte it moves) and puts the
 method to work. Hardware (:numref:`sec_hardware`) explains where peak
 arithmetic and bandwidth come from. Compilation (:numref:`sec_compilation`)
 and the memory techniques of :numref:`sec_memory_precision` are the single-GPU

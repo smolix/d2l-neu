@@ -586,8 +586,6 @@ GPUs to train a 36-block GPT whose 28.6 GiB state fits on neither card alone.
        NVLink 5 (900 GB/s), and state how much prefetching saves on each
        interconnect.
 
-[Discussions](https://d2l.discourse.group/)
-
 [Discussions](https://d2l.discourse.group/t/36886)
 
 <!-- slides -->
@@ -617,7 +615,7 @@ Doubling our 1B-parameter GPT from $18$ to $36$ blocks (width $d = 2048$) produc
 ::: {.col}
 - **Weights ($\mathbf{W}_\ell$, $4\text{ B/param}$):** Needed only while block $\ell$ executes its forward or backward pass.
 - **Gradients ($\nabla\mathbf{W}_\ell$, $4\text{ B/param}$):** Needed only from block $\ell$'s backward pass until the optimizer step.
-- **Adam Moments ($\mathbf{m}, \mathbf{v}$, $8\text{ B/param}$):** Touched **only inside the elementwise Adam update** at the end of the step—each of the $k$ GPUs needs to own and update only $1/k$ of the parameters!
+- **Adam Moments ($\mathbf{m}, \mathbf{v}$, $8\text{ B/param}$):** Touched **only inside the elementwise Adam update** at the end of the step—each of the $k$ GPUs needs to own and update only $1/k$ of the parameters.
 :::
 
 ::: {.col .fig .big}
@@ -664,7 +662,7 @@ Doubling our 1B-parameter GPT from $18$ to $36$ blocks (width $d = 2048$) produc
 ::: {.cols .vc}
 ::: {.col}
 - **Insert Adam between the two halves of allreduce:** (1) Reduce-scatter gradients ($\frac{k-1}{k}S$), (2) update owned $1/k$ weights with owned $1/k$ Adam moments, (3) all-gather updated weights ($\frac{k-1}{k}S$).
-- **Zero extra communication bytes:** Total traffic per GPU is $\frac{2(k-1)}{k}S$—identical to standard DDP while cutting Adam state memory by $k\times$!
+- **Zero extra communication bytes:** Total traffic per GPU is $\frac{2(k-1)}{k}S$, identical to standard DDP while cutting Adam state memory by $k\times$.
 :::
 
 ::: {.col .fig .big}
@@ -781,7 +779,7 @@ def fsdp_sharding(x):  # shard first axis divisible by k
 ::: {.col .fig}
 @!sharding-memory-and-communication-9
 
-- **Exact traffic match:** In HLO result sizes ($2 \times$ sent bytes at $k=2$), all-gather produces $2S \approx 15.0\text{ GB}$ (sent $S = 7.5\text{ GB}$) and reduce-scatter produces $S/2 \approx 3.8\text{ GB}$ (sent $3.8\text{ GB}$), totaling $11.3\text{ GB} \approx 1.5\,S$!
+- **Exact traffic match:** In HLO result sizes ($2 \times$ sent bytes at $k=2$), all-gather produces $2S \approx 15.0\text{ GB}$ (sent $S = 7.5\text{ GB}$) and reduce-scatter produces $S/2 \approx 3.8\text{ GB}$ (sent $3.8\text{ GB}$), totaling $11.3\text{ GB} \approx 1.5\,S$.
 :::
 :::
 :::
@@ -793,7 +791,7 @@ Querying `compiled.memory_analysis()` before running a single step confirms that
 
 @!sharding-memory-and-communication-7
 
-- **Buffer donation (`donate_argnums=(0, 1)`):** Marks the old sharded weight and Adam moment buffers ($10.7\text{ GiB} = 12N/2$) as reusable in place for the updated state; without buffer donation, holding both old and new states simultaneously during the optimizer update would require $2 \times 10.7 = 21.4\text{ GiB}$ and trigger an OOM!
+- **Buffer donation (`donate_argnums=(0, 1)`):** Marks the old sharded weight and Adam moment buffers ($10.7\text{ GiB} = 12N/2$) as reusable in place for the updated state; without buffer donation, holding both old and new states simultaneously during the optimizer update would require $2 \times 10.7 = 21.4\text{ GiB}$ and trigger an OOM.
 :::
 
 ::: {.slide title="Measured FSDP Step: 16 GiB Peak, 90% Communication"}
@@ -852,7 +850,7 @@ Work out three sharding scenarios ($S = 4N$: bytes of one full `float32` copy of
 **Answers:**
 
 1. **DDP ($16N$):** $\mathbf{64\text{ GB}}$; **ZeRO-1 ($(8 + 8/k)N = 10N$):** $\mathbf{40\text{ GB}}$; **ZeRO-2 ($(4 + 12/k)N = 7N$):** $\mathbf{28\text{ GB}}$; **ZeRO-3 / FSDP ($16N/k = 4N$):** $\mathbf{16\text{ GB}}$ per GPU.
-2. **Less traffic than `float32` DDP!** Halving the collective dtype to `bfloat16` halves $S_{\textrm{comm}}$ from $4N \to 2N = S/2$, so 3 FSDP phases move $\frac{3(k-1)}{k} \frac{S}{2} = \mathbf{1.5\,\frac{k-1}{k}S}$ bytes—$25\%$ *fewer* bytes than `float32` DDP's $\frac{2(k-1)}{k}S$!
+2. **Less traffic than `float32` DDP:** Halving the collective dtype to `bfloat16` halves $S_{\textrm{comm}}$ from $4N \to 2N = S/2$, so 3 FSDP phases move $\frac{3(k-1)}{k} \frac{S}{2} = \mathbf{1.5\,\frac{k-1}{k}S}$ bytes ($25\%$ *fewer* bytes than `float32` DDP's $\frac{2(k-1)}{k}S$).
 3. **Memory drops by $32\times$** ($16N/2 \to 16N/64$), while **communication per GPU grows by nearly $2\times$** (from $3(1/2)S = 1.5\,S$ at $k=2$ to $3(63/64)S \approx 2.95\,S$ at $k=64$).
 :::
 :::

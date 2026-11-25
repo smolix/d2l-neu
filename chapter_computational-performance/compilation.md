@@ -512,7 +512,7 @@ spent in Python at the `autograd.grad` graph break.
 `jax.jit` fuses each $\tanh$ directly into the following matrix product and
 replays the compiled sequence as an XLA command buffer (CUDA graph), running
 ~$30\times$ faster than eager dispatch and keeping the GPU busy for nearly the
-entire ~0.27 ms call.
+entire ~0.25 ms call.
 :end_tab:
 
 ```{.python .input #compilation-replaying-the-training-step}
@@ -824,7 +824,7 @@ Even after fusion, `gelu_ish` performs only $\sim 12\text{ FLOPs}$ per $8\text{ 
 @!compilation-what-the-compiler-does-fusion
 
 ::: {.d2l-note}
-Always verify `allclose` first because compiler fusion can reorder floating-point additions. Both versions stream at $0.6\text{--}0.9\text{ TB/s}$, and the compiled kernel runs **$8\text{--}11\times$ faster**—matching our $9\times$ byte-count ratio!
+Always verify `allclose` first because compiler fusion can reorder floating-point additions. Both versions stream at $0.6\text{--}0.9\text{ TB/s}$, and the compiled kernel runs **$8\text{--}11\times$ faster**, matching our $9\times$ byte-count ratio.
 :::
 :::
 
@@ -935,7 +935,7 @@ Comparing `eager`, default `torch.compile` (`fused`), and `torch.compile(..., mo
 @!compilation-the-overhead-regime-capture-and-replay
 
 ::: {.d2l-note}
-Default `torch.compile` leaves the GPU busy for only $\sim 15\%$ of the call because Python still launches each layer's cuBLAS and Triton kernels one by one; `mode='reduce-overhead'` replays all kernels in one launch, cutting call time **$7\times$** down to the $\sim 0.3\text{ ms}$ device busy time!
+Default `torch.compile` leaves the GPU busy for only $\sim 15\%$ of the call because Python still launches each layer's cuBLAS and Triton kernels one by one; `mode='reduce-overhead'` replays all kernels in one launch, cutting call time **$7\times$** down to the $\sim 0.3\text{ ms}$ device busy time.
 :::
 :::
 
@@ -947,7 +947,7 @@ In JAX, `jax.jit` fuses each $\tanh$ directly into the following matrix-product 
 @!compilation-the-overhead-regime-capture-and-replay
 
 ::: {.d2l-note}
-A single Python call dispatches all 60 layers in $\sim 0.27\text{ ms}$ ($\sim 2\,\mu\text{s}$ per operation, keeping the GPU busy for nearly $100\%$ of the call)—roughly **$30\times$ faster** than eager per-layer dispatch.
+A single Python call dispatches all 60 layers in $0.25\text{ ms}$ ($\sim 2\,\mu\text{s}$ per operation, keeping the GPU busy for $95\%$ of the call), roughly **$30\times$ faster** than eager per-layer dispatch.
 :::
 :::
 

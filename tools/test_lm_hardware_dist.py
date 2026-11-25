@@ -8,8 +8,8 @@ raises instead in a regeneration run; `hw_bin` finds a tool in D2L_HW_BIN;
 median of the per-process values, the packed tar, refusal to overwrite).
 the driver's finish hook runs after the combine; the torch.distributed
 fallback sweep of sec_lm_server_paths on a 2-rank gloo group under its own
-timeout. Later steps add `hier_allreduce` on a 4-rank gloo group (chapter spec part
-1.9).
+timeout; the gloo loopback table of sec_lm_networks. Later steps add
+`hier_allreduce` on a 4-rank gloo group (chapter spec part 1.9).
 """
 import os
 import stat
@@ -124,6 +124,16 @@ class TestTorchrunSweep(unittest.TestCase):
                     b'1000000' in args:
                 left.append(pid)
         self.assertEqual(left, [], 'a sweep worker survived the timeout')
+
+    def test_loopback_gloo(self):
+        """sec_lm_networks' gloo floor: the long table fit_collectives
+        reads, on 2 ranks over the loopback interface."""
+        t = d2l._loopback_compute('gloo', (2,), '', 64, 2**16, 3, 1)
+        self.assertEqual(list(t['size']), [64 * 2**i for i in range(11)])
+        self.assertEqual(set(t.path), {'loopback'})
+        self.assertEqual(t.attrs['backend'], 'gloo')
+        ab = d2l.fit_collectives(t, alpha_below=2**12, plateau_from=2**15)
+        self.assertGreater(ab.alpha.iloc[0], 0)
 
 
 class TestRegenCLI(unittest.TestCase):

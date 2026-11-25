@@ -2428,5 +2428,280 @@ class TestServerPaths(unittest.TestCase):
                          '<host> boxnamex sum -1<host>:7:7')
 
 
+def committed_systems():
+    with open(os.path.join(HW_DATA, 'systems.json')) as f:
+        return json.load(f)
+
+
+BOX_AB = dict(g=4, alpha=30e-6, beta=2.4e9, alpha_s=30e-6, beta_Bps=2.4e9)
+
+PERFTEST_BW = """\
+---------------------------------------------------------------------------------------
+                    RDMA_Write BW Test
+ Dual-port       : OFF		Device         : mlx5_0
+ Number of qps   : 1		Transport type : IB
+---------------------------------------------------------------------------------------
+ #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]
+ 2          5000           0.12               0.11   		   6.824509
+ 1024       5000           62.10              61.85  		   7.549821
+ 1048576    5000           196.40             196.32 		   0.023403
+ 2097152    5000           196.50             196.44 		   0.011709
+---------------------------------------------------------------------------------------
+"""
+
+PERFTEST_LAT = """\
+---------------------------------------------------------------------------------------
+                    RDMA_Write Latency Test
+---------------------------------------------------------------------------------------
+ #bytes #iterations    t_min[usec]    t_max[usec]  t_typical[usec]    t_avg[usec]    t_stdev[usec]   99% percentile[usec]   99.9% percentile[usec] 
+ 2       1000          1.02           3.63         1.06     	       1.08        	0.05   		1.27    		3.63   
+ 64      1000          1.10           2.98         1.14     	       1.15        	0.04   		1.30    		2.98   
+ 4096    1000          2.01           4.10         2.05     	       2.07        	0.06   		2.30    		4.10   
+---------------------------------------------------------------------------------------
+"""
+
+
+class TestNetworks(unittest.TestCase):
+    """sec_lm_networks: the systems table, fat tree, D1 ratios, layout
+    calculator, loopback displays and the perftest parser (a hand-written
+    sample of perftest's format: the box has no RDMA device)."""
+
+    def setUp(self):
+        stack = contextlib.ExitStack()
+        self.addCleanup(stack.close)
+        stack.enter_context(mock.patch.object(
+            d2l, '_hw_static', side_effect=lambda n: committed_systems()))
+        stack.enter_context(mock.patch.object(
+            d2l, 'box_alpha_beta', return_value=dict(BOX_AB)))
+        stack.enter_context(specs_patch())
+
+    def test_systems_contract(self):
+        rows = committed_systems()['rows']
+        self.assertLessEqual(len(rows), 12)
+        for r in rows:
+            self.assertTrue(r['source_url'], r['system'])
+            self.assertRegex(r['retrieved'], r'\d{4}-\d\d-\d\d$')
+            self.assertIn(r['scaleup_dir'], ('bidir', 'per_dir'))
+            self.assertIn(r['kind'], ('quoted', 'measured', 'spec'))
+        specs = d2l.chip_specs()
+        for r in rows:
+            if r['chip']:
+                self.assertIn(r['chip'], specs.index)
+
+    def test_systems_table(self):
+        sy = d2l.systems_table()
+        self.assertEqual(sy.loc['8 x A100 SXM 40 GB', 'up_gbs_dir'], 300)
+        self.assertEqual(sy.loc['TPU v7 pod', 'up_gbs_dir'], 200)  # 2 links
+        self.assertEqual(sy.loc['this box (4 x RTX 4090)', 'up_gbs_dir'], 2.4)
+        self.assertAlmostEqual(sy.loc['GB200 NVL72', 'domain_mem_tb'],
+                               72 * 186.1 / 1e3)
+        lines, _ = lines_of(self, d2l.show_table,
+                            sy[list(d2l.SYSTEMS_SHORT)],
+                            headers=d2l.SYSTEMS_SHORT)
+        self.assertLessEqual(len(lines), 13)
+
+    def test_fat_tree_counts(self):
+        for r in (4, 8, 16):
+            two = d2l.fat_tree(r, 2)
+            self.assertEqual((two['endpoints'], two['switches']),
+                             (r**2 // 2, 3 * r // 2))
+            self.assertEqual(two['links'], r * r)
+            three = d2l.fat_tree(r, 3)
+            self.assertEqual((three['endpoints'], three['switches']),
+                             (r**3 // 4, 5 * r**2 // 4))
+            self.assertEqual(three['links'], 3 * r**3 // 4)
+            # every switch uses at most radix ports
+            G = three['graph']
+            self.assertLessEqual(max(G.degree(n) for n in G
+                                     if not n.startswith('host')), r)
+
+    def test_fat_tree_flow(self):
+        beta = 50e9
+        for r, o, tiers, rails in ((8, 1.0, 2, 1), (8, 3.0, 2, 2),
+                                   (16, 1.0, 3, 1), (16, 3.0, 3, 4),
+                                   (64, 2.0, 2, 8)):
+            ft = d2l.fat_tree(r, tiers, oversub=o, rails=rails)
+            self.assertAlmostEqual(ft['down'] / ft['up'], o)
+            flow = d2l.cross_leaf_flow(ft, beta)
+            self.assertAlmostEqual(flow, ft['up'] * beta)  # beta u, exact
+            self.assertEqual(ft['hosts'] * rails, ft['endpoints'])
+
+    def test_rail_wiring(self):
+        ft = d2l.fat_tree(8, 2, rails=4)
+        nics = {}
+        for ep, leaf in ft['attach'].items():
+            nics.setdefault(leaf, set()).add(ep.split('/')[1])
+        self.assertTrue(all(len(v) == 1 for v in nics.values()))
+
+    def test_layer_params_and_ratios(self):
+        cfg = small_config(L=4, d=256, H=4, H_kv=2)
+        N_layer = 2 * 256 * 64 * 6 + 3 * 256 * 1024
+        self.assertEqual(d2l.layer_params(cfg), N_layer)
+        par = dict(b=2, b_g=4, t=4, e=8, n_stage=2, T=1000, k=8)
+        R = 500.0
+        self.assertAlmostEqual(d2l.axis_ratio('tp', cfg, R, **par),
+                               4 / 3 * 3 * 256 * 2 / N_layer * R)
+        self.assertAlmostEqual(d2l.axis_ratio('pp', cfg, R, **par),
+                               256 * 2 / (3 * 2 * N_layer) * R)
+        self.assertAlmostEqual(d2l.axis_ratio('dp', cfg, R, **par),
+                               4 / 3000 * R * 7 / 8)
+        self.assertTrue(math.isnan(d2l.axis_ratio('ep', cfg, R, **par)))
+        moe = d2l.HWShape(cfg, num_experts=16, num_experts_per_tok=2,
+                          moe_intermediate_size=128, decoder_sparse_step=1,
+                          mlp_only_layers=[])
+        self.assertEqual(d2l.layer_params(moe),
+                         2 * 256 * 64 * 6 + 2 * 3 * 256 * 128)
+        self.assertAlmostEqual(d2l.axis_ratio('ep', moe, R, **par),
+                               2 * 2 * (7 / 8) / (9 * 128) * R)
+        # ratios are linear in the ridge
+        self.assertAlmostEqual(d2l.axis_ratio('tp', cfg, 2 * R, **par),
+                               2 * d2l.axis_ratio('tp', cfg, R, **par))
+
+    def test_qwen3_8b_layer(self):
+        cfg = cached_config(self, 'Qwen/Qwen3-8B')
+        self.assertAlmostEqual(d2l.layer_params(cfg) / 1e6, 192.9, places=1)
+
+    def toy_system(self, domain=8, up=600, out=50, chips=8):
+        return pd.Series(dict(
+            short='toy', chip='H100 SXM', chips=chips, domain_chips=domain,
+            up_gbs_dir=up / 2, scaleout_gbs_per_chip=out, p16_tflops=1000.0,
+            hbm_gb_per_chip=80.0), name='toy system')
+
+    def test_layout_fit(self):
+        cfg = small_config(L=8, d=1024, H=8, H_kv=2)
+        cfg['name_or_path'] = 'Qwen/Qwen3-toy'
+        sys_ = self.toy_system()
+        fit = d2l.layout_fit(cfg, sys_, dict(t=8, e=1, p=2, k=4), 2**20)
+        self.assertEqual(list(fit.index), ['tp', 'pp', 'dp'])
+        self.assertEqual(list(fit.link), ['scale-up', 'scale-out',
+                                          'scale-out'])
+        R_up, R_out = 1e15 / 300e9, 1e15 / 50e9
+        par = dict(b=2, b_g=2, t=8, e=1, n_stage=2, T=2**20 / 4, k=4)
+        self.assertAlmostEqual(fit.ratio['tp'],
+                               d2l.axis_ratio('tp', cfg, R_up, **par))
+        self.assertAlmostEqual(fit.ratio['dp'], 0.1 * d2l.axis_ratio(
+            'dp', cfg, R_out, **par))
+        self.assertEqual(list(fit.fit), list(fit.ratio <= 0.15))
+        self.assertEqual(fit.attrs['model'], 'toy')
+        N = d2l.ServingModel(cfg, d2l.chip_specs().loc['H100 SXM']
+                             ).n_params()[0]
+        self.assertAlmostEqual(fit.attrs['mem_gb'], 16 * N / 16 / 1e9)
+        # bytes per step: tp moves 8 (t-1)/t T d b per layer and replica
+        T_r = 2**20 / 4
+        tp_bytes = 8 * 7 / 8 * T_r * 1024 * 2 * 8 / 2  # L / p layers
+        self.assertAlmostEqual(fit.gb_per_step['tp'] * 1e9 / tp_bytes, 1.0,
+                               places=6)
+        # a bigger domain moves pp onto the scale-up link
+        big = d2l.layout_fit(cfg, self.toy_system(domain=72), dict(
+            t=8, e=1, p=2, k=4), 2**20)
+        self.assertEqual(big.link['pp'], 'scale-up')
+
+    def test_layout_for_and_display(self):
+        sy = d2l.systems_table()
+        cfg = small_config(L=8, d=1024, H=8, H_kv=2)
+        cfg['name_or_path'] = 'Qwen/Qwen3-toy'
+        box = sy.loc['this box (4 x RTX 4090)']
+        self.assertEqual(d2l.layout_for(box, dict(t=8, e=1, p=4), 1024),
+                         dict(t=4, e=1, p=1, k=1))
+        node = sy.loc['8 x A100 SXM 40 GB']
+        self.assertEqual(d2l.layout_for(node, dict(t=1, e=8, p=4), 1024),
+                         dict(t=1, e=8, p=4, k=256))
+        fits = [d2l.layout_fit(cfg, sy.loc[n], d2l.layout_for(
+            sy.loc[n], dict(t=8, e=1, p=4), 1024), 2**22) for n in
+            ('8 x A100 SXM 40 GB', 'Trn3 UltraServer', 'this box (4 x RTX 4090)')]
+        lines, _ = lines_of(self, d2l.show_layout_fit, fits)
+        self.assertLessEqual(len(lines), 15)
+        self.assertIn('n/a', lines[2])  # Trn3 states no rates
+        lines, _ = lines_of(self, d2l.show_epsilon, fits, (0.05, 0.3))
+        self.assertEqual(len(lines), 2)
+
+    def test_diloco(self):
+        self.assertEqual(d2l.diloco_wan_bandwidth(8e9, 2, 100, 2.0), 8e7)
+
+    def test_perftest(self):
+        bw = d2l.parse_perftest(PERFTEST_BW, 'bw')
+        self.assertEqual(list(bw.bytes), [2, 1024, 1048576, 2097152])
+        self.assertEqual(bw.bw_avg_gbits.iloc[-1], 196.44)
+        lat = d2l.parse_perftest(PERFTEST_LAT, 'lat')
+        self.assertEqual(list(lat.t_typical_us), [1.06, 1.14, 2.05])
+        with self.assertRaises(ValueError):
+            d2l.parse_perftest(PERFTEST_LAT, 'bw')
+        fit = d2l.fit_perftest(dict(perftest={'mlx5_0': dict(
+            bw=PERFTEST_BW, lat=PERFTEST_LAT)}))
+        r = fit.loc[('ib_write', 1, 'mlx5_0')]
+        self.assertAlmostEqual(r.alpha, 1.10e-6)
+        self.assertAlmostEqual(r.beta, 196.38e9 / 8)
+        lines, _ = lines_of(self, d2l.show_fits, fit)
+        self.assertEqual(len(lines), 2)
+        pending = d2l.fit_perftest(d2l.CampaignPending(
+            'cluster-nccl', 'C-T4', 'two 8 x A100 nodes with RDMA'))
+        lines, _ = lines_of(self, d2l.show_fits, pending)
+        self.assertEqual(lines, ['two 8 x A100 nodes with RDMA: campaign '
+                                 'C-T4 not run yet'])
+
+    def loopback(self, backend, ranks, alpha, B):
+        frames = [synthetic_sweep('all_reduce', k, 'loopback', alpha * k, B,
+                                  seed=k) for k in ranks]
+        t = pd.concat(frames, ignore_index=True)
+        t.attrs.update(backend=backend, env='', alpha_below=2**16,
+                       plateau_from=2**22,
+                       info={2: dict(version='2.28.9',
+                                     transports=['NET/Socket/0'])})
+        return t
+
+    def test_loopback_displays(self):
+        floor = self.loopback('gloo', (2, 4), 300e-6, 1.4e9)
+        sock = self.loopback('nccl', (2,), 40e-6, 1.0e9)
+        lines, _ = lines_of(self, d2l._show_loopback, floor)
+        self.assertEqual(len(lines), 2)
+        self.assertIn('gloo over TCP, 2 ranks: alpha 600 us', lines[0])
+        lines, _ = lines_of(self, d2l._show_loopback, sock)
+        self.assertIn('NCCL over sockets, 2 GPUs', lines[0])
+        quoted = d2l.quoted_latencies()
+        self.assertTrue(quoted.source_url.str.contains('https://').all())
+        lines, ladder = lines_of(self, d2l.transport_ladder, floor, sock,
+                                 dict(BOX_AB), quoted)
+        self.assertEqual(len(ladder), 6)
+        self.assertLessEqual(len(lines), 7)
+        self.assertAlmostEqual(ladder.alpha_us['NCCL shm, 4 GPUs'], 30)
+        betas = d2l.link_betas(d2l.systems_table(), dict(BOX_AB))
+        self.assertEqual(betas, {'NVLink (A100)': 300e9,
+                                 'NIC (A100, HDR)': 25e9,
+                                 'host-staged (box)': 2.4e9})
+
+    def test_loopback_live_line(self):
+        floor = self.loopback('gloo', (2, 4), 300e-6, 1.4e9)
+        sizes = d2l._HW_NET_LIVE['sizes']
+        floor = floor[floor['size'].isin(sizes) | (floor.g == 4)]
+        if not set(sizes) <= set(floor['size']):
+            self.skipTest('synthetic sweep lacks the live sizes')
+        with mock.patch.object(d2l, '_loopback_live_us',
+                               side_effect=lambda b, e, size: float(
+                                   floor.oop_us[(floor.g == 2) & (
+                                       floor['size'] == size)].iloc[0])):
+            text = d2l._loopback_live(floor, True)
+        self.assertEqual(text, '3 sizes on 2 ranks, largest difference 0%')
+        with mock.patch.object(d2l, '_loopback_live_us', return_value=1e9):
+            self.assertTrue(d2l._loopback_live(floor, True).endswith(
+                '(differs)'))
+
+    def test_regen_finish(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for i, scale in enumerate((1.0, 1.1)):
+                for entry in ('gloo', 'nccl'):
+                    t = self.loopback(entry, (2,), 100e-6 * scale, 1e9)
+                    os.makedirs(os.path.join(tmp, f'proc{i}'), exist_ok=True)
+                    d2l._hw_write(os.path.join(tmp, f'proc{i}',
+                                               f'{entry}.json.gz'), t, {})
+            for entry in ('gloo', 'nccl'):
+                d2l._hw_write(os.path.join(tmp, f'{entry}.json.gz'),
+                              self.loopback(entry, (2,), 100e-6, 1e9), {})
+            d2l.regen_net_finish(tmp)
+            t, _ = d2l._hw_read(os.path.join(tmp, 'gloo.json.gz'))
+            self.assertEqual(len(t.attrs['proc_us']), 2)
+            ab = d2l.fit_collectives(t)
+            self.assertFalse(math.isnan(ab.alpha_lo.iloc[0]))
+
+
 if __name__ == '__main__':
     unittest.main()

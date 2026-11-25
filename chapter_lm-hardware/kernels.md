@@ -200,7 +200,7 @@ def gemm_shapes(cfg, tokens):  #@save
     decoder (an Arch or a Transformers config): per product, the shape
     M x N x K of one layer's matmul and the GFLOP over all layers (the head
     once). The attention scores are not weight products."""
-    L, d, H, H_kv, d_h, f, V, tie = d2l._arch_fields(cfg)
+    L, d, H, H_kv, d_h, f, V, _ = d2l._arch_fields(cfg)  # _: tied or not
     products = [('QKV', (H + 2 * H_kv) * d_h, d, L), ('out', d, H * d_h, L),
                 ('gate-up', 2 * f, d, L), ('down', d, f, L), ('head', V, d, 1)]
     return pd.DataFrame([
@@ -223,13 +223,22 @@ for M in (1, seq):
 d2l.show_table(table[['N', 'K', 'gflop', 1, seq]], digits={1: 1, seq: 0},
                headers={'gflop': 'GFLOP*', 1: 'FLOP/B, M=1',
                         seq: f'FLOP/B, M={seq:,}'})
-print(f'* per product at M = {seq:,} tokens')
+print(f'* all layers (the head once), M = {seq:,} tokens')
 ```
 
 <!-- Placeholder (prose): the shape sweep: achieved BF16 TFLOP/s of each of
 Qwen3-8B's weight products for M from 512 to 16,384 (hw_matmul_bench of
 sec_lm_accelerator_design, each point after a short warm-up), against the
-datasheet peak; the A100 twin's series joins it when campaign C-T2 has run. -->
+datasheet peak; the A100 twin's series joins it when campaign C-T2 has run.
+Read the lines under the plot: most points sit at 160-177 TFLOP/s, above the
+dashed datasheet line, because the card runs its SM clock above the 2.52 GHz
+boost clock the datasheet assumes (the clock line gives the sweep's range).
+One point drops by a third: the head product (N = 151,936) at M = 4,096
+(about 109 TFLOP/s, as long per call as M = 6,144). It is deterministic, and
+the kernel lines name the cause: cuBLAS's heuristic picked the same 128 x 128
+tile without the multistage pipeline (no "stages_32x1") it uses at
+M = 2,048. Lesson: a library's per-shape kernel choice can miss by a third;
+measure the shapes the model actually runs. -->
 
 ```{.python .input #kernels-shape-sweep}
 %%tab pytorch
@@ -299,12 +308,18 @@ the same formula under torch.compile, and torch's own fused kernel
 (F.rms_norm); one read and one write of x, so GB/s is 2 |x| / t, compared
 with the DRAM read rate measured in sec_lm_accelerator_design. -->
 
-```{.python .input #kernels-rmsnorm-check}
+<!-- Placeholder (prose): the baseline, the formula as written in PyTorch:
+each operation is its own kernel and reads or writes x. -->
+
+```{.python .input #kernels-rmsnorm-formula}
 %%tab pytorch
 def rms_norm_formula(x, weight, eps=1e-6):  #@save
     """RMSNorm as written: x / sqrt(mean(x^2) + eps) * weight."""
     return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + eps) * weight
+```
 
+```{.python .input #kernels-rmsnorm-check}
+%%tab pytorch
 d = 4096
 x = torch.randn(8 * 4096, d, device='cuda')  # 8 sequences of 4,096 tokens
 w = torch.randn(d, device='cuda')
@@ -400,7 +415,8 @@ def flash_attention_triton(q, k, v, causal=True, block_q=128,  #@save
                            block_k=64, num_warps=4, num_stages=2):
     """Attention forward of q (B, H, N, d) against k and v (B, H_kv, N, d)
     in one Triton kernel: one program per query tile and head, the online
-    softmax over key-value tiles; no dropout, no backward."""
+    softmax over key-value tiles; no dropout, no backward. Offsets are
+    32-bit: each tensor holds fewer than 2^31 elements."""
     q, k, v = q.contiguous(), k.contiguous(), v.contiguous()
     B, H, N, D = q.shape
     o = torch.empty_like(q)
@@ -432,7 +448,11 @@ flash kernel and the compiled chunked attention; the table keeps the three
 best and the worst configuration per shape. Claims K1 (within 2x of SDPA)
 and K2 (at least 10x the eager chunked version of the opening). A
 configuration that needs more shared memory than an SM offers (99 KiB per
-block on Ada) does not compile; the line under the table names it. -->
+block on Ada) would not compile and a line under the table would name it;
+on the 4090 all twelve compile (num_stages 2), so no such line appears.
+Measured on the 4090: the best configuration runs at 103% of SDPA at the
+reference shape (64 x 64, 4 warps) and 92% at Qwen3-8B (128 x 128, 8 warps);
+the 64-row tiles at 8 warps run at about half speed at both shapes. -->
 
 ```{.python .input #kernels-flash-sweep}
 %%tab pytorch
@@ -441,10 +461,20 @@ flash = d2l.flash_sweep(shapes, seq, block_q=(64, 128), block_k=(32, 64, 128),
 ```
 
 <!-- Placeholder (prose): registers. Triton reports, per compiled
-configuration, the registers per thread (at most 255) and the bytes spilled
-to local memory when a tile's accumulators and operands do not fit; claim
-K3: the spill point as measured, read against the throughput of each
-configuration. -->
+configuration, the registers per thread (at most 255) and the 32-bit words
+spilled to local memory when a tile's accumulators and operands do not fit;
+claim K3, stated as measured (the fallback wording), not as predicted:
+- d_h = 64 (reference): block_q 128 does not raise throughput; the 64-row
+  tiles at 4 warps are best (149-151 TF/s), since K and V come from L2
+  anyway. 128 x 32 at 4 warps is spill-free (254 registers) at 147.
+- d_h = 128 (Qwen3-8B): block_q 128 gains (64 x 32 -> 128 x 32 at 4 warps:
+  116 -> 132 TF/s) even with 44 spilled words.
+- Large spills cost: 128 x 128 at 4 warps spills 140 words (reference) and
+  248 (Qwen3-8B) and runs at 127 and 76 TF/s.
+- The strongest effect is warps against tile height: 64-row tiles at 8
+  warps run at about half speed at both shapes (68-77 and 64-99 TF/s).
+Do not write "the largest spill-free block_q at 4 warps was 64": 128 x 32 at
+4 warps has no spills at the reference shape. -->
 
 ```{.python .input #kernels-spill}
 %%tab pytorch
@@ -458,9 +488,12 @@ d2l.triton_spills(d2l.flash_attention_triton, flash)
 and emits Triton for them; max-autotune picks the tiles of a single matmul;
 nothing re-tiles a chain of matmuls across a softmax. The list below is what
 torch.compile made of the chunked attention (claim K4): library matmuls for
-the two products of every chunk, and Triton kernels for the softmax
-arithmetic between them; the scores of every chunk still go through
-memory. -->
+the two products of every chunk (8 QK^T GEMMs, 8 PV GEMMs), and Triton
+kernels for the softmax arithmetic between them. Inductor fused the softmax
+chain of all 8 chunks into one reduction, so it materializes every chunk's
+scores (and P) in memory: 8 QK^T GEMMs, then one reduction, then 8 PV GEMMs.
+That is also why the compiled arm peaks at about 7 GiB at the reference
+shape (3.2 GB of BF16 scores plus 3.2 GB of P). -->
 
 ```{.python .input #kernels-inductor-kernels}
 %%tab pytorch

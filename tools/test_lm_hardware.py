@@ -224,9 +224,12 @@ class TestResult(Registry):
             d2l._hw_result('t-multi', self.compute, dict(n=3),
                            entry='ladder', live_check=bad,
                            show=lambda r: print('shown'))
-        self.assertEqual(buf.getvalue().splitlines(),
-                         ['shown', 'live values on RTX 9999: not run '
-                          '(RuntimeError)'])
+        lines = buf.getvalue().splitlines()
+        self.assertEqual(lines[0], 'shown')
+        self.assertRegex(lines[1], r'^committed run on .+; live values on '
+                         r'RTX 9999$')  # the committed numbers' GPU named
+        self.assertEqual(lines[2:], ['live values on RTX 9999: not run '
+                                     '(RuntimeError)'])
         buf = io.StringIO()
         with mock.patch.object(d2l, 'download_keyed', return_value=packed), \
                 mock.patch.object(torch.cuda, 'is_available',
@@ -237,7 +240,8 @@ class TestResult(Registry):
             d2l._hw_result('t-multi', self.compute, dict(n=3),
                            entry='ladder', live_check=lambda r, s: 'ok',
                            live_label='L1')
-        self.assertEqual(buf.getvalue(), 'live values (L1) on RTX 9999: ok\n')
+        self.assertEqual(buf.getvalue().splitlines()[-1],
+                         'live values (L1) on RTX 9999: ok')
 
     def test_box_log_entries(self):
         self.regenerate('t-multi', entry='a')
@@ -1043,6 +1047,54 @@ class TestKernelDisplays(unittest.TestCase):
                          {1024: '128 x 128', 2048: '128 x 64'})
         self.assertEqual(lines[3], 'cuBLAS tiles by kernel name: 128 x 128, '
                          '128 x 64')
+
+    def test_empty_profiler_trace(self):
+        """A profiler that records no kernel raises in _kernel_launches,
+        drops the launch column (None) and fails inductor_kernels loudly,
+        never a display of '0 kernels'."""
+        class Empty:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def events(self):
+                return []
+        with mock.patch.object(torch.profiler, 'profile',
+                               lambda **kw: Empty()), \
+                mock.patch.object(torch.cuda, 'synchronize', lambda: None), \
+                mock.patch.object(torch.cuda, '_sleep', lambda n: None), \
+                mock.patch.object(torch.cuda, 'is_available', lambda: True), \
+                mock.patch.dict(os.environ, {'D2L_RERUN': ''}):
+            with self.assertRaises(d2l._NoKernelsRecorded):
+                d2l._kernel_launches(lambda: None)
+            self.assertIsNone(d2l._arm_launches({'f': lambda: None}, ()))
+            with quiet(), self.assertRaises(d2l._NoKernelsRecorded):
+                d2l.inductor_kernels(lambda: None)
+
+    def test_kernel_kind(self):
+        self.assertEqual(d2l._kernel_kind(
+            'ampere_bf16_s16816gemm_bf16_256x128_ldg8_f2f_stages_32x3_tn'),
+            'library GEMM, tile 256 x 128')
+        self.assertEqual(d2l._kernel_kind(
+            'triton_red_fused__to_copy_add_amax_arange_div_exp_full_gt_'
+            'masked_fill_maximum_mul_repeat_sub_sum_unsqueeze_view_zeros_'
+            'like_0'), 'Inductor reduction: masked_fill, amax, maximum, sub, '
+            'exp, sum, div, mul')
+        self.assertEqual(d2l._kernel_kind(
+            'triton_poi_fused__to_copy_add_div_exp_maximum_mul_sub_view_2'),
+            'Inductor pointwise: maximum, sub, exp, div, mul')
+
+    def test_show_slowest(self):
+        rows = [dict(name=n, M=m, N=151936 if n == 'head' else 4096,
+                     K=4096, tflops=109.0 if (n, m) == ('head', 4096)
+                     else 166.0) for n in ('QKV', 'head')
+                for m in (2048, 4096, 8192)]
+        with mock.patch.object(torch.cuda, 'is_available', lambda: False):
+            lines = self.out(d2l._show_slowest, kernels_frame(rows))
+        self.assertEqual(lines, ['slowest point: head at M = 4,096, 109 '
+                                 'TFLOP/s (median of the sweep 166)'])
 
     def test_launches_skipped_in_regeneration(self):
         with mock.patch.dict(os.environ, {'D2L_RERUN': 'box-microbench'}):

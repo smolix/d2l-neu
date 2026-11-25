@@ -194,12 +194,21 @@ class TestKernelsGPU(unittest.TestCase):
         flash = pd.DataFrame([dict(shape='reference', arm='64 x 64, 4 warps',
                                    H=12, H_kv=4, d_h=64, block_q=64,
                                    block_k=64, num_warps=4, tflops=100.0)])
+        flash.attrs['gpu'] = d2l._gpu_short(torch.cuda.get_device_name(0))
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             d2l.triton_spills(d2l.flash_attention_triton, flash)
         line = buf.getvalue().splitlines()[1].split()
         self.assertEqual(line[:2], ['64x64', 'w4'])
         self.assertGreater(int(line[3].replace(',', '')), 32)  # registers
+        flash.attrs['gpu'] = 'RTX 9999'  # committed elsewhere: no TF/s
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            d2l.triton_spills(d2l.flash_attention_triton, flash)
+        lines = buf.getvalue().splitlines()
+        self.assertNotIn('TF/s', lines[0])
+        self.assertTrue(lines[-1].startswith('(TF/s omitted: the sweep ran '
+                                             'on RTX 9999'))
         q, k, v = d2l.attention_inputs(self.shapes()['reference'][0], 1, 1024)
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):

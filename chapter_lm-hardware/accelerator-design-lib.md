@@ -537,18 +537,24 @@ def _hw_load(name, entry=None):
 def _hw_live(live_check, result, meta, label=''):
     """Print the one agreement line of a live check, naming what it checks
     (label): compared when this GPU is the committed run's GPU, else this
-    GPU's values uncompared. A live check never fails a run and never
-    changes the committed numbers."""
+    GPU's values uncompared, after a line naming the committed run's GPU
+    (the tables above show its numbers, their live columns this GPU's). A
+    live check never fails a run and never changes the committed
+    numbers."""
     if live_check is None or not torch.cuda.is_available():
         return
     gpu = torch.cuda.get_device_name(0)
-    same = gpu == (meta.get('env') or {}).get('gpu')
+    committed = (meta.get('env') or {}).get('gpu')
+    same = gpu == committed
     try:
         with d2l._quiet():
             text = live_check(result, same)
     except Exception as e:  # report, never fail the page
         text = f'not run ({type(e).__name__})'
     what = f' ({label})' if label else ''
+    if not same:
+        print(f'committed run on {_gpu_short(committed) or "no GPU"}; '
+              f'live values on {_gpu_short(gpu)}')
     print(f'live {"check" if same else "values"}{what} on {_gpu_short(gpu)}: '
           f'{text}')
 

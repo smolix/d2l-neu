@@ -192,19 +192,44 @@ def _short_kernel(name, width=60):
     return s if len(s) <= width else s[:width - 3] + '...'
 
 #@save
-def _kernel_launches(fn):
+class _NoKernelsRecorded(RuntimeError):
+    """The profiler did not record a whole call (torch 2.11's profiler can
+    miss the first kernels of every trace after a cold Triton compile)."""
+
+#@save
+def _kernel_launches(fn, leads=(2, 8, 32)):
     """{CUDA kernel name: (launches, device ms)} of one call of fn, after a
-    warm-up call."""
+    warm-up call. The call is profiled between marker kernels: torch 2.11's
+    profiler can miss the first kernels of every trace (seen after a cold
+    Triton compile of Inductor's attention kernels), so a trace counts only
+    when it kept at least one of the leading markers and the trailing one;
+    each retry leads with more markers. _NoKernelsRecorded when no trace
+    did."""
     fn()
     torch.cuda.synchronize()
     cuda = torch.profiler.ProfilerActivity.CUDA
-    with d2l._quiet(), torch.profiler.profile(activities=[cuda],
-                                             acc_events=True) as prof:
-        fn()
-        torch.cuda.synchronize()
-    return {e.key: (e.count, e.device_time_total / 1e3)
-            for e in prof.key_averages()
-            if e.device_type == torch.autograd.DeviceType.CUDA}
+    for lead in leads:
+        with d2l._quiet(), torch.profiler.profile(activities=[cuda],
+                                                 acc_events=True) as prof:
+            for _ in range(lead):
+                torch.cuda._sleep(1000)  # leading markers (spin_kernel)
+            fn()
+            torch.cuda._sleep(1000)  # the trailing marker
+            torch.cuda.synchronize()
+        ev = sorted((e for e in prof.events()
+                     if e.device_type == torch.autograd.DeviceType.CUDA),
+                    key=lambda e: e.time_range.start)
+        mark = ['spin_kernel' in e.name for e in ev]
+        i = mark.index(False) if False in mark else len(ev)
+        if 0 < i < len(ev) - 1 and mark[-1] and not any(mark[i:-1]):
+            launches = {}
+            for e in ev[i:-1]:
+                c, ms = launches.get(e.name, (0, 0.0))
+                launches[e.name] = (c + 1,
+                                    ms + e.time_range.elapsed_us() / 1e3)
+            return launches
+    raise _NoKernelsRecorded('the profiler did not record a whole call; '
+                             'restart the kernel and run the cell again')
 
 #@save
 def _arm_bench(fn, args, repeats):
@@ -236,16 +261,19 @@ def _time_arms(arms, args, flops=None, nbytes=None, repeats=10, warm_s=0.5):
 def _arm_launches(arms, args):
     """{arm: (kernel launches per call, its longest kernel's name)}, read
     with the profiler on this GPU (deterministic for the pinned software,
-    so never committed); None without a GPU or while box-microbench is
-    regenerated (in a long timing process the profiler has been seen to
-    stop recording CUDA kernels, torch 2.11)."""
+    so never committed); None, which drops the column, without a GPU,
+    while box-microbench is regenerated, or when the profiler records no
+    kernel (_NoKernelsRecorded)."""
     if not torch.cuda.is_available() or 'box-microbench' in _hw_regenerating():
         return None
     out = {}
     for name, fn in arms.items():
-        with d2l._quiet():
-            launches = _kernel_launches(lambda: fn(*args))
-        top = max(launches, key=lambda n: launches[n][1]) if launches else ''
+        try:
+            with d2l._quiet():
+                launches = _kernel_launches(lambda: fn(*args))
+        except _NoKernelsRecorded:
+            return None
+        top = max(launches, key=lambda n: launches[n][1])
         out[name] = (sum(c for c, _ in launches.values()), _short_kernel(top))
     return out
 
@@ -373,10 +401,12 @@ def _shape_sweep_compute(products, M, repeats):
 
 #@save
 def _shape_live(r, same):
-    rows = r[r.name == r.name.iloc[0]]  # the first product at three M
+    """The first product at three M, and the sweep's slowest point."""
+    rows = r[r.name == r.name.iloc[0]]
+    picks = [rows.index[j] for j in (0, len(rows) // 2, len(rows) - 1)]
+    slowest = r.index[int(np.argmin(r.tflops.to_numpy()))]
     pts = []
-    for j in (0, len(rows) // 2, len(rows) - 1):
-        i = rows.index[j]
+    for i in picks + ([slowest] if slowest not in picks else []):
         m, n, k = int(r.M[i]), int(r.N[i]), int(r.K[i])
         live = d2l.hw_matmul_bench(m, n, k, 'bf16', repeats=5)['tflops']
         pts.append((f'{r.name[i]} M={m:,}', r.tflops[i], live,
@@ -399,15 +429,43 @@ def hw_shape_sweep(cfg, M, repeats=20):
         live_label='matmul shapes')
 
 #@save
+def _show_slowest(sweep, dip=0.85):
+    """The sweep's slowest point against its median; when it lies below
+    dip times the median and this is the GPU the sweep ran on, the cuBLAS
+    kernel there and at the same product's faster neighbour in M (read
+    live: cuBLAS picks a kernel per shape)."""
+    i = int(np.argmin(sweep.tflops.to_numpy()))
+    slow, median = sweep.iloc[i], float(sweep.tflops.median())
+    print(f"slowest point: {slow['name']} at M = {int(slow.M):,}, "
+          f'{slow.tflops:.0f} TFLOP/s (median of the sweep {median:.0f})')
+    if (slow.tflops >= dip * median or not torch.cuda.is_available()
+            or 'box-microbench' in _hw_regenerating()
+            or _gpu_short(torch.cuda.get_device_name(0))
+            != sweep.attrs.get('gpu')):
+        return
+    part = sweep[sweep.name == slow['name']].sort_values('M')
+    j = list(part.index).index(sweep.index[i])
+    near = [part.iloc[x] for x in (j - 1, j + 1) if 0 <= x < len(part)]
+    rows = [slow, max(near, key=lambda r: r.tflops)] if near else [slow]
+    try:
+        names = [_gemm_tile(int(r.M), int(r.N), int(r.K))[0] for r in rows]
+    except _NoKernelsRecorded:
+        return
+    print(f"cuBLAS kernels of the {slow['name']} product on this GPU:")
+    for r, name in zip(rows, names):
+        print(f'  M = {int(r.M):,}: {_short_kernel(name, 62)}')
+
+#@save
 def plot_shape_sweep(sweep, specs, reference=None):
     """TFLOP/s against M (log2 x) for each weight product, with the
-    datasheet BF16 peak of the measured GPU's chip-table row; the A100
-    campaign's series dotted when its log is committed (else one line)."""
+    datasheet BF16 peak of each measured GPU's chip-table row and the boost
+    clock it assumes; the A100 campaign's series dotted when its log is
+    committed (else one status line); the slowest point (_show_slowest)."""
     if sweep.empty:
         return
     logs, status = [sweep], ''
     if isinstance(reference, CampaignPending):
-        status = hw_status_line(reference).replace('not run yet', 'pending')
+        status = hw_status_line(reference)
     elif reference and 'shape-sweep' in reference:
         logs.append(reference['shape-sweep'])
     X, Y, fmts, legend = [], [], [], []
@@ -423,15 +481,26 @@ def plot_shape_sweep(sweep, specs, reference=None):
     ax = d2l.plt.gca()
     ax.set_xscale('log', base=2)
     handles = ax.get_lines()[:len(Y)]
-    chip = _hw_chip_row(sweep.attrs.get('gpu'), sweep.attrs.get('mem_bytes'),
-                        specs)
-    if chip:
-        peak = specs.loc[chip, 'p16_tflops']
-        handles.append(ax.axhline(peak, color='k', ls='--', lw=1))
-        legend.append(f'datasheet {peak:,.0f} TFLOP/s')
+    for j, df in enumerate(logs):
+        chip = _hw_chip_row(df.attrs.get('gpu'), df.attrs.get('mem_bytes'),
+                            specs)
+        if chip:
+            peak = specs.loc[chip, 'p16_tflops']
+            handles.append(ax.axhline(peak, color='k', ls='--' if j == 0
+                                      else ':', lw=1))
+            legend.append(f'datasheet {peak:,.0f} TFLOP/s'
+                          + (f' ({chip})' if len(logs) > 1 else ''))
     ax.set_ylim(0, None)
     ax.legend(handles, legend, fontsize=8, loc='center left',
               bbox_to_anchor=(1.01, 0.5), frameon=False)
+    _show_slowest(sweep)
+    chip = _hw_chip_row(sweep.attrs.get('gpu'), sweep.attrs.get('mem_bytes'),
+                        specs)
+    clock = sweep.sm_mhz.dropna() if 'sm_mhz' in sweep else []
+    if chip in _HW_BOOST_MHZ and len(clock):
+        print(f'datasheet line: {_HW_BOOST_MHZ[chip] / 1000:.2f} GHz boost '
+              f'clock; SM clock in the sweep {clock.min() / 1000:.2f}-'
+              f'{clock.max() / 1000:.2f} GHz')
     if status:
         print(status)
 
@@ -439,11 +508,9 @@ def plot_shape_sweep(sweep, specs, reference=None):
 def _gemm_tile(m, n, k):
     """The cuBLAS kernel a bf16 (m x k) @ (k x n) product runs and the tile
     its name encodes (the first 'AxB' in it), e.g. ('..._128x128_...',
-    '128 x 128'); empty strings when the profiler recorded no kernel."""
+    '128 x 128'); _NoKernelsRecorded when the profiler saw none."""
     fn = d2l.hw_matmul_op(m, n, k, 'bf16')
     launches = _kernel_launches(fn)
-    if not launches:
-        return '', ''
     name = _short_kernel(max(launches, key=lambda s: launches[s][1]), 200)
     tile = re.search(r'(\d+)x(\d+)', name)
     return name, (f'{tile[1]} x {tile[2]}' if tile else '')
@@ -454,7 +521,10 @@ def _wave_tiles(M, K, N, tile_every=16):
     live (None as for _arm_launches)."""
     if not torch.cuda.is_available() or 'box-microbench' in _hw_regenerating():
         return None
-    return {n: _gemm_tile(M, n, K)[1] for n in list(N)[::tile_every]}
+    try:
+        return {n: _gemm_tile(M, n, K)[1] for n in list(N)[::tile_every]}
+    except _NoKernelsRecorded:
+        return None
 
 #@save
 @triton.jit
@@ -523,17 +593,23 @@ def _wave_compute(M, K, N, repeats):
 def _sawtooth_period(N, y, min_ratio=4.0):
     """The period (in N) of the strongest periodic component of y over the
     evenly spaced N, after removing a linear trend: the periodogram's peak
-    over periods from two steps to half the range; None when that peak is
-    below min_ratio times the median power (no clear saw-tooth)."""
+    over periods from two steps to half the range, refined to a quarter
+    step within one step of it (a period that is not a multiple of the
+    step is not aliased to one); None when the peak is below min_ratio
+    times the median power (no clear saw-tooth)."""
     N, y = np.asarray(N, float), np.asarray(y, float)
     r = y - np.polyval(np.polyfit(N, y, 1), N)
     step = N[1] - N[0]
+    power = lambda ps: np.array([
+        np.abs(np.sum(r * np.exp(-2j * np.pi * N / p)))**2 for p in ps])
     periods = np.arange(2 * step, (N[-1] - N[0]) / 2 + step, step)
-    power = np.array([np.abs(np.sum(r * np.exp(-2j * np.pi * N / p)))**2
-                      for p in periods])
-    best = int(np.argmax(power))
-    return float(periods[best]) if power[best] >= min_ratio * np.median(
-        power) else None
+    coarse = power(periods)
+    best = int(np.argmax(coarse))
+    if coarse[best] < min_ratio * np.median(coarse):
+        return None
+    fine = periods[best] + np.arange(-4, 5) * step / 4
+    fine = fine[fine >= 2 * step]
+    return float(fine[int(np.argmax(power(fine)))])
 
 #@save
 def _show_wave(wave, tiles=None):
@@ -558,7 +634,8 @@ def _show_wave(wave, tiles=None):
 
 #@save
 def _wave_live(r, same):
-    """Four points of the fixed-tile arm around its largest drop."""
+    """The fixed-tile arm's points from one before its largest drop to
+    two after it (fewer at the ends of the sweep)."""
     r = r[r.arm != 'cuBLAS'].reset_index(drop=True)
     i = int(np.argmax(-np.diff(r.tflops.to_numpy())))  # the largest drop
     picks = [j for j in range(i - 1, i + 3) if 0 <= j < len(r)]
@@ -740,7 +817,9 @@ def triton_spills(launcher, flash):
     """Registers per thread and spilled registers (32-bit words of local
     memory per thread) of every Triton configuration of a flash sweep,
     read from the compiled kernels' metadata (deterministic for the pinned
-    Triton), next to each configuration's committed TFLOP/s."""
+    Triton), next to each configuration's committed TFLOP/s when this GPU
+    is the one the sweep ran on."""
+    stages = flash.attrs.get('num_stages', 2)
     kernels = [launcher.__globals__[n] for n in launcher.__code__.co_names
                if isinstance(launcher.__globals__.get(n),
                              triton.runtime.JITFunction)]
@@ -753,10 +832,9 @@ def triton_spills(launcher, flash):
         kv = torch.zeros(1, H_kv, n, d, dtype=torch.bfloat16, device='cuda')
         try:
             with d2l._quiet():
-                launcher(q, kv, kv, block_q=int(row.block_q),
+                launcher(q, kv, kv, causal=True, block_q=int(row.block_q),
                          block_k=int(row.block_k),
-                         num_warps=int(row.num_warps),
-                         num_stages=flash.attrs.get('num_stages', 2))
+                         num_warps=int(row.num_warps), num_stages=stages)
         except Exception as e:
             if type(e).__name__ != 'OutOfResources':
                 raise
@@ -767,7 +845,8 @@ def triton_spills(launcher, flash):
                     and consts.get('BLOCK_K') == row.block_k
                     and consts.get('D') == d
                     and consts.get('GROUP') == H // H_kv
-                    and nw == row.num_warps):
+                    and consts.get('CAUSAL') is True
+                    and nw == row.num_warps and ns == stages):
                 regs, spills = n_regs, n_spills
         tag = shape.split('-')[-1] if '-' in shape else shape[:3]
         label = f'{int(row.block_q)}x{int(row.block_k)} w{int(row.num_warps)}'
@@ -775,32 +854,53 @@ def triton_spills(launcher, flash):
             f'TF/s {tag}': row.tflops, f'regs {tag}': regs,
             f'spills {tag}': spills})
     t = pd.DataFrame.from_dict(rows, orient='index')
+    committed = flash.attrs.get('gpu')
+    here = _gpu_short(torch.cuda.get_device_name(0))
+    if committed != here:  # never committed timings next to this GPU's
+        t = t[[c for c in t.columns if not c.startswith('TF')]]
     show_table(t, digits={c: 0 for c in t.columns if not c.startswith('TF')})
     print('regs: registers per thread; spills: 32-bit words per thread in '
           'local memory')
+    if committed != here:
+        print(f'(TF/s omitted: the sweep ran on {committed}, not on {here})')
 
 #@save
-def inductor_kernels(fn, *args, rows=8, width=79):
+_SOFTMAX_OPS = ('masked_fill', 'amax', 'maximum', 'sub', 'exp', 'sum', 'div',
+                'mul')  # the operations of the online softmax, in its order
+
+#@save
+def _kernel_kind(name):
+    """A CUDA kernel's kind in a few words: a library GEMM by the tile its
+    name encodes; an Inductor kernel (named after the operations it fuses)
+    by kind and the softmax operations among them; else its short name."""
+    m = re.match(r'triton_(\w{3})_fused_(.*?)(_\d+)?$', name)
+    if m:
+        kind = {'poi': 'pointwise', 'per': 'reduction',
+                'red': 'reduction'}.get(m[1], m[1])
+        ops = [op for op in _SOFTMAX_OPS if f'_{op}_' in f'_{m[2]}_']
+        return f'Inductor {kind}: ' + ', '.join(ops)
+    tile = re.search(r'_(\d+)x(\d+)_', name)
+    if 'gemm' in name and tile:
+        return f'library GEMM, tile {tile[1]} x {tile[2]}'
+    return 'library ' + _short_kernel(name, 50)
+
+#@save
+def inductor_kernels(fn, *args):
     """The CUDA kernels one call of a compiled function launches, most
-    launched first: library kernels (cuBLAS, CUTLASS) by name, and the
-    Triton kernels Inductor generated by kind (pointwise, reduction) and
-    the operations each one fuses (read from its name)."""
-    import textwrap
+    launched first: library GEMMs by tile, and the Triton kernels Inductor
+    generated by kind (pointwise, reduction) and the softmax operations
+    each one fuses (read from its name); kernels of the same kind on one
+    line."""
     with d2l._quiet():
         fn(*args)  # compile
     launches = _kernel_launches(lambda: fn(*args))
     total = sum(c for c, _ in launches.values())
     print(f'{total} launches per call, {len(launches)} distinct kernels:')
-    kinds = {'poi': 'pointwise', 'per': 'reduction', 'red': 'reduction'}
-    for name, (c, ms) in sorted(launches.items(),
-                                key=lambda kv: -kv[1][0])[:rows]:
-        m = re.match(r'triton_(\w{3})_fused_(.*?)(_\d+)?$', name)
-        if m:  # Inductor names a kernel after the operations it fuses
-            text = (f'{c:3d} x Inductor {kinds.get(m[1], m[1])}: '
-                    + m[2].strip('_').replace('_', ' '))
-        else:
-            text = f'{c:3d} x library {_short_kernel(name, width - 16)}'
-        print(textwrap.fill(text, width, subsequent_indent=' ' * 6))
+    kinds = collections.Counter()
+    for name, (c, _) in launches.items():
+        kinds[_kernel_kind(name)] += c
+    for text, c in kinds.most_common():
+        print(f'{c:3d} x {text}')
 ```
 
 ## The Section's Part of the Regeneration

@@ -1863,7 +1863,7 @@ For an $n \times n$ square matrix $\mathbf{A}$, being one-to-one and being onto 
 
 @mdl-linear-maps-limits-of-the-determinant
 
-- **Underflow vs. Ill-Conditioning:** $0.1\,\mathbf{I}_{400}$ is perfectly conditioned ($\kappa = 1$, inverse $10\,\mathbf{I}_{400}$) yet `det` underflows to `0.0` ($10^{-400}$, requiring `slogdet`), while the extreme shear $\left(\begin{smallmatrix}1&10^8\\0&1\end{smallmatrix}\right)$ has $\det = 1$ yet singular values $10^8$ and $10^{-8}$, just $10^{-8}$ away from singularity!
+- **Underflow vs. Ill-Conditioning:** $0.1\,\mathbf{I}_{400}$ is perfectly conditioned ($\kappa = 1$, inverse $10\,\mathbf{I}_{400}$) yet `det` underflows to `0.0` ($10^{-400}$, requiring `slogdet`), while the extreme shear $\left(\begin{smallmatrix}1&10^8\\0&1\end{smallmatrix}\right)$ has $\det = 1$ yet singular values $10^8$ and $10^{-8}$, just $10^{-8}$ away from singularity.
 :::
 
 ::: {.slide title="Preview: Eigenvalues vs. Singular Values"}
@@ -1873,7 +1873,7 @@ For an $n \times n$ square matrix $\mathbf{A}$, being one-to-one and being onto 
 - **Running Matrix $\mathbf{A} = \left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$:**
   - Its eigenvalues are $\lambda_{1,2} = 2 \pm i$, whose product is $(2+i)(2-i) = 5 = \det\mathbf{A}$ (§{sec_mdl-eigendecompositions}).
   - Its singular values are $\sigma_1 \approx 3.618$ and $\sigma_2 \approx 1.382$, whose product is $3.618 \times 1.382 = 5 = |\det\mathbf{A}|$ (§{sec_mdl-svd-low-rank}).
-- **True Proximity to Singularity:** The ratio $\kappa(\mathbf{A}) = \sigma_1/\sigma_n$—not $\det\mathbf{A}$—measures how close a matrix is to collapsing space.
+- **True Proximity to Singularity:** The ratio $\kappa(\mathbf{A}) = \sigma_1/\sigma_n$, not $\det\mathbf{A}$, measures how close a matrix is to collapsing space.
 :::
 
 ::: {.slide title="Concept Check: Linear Maps, Rank & Determinants"}

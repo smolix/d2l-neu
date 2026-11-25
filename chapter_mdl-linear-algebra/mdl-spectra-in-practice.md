@@ -164,7 +164,8 @@ the question, yet if it is sparse we can still multiply it by a vector cheaply.
 What happens if we start with a vector $\mathbf{v}_0$ and simply multiply by
 $\mathbf{A}$ over and over again?
 
-The power expansion :eqref:`eq_mdl-eig-power-expansion` gives the answer.
+The power expansion $\mathbf{A}^k\mathbf{x} = \sum_i c_i\lambda_i^k\mathbf{v}_i$
+of :numref:`subsec_mdl-diagonalization` gives the answer.
 Suppose $\mathbf{A}$ is diagonalizable with eigenvectors $\mathbf{v}_i$,
 ordered by the magnitude of their eigenvalues, and suppose the largest
 eigenvalue is *strictly dominant*, meaning
@@ -481,7 +482,7 @@ $0.1v_1+4v_2=0$, giving $\mathbf{v}_2=(-40,1)$. Notice how close these two
 directions are: the angle between them is only
 $\arctan(1/40)\approx 1.4^\circ$. Expanding $\mathbf{e}_2$ in this nearly
 parallel basis gives $\mathbf{e}_2=40\mathbf{v}_1+\mathbf{v}_2$, and applying
-:eqref:`eq_mdl-eig-power-expansion` yields
+the eigenvector power expansion (:numref:`subsec_mdl-diagonalization`) yields
 
 $$
 \mathbf M^k\mathbf e_2=40\cdot0.9^k\,\mathbf v_1+0.8^k\,\mathbf v_2
@@ -1045,7 +1046,7 @@ Even though $\mathbf{M} = \left(\begin{smallmatrix}0.9&4\\0&0.8\end{smallmatrix}
 ::: {.col}
 - **$\varepsilon$-Pseudospectrum $\Lambda_\varepsilon(\mathbf{A})$:** The set of all $z \in \mathbb{C}$ that are eigenvalues of $\mathbf{A} + \mathbf{E}$ for some perturbation $\|\mathbf{E}\|_2 \le \varepsilon$, equivalently where the resolvent norm satisfies:
   $$\|(z\mathbf{I} - \mathbf{A})^{-1}\|_2 \ge \frac{1}{\varepsilon}$$
-- **Normal Discs vs. Non-Normal Bulge:** At $z = 1$, $\|(\mathbf{I} - \boldsymbol{\Lambda})^{-1}\|_2 = 1/(1 - 0.9) = 10$, whereas $\|(\mathbf{I} - \mathbf{M})^{-1}\|_2 = 200.3$: a tiny perturbation of size $\varepsilon \approx 0.005$ pushes an eigenvalue of $\mathbf{M}$ onto the unit circle!
+- **Normal Discs vs. Non-Normal Bulge:** At $z = 1$, $\|(\mathbf{I} - \boldsymbol{\Lambda})^{-1}\|_2 = 1/(1 - 0.9) = 10$, whereas $\|(\mathbf{I} - \mathbf{M})^{-1}\|_2 = 200.3$: a tiny perturbation of size $\varepsilon \approx 0.005$ pushes an eigenvalue of $\mathbf{M}$ onto the unit circle.
 :::
 
 ::: {.col .fig}
@@ -1060,7 +1061,7 @@ Even though $\mathbf{M} = \left(\begin{smallmatrix}0.9&4\\0&0.8\end{smallmatrix}
 ::: {.cols .vc}
 ::: {.col}
 - **Changing Jacobians in BPTT:** Backprop multiplies $T$ distinct per-step matrices $\nabla_{\mathbf{h}_0}\mathcal{L} = \mathbf{D}_1^\top\mathbf{D}_2^\top\cdots\mathbf{D}_T^\top\nabla_{\mathbf{h}_T}\mathcal{L}$.
-- **Zero Spectral Radius Can Still Explode:** Nilpotent $\mathbf{D}_1 = \left(\begin{smallmatrix}0&2\\0&0\end{smallmatrix}\right)$ and $\mathbf{D}_2 = \left(\begin{smallmatrix}0&0\\2&0\end{smallmatrix}\right)$ both have $\rho = 0$, yet $\mathbf{D}_2\mathbf{D}_1 = \operatorname{diag}(0, 4)$ has $\rho = 4$ and explodes as $4^{T/2}$!
+- **Zero Spectral Radius Can Still Explode:** Nilpotent $\mathbf{D}_1 = \left(\begin{smallmatrix}0&2\\0&0\end{smallmatrix}\right)$ and $\mathbf{D}_2 = \left(\begin{smallmatrix}0&0\\2&0\end{smallmatrix}\right)$ both have $\rho = 0$, yet $\mathbf{D}_2\mathbf{D}_1 = \operatorname{diag}(0, 4)$ has $\rho = 4$ and explodes as $4^{T/2}$.
 :::
 
 ::: {.col .fig .big}

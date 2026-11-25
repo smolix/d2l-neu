@@ -16,7 +16,7 @@ In :numref:`chap_classification`, softmax regression scored each garment categor
 ![Health risk against body temperature. The risk is lowest near $37^\circ\textrm{C}$ and rises on both sides, whereas a linear score can only rise or fall. The dashed line is the least-squares linear fit over the plotted range.](../img/mdl-mlp-temperature-risk.svg)
 :label:`fig_mdl-mlp-temperature-risk`
 
-A *multilayer perceptron* (MLP) overcomes both limitations by inserting one or more *hidden layers* that transform raw inputs into learned intermediate representations—applying an affine map followed by a nonlinear *activation function*—before a linear output layer makes the final prediction. In this section, we prove that no linear model can solve the four-point XOR problem, solve XOR explicitly with two ReLU hidden units, examine what functions shallow and deep networks can represent, and compare the activation functions used across modern deep learning.
+A *multilayer perceptron* (MLP) overcomes both limitations by inserting one or more *hidden layers* that transform raw inputs into learned intermediate representations, applying an affine map followed by a nonlinear *activation function* before a linear output layer makes the final prediction. In this section, we prove that no linear model can solve the four-point XOR problem, solve XOR explicitly with two ReLU hidden units, examine what functions shallow and deep networks can represent, and compare the activation functions used across modern deep learning.
 
 ```{.python .input #mlp-multilayer-perceptrons}
 %%tab mxnet
@@ -60,7 +60,7 @@ from d2l import jax as d2l
 
 ## Limits of Linear Models: The XOR Problem
 
-The starkest possible demonstration of feature interaction uses just four data points—the corners of the unit square $\{0, 1\}^2$ labeled by their *exclusive-OR* (XOR), where $y = 1$ if and only if *exactly one* coordinate equals $1$:
+The starkest possible demonstration of feature interaction uses just four data points: the corners of the unit square $\{0, 1\}^2$ labeled by their *exclusive-OR* (XOR), where $y = 1$ if and only if *exactly one* coordinate equals $1$:
 
 | $x_1$ | $x_2$ | $y$ |
 |:---:|:---:|:---:|
@@ -73,9 +73,9 @@ Notice the interaction: flipping $x_1$ from $0$ to $1$ increases $y$ when $x_2 =
 
 **Proposition.** For all $w_1, w_2, b \in \mathbb{R}$, the linear decision rule "predict class 1 if $w_1 x_1 + w_2 x_2 + b > 0$" misclassifies at least one of the four XOR points.
 
-**Proof.** Suppose for contradiction that some $w_1, w_2, b$ classify all four corners correctly. The two class-1 points $(0, 1)$ and $(1, 0)$ require $w_2 + b > 0$ and $w_1 + b > 0$, whose sum gives $w_1 + w_2 + 2b > 0$. Meanwhile, the two class-0 points $(0, 0)$ and $(1, 1)$ require $b \leq 0$ and $w_1 + w_2 + b \leq 0$, whose sum gives $w_1 + w_2 + 2b \leq 0$—an immediate contradiction. $\blacksquare$
+**Proof.** Suppose for contradiction that some $w_1, w_2, b$ classify all four corners correctly. The two class-1 points $(0, 1)$ and $(1, 0)$ require $w_2 + b > 0$ and $w_1 + b > 0$, whose sum gives $w_1 + w_2 + 2b > 0$. Meanwhile, the two class-0 points $(0, 0)$ and $(1, 1)$ require $b \leq 0$ and $w_1 + w_2 + b \leq 0$, whose sum gives $w_1 + w_2 + 2b \leq 0$, an immediate contradiction. $\blacksquare$
 
-Geometrically, both diagonals of the unit square share the midpoint $(1/2, 1/2)$ (:numref:`fig_mdl-mlp-xor-diagonals`), where any affine function equals the average of its values at either diagonal's endpoints—so no straight line can ever separate the two diagonals.
+Geometrically, both diagonals of the unit square share the midpoint $(1/2, 1/2)$ (:numref:`fig_mdl-mlp-xor-diagonals`), where any affine function equals the average of its values at either diagonal's endpoints, so no straight line can ever separate the two diagonals.
 
 ![The four XOR points, labeled by class. Each diagonal joins the two points of one class, and the two diagonals cross at $(1/2, 1/2)$, so no straight line separates the classes.](../img/mdl-mlp-xor-diagonals.svg)
 :label:`fig_mdl-mlp-xor-diagonals`
@@ -94,7 +94,7 @@ $$
 $$
 :eqlabel:`eq_mlp`
 
-where biases broadcast across rows and the nonlinear *activation function* $\phi$ acts elementwise on the *pre-activations* $\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}$ to produce the hidden *activations* $\mathbf{H} \in \mathbb{R}^{n \times h}$. Notice the parameter count: $(d + 1)h + (h + 1)q$. On Fashion-MNIST ($d = 784, q = 10$), a hidden layer of $h = 256$ units has $785 \times 256 + 257 \times 10 = 203{,}530$ parameters—26 times softmax regression's $7{,}850$.
+where biases broadcast across rows and the nonlinear *activation function* $\phi$ acts elementwise on the *pre-activations* $\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}$ to produce the hidden *activations* $\mathbf{H} \in \mathbb{R}^{n \times h}$. Notice the parameter count: $(d + 1)h + (h + 1)q$. On Fashion-MNIST ($d = 784, q = 10$), a hidden layer of $h = 256$ units has $785 \times 256 + 257 \times 10 = 203{,}530$ parameters, 26 times softmax regression's $7{,}850$.
 
 ![An MLP with 4 inputs, 1 hidden layer of 5 hidden units, and 3 outputs. Both parameterized layers are fully connected.](../img/mlp.svg)
 :label:`fig_mlp`
@@ -151,14 +151,14 @@ building a compositional hierarchy of representations from raw inputs to class l
 
 ### Universal Approximation
 
-How rich is the class of functions computable by a single hidden layer ($K = 2$)? On the real line ($d = 1$), each ReLU hidden unit $a_j\,\mathrm{ReLU}(x - t_j)$ contributes a *hinge* that is flat to the left of its knot $t_j$ and changes slope by $a_j$ to the right (:numref:`fig_mdl-mlp-uat-hinges`). Summing $h$ hinges plus a constant produces any continuous piecewise-linear polyline with $h$ interior knots—and since any continuous function on a closed bounded interval $[a, b]$ can be approximated uniformly to within any $\epsilon > 0$ by a fine enough polyline, a single wide enough ReLU hidden layer approximates any continuous 1D function to arbitrary precision.
+How rich is the class of functions computable by a single hidden layer ($K = 2$)? On the real line ($d = 1$), each ReLU hidden unit $a_j\,\mathrm{ReLU}(x - t_j)$ contributes a *hinge* that is flat to the left of its knot $t_j$ and changes slope by $a_j$ to the right (:numref:`fig_mdl-mlp-uat-hinges`). Summing $h$ hinges plus a constant produces any continuous piecewise-linear polyline with $h$ interior knots; since any continuous function on a closed bounded interval $[a, b]$ can be approximated uniformly to within any $\epsilon > 0$ by a fine enough polyline, a single wide enough ReLU hidden layer approximates any continuous 1D function to arbitrary precision.
 
 ![Approximating a smooth curve on an interval by a sum of ReLU hinges $a_j\,\mathrm{ReLU}(x - t_j)$, one hidden unit per slope change.](../img/mdl-mlp-uat-hinges.svg)
 :label:`fig_mdl-mlp-uat-hinges`
 
 The *universal approximation theorem* generalizes this fact to arbitrary input dimension $d$: a single-hidden-layer MLP can approximate *any* continuous function on any compact subset of $\mathbb{R}^d$ to arbitrary uniform accuracy using *any* continuous non-polynomial activation function $\phi$ :cite:`Cybenko.1989,Leshno.Lin.Pinkus.ea.1993` (see Exercise :exref:`ex_mlp-one-hidden-layer` for a 2D proof via ridge functions and the Stone--Weierstrass theorem).
 
-### Why Depth Matters
+### Depth and Space Folding
 
 If one hidden layer can already approximate anything, why build *deep* networks? Because universal approximation says nothing about *how many units* a single layer needs (which can grow exponentially in $d$), nor whether gradient descent can learn or generalize from finite data.
 
@@ -166,7 +166,7 @@ Depth achieves exponential parameter efficiency by *composing* space-folding map
 
 $$g(z) = 2\,\mathrm{ReLU}(z) - 4\,\mathrm{ReLU}(z - 1/2),$$
 
-which rises from $0$ to $1$ on $[0, 1/2]$ and falls back to $0$ on $[1/2, 1]$ (:numref:`fig_mdl-mlp-depth-folding`). Composing $g$ with itself folds $[0, 1]$ in half at every layer: $g \circ g$ has $4$ linear pieces, $g \circ g \circ g$ has $8$, and the $m$-fold composition $g^{\circ m}$—computed by $m$ hidden layers of $2$ ReLU units ($2m$ total units)—produces a sawtooth wave with $2^m$ linear pieces! Representing that same $2^m$-piece sawtooth with a *single* hidden layer requires at least $2^m - 1$ hidden units ($1{,}023$ units in one layer vs. $20$ units across $10$ layers when $m = 10$).
+which rises from $0$ to $1$ on $[0, 1/2]$ and falls back to $0$ on $[1/2, 1]$ (:numref:`fig_mdl-mlp-depth-folding`). Composing $g$ with itself folds $[0, 1]$ in half at every layer: $g \circ g$ has $4$ linear pieces, $g \circ g \circ g$ has $8$, and the $m$-fold composition $g^{\circ m}$, computed by $m$ hidden layers of $2$ ReLU units ($2m$ total units), produces a sawtooth wave with $2^m$ linear pieces. Representing that same $2^m$-piece sawtooth with a *single* hidden layer requires at least $2^m - 1$ hidden units ($1{,}023$ units in one layer vs. $20$ units across $10$ layers when $m = 10$).
 
 ![Composing the two-ReLU tent function $g$ with itself $m$ times doubles the number of linear segments at every layer, producing $2^m$ segments with only $2m$ hidden units.](../img/mdl-mlp-depth-folding.svg)
 :label:`fig_mdl-mlp-depth-folding`
@@ -189,9 +189,7 @@ Wherever $\phi'(z_j) \approx 0$, gradient flow stalls. :numref:`fig_mdl-mlp-acti
 
 ## Summary
 
-- **Limits of linearity and hidden layers:** Linear models are monotonic in each coordinate and cannot capture feature interactions such as XOR. An MLP inserts hidden layers $\mathbf{H} = \phi(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$ before the linear output layer; without a nonlinear $\phi$, stacked affine layers collapse into a single linear layer.
-- **Expressive power and depth:** A single wide enough hidden layer with any continuous non-polynomial activation is a universal approximator on compact sets, while stacking $m$ hidden layers can compose space-folding functions to create $2^m$ linear regions with only $O(m)$ units.
-- **Activation functions:** ReLU ($\max(z, 0)$) passes gradients with slope $1$ for positive pre-activations, and GELU ($z\Phi(z)$) with slope close to $1$ once $z \gtrsim 1$. Neither saturates for large positive $z$, unlike sigmoid (slope at most $1/4$) and $\tanh$ (slope at most $1$), whose slopes vanish in both tails.
+Linear models are monotonic in every coordinate and cannot capture feature interactions such as XOR. Multilayer perceptrons overcome both limitations by inserting hidden layers $\mathbf{H}^{(k)} = \phi(\mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)})$ before the linear output layer; without a nonlinear activation $\phi$, stacked affine transformations collapse into a single linear map. A single sufficiently wide hidden layer with any continuous non-polynomial activation can approximate any continuous function on a compact set, whereas composing $m$ hidden layers folds space repeatedly to create $2^m$ linear regions with $O(m)$ units. Among activation functions, rectifiers such as ReLU ($\max(z, 0)$) and GELU ($z\Phi(z)$) maintain unit or near-unit slope on positive inputs, avoiding the tail saturation that attenuates gradients through deep stacks of sigmoid or $\tanh$ units.
 
 ## Exercises
 
@@ -417,7 +415,7 @@ Visualizing the input space $(x_1, x_2)$ alongside the learned hidden space $(h_
 ::: {.cols .vc}
 ::: {.col}
 - **General 1-hidden-layer parameter count:** $(d + 1)h + (h + 1)q = dh + h + hq + q$ parameters and $dh + hq$ multiply-adds per example.
-- **First-layer dominance on Fashion-MNIST ($d = 784, h = 256, q = 10$):** $\mathbf{W}^{(1)}, \mathbf{b}^{(1)}$ hold $785 \times 256 = 200{,}960$ of the $203{,}530$ parameters—nearly $99\%$ of the model!
+- **First-layer dominance on Fashion-MNIST ($d = 784, h = 256, q = 10$):** $\mathbf{W}^{(1)}, \mathbf{b}^{(1)}$ hold $785 \times 256 = 200{,}960$ of the $203{,}530$ parameters, nearly $99\%$ of the model.
 - **Adding a second hidden layer ($256 \to 256$):** Adds $257 \times 256 = 65{,}792$ parameters ($269{,}322$ total).
 :::
 
@@ -470,7 +468,7 @@ Whereas adding units to a *single* hidden layer adds hinges one by one ($h + 1$ 
 - **The 2-ReLU tent map:** On $[0, 1]$, two ReLU units compute the symmetric tent function:
   $$g(z) = 2\,\mathrm{ReLU}(z) - 4\,\mathrm{ReLU}(z - 1/2)$$
 - **Exponential folding across depth:** Each composition with $g$ folds $[0, 1]$ in half, doubling the linear segments: $g^{\circ m}$ has $2^m$ linear pieces using only $m$ hidden layers of $2$ units ($2m$ units total).
-- **10 layers vs. 1 layer:** At $m = 10$, a deep network of $20$ ReLU units produces $2^{10} = 1{,}024$ pieces; matching it with one hidden layer requires $2^{10} - 1 = 1{,}023$ units!
+- **10 layers vs. 1 layer:** At $m = 10$, a deep network of $20$ ReLU units produces $2^{10} = 1{,}024$ pieces; matching it with one hidden layer requires $2^{10} - 1 = 1{,}023$ units.
 :::
 
 ::: {.col .fig}
@@ -513,7 +511,7 @@ Modern deep networks default to rectifying nonlinearities on hidden layers becau
 
 Classical neural networks used smooth S-curves that squash $\mathbb{R}$ into $(0, 1)$ or $(-1, 1)$, but suffer from severe gradient attenuation across depth:
 
-- **Logistic sigmoid:** $\sigma(z) = \frac{1}{1 + e^{-z}} \in (0, 1)$ has derivative $\sigma'(z) = \sigma(z)(1 - \sigma(z)) \le 1/4$ (peaking at $z = 0$). Even near $z = 0$, stacking $K = 10$ sigmoid layers shrinks gradients by at least $4^{-10} \approx 10^{-6}$!
+- **Logistic sigmoid:** $\sigma(z) = \frac{1}{1 + e^{-z}} \in (0, 1)$ has derivative $\sigma'(z) = \sigma(z)(1 - \sigma(z)) \le 1/4$ (peaking at $z = 0$). Even near $z = 0$, stacking $K = 10$ sigmoid layers shrinks gradients by at least $4^{-10} \approx 10^{-6}$.
 - **Hyperbolic tangent:** $\tanh(z) = \frac{1 - e^{-2z}}{1 + e^{-2z}} = 2\sigma(2z) - 1 \in (-1, 1)$ is zero-centered with derivative $1 - \tanh^2(z) \le 1$ at $z = 0$, avoiding the $1/4$ penalty near the origin.
 - **Tail saturation at $|z| = 4$:** At $z = \pm 4$, $\sigma'(\pm 4) \approx 0.018$ and $\tanh'(\pm 4) \approx 0.0013$—both squash gradients by $>98\%$. Today, $\sigma$ and $\tanh$ serve as probability outputs or multiplicative *gates* in LSTMs/GRUs rather than deep hidden activations.
 :::

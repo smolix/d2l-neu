@@ -165,7 +165,7 @@ def relu(X):
     return X * (X > 0)
 ```
 
-We then factor the hidden layer into `hidden(self, X)`—which flattens each image minibatch to `(-1, self.num_inputs)` and computes $\mathbf{H} = \mathrm{relu}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$—so `forward(self, X)` simply returns the raw class logits $\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$ (consumed directly by `Classifier.loss`):
+We then factor the hidden layer into `hidden(self, X)`, which flattens each image minibatch to `(-1, self.num_inputs)` and computes $\mathbf{H} = \mathrm{relu}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$, so `forward(self, X)` simply returns the raw class logits $\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$ (consumed directly by `Classifier.loss`):
 
 ```{.python .input #mlp-implementation-model-2}
 %%tab mxnet
@@ -330,8 +330,8 @@ print(f'training accuracy of the MLP from scratch: {train_acc:.3f}')
 
 Notice two instructive patterns in the learning curves:
 
-1. **Slow warmup from `std=0.01`:** On epoch 1, both MLPs actually trail softmax regression! Because both $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$ start with entries around $0.01$, the hidden activations $\mathbf{H}$ and the backpropagated gradients into $\mathbf{W}^{(1)}$ are suppressed by a factor of $0.01$ until $\mathbf{W}^{(2)}$ grows—a bottleneck we eliminate with He initialization in :numref:`sec_numerical_stability`.
-2. **Cutting a fifth of the classification errors:** By epochs 26–30, softmax regression plateaus around $84\%$ validation accuracy ($16\%$ error rate), whereas both MLPs reach $\sim 87\%$ validation accuracy ($\sim 13\%$ error rate, and $87$–$90\%$ training accuracy)—eliminating roughly $20\%$ of softmax regression's mistakes.
+1. **Slow warmup from `std=0.01`:** On epoch 1, both MLPs actually trail softmax regression. Because both $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$ start with entries around $0.01$, the hidden activations $\mathbf{H}$ and the backpropagated gradients into $\mathbf{W}^{(1)}$ are suppressed by a factor of $0.01$ until $\mathbf{W}^{(2)}$ grows, a bottleneck we eliminate with He initialization in :numref:`sec_numerical_stability`.
+2. **Cutting a fifth of the classification errors:** By epochs 26–30, softmax regression plateaus around $84\%$ validation accuracy ($16\%$ error rate), whereas both MLPs reach $\sim 87\%$ validation accuracy ($\sim 13\%$ error rate, and $87$–$90\%$ training accuracy), eliminating roughly $20\%$ of softmax regression's mistakes.
 
 Which mistakes are left? In :numref:`sec_fashion_mnist` we saw that the four upper-body tops (T-shirt, pullover, coat, and shirt) look alike, so they are the natural suspects. For each of the two models we just trained, we count the validation errors and how many of them mistake one top for another:
 
@@ -351,7 +351,7 @@ For both models, more than half of all errors confuse two tops. The MLP makes fe
 
 ### The Learned Features
 
-In :numref:`sec_softmax_scratch`, the 10 columns of softmax regression's weight matrix $\mathbf{W}$ had to act as whole-garment templates. To see what our MLP's 256 hidden units learned, we first copy its trained weight matrices $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}$ and $\mathbf{W}^{(2)} \in \mathbb{R}^{256 \times 10}$ into NumPy arrays `W1` and `W2`:
+In :numref:`sec_softmax_scratch`, the 10 columns of softmax regression's weight matrix $\mathbf{W}$ had to act as whole-garment templates. To inspect what our MLP's 256 hidden units learned instead, we extract its trained weight matrices $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$ as NumPy arrays:
 
 ```{.python .input #mlp-implementation-what-the-hidden-units-compute-1}
 %%tab pytorch, tensorflow
@@ -368,7 +368,7 @@ W1, W2 = d2l.numpy(model.W1.data()), d2l.numpy(model.W2.data())
 W1, W2 = d2l.numpy(model.W1[...]), d2l.numpy(model.W2[...])
 ```
 
-We then select the 10 hidden units `units` whose columns in `W1` have the largest Euclidean norms, reshape each 784-vector into a $28 \times 28$ image normalized to $[-1, 1]$, and title each unit by the garment class to which `W2` assigns its largest positive outgoing weight (`W2[units].argmax(1)`):
+We display the 10 hidden units with the largest Euclidean weight norms as $28 \times 28$ images, labeling each unit by the garment class to which it assigns its largest positive outgoing weight:
 
 ```{.python .input #mlp-implementation-what-the-hidden-units-compute-2}
 names = data.text_labels(range(10))
@@ -396,12 +396,11 @@ for name, s in seconds.items():
     print(f'{name}: {s:.1f} s per epoch')
 ```
 
-On modern hardware (especially a GPU), both models take almost the exact same wall-clock time per epoch! At width $h = 256$, data loading and Python/kernel launch overhead dominate the runtime, so the 26-fold increase in dense matrix arithmetic runs virtually for free (Exercise :exref:`ex_mlp-implementation-width` explores the width at which matrix arithmetic finally overtakes data-loading overhead).
+On modern hardware (especially a GPU), both models take almost the same wall-clock time per epoch. At width $h = 256$, data loading and Python or kernel-launch overhead dominate the runtime, so the 26-fold increase in dense matrix arithmetic adds almost no wall-clock cost (Exercise :exref:`ex_mlp-implementation-width` explores the width at which matrix arithmetic finally overtakes data-loading overhead).
 
 ## Summary
 
-- **Pre-training checks:** A single forward pass on a small batch before training verifies tensor shapes, confirms that the initial cross-entropy loss sits near $\log q \approx 2.30$, and checks that roughly half of ReLU hidden units activate.
-- **Empirical gain over linear classification:** Adding one 256-unit ReLU hidden layer lifts Fashion-MNIST validation accuracy from $\sim 84\%$ to $\sim 87\%$ (cutting error rate by nearly a fifth) at virtually identical per-epoch wall-clock time. The hidden units learn contrast patterns (bright in one region, dark in a neighboring one) in place of whole-garment templates.
+Before launching training, a single forward pass on a small batch verifies intermediate and output tensor shapes, confirms that the initial cross-entropy loss sits near $\log q \approx 2.30$, and checks that roughly half of the ReLU hidden units activate. On Fashion-MNIST, inserting one 256-unit ReLU hidden layer lifts validation accuracy from $\sim 84\%$ to $\sim 87\%$, cutting the error rate by nearly a fifth at almost identical per-epoch GPU wall-clock time. Rather than forming blurred whole-garment templates, the hidden units learn contrast patterns that weigh neighboring regions with opposite signs and combine across the output layer.
 
 ## Exercises
 

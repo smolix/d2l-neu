@@ -6,9 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Numerical Stability and Initialization
 :label:`sec_numerical_stability`
 
-In :numref:`sec_mlp-implementation`, initializing our one-hidden-layer MLP with $\mathcal{N}(0, 0.01^2)$ weights caused a sluggish first epoch, yet the network recovered and reached $87\%$ accuracy. What happens if we stack *ten* hidden layers of width $256$ with that same $\mathcal{N}(0, 0.01^2)$ initialization? Ten epochs later, the loss has not budged from $\log 10 \approx 2.30$ and accuracy sits at $10\%$ random guessing! Conversely, if we initialize the weights with $\mathcal{N}(0, 1)$, activations and gradients come out astronomically large, and a single SGD update throws the weights so far that the next forward pass overflows to `inf` and `NaN`.
+In :numref:`sec_mlp-implementation`, initializing our one-hidden-layer MLP with $\mathcal{N}(0, 0.01^2)$ weights caused a sluggish first epoch, yet the network recovered and reached $87\%$ accuracy. What happens if we stack *ten* hidden layers of width $256$ with that same $\mathcal{N}(0, 0.01^2)$ initialization? Ten epochs later, the loss has not budged from $\log 10 \approx 2.30$ and accuracy sits at $10\%$ random guessing. Conversely, if we initialize the weights with $\mathcal{N}(0, 1)$, activations and gradients come out astronomically large, and a single SGD update throws the weights so far that the next forward pass overflows to `inf` and `NaN`.
 
-As we saw in :numref:`sec_backprop`, forward activations and backward gradients pass through a product of $K$ weight and slope matrices across a $K$-layer network. Unless each layer preserves the signal variance—keeping its multiplicative factor near $1$—signals either *vanish* exponentially to zero or *explode* exponentially to infinity. In this section, we quantify per-layer variance propagation, derive *Xavier* and *He* initialization, verify them on a 10-layer MLP on Fashion-MNIST, and prove why initial weights must be *random* to break permutation symmetry among hidden units.
+As we saw in :numref:`sec_backprop`, forward activations and backward gradients pass through a product of $K$ weight and slope matrices across a $K$-layer network. Unless each layer preserves the signal variance, keeping its multiplicative factor near $1$, signals either *vanish* exponentially to zero or *explode* exponentially to infinity. In this section, we quantify per-layer variance propagation, derive *Xavier* and *He* initialization, verify them on a 10-layer MLP on Fashion-MNIST, and prove why initial weights must be *random* to break permutation symmetry among hidden units.
 
 ```{.python .input #numerical-stability-and-init-numerical-stability-and-initialization}
 %%tab mxnet
@@ -83,7 +83,7 @@ $$
 $$
 :eqlabel:`eq_grad-factor`
 
-Across $t$ layers, the gradient's mean square is multiplied by $\big(h\,\tau^2\,\mathbb{E}[\phi'(z)^2]\big)^t$! For symmetric pre-activations and ReLU, $\phi'(z) \in \{0, 1\}$ is $1$ half the time, so $\mathbb{E}[\phi'(z)^2] = 1/2$ and the per-layer multiplier is $\frac{1}{2}h\tau^2$. At width $h = 256$:
+Across $t$ layers, the gradient's mean square is multiplied by $\big(h\,\tau^2\,\mathbb{E}[\phi'(z)^2]\big)^t$. For symmetric pre-activations and ReLU, $\phi'(z) \in \{0, 1\}$ is $1$ half the time, so $\mathbb{E}[\phi'(z)^2] = 1/2$ and the per-layer multiplier is $\frac{1}{2}h\tau^2$. At width $h = 256$:
 
 - With $\tau = 0.01$: the multiplier is $256 \times 10^{-4} / 2 = 0.0128$, which after $9$ hops shrinks the gradient mean square by $0.0128^9 \approx 10^{-17}$ (**vanishing gradients**).
 - With $\tau = 1$: the multiplier is $256 \times 1 / 2 = 128$, which after $9$ hops inflates the gradient mean square by $128^9 \approx 10^{19}$ (**exploding gradients**).
@@ -339,7 +339,7 @@ Initialization is not the whole answer to depth, though. The variance argument d
 
 ## Symmetry among Hidden Units
 
-Why must initial weights be *random* rather than setting every entry of $\mathbf{W}^{(1)}$ to the deterministic constant $c = \sqrt{2 / n_{\textrm{in}}}$? Because hidden units within a layer are permutation-symmetric: if all columns of $\mathbf{W}^{(1)}$ start identical (and all rows of $\mathbf{W}^{(2)}$ start identical), then every hidden unit computes the exact same forward activation, receives the exact same backward gradient, and takes the exact same SGD update step forever—collapsing a 256-unit layer into a single effective neuron! Let us verify on a 16-unit layer that constant He-scaled weights give identical gradient columns (`0.00` difference between units), whereas random He-scaled weights give every unit a distinct gradient direction:
+Why must initial weights be *random* rather than setting every entry of $\mathbf{W}^{(1)}$ to the deterministic constant $c = \sqrt{2 / n_{\textrm{in}}}$? Because hidden units within a layer are permutation-symmetric: if all columns of $\mathbf{W}^{(1)}$ start identical (and all rows of $\mathbf{W}^{(2)}$ start identical), then every hidden unit computes the same forward activation, receives the same backward gradient, and takes the same SGD update step forever, collapsing a 256-unit layer into a single effective neuron. Let us verify on a 16-unit layer that constant He-scaled weights give identical gradient columns (`0.00` difference between units), whereas random He-scaled weights give every unit a distinct gradient direction:
 
 ```{.python .input #numerical-stability-and-init-symmetry-among-hidden-units}
 %%tab mxnet
@@ -428,9 +428,7 @@ for name, (W1, W2) in inits.items():
 
 ## Summary
 
-- **Exponential variance scaling:** Across a $K$-layer MLP of width $h$ and weight variance $\tau^2$, each layer multiplies activation and gradient mean squares by roughly $h\tau^2\,\mathbb{E}[\phi'(z)^2]$, causing exponential vanishing or explosion unless this factor is close to $1$.
-- **Xavier and He initialization:** Xavier initialization sets $\tau^2 = 2/(n_{\textrm{in}} + n_{\textrm{out}})$ for linear and $\tanh$ layers; He initialization sets $\tau^2 = 2/n_{\textrm{in}}$ to compensate for ReLU halving the mean square, enabling deep ReLU networks to train from step 1.
-- **Symmetry breaking:** Initializing weights with identical constants locks all hidden units in a layer into identical gradients and updates forever; random initialization is essential to break permutation symmetry.
+Across a $K$-layer MLP of width $h$ and initial weight variance $\tau^2$, each layer multiplies activation and gradient mean squares by roughly $h\tau^2\,\mathbb{E}[\phi'(z)^2]$, causing signals to vanish or explode exponentially with depth unless that factor stays close to $1$. Xavier initialization sets $\tau^2 = 2/(n_{\textrm{in}} + n_{\textrm{out}})$ to balance forward and backward variance in linear and $\tanh$ layers, while He initialization doubles the variance to $\tau^2 = 2/n_{\textrm{in}}$ to offset ReLU zeroing out its negative half-line, allowing deep ReLU stacks to train cleanly from the first epoch. Because hidden units within a layer are permutation-symmetric, weights must also be drawn independently at random rather than set to a constant; otherwise every unit receives identical gradients and updates throughout training. Beyond step $0$, deeper architectures pair variance-preserving initialization with normalization layers and residual connections to keep signals well scaled as weights evolve.
 
 ## Exercises
 
@@ -621,7 +619,7 @@ $$\mathbb{E}[g_i^2] = \underbrace{h\, \tau^2\, \mathbb{E}\bigl[\phi'(z)^2\bigr]}
 
 ::: {.cols .vc}
 ::: {.col}
-- **The sigmoid catch-22:** Since $\sigma'(z) \le 1/4$, setting $h\tau^2 = 1$ divides gradient variance by $\ge 16$ per layer—and inflating weights ($h\tau^2 \ge 16$) pushes pre-activations $z$ into the saturated tails ($|z| \gg 3$) where $\sigma'(z) \to 0$ even faster!
+- **The sigmoid catch-22:** Since $\sigma'(z) \le 1/4$, setting $h\tau^2 = 1$ divides gradient variance by $\ge 16$ per layer, and inflating weights ($h\tau^2 \ge 16$) pushes pre-activations $z$ into the saturated tails ($|z| \gg 3$) where $\sigma'(z) \to 0$ even faster.
 - **Exploding gradients ruin step-size conditioning:** When layer-1 gradients are $10^9\times$ larger than layer-10 gradients, no single learning rate $\eta$ can train both layers simultaneously.
 :::
 
@@ -636,7 +634,7 @@ $$\mathbb{E}[g_i^2] = \underbrace{h\, \tau^2\, \mathbb{E}\bigl[\phi'(z)^2\bigr]}
 
 ::: {.cols .vc}
 ::: {.col}
-$$\mathrm{Var}[o_j] = \bigl(n_{\textrm{in}}\,\tau^2\bigr)\,\gamma^2, \qquad \mathrm{Var}[g_i] = \bigl(n_{\textrm{out}}\,\tau^2\bigr)\,\mathrm{Var}[g'_j]$$
+$$\begin{aligned}\mathrm{Var}[o_j] &= \bigl(n_{\textrm{in}}\,\tau^2\bigr)\,\gamma^2, \\ \mathrm{Var}[g_i] &= \bigl(n_{\textrm{out}}\,\tau^2\bigr)\,\mathrm{Var}[g'_j]\end{aligned}$$
 
 - **Dual preservation criteria:** Forward variance preservation requires $n_{\textrm{in}}\tau^2 = 1$; backward gradient preservation requires $n_{\textrm{out}}\tau^2 = 1$.
 - **Xavier compromise (Glorot & Bengio, 2010):** Average the two fan counts $\frac{1}{2}(n_{\textrm{in}} + n_{\textrm{out}})\tau^2 = 1 \implies \tau^2 = \frac{2}{n_{\textrm{in}} + n_{\textrm{out}}}$.
@@ -673,7 +671,7 @@ $$v^{(k)} = \frac{1}{2}\, n_{\textrm{in}}\, \tau^2\, v^{(k-1)} \quad \Longrighta
 - **Setup:** 10 ReLU layers of width $h = 256$ under three initializations; Xavier and He differ by a factor of 2 per layer.
 - **$\mathcal{N}(0, 0.01^2)$:** Collapses to $\sim 10^{-19}$ by layer 10.
 - **Xavier ($\tau^2 = 1/h$):** Loses a factor of $1/2$ at every ReLU layer, decaying by $2^{-10} \approx 10^{-3}$ across 10 layers.
-- **He ($\tau^2 = 2/h$):** Holds both activation mean squares and backward gradient mean squares near $1$, within a factor of about $2$, across all 10 layers!
+- **He ($\tau^2 = 2/h$):** Holds both activation mean squares and backward gradient mean squares near $1$, within a factor of about $2$, across all 10 layers.
 :::
 
 ::: {.col .fig}
@@ -759,7 +757,7 @@ Why not initialize every entry of $\mathbf{W}^{(1)}$ deterministically to the co
 @!numerical-stability-and-init-symmetry-among-hidden-units
 
 - **Permutation invariance:** An MLP's output is unchanged if we permute the columns of $\mathbf{W}^{(1)}$ and the corresponding rows of $\mathbf{W}^{(2)}$.
-- **Deterministic fixed point of SGD:** If all columns of $\mathbf{W}^{(1)}$ start identical ($c$) and all rows of $\mathbf{W}^{(2)}$ start identical ($c_{\textrm{out}}$), every hidden unit receives the exact same gradient (`0.00` difference above) and remains identical forever—reducing width $h$ to $1$ effective unit!
+- **Deterministic fixed point of SGD:** If all columns of $\mathbf{W}^{(1)}$ start identical ($c$) and all rows of $\mathbf{W}^{(2)}$ start identical ($c_{\textrm{out}}$), every hidden unit receives the same gradient (`0.00` difference above) and remains identical forever, reducing width $h$ to $1$ effective unit.
 :::
 
 ::: {.slide title="What Initialization Alone Cannot Fix During Training"}
@@ -792,7 +790,7 @@ Test your understanding of variance propagation and symmetry breaking:
 
 1. **First-layer $\tau$:** Xavier gives $\tau = \sqrt{2/(784 + 256)} = \sqrt{2/1040} \approx 0.0439$; He gives $\tau = \sqrt{2/784} = 1/19.8 \approx 0.0505$ ($5\times$ larger than $0.01$).
 2. **Leaky ReLU:** $\phi'(z)^2 = 1$ for $z > 0$ (prob $1/2$) and $\alpha^2$ for $z < 0$ (prob $1/2$), so $\mathbb{E}[\phi'(z)^2] = \frac{1 + \alpha^2}{2}$ and $\tau^2 = \frac{2}{(1 + \alpha^2)n_{\textrm{in}}}$.
-3. **Zero weights:** If $\mathbf{W}^{(2)} = \mathbf{0}$, then $\partial L / \partial \mathbf{H} = (\partial L / \partial \mathbf{O})\mathbf{W}^{(2)\top} = \mathbf{0}$, so $\partial L / \partial \mathbf{W}^{(1)} = \mathbf{0}$ for *all* hidden units on step 1 regardless of $\mathbf{b}^{(1)}$! Random weights are essential.
+3. **Zero weights:** If $\mathbf{W}^{(2)} = \mathbf{0}$, then $\partial L / \partial \mathbf{H} = (\partial L / \partial \mathbf{O})\mathbf{W}^{(2)\top} = \mathbf{0}$, so $\partial L / \partial \mathbf{W}^{(1)} = \mathbf{0}$ for *all* hidden units on step 1 regardless of $\mathbf{b}^{(1)}$. Random weights are essential.
 :::
 :::
 

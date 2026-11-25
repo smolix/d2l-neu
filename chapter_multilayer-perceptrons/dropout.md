@@ -54,7 +54,7 @@ from d2l import jax as d2l
 
 ### Masking and Rescaling (Inverted Dropout)
 
-Injecting random noise into inputs during training encourages smooth, perturbation-resilient functions :cite:`Bishop.1995`—in fact, for a linear model $\mathbf{w}^\top\mathbf{x} + b$ under squared error, adding zero-mean independent noise of variance $s^2$ to the inputs adds $s^2\|\mathbf{w}\|_2^2$ to the expected loss, which is literally $\ell_2$ weight decay! Dropout extends noise injection to hidden layers via random binary masking.
+Injecting random noise into inputs during training encourages smooth, perturbation-resilient functions :cite:`Bishop.1995`; in fact, for a linear model $\mathbf{w}^\top\mathbf{x} + b$ under squared error, adding zero-mean independent noise of variance $s^2$ to the inputs adds $s^2\|\mathbf{w}\|_2^2$ to the expected loss, which is $\ell_2$ weight decay. Dropout extends noise injection to hidden layers via random binary masking.
 
 For a hidden activation $h_j$ and *dropout probability* $p \in [0, 1)$, on each training step we draw an independent Bernoulli mask $\xi_j \in \{0, 1\}$ with $P(\xi_j = 0) = p$ and $P(\xi_j = 1) = 1 - p$, and replace $h_j$ with
 
@@ -77,7 +77,7 @@ Because $\mathbb{E}[h_j'] = h_j$ is preserved during training, **at inference ti
 
 ### The Dropout Layer
 
-Our from-scratch `dropout_layer(X, dropout)` draws a uniform tensor in $[0, 1)$, keeps entries $\geq$ `dropout`, and divides by `1.0 - dropout` (returning zeros when `dropout == 1`). Let us test it on a $2 \times 8$ array for $p \in \{0, 0.5, 1\}$ and verify on $10^6$ ones at $p = 0.2$ that the sample mean is $1.000$ and the sample variance is $p/(1 - p) = 0.250$:
+Our from-scratch `dropout_layer(X, dropout)` draws a uniform tensor in $[0, 1)$, keeps entries $\geq$ `dropout`, and divides by `1.0 - dropout` (returning zeros when `dropout == 1`):
 
 ```{.python .input #dropout-implementation-from-scratch-1}
 %%tab mxnet
@@ -115,7 +115,7 @@ def dropout_layer(X, dropout, key):
     return mask.astype(X.dtype) * X / (1.0 - dropout)
 ```
 
-Let's test `dropout_layer` on a $2 \times 8$ tensor with dropout probabilities
+Let us test `dropout_layer` on a $2 \times 8$ tensor with dropout probabilities
 $0$, $0.5$, and $1$. We also apply $p = 0.2$ to a vector of one million ones and
 verify that its empirical mean and variance match the theoretical values $1$ and
 $p/(1 - p) = 0.25$.
@@ -382,7 +382,7 @@ class DropoutMLP(d2l.Classifier):
 
 ## Effects of Dropout under Label Noise
 
-On the full $60{,}000$-image Fashion-MNIST dataset over 20 epochs, an unregularized MLP barely overfits, leaving little room for dropout to shine. To watch dropout combat severe memorization, we return to the $1{,}000$-image noisy-label benchmark from :numref:`subsec_early_stopping`, corrupting $40\%$ of the training labels at random via `d2l.corrupt` ($\sim 36\%$ genuinely wrong labels, indexed by the Boolean mask `wrong = labels != y`):
+On the full $60{,}000$-image Fashion-MNIST dataset over 20 epochs, an unregularized MLP barely overfits, leaving little room for dropout to shine. To watch dropout combat severe memorization, we return to the $1{,}000$-image noisy-label benchmark from :numref:`subsec_early_stopping`, corrupting $40\%$ of the training labels at random via `d2l.corrupt` ($\sim 36\%$ wrong labels, indexed by the Boolean mask `wrong = labels != y`):
 
 ```{.python .input #dropout-noisy-labels-1}
 images = d2l.FashionMNIST(batch_size=2000)
@@ -425,8 +425,7 @@ In practice, dropout is most valuable precisely when parameter count dwarfs data
 
 ## Summary
 
-- **Inverted dropout:** Zeroing each hidden activation independently with probability $p$ and rescaling survivors by $1/(1 - p)$ during training preserves $\mathbb{E}[h_j'] = h_j$ while injecting variance $\frac{p}{1-p}h_j^2$, allowing the full unscaled network to run deterministically at test time.
-- **Resistance to noise memorization:** On small datasets with corrupted labels, dropout slows the memorization of wrong labels and leaves held-out accuracy a few points higher. It does not prevent memorization, so it complements early stopping and weight decay rather than replacing them.
+Inverted dropout zeroes out each hidden activation independently with probability $p$ and rescales surviving activations by $1/(1 - p)$ during training. Because this rescaling preserves $\mathbb{E}[h_j'] = h_j$ while injecting variance $\frac{p}{1 - p}h_j^2$, the full unmasked network runs deterministically at test time without any weight rescaling. On small or noisy datasets where parameter count far exceeds sample size, dropout discourages fragile co-adaptation across hidden units, slows the memorization of corrupted labels, and lifts held-out accuracy by several percentage points. Because it delays rather than prevents eventual memorization, dropout works best alongside early stopping and weight decay.
 
 ## Exercises
 

@@ -77,7 +77,7 @@ raw_train, raw_test = read_house_prices()
 print(raw_train.shape, raw_test.shape)
 ```
 
-Slicing the first four rows across the first four and last three columns of `raw_train` via `iloc` displays a representative mix of integer codes (`Id`, `MSSubClass`), string categories (`MSZoning`, `SaleType`, `SaleCondition`), continuous measurements (`LotFrontage`), and the dollar target `SalePrice`:
+Inspecting the first four rows across a few leading and trailing columns of `raw_train` shows a representative mix of integer codes (`Id`, `MSSubClass`), string categories (`MSZoning`, `SaleType`, `SaleCondition`), continuous measurements (`LotFrontage`), and the dollar target `SalePrice`:
 
 ```{.python .input #kaggle-house-price-data-preprocessing-1  n=10}
 print(raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
@@ -89,14 +89,14 @@ Because home prices range from $\$34{,}900$ to $\$755{,}000$, a $\$50{,}000$ err
 
 $$\textrm{log-RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^n\left(\log y_i - \log \hat{y}_i\right)^2}.$$
 
-For small $\delta = |\log \hat{y} - \log y|$, $\hat{y}/y = e^{\pm \delta} \approx 1 \pm \delta$, so a log-RMSE of $0.135$ corresponds to roughly a $13.5\%$ typical percentage error. By training our models to predict $\log y$ under squared error loss, we optimize the square of the competition metric directly!
+For small $\delta = |\log \hat{y} - \log y|$, $\hat{y}/y = e^{\pm \delta} \approx 1 \pm \delta$, so a log-RMSE of $0.135$ corresponds to roughly a $13.5\%$ typical percentage error. By training our models to predict $\log y$ under squared error loss, we optimize the square of the competition metric directly.
 
 ## Leakage-Free Preprocessing
 
 Turning the raw DataFrames into float32 feature matrices requires four careful steps, implemented in `preprocess(train, *others)` below:
 
 1. **Recast numeric category codes to strings:** `MSSubClass` uses numbers ($20, 60, 90, \ldots$) to name dwelling styles (1-story, 2-story, duplex); converting it to `str` prevents the model from treating code $90$ as a linear multiple of code $20$.
-2. **Standardize numerical features using *training-set* statistics only:** Computing means $\mu$ and standard deviations $s$ exclusively on `train`—and applying $(x - \mu)/s$ to both training and validation/test tables—puts all numerical features on a unit scale for SGD and weight decay while preventing *data leakage* from validation or test rows.
+2. **Standardize numerical features using *training-set* statistics only:** Computing means $\mu$ and standard deviations $s$ exclusively on `train` and applying $(x - \mu)/s$ to both training and validation/test tables puts all numerical features on a unit scale for SGD and weight decay while preventing *data leakage* from validation or test rows.
 3. **Impute missing numerical values with $0$ (the training mean):** Filling standardized `NaN` entries with `0` replaces missing numerical measurements by their training-set mean (Exercise :exref:`ex_kaggle-house-mean-imputation`).
 4. **One-hot encode categoricals (`pd.get_dummies(..., dummy_na=True)`):** Expands each categorical column into binary indicators (including an explicit indicator for `NaN`) and aligns validation/test columns to the exact training column vocabulary via `reindex(..., fill_value=0)`:
 
@@ -335,7 +335,7 @@ print(f'weight decay {best}: MLP minus linear, per fold',
       np.round(mlp[best][1] - linear[1], 3))
 ```
 
-The cross-validation curve traces a textbook U-shape: weak weight decay (`wd = 0.001`) overfits the training folds (training RMSE $\sim 0.09$, validation RMSE $\sim 0.15$–$0.18$, worse than linear regression!), intermediate weight decay (`wd = 0.03` or `0.1`) hits the sweet spot at validation RMSE $\sim 0.135$–$0.14$ (beating the linear baseline on most folds), and excessive decay (`wd = 0.3`) underfits.
+The cross-validation curve traces a textbook U-shape: weak weight decay (`wd = 0.001`) overfits the training folds (training RMSE $\sim 0.09$, validation RMSE $\sim 0.15$–$0.18$, worse than linear regression), intermediate weight decay (`wd = 0.03` or `0.1`) hits the sweet spot at validation RMSE $\sim 0.13$–$0.14$ (beating the linear baseline on most folds), and excessive decay (`wd = 0.3`) underfits.
 
 ## Submitting Predictions
 :label:`subsec_kaggle_submission`
@@ -357,8 +357,7 @@ submission.head()
 
 ## Summary
 
-- **Leakage-free tabular preprocessing:** Recast numeric category codes to strings, standardize numerical features using training-split means and standard deviations only, impute missing standardized values with $0$, one-hot encode categoricals with `dummy_na=True`, and center log targets by the training mean.
-- **Cross-validated model selection:** Reusing identical $K = 5$ folds across models cancels fold-sampling noise in paired comparisons; tuning weight decay takes a 22,000-parameter MLP from overfitting ($\sim 0.15$–$0.18$ log-RMSE) past the linear baseline ($\sim 0.15$) down to $\sim 0.135$ log-RMSE (while gradient-boosted trees remain a strong tabular competitor; see Exercise :exref:`ex_kaggle-house-trees`).
+Real-world tabular regression hinges on disciplined, leakage-free preprocessing: dropping arbitrary row identifiers, recasting numeric category codes to strings, standardizing numerical columns with training-split means and standard deviations before zero-imputing missing entries, one-hot encoding categoricals with an explicit missingness indicator, and centering log-transformed targets around the training mean. Evaluating all candidate models on the same $K = 5$ cross-validation folds—each refitting its own preprocessor on its four training folds—cancels fold-sampling noise when comparing models head to head. On Ames Housing, tuning $\ell_2$ weight decay moves a 22,000-parameter ReLU MLP from overfitting ($\sim 0.15$–$0.18$ log-RMSE) past the linear baseline ($\sim 0.15$) to $\sim 0.13$–$0.14$ log-RMSE, though gradient-boosted decision trees remain a strong competitor on heterogeneous tabular features (Exercise :exref:`ex_kaggle-house-trees`).
 
 ## Exercises
 
@@ -503,7 +502,7 @@ Predicting House Prices on Kaggle: End-to-End Tabular ML<br>**log-RMSE metric ·
 
 ::: {.cols .vc}
 ::: {.col}
-- **Scarce, heterogeneous data:** Only $1{,}460$ labeled Ames homes ($+1{,}459$ test homes) across $79$ mixed columns ($35$ numeric spanning $10^0$–$10^5$, $44$ categorical, `NaN`s in $19$ columns).
+- **Scarce, heterogeneous data:** Only $1{,}460$ labeled Ames homes ($+1{,}459$ test homes) across $79$ mixed columns ($35$ numeric spanning $10^0$–$10^5$ and $44$ categorical after recasting `MSSubClass`, with `NaN`s in $19$ columns).
 - **Relative evaluation metric:** Sale prices span $\$34.9\textrm{k}$–$\$755\textrm{k}$ ($22\times$ range) and are scored by **log-RMSE**.
 - **Overfitting risk ($\sim 19$ params/house):** With $345$ one-hot expanded features, leakage-free preprocessing, 5-fold cross-validation, and $\ell_2$ weight decay are essential.
 :::
@@ -522,7 +521,7 @@ Loading the CSV tables via `read_house_prices()` reveals $1{,}460 \times 81$ tra
 @!kaggle-house-price-data-preprocessing-1
 
 - **Numeric vs. disguised categorical codes:** `LotFrontage` is a physical length in feet (with $259$ `NaN` rows), whereas `MSSubClass` uses integers ($20, 60, 90, \ldots$) to encode dwelling style (1-story, 2-story, duplex) and must be cast to `str`.
-- **Informative missingness:** In many categorical attributes (such as `PoolQC` or `Alley`), `NaN` is not a recording error—it encodes the physical absence of a pool or alley!
+- **Informative missingness:** In many categorical attributes (such as `PoolQC` or `Alley`), `NaN` is not a recording error; it encodes the physical absence of a pool or alley.
 - **Row identifier trap:** Column `Id` ($1, 2, \ldots, 1460$) carries zero predictive signal and must be dropped before training so the model cannot memorize row indices.
 :::
 
@@ -603,7 +602,7 @@ All four steps fit exclusively on `train` and transform `*others` (`val` or `tes
 ::: {.slide title="Shared 5-Fold Cross-Validation Without Leakage"}
 [Model Selection Protocol]{.kicker}
 
-With only $1{,}460$ labeled houses, a single $20\%$ validation split ($292$ houses) has a sampling standard error of $\sim 0.015$ in log-RMSE—larger than the gap between competing models!
+With only $1{,}460$ labeled houses, a single $20\%$ validation split ($292$ houses) has a sampling standard error of $\sim 0.015$ in log-RMSE, larger than the gap between competing models.
 
 ::: {.cols .vc}
 ::: {.col}
@@ -668,8 +667,8 @@ Because both models were evaluated on the exact same $5$ folds, we can inspect t
 
 @!kaggle-house-price-mlp-paired
 
-- **Variance reduction via pairing:** Even though fold-to-fold validation RMSE varies by $\pm 0.04$ across splits (depending on which fold holds out unusual luxury sales), the paired difference is negative (or tied within $0.005$) on every fold!
-- **Tabular reality check:** While our regularized 64-unit MLP beats linear regression by $\sim 0.01$–$0.015$ log-RMSE, on heterogeneous tabular data gradient-boosted decision trees (XGBoost / LightGBM) remain fierce competitors (Exercise 4.7.3).
+- **Variance reduction via pairing:** Even though fold-to-fold validation RMSE varies by $\pm 0.04$ across splits (depending on which fold holds out unusual luxury sales), the paired difference favors the regularized MLP on nearly every fold, lowering mean validation RMSE by $\sim 0.006$–$0.014$.
+- **Tabular reality check:** While our regularized 64-unit MLP beats linear regression by $\sim 0.01$ log-RMSE on average, on heterogeneous tabular data gradient-boosted decision trees (XGBoost / LightGBM) remain fierce competitors (see the exercises).
 :::
 
 ::: {.slide title="Retraining on All 1,460 Houses & Writing submission.csv"}

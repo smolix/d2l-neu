@@ -11693,9 +11693,11 @@ def r2_config(preset='r2', **overrides):
     L, d, H, H_kv, f, qk_norm, T = R2_ARCHS[preset]
     arch = Arch(L, d, H, H_kv, d // H, f, 32768, T, 1e4, qk_norm, True)
     B, steps, warmup, decay, lr, data = R2_SCHEDULES[preset]
-    cfg = PretrainConfig(preset, arch, steps, B, micro_batch=16 if T < 4096
-                         else 8, peak_lr=lr, warmup=warmup, decay=decay,
-                         data=data, **d2l._preset_saves(preset))
+    # the largest micro-batch that fits a 24 GB card (r2 at 8 does not)
+    micro = 16 if T < 4096 else 4 if preset.startswith('r2') else 8
+    cfg = PretrainConfig(preset, arch, steps, B, micro_batch=micro,
+                         peak_lr=lr, warmup=warmup, decay=decay, data=data,
+                         **d2l._preset_saves(preset))
     return dataclasses.replace(cfg, **overrides)
 
 def flops_per_token(arch, T=None, causal_half=False):

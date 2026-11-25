@@ -168,8 +168,10 @@ class ConfigTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             d2l.r2_config('r2', micro_batch=7).accum(1)
         r2 = d2l.r2_config()
+        # micro-batch 4: at 8, r2 ran out of memory in run A's D1 probe
         self.assertEqual((r2.steps, r2.global_batch, r2.micro_batch,
-                          r2.accum(4)), (6000, 128, 8, 4))
+                          r2.accum(4)), (6000, 128, 4, 8))
+        self.assertEqual(d2l.r2_config('ladder-88m').micro_batch, 8)
         self.assertEqual(r2.branches, ((2550, 450), (1275, 225)))
         self.assertIn(5100, r2.state_steps)
         self.assertEqual(r2.stats_every, 10)

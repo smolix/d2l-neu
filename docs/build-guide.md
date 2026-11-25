@@ -591,11 +591,20 @@ make upload-r2-dry-run        # what would upload to the staging-d2l bucket
 make upload-r2                # incremental upload of _book/ (needs .env, aws)
 make upload-r2-delete         # also delete bucket objects missing from _book/
 make upload-r2-full R2_BUCKET=temporary-d2l   # another bucket, full upload
+make upload-r2-delete R2_BUCKET=d2l-en         # production: d2l.ai and en.d2l.ai
+                              # (keys in ~/.config/cloudflare/d2l-buckets.env)
 make publish-colab            # rebuild hosted notebooks, force-push the orphan
                               # `notebooks` branch, verify it
 python3 tools/create_forum_topics.py           # pages without a forum link (dry run)
 python3 tools/create_forum_topics.py --create  # create topics, insert the links
 ```
+
+Buckets: `staging-d2l` serves d2l.smola.org and is the default; `d2l-en`
+serves d2l.ai and en.d2l.ai. The previous edition stays in `d2l-en-v2` at
+en-v2.d2l.ai, linked as "English (old)" at the bottom of the navbar's
+language menu (`_quarto.yml`); other languages' old editions go under the
+same divider when their new sites launch. The language buckets (`d2l-zh`,
+`d2l-ja`, ...) share the `d2l-buckets.env` keys.
 
 Rules: the `notebooks` branch is an orphan serving branch; never open a PR
 from it or merge it. Forum topics need the key in

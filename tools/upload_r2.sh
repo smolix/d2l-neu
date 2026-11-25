@@ -81,13 +81,37 @@ done
 # bucket — the staging pair unsuffixed, and a suffixed set per additional bucket
 # — and the table below is the whole mapping. R2_CRED_SUFFIX is the escape hatch
 # for a bucket not listed here yet.
+#
+# The production language buckets (d2l-en serves d2l.ai and en.d2l.ai; d2l-zh,
+# d2l-ja, ... the other languages) share one token, kept outside the repo in
+# ~/.config/cloudflare/d2l-buckets.env (override with D2L_BUCKETS_ENV). That file
+# uses the standard names (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+# AWS_ENDPOINT_URL_S3), so it is sourced as is.
+CRED_FILE=""
 case "$BUCKET" in
     staging-d2l)   CRED_SUFFIX="" ;;
     temporary-d2l) CRED_SUFFIX="_TEMPORARY" ;;
+    d2l-en|d2l-zh|d2l-ja|d2l-ko|d2l-pt|d2l-tr|d2l-vi|d2l-ar|d2l-de|d2l-el|d2l-es|d2l-fr|d2l-hi)
+                   CRED_SUFFIX=""
+                   CRED_FILE="${D2L_BUCKETS_ENV:-$HOME/.config/cloudflare/d2l-buckets.env}" ;;
     *)             CRED_SUFFIX="${R2_CRED_SUFFIX-}" ;;
 esac
 
-if [[ -n "$CRED_SUFFIX" ]]; then
+if [[ -n "$CRED_FILE" ]]; then
+    if [[ ! -f "$CRED_FILE" ]]; then
+        echo "Error: bucket '$BUCKET' needs credentials from $CRED_FILE (not found)." >&2
+        exit 1
+    fi
+    set -a
+    # shellcheck disable=SC1090
+    source "$CRED_FILE"
+    set +a
+    if [[ -z "${AWS_ACCESS_KEY_ID-}" || -z "${AWS_SECRET_ACCESS_KEY-}" || -z "${AWS_ENDPOINT_URL_S3-}" ]]; then
+        echo "Error: $CRED_FILE must set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_ENDPOINT_URL_S3." >&2
+        exit 1
+    fi
+    ENDPOINT="$AWS_ENDPOINT_URL_S3"
+elif [[ -n "$CRED_SUFFIX" ]]; then
     # The .env names are imprecise, and deliberately left alone: the variable
     # spelled R2_ACCOUNT_ID_<SUFFIX> actually holds the S3 *Access Key ID*, and
     # CLOUDFLARE_TOKEN_<SUFFIX> the *Secret Access Key* — the pair Cloudflare

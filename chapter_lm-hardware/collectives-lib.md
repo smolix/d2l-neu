@@ -868,8 +868,9 @@ def _hier_predict(r):
 def _show_hier(r, sizes=(2**24, 2**28)):
     """At most five rows: each variant's time (ms) at two sizes, measured
     and predicted by the closed forms; one line with the hierarchical gain
-    over the flat gloo baseline, measured and predicted, and the
-    intra/inter bandwidth ratio of the fits."""
+    over the flat gloo baseline, measured and predicted; one with the
+    intra/inter bandwidth ratio, measured from the two stages alone and
+    from the fits."""
     if r.empty:
         print(r.attrs.get('label', 'pending'))
         return
@@ -889,8 +890,12 @@ def _show_hier(r, sizes=(2**24, 2**28)):
             f'than flat gloo')
     if p:
         text += (f" ({big.model['flat gloo'] / big.model['hierarchical']:.1f}"
-                 f'x by the model); intra/inter bandwidth {p[1]:.1f}x')
+                 f'x by the model)')
     print(text)
+    # a 2-rank ring moves S per rank in the intra stage, S / 2 in the inter
+    ratio = 2 * big.us['inter stage'] / big.us['intra stage']
+    print(f'intra/inter bandwidth: {ratio:.1f}x measured from the stages'
+          + (f', {p[1]:.1f}x from the fits' if p else ''))
 
 #@save
 def _check_line(rec, where):

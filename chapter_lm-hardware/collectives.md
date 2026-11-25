@@ -310,8 +310,9 @@ for G in (4, 8, 16, 32):
                                     / model(f * S_star) - 1)
             for f in factors}))
 err = pd.DataFrame(rows)
-d2l.show_table(err, digits=1, width=79)
 cols = [c for c in err.columns if c.endswith('(%)')]
+err[cols] = err[cols].round(1) + 0.0  # + 0.0: no '-0.0' in the table
+d2l.show_table(err, digits=dict.fromkeys(cols, 1), width=79)
 assert (err[err.algo == 'ring'][cols].abs() < 1e-6).all().all()  # exact
 assert (err[err.algo == 'tree']['100 S* (%)'].abs() < 1).all()  # C1
 assert (err[cols] < 1).all().all()  # the closed form is an upper bound

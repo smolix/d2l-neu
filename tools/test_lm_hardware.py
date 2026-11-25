@@ -3062,8 +3062,9 @@ class TestCollectives(unittest.TestCase):
         r = pd.DataFrame(rows)
         with mock.patch.object(d2l, '_hier_predict', return_value=None):
             lines, _ = lines_of(self, d2l._show_hier, r)
-        self.assertLessEqual(len(lines), 8)
-        self.assertIn('hierarchical 3.0x faster than flat gloo', lines[-1])
+        self.assertLessEqual(len(lines), 9)  # two header rows, five rows
+        self.assertIn('hierarchical 3.0x faster than flat gloo', lines[-2])
+        self.assertIn('4.0x measured from the stages', lines[-1])
 
     def test_campaign_config_refused(self):
         with self.assertRaisesRegex(ValueError, 'campaign launcher'):

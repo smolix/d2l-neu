@@ -929,7 +929,7 @@ not—and those nonzero component gradients are the noise that a constant step
 size keeps injecting.
 
 One important regime needs no remedy at all. If a model interpolates the
-training set—fitting every single example with zero loss—then every
+training set (fitting every single example with zero loss), then every
 $\nabla f_i(\mathbf{x}^\star)$ vanishes at the minimizer, and constant-step
 SGD on a strongly convex objective converges linearly with no noise floor
 (exercise :exref:`ex_mdl-stochastic-gradient-methods-interpolation`). Large
@@ -1050,7 +1050,7 @@ putting the theorem's step-size ceiling $1/(4L_{\max})$ between roughly $0.006$
 and $0.01$.
 
 Next, we compare SVRG ($m = n$) against single-example SGD at the same constant
-step size $\eta = 0.02$—more than twice the theorem's bound—for $12$ epochs
+step size $\eta = 0.02$ (more than twice the theorem's bound) for $12$ epochs
 costing $3n$ example-gradient evaluations each. We also test our earlier
 quadratic-floor formula on SGD: its steady-state loss gap should equal the sum
 of $\eta\sigma_i^2/(2(2 - \eta\lambda_i))$ over the eigenvectors of the
@@ -1092,7 +1092,7 @@ between roughly $10\%$ below and $40\%$ above the prediction—slightly above
 more often than below, because the formula evaluates gradient variance only at
 $\mathbf{x}^\star$, whereas the example gradients spread slightly more away
 from the minimizer. SVRG starts behind and finishes far ahead. After its first
-epoch—which takes only $n$ inner steps anchored at the starting point—its gap
+epoch (which takes only $n$ inner steps anchored at the starting point), its gap
 still exceeds SGD's. From epoch $2$ onward, however, it shrinks by roughly a
 factor of eight per epoch (between five and thirteen across runs), reaching
 $10^{-13}$ to $10^{-8}$ by epoch $12$. Notably, it achieves this linear
@@ -1433,7 +1433,7 @@ In deep learning we care about the expected suboptimality gap $\mathbb{E}[f(\mat
 On $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ with $\eta = 1/L = 10^{-3}$ and unit noise ($\sigma_1^2 = \sigma_2^2 = 1$):
 
 - **Flat mode ($\lambda_1 = 1$):** Contracts at $\rho_1 = 0.999$, taking $\approx 3{,}450$ steps to decay its transient to the floor $\tfrac12\lambda_1 V_1 = 2.5 \times 10^{-4}$ ($33\%$).
-- **Steep mode ($\lambda_2 = 1000$):** Contracts in $1$ step ($\rho_2 = 0$), but because $2 - \eta\lambda_2 = 1$, it contributes $\tfrac12\lambda_2 V_2 = 5.0 \times 10^{-4}$ ($67\%$ of the total $7.5 \times 10^{-4}$ loss floor!).
+- **Steep mode ($\lambda_2 = 1000$):** Contracts in $1$ step ($\rho_2 = 0$), but because $2 - \eta\lambda_2 = 1$, it contributes $\tfrac12\lambda_2 V_2 = 5.0 \times 10^{-4}$ ($67\%$ of the total $7.5 \times 10^{-4}$ loss floor).
 :::
 
 ::: {.col .fig .big}
@@ -1569,9 +1569,9 @@ $$\mathbb{E}\big[f(\bar{\mathbf{x}}_K)\big] - f^\star \le \frac{D^2}{2\eta K} + 
 
 For nonconvex neural networks, assume $f$ is $L$-smooth with $\Delta = f(\mathbf{x}_0) - f^\star$, and stochastic gradients satisfy $\mathbb{E}[\mathbf{g}_k \mid \mathbf{x}_k] = \nabla f(\mathbf{x}_k)$ and $\mathbb{E}[\|\mathbf{g}_k - \nabla f(\mathbf{x}_k)\|^2 \mid \mathbf{x}_k] \le \sigma^2$:
 
-- **Step 1 — Stochastic descent lemma:** Plug $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\mathbf{g}_k$ into the $L$-smoothness quadratic ceiling and use $\mathbb{E}[\|\mathbf{g}_k\|^2 \mid \mathbf{x}_k] \le \|\nabla f(\mathbf{x}_k)\|^2 + \sigma^2$:
+- **Step 1: Stochastic descent lemma:** Plug $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\mathbf{g}_k$ into the $L$-smoothness quadratic ceiling and use $\mathbb{E}[\|\mathbf{g}_k\|^2 \mid \mathbf{x}_k] \le \|\nabla f(\mathbf{x}_k)\|^2 + \sigma^2$:
   $$\mathbb{E}\big[f(\mathbf{x}_{k+1}) \mid \mathbf{x}_k\big] \le f(\mathbf{x}_k) - \eta\left(1 - \frac{L\eta}{2}\right)\|\nabla f(\mathbf{x}_k)\|^2 + \frac{L\eta^2\sigma^2}{2}$$
-- **Step 2 — Telescope for $\eta \le 1/L$ (so $1 - L\eta/2 \ge \tfrac12$):** Summing over $k = 0, \ldots, K-1$ and dividing by $\eta K / 2$ bounds the average squared gradient norm:
+- **Step 2: Telescope for $\eta \le 1/L$ (so $1 - L\eta/2 \ge \tfrac12$):** Summing over $k = 0, \ldots, K-1$ and dividing by $\eta K / 2$ bounds the average squared gradient norm:
   $$\frac{1}{K}\sum_{k=0}^{K-1}\mathbb{E}\big[\|\nabla f(\mathbf{x}_k)\|^2\big] \le \frac{2\Delta}{\eta K} + L\eta\sigma^2$$
 :::
 
@@ -1609,7 +1609,7 @@ Training a nonconvex single-neuron regression model $f(\mathbf{x}) = \frac{1}{n}
 
 Why does constant-step SGD stall on a noise floor? At the global minimizer $\mathbf{x}^\star$, the average gradient vanishes ($\nabla f(\mathbf{x}^\star) = \frac{1}{n}\sum_{i=1}^n \nabla f_i(\mathbf{x}^\star) = \mathbf{0}$), but individual example gradients $\nabla f_i(\mathbf{x}^\star)$ generally do not:
 
-- **The interpolation regime ($\nabla f_i(\mathbf{x}^\star) = \mathbf{0}$ for all $i$):** When an overparameterized network fits every training example with zero loss, every component gradient vanishes at $\mathbf{x}^\star$. The noise variance $\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star) = 0$ vanishes automatically at the optimum, and constant-step SGD converges linearly with no noise floor!
+- **The interpolation regime ($\nabla f_i(\mathbf{x}^\star) = \mathbf{0}$ for all $i$):** When an overparameterized network fits every training example with zero loss, every component gradient vanishes at $\mathbf{x}^\star$. The noise variance $\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star) = 0$ vanishes automatically at the optimum, and constant-step SGD converges linearly with no noise floor.
 - **Non-interpolating finite sums ($\nabla f_i(\mathbf{x}^\star) \neq \mathbf{0}$):** When individual examples disagree at $\mathbf{x}^\star$, we can cancel their persistent variance using a Monte Carlo **control variate**—subtracting a correlated gradient whose exact mean over the $n$ examples is known.
 :::
 

@@ -197,7 +197,7 @@ for dt in [np.float16, np.float32, ml_dtypes.bfloat16,
           f'{float(fi.smallest_normal):16.3e} {float(fi.max):10.3e}')
 ```
 
-**fp32** keeps $p=23$ mantissa bits—about seven decimal digits—and reaches up
+**fp32** keeps $p=23$ mantissa bits (about seven decimal digits) and reaches up
 to $3.4\times10^{38}$. **fp16** keeps $p=10$ bits (about three decimal digits)
 but has a narrow exponent range: it overflows above $65504$, and below
 $2^{-14}\approx6.1\times10^{-5}$ its values become subnormal. **bf16**
@@ -263,7 +263,7 @@ Here $1+\varepsilon_{\mathrm{mach}}/2$ is the midpoint between $1$ and its
 upper neighbor, so ties-to-even sends it back to $1$. The worst-case rounding
 error of half a gap really does occur, giving a relative error of $u/(1+u)$,
 just inside the bound $|\delta|\le u$. Meanwhile, the gap at $2^{20}$ is
-$2^{20}$ times—about a million times—the gap at $1$. Finally, the last three
+$2^{20}$ times (about a million times) the gap at $1$. Finally, the last three
 lines pinpoint where $e^x$ overflows: above $11.09$ in fp16, $88.72$ in fp32,
 and $709.78$ in fp64.
 
@@ -434,9 +434,9 @@ print('softmax(0, 10), naive minus stable, in ulps:',
       (a - b) / np.spacing(b))
 ```
 
-At $t=100$, the shifted softmax returns $(3.8\times10^{-44}, 1)$—the true
+At $t=100$, the shifted softmax returns $(3.8\times10^{-44}, 1)$, the true
 $3.7\times10^{-44}$ rounded onto the subnormal grid with five significant
-bits left—while the direct formula returns $0$ and `NaN`. Switching to higher
+bits left, while the direct formula returns $0$ and `NaN`. Switching to higher
 precision does not cure the problem: the logits $(1000, 1001, 1002)$ from the
 opening overflow $e^{1000}$ even in fp64, turning the direct formula into
 three `NaN`s where the shifted version cleanly returns $(0.09, 0.24, 0.67)$.
@@ -639,7 +639,7 @@ probability becomes $0$ and the loss jumps to `inf` at both $t=103$ and $104$.
 :end_tab:
 
 The practical takeaway is simple: keep losses, likelihoods, and posteriors
-in log space until you genuinely need a probability. The fused loss in
+in log space until you actually need a probability. The fused loss in
 :numref:`subsec_softmax-implementation-revisited` implements
 :eqref:`eq_mdl-opt-ce-from-logits` for this reason,
 :numref:`sec_mdl-information_theory` interprets what cross-entropy measures,
@@ -747,7 +747,7 @@ print('float64: log(1 + 1e-20) =', np.log(1 + 1e-20),
 Between $1$ and $2$, every fp32 difference is an integer multiple of
 $\varepsilon_{\mathrm{mach}}=1.19\times10^{-7}$, and the true difference
 $3.0\times10^{-7}$ does not fall on that grid. The subtraction returned two
-ulps, $2.38\times10^{-7}$—20% too small—yet once again it committed no error
+ulps, $2.38\times10^{-7}$ (20% too small), yet once again it committed no error
 of its own. The inputs were stored as $1.0002343655$ and $1.0002341270$, and
 their exact difference is what the cell printed; the error was already baked
 into the stored inputs. Here the cancellation factor
@@ -940,8 +940,8 @@ print(f'Welford vs two-pass   : {abs(welford - two_pass) / two_pass:.1e} relativ
 print('float64 gap near 1e18 :', np.spacing(1e18))
 ```
 
-The naive one-pass estimate comes out as an exact multiple of $128$—typically
-$0$, $\pm128$, or $\pm256$—nowhere near the true variance $1$, and frequently
+The naive one-pass estimate comes out as an exact multiple of $128$ (typically
+$0$, $\pm128$, or $\pm256$), nowhere near the true variance $1$, and frequently
 negative. Why $128$? Both $\frac1N\sum x_i^2$ and $m^2$ lie in
 $[2^{59}, 2^{60})$, where adjacent fp64 numbers are $2^{59-52}=128$ apart, so
 their difference can only be a multiple of $128$: our predicted error of
@@ -1053,8 +1053,8 @@ the function $\mathbf b\mapsto\mathbf A^{-1}\mathbf b$: the largest factor
 by which a relative change of the input can become a relative change of the
 output, taken over all right-hand sides and all directions of the change.
 For a matrix with singular values $\sigma_1\ge\cdots\ge\sigma_d>0$ that
-factor is $\kappa(\mathbf A)=\sigma_1/\sigma_d$, by
-:eqref:`eq_mdl-condition-bound`, and it is about $4\times10^4$ for the two
+factor is $\kappa(\mathbf A)=\sigma_1/\sigma_d$
+(:numref:`subsec_mdl-condition-number`), and it is about $4\times10^4$ for the two
 lines. The shift $(0,10^{-4})$ realizes $2.8\times10^4$ of it, because it is
 not along the most amplified direction.
 
@@ -1145,8 +1145,8 @@ $\kappa\omega/(1-\kappa\omega)$ when $\kappa\omega<1$, the same to first
 order. On the two-line system, $\kappa\omega=4\times10^4\cdot
 2.5\times10^{-5}=1.0$, and the error relative to $\hat{\mathbf x}$ is
 $\|(-1,1)\|/\|(0,2)\|=0.71$, inside the bound. For an error in the
-right-hand side instead of the matrix, the corresponding bound is
-:eqref:`eq_mdl-condition-bound`.
+right-hand side instead of the matrix, the corresponding bound appears in
+:numref:`subsec_mdl-condition-number`.
 
 A backward-stable solver has $\omega\approx u$, and taking $\log_{10}$ of the
 bound gives the rule of thumb
@@ -1336,7 +1336,7 @@ under other names.
 The price is a different minimizer. In the present notation, with
 $\mathbf v_i$ the right singular vectors of $\mathbf A$ and
 $\mathbf w_0=\mathbf A^+\mathbf b$ the minimum-norm least-squares solution,
-the filter factors of :eqref:`eq_mdl-ridge-filter` read
+the filter factors of :numref:`subsec_mdl-pseudoinverse` read
 
 $$
 \mathbf w_\lambda=\sum_{i=1}^d\frac{\sigma_i^2}{\sigma_i^2+\lambda}\,(\mathbf v_i^\top\mathbf w_0)\,\mathbf v_i .
@@ -1354,8 +1354,8 @@ the minimizer toward the origin is not drawn.
 
 The same $\kappa$ counts the steps of gradient descent on the ridge objective.
 At the best fixed step, gradient descent on a quadratic with condition number
-$\kappa>1$ contracts the error by $\rho=(\kappa-1)/(\kappa+1)$ per step,
-by :eqref:`eq_mdl-opt-optimal-step`. Started at the origin, where the error is
+$\kappa>1$ contracts the error by $\rho=(\kappa-1)/(\kappa+1)$ per step
+(:numref:`sec_mdl-gradient-based-optimization`). Started at the origin, where the error is
 $-\mathbf w^\star$, it has relative error
 $\|\mathbf w_k-\mathbf w^\star\|/\|\mathbf w^\star\|\le\rho^k$ after $k$
 steps, so a tolerance $0<\mathrm{tol}<1$ is met within
@@ -1790,7 +1790,7 @@ $$\text{Stable:}\quad (z_i - c) - s \qquad \text{vs.} \qquad \text{Naive subtrac
 
 @!numerical-stability-conditioning-logsumexp
 
-- **Where did $z_i - \mathrm{lse}(\mathbf{z})$ lose precision?** Near $c = 1002$, `fp32` grid points sit $2^{-14} \approx 6.1 \times 10^{-5}$ apart. Forming $c + s = 1002.4076$ rounds $s$ to the coarse grid of $1002$, losing $1.32 \times 10^{-5}$ before $z_i$ is subtracted!
+- **Where did $z_i - \mathrm{lse}(\mathbf{z})$ lose precision?** Near $c = 1002$, `fp32` grid points sit $2^{-14} \approx 6.1 \times 10^{-5}$ apart. Forming $c + s = 1002.4076$ rounds $s$ to the coarse grid of $1002$, losing $1.32 \times 10^{-5}$ before $z_i$ is subtracted.
 :::
 
 ::: {.slide title="Cross-Entropy from Logits vs. Probability Underflow" only="pytorch"}
@@ -1801,7 +1801,7 @@ The cross-entropy loss for true class $y$ is $-\log\mathrm{softmax}(\mathbf{z})_
 @!numerical-stability-conditioning-cross-entropy
 
 ::: {.d2l-note .warn}
-At $t = 103$, PyTorch rounds $e^{-103} \approx 1.32 \times 2^{-149}$ to the smallest `fp32` subnormal $2^{-149}$ (keeping just 1 bit!), returning $149\log 2 = 103.2789$. At $t = 104$, $p_0 = 0$ and $-\log p_0 = \infty$, whereas `F.cross_entropy` on logits is exact.
+At $t = 103$, PyTorch rounds $e^{-103} \approx 1.32 \times 2^{-149}$ to the smallest `fp32` subnormal $2^{-149}$ (keeping just 1 bit), returning $149\log 2 = 103.2789$. At $t = 104$, $p_0 = 0$ and $-\log p_0 = \infty$, whereas `F.cross_entropy` on logits is exact.
 :::
 :::
 
@@ -1825,7 +1825,7 @@ The cross-entropy loss for true class $y$ is $-\log\mathrm{softmax}(\mathbf{z})_
 @!numerical-stability-conditioning-cross-entropy
 
 ::: {.d2l-note .warn}
-TensorFlow flushes subnormal probabilities to $0$ (`inf` at $t = 103$). Worse, Keras with `from_logits=False` clips probabilities to $10^{-7}$, freezing the loss at $-\log 10^{-7} = 16.1181$ with **zero gradient** for all $t > 16$!
+TensorFlow flushes subnormal probabilities to $0$ (`inf` at $t = 103$). Worse, Keras with `from_logits=False` clips probabilities to $10^{-7}$, freezing the loss at $-\log 10^{-7} = 16.1181$ with **zero gradient** for all $t > 16$.
 :::
 :::
 
@@ -1862,7 +1862,7 @@ $$\kappa_f(x) = \left|\frac{x\,f'(x)}{f(x)}\right|, \qquad \text{and for subtrac
 ::: {.cols .vc}
 ::: {.col}
 - **Well-conditioned problem:** $f(x) = \log(1 + x)$ near $x = 0$ has $\kappa_f(x) = \left|\frac{x}{(1+x)\log(1+x)}\right| \to 1$.
-- **Unstable intermediate detour:** Evaluating `log(1.0 + x)` at $x = 10^{-8}$ in `fp32` rounds $y = \mathrm{fl}(1 + 10^{-8}) = 1.0$, and $\log(y)$ near $y = 1$ has $\kappa_{\log}(y) = 1/|\log y| = 10^8$, magnifying the $10^{-8}$ rounding error to $100\%$ error!
+- **Unstable intermediate detour:** Evaluating `log(1.0 + x)` at $x = 10^{-8}$ in `fp32` rounds $y = \mathrm{fl}(1 + 10^{-8}) = 1.0$, and $\log(y)$ near $y = 1$ has $\kappa_{\log}(y) = 1/|\log y| = 10^8$, magnifying the $10^{-8}$ rounding error to $100\%$ error.
 - **Direct series (`log1p`):** Evaluates $x - x^2/2 + \cdots$ directly to full machine precision.
 :::
 
@@ -1879,14 +1879,14 @@ Subtracting two nearly equal `fp32` numbers $a = 1.0002344$ and $b = 1.0002341$ 
 
 @!numerical-stability-conditioning-log1p
 
-- **Sterbenz's Lemma (1974):** Whenever two floating-point numbers satisfy $b/2 \le a \le 2b$, their difference $a - b$ is *exactly representable* with zero rounding error!
+- **Sterbenz's Lemma (1974):** Whenever two floating-point numbers satisfy $b/2 \le a \le 2b$, their difference $a - b$ is *exactly representable* with zero rounding error.
 - **Why the result is still off by $20\%$:** The subtraction operation itself committed zero error; it merely cancelled the shared leading bits and exposed the prior rounding errors committed when $a$ and $b$ were first stored on the $2^{-23} \approx 1.19 \times 10^{-7}$ grid.
 :::
 
 ::: {.slide title="Truncation vs. Cancellation in Finite Differences" layout="tall-output"}
 [Catastrophic Cancellation]{.kicker}
 
-In one place—numerical gradient checks via the forward difference $\frac{f(x + h) - f(x)}{h}$—we cannot algebraically eliminate the subtraction of nearly equal numbers:
+In numerical gradient checks via the forward difference $\frac{f(x + h) - f(x)}{h}$, we cannot algebraically eliminate the subtraction of nearly equal numbers:
 
 $$\text{Total Error}(h) \;\approx\; \underbrace{\frac{h}{2}\,|f''(x)|}_{\text{Taylor truncation error}} \;+\; \underbrace{\frac{2u\,|f(x)|}{h}}_{\text{cancellation of rounding noise}}$$
 
@@ -1909,7 +1909,7 @@ Normalization layers and data pipelines continuously compute sample variances $s
 $$\text{Two-Pass:}\quad \frac{1}{N}\sum_{i=1}^N (x_i - m)^2 \qquad \text{vs.} \qquad \text{Naive One-Pass:}\quad \frac{1}{N}\sum_{i=1}^N x_i^2 - m^2$$
 
 - **Condition number of the variance problem:** Perturbing each input $x_i \mapsto x_i(1 + \delta_i)$ with $|\delta_i| \le u$ changes the variance by $\frac{2}{N}\sum_i (x_i - m)x_i\delta_i$, yielding relative condition number $\kappa_{\mathrm{var}} \le 2(1 + |m|/s) \approx 2|m|/s$. For $m = 10^9, s = 1$ in `fp64` ($u \approx 1.1 \times 10^{-16}$), the problem permits $\approx 7$ accurate digits ($\kappa_{\mathrm{var}} u \approx 2 \times 10^{-7}$).
-- **Catastrophic cancellation in $\frac{1}{N}\sum x_i^2 - m^2$:** Both terms have magnitude $\approx m^2 = 10^{18}$ while their difference is $s^2 = 1$, so the subtraction condition number is $\frac{2m^2}{s^2} = 2 \times 10^{18} > 1/u$, **squaring the condition number** and destroying every single digit!
+- **Catastrophic cancellation in $\frac{1}{N}\sum x_i^2 - m^2$:** Both terms have magnitude $\approx m^2 = 10^{18}$ while their difference is $s^2 = 1$, so the subtraction condition number is $\frac{2m^2}{s^2} = 2 \times 10^{18} > 1/u$, **squaring the condition number** and destroying every single digit.
 :::
 
 ::: {.slide title="Welford's Stable One-Pass Variance Recursion"}
@@ -1937,7 +1937,7 @@ On $N = 10^5$ `fp64` samples drawn from $\mathcal{N}(10^9, 1)$, compare naive on
 
 @!numerical-stability-conditioning-welford
 
-- Because $10^{18} \in [2^{59}, 2^{60})$, adjacent `fp64` numbers are spaced $2^{59-52} = 128$ apart—so the naive formula can only return integer multiples of $128$ (often $0$ or negative!), whereas Welford matches the two-pass reference to $7+$ digits.
+- Because $10^{18} \in [2^{59}, 2^{60})$, adjacent `fp64` numbers are spaced $2^{59-52} = 128$ apart—so the naive formula can only return integer multiples of $128$ (often $0$ or negative), whereas Welford matches the two-pass reference to $7+$ digits.
 :::
 
 ::: {.slide title="Summation Order: Left-to-Right vs. Pairwise Trees"}
@@ -1961,7 +1961,7 @@ Consider solving a linear system $\mathbf{A}\mathbf{x} = \mathbf{b}$ where the t
 
 $$\mathbf{A} = \begin{pmatrix} 1 & 1 \\ 1 & 1.0001 \end{pmatrix}, \;\; \kappa(\mathbf{A}) \approx 4 \times 10^4$$
 
-- **Extreme sensitivity:** Perturbing $b_2$ by $+10^{-4}$ (a relative data change of $3.5 \times 10^{-5}$) shifts the intersection to $\hat{\mathbf{x}} = (0, 2)$—a **$100\%$ forward error**!
+- **Extreme sensitivity:** Perturbing $b_2$ by $+10^{-4}$ (a relative data change of $3.5 \times 10^{-5}$) shifts the intersection to $\hat{\mathbf{x}} = (0, 2)$, a **$100\%$ forward error**.
 - **Forward vs. backward error:** For the original system, $\hat{\mathbf{x}} = (0, 2)$ has $100\%$ **forward error**, yet its **backward error** (the smallest relative data perturbation for which $\hat{\mathbf{x}}$ is exact) is only $3.5 \times 10^{-5}$.
 :::
 
@@ -1980,7 +1980,7 @@ An algorithm for $\mathbf{A}\mathbf{x} = \mathbf{b}$ is **backward stable** if i
   - Any perturbation satisfying $(\mathbf{A} + \Delta\mathbf{A})\hat{\mathbf{x}} = \mathbf{b}$ must map $\Delta\mathbf{A}\hat{\mathbf{x}} = \mathbf{b} - \mathbf{A}\hat{\mathbf{x}} = \mathbf{r}$, so $\|\mathbf{r}\|_2 \le \|\Delta\mathbf{A}\|_2\,\|\hat{\mathbf{x}}\|_2$.
   - The rank-one perturbation $\Delta\mathbf{A}^\star = \frac{\mathbf{r}\hat{\mathbf{x}}^\top}{\|\hat{\mathbf{x}}\|_2^2}$ achieves equality with spectral norm $\|\Delta\mathbf{A}^\star\|_2 = \frac{\|\mathbf{r}\|_2}{\|\hat{\mathbf{x}}\|_2}$, giving the exact relative backward error:
     $$\omega = \min_{(\mathbf{A} + \Delta\mathbf{A})\hat{\mathbf{x}} = \mathbf{b}} \frac{\|\Delta\mathbf{A}\|_2}{\|\mathbf{A}\|_2} = \frac{\|\mathbf{b} - \mathbf{A}\hat{\mathbf{x}}\|_2}{\|\mathbf{A}\|_2\,\|\hat{\mathbf{x}}\|_2}$$
-- **Certificate of solver quality:** A small relative residual $\omega \approx u$ proves that the solver did its job to machine precision—regardless of how large the forward error turns out to be!
+- **Certificate of solver quality:** A small relative residual $\omega \approx u$ proves that the solver did its job to machine precision, regardless of how large the forward error turns out to be.
 :::
 
 ::: {.slide title="Forward Error Bound and the Lost-Digits Rule"}
@@ -2008,7 +2008,7 @@ The Hilbert matrix $H_{ij} = \frac{1}{i + j - 1}$ has $\kappa(\mathbf{H})$ growi
 
 @!numerical-stability-conditioning-hilbert
 
-- At $n = 12$ ($\kappa \approx 1.7 \times 10^{16}$), `np.linalg.solve` has backward error $\omega \approx 10^{-17}$, and an *exact* rational solve of the stored `fp64` system has the exact same $30\%$ forward error—the digits were already lost when $\mathbf{b} = \mathbf{H}\mathbf{1}$ was rounded to `fp64`!
+- At $n = 12$ ($\kappa \approx 1.7 \times 10^{16}$), `np.linalg.solve` has backward error $\omega \approx 10^{-17}$, and an *exact* rational solve of the stored `fp64` system has the exact same $30\%$ forward error: the digits were already lost when $\mathbf{b} = \mathbf{H}\mathbf{1}$ was rounded to `fp64`.
 :::
 
 ::: {.slide title="Why the Normal Equations Square κ(A)"}

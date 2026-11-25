@@ -372,7 +372,7 @@ and at $(0.6, 0.8)$ we have $\lambda^\star g(\mathbf{x}^\star) = 4 \cdot 0 = 0$.
 dual feasibility together. At the optimum, the descent direction $-\nabla f$
 must be a nonnegative linear combination of the outward normals of the active
 constraints. Equivalently, $-\nabla f$ lies inside the cone spanned by those
-outward normals—the *normal cone*—while inactive constraints contribute nothing.
+outward normals (the *normal cone*), while inactive constraints contribute nothing.
 
 ![Geometry of the KKT conditions on a feasible region defined by two inequality constraints. In (a), one constraint is active at $\mathbf{x}^\star$ and the other is inactive: $-\nabla f$ aligns with the active outward normal with $\lambda_1 > 0$, while $\lambda_2 = 0$. In (b), both constraints are active at a corner, so $-\nabla f$ must lie in the shaded normal cone spanned by both outward normals. Orange arcs show level sets of $f$ around its unconstrained minimizer (+).](../img/mdl-opt-kkt-active-set.svg)
 :label:`fig_mdl-opt-kkt-active-set`
@@ -836,7 +836,7 @@ regularization term: expanding the squared distance shows that sparsemax
 maximizes $\mathbf{y}^\top\mathbf{x} - \tfrac12\|\mathbf{x}\|^2$ over
 $\Delta$, whereas softmax maximizes $\mathbf{y}^\top\mathbf{x} + H(\mathbf{x})$,
 replacing the quadratic penalty with Shannon entropy
-(:eqref:`eq_mdl-opt-lse-entropy`).
+(:numref:`sec_mdl-lagrangian-duality`).
 
 Whenever we implement a projection, it is good practice to verify its output.
 The KKT residuals are the natural first test, though we have to be careful
@@ -946,7 +946,7 @@ print(f'largest null coordinate: {np.abs(w_sub[null]).max():.3f};  '
 ```
 
 It fails completely to produce exact zeros. None of the coordinates land on
-zero, and the five *null* coordinates—those planted at zero—flip sign on
+zero, and the five *null* coordinates (those planted at zero) flip sign on
 nearly every iteration, bouncing back and forth at an amplitude of about
 $\eta\lambda$. The culprit is the kink at zero. At the true lasso solution, the
 smooth gradient on a null coordinate has magnitude strictly smaller than
@@ -1474,7 +1474,7 @@ Consider minimizing a differentiable objective $f(\mathbf{x})$ on an equality su
 ::: {.slide title="The Lagrangian and Stationarity on the Circle"}
 [Lagrange Multipliers]{.kicker}
 
-We package both requirements—parallel normals and feasibility $h(\mathbf{x}) = 0$—into a single function of $(\mathbf{x}, \nu)$, the **Lagrangian**:
+We package both requirements, parallel normals and feasibility $h(\mathbf{x}) = 0$, into a single function of $(\mathbf{x}, \nu)$, the **Lagrangian**:
 
 $$\mathcal{L}(\mathbf{x}, \nu) = f(\mathbf{x}) + \nu\,h(\mathbf{x}) \implies \nabla_{\mathbf{x}}\mathcal{L} = \nabla f(\mathbf{x}) + \nu\,\nabla h(\mathbf{x}) = \mathbf{0}, \qquad \frac{\partial\mathcal{L}}{\partial\nu} = h(\mathbf{x}) = 0$$
 
@@ -1531,7 +1531,7 @@ For $\mathbf{y} = (3, 4)$ and radius $r = 1$, the active constraint formula yiel
 @!mdl-constrained-optimization-duality-active-and-inactive-constraints
 
 ::: {.d2l-note .rule}
-**Why inequality multipliers must be nonnegative ($\lambda^\star \ge 0$):** Since $\nabla g(\mathbf{x}^\star)$ points *outward* from the feasible set $\{g \le 0\}$, stationarity $-\nabla f(\mathbf{x}^\star) = \lambda^\star \nabla g(\mathbf{x}^\star)$ with $\lambda^\star \ge 0$ ensures that the downhill direction $-\nabla f$ pulls outward into the wall. If $\lambda^\star < 0$, $-\nabla f$ would point *inward*, so stepping into the interior would lower $f$!
+**Why inequality multipliers must be nonnegative ($\lambda^\star \ge 0$):** Since $\nabla g(\mathbf{x}^\star)$ points *outward* from the feasible set $\{g \le 0\}$, stationarity $-\nabla f(\mathbf{x}^\star) = \lambda^\star \nabla g(\mathbf{x}^\star)$ with $\lambda^\star \ge 0$ ensures that the downhill direction $-\nabla f$ pulls outward into the wall. If $\lambda^\star < 0$, $-\nabla f$ would point *inward*, so stepping into the interior would lower $f$.
 :::
 :::
 
@@ -1564,7 +1564,7 @@ By complementary slackness, inactive constraints ($g_i(\mathbf{x}^\star) < 0$) h
 $$-\nabla f(\mathbf{x}^\star) = \sum_{i \in \mathcal{A}(\mathbf{x}^\star)} \lambda_i^\star\,\nabla g_i(\mathbf{x}^\star)$$
 
 - **The normal cone:** At an optimum, the steepest descent direction $-\nabla f(\mathbf{x}^\star)$ must lie inside the convex cone spanned by the outward normals $\nabla g_i(\mathbf{x}^\star)$ of the active walls.
-- **Nonconvex caveat:** On $\min_{x \in [-1, 1]} -x^2$, the interior point $x = 0$ satisfies all four KKT conditions with $\lambda_1 = \lambda_2 = 0$, yet $x = 0$ is the global *maximum*!
+- **Nonconvex caveat:** On $\min_{x \in [-1, 1]} -x^2$, the interior point $x = 0$ satisfies all four KKT conditions with $\lambda_1 = \lambda_2 = 0$, yet $x = 0$ is the global *maximum*.
 :::
 
 ::: {.col .fig}
@@ -1585,7 +1585,7 @@ Two regularity conditions guarantee that every local minimum is a KKT point (pre
 - **2. Slater's Condition (convex problems — $f, g_i$ convex, $h_j$ affine):**
   There exists a single strictly feasible point $\bar{\mathbf{x}}$ satisfying:
   $$g_i(\bar{\mathbf{x}}) < 0 \;\text{ (for all non-affine } g_i\text{)}, \qquad g_i(\bar{\mathbf{x}}) \le 0 \;\text{ (for affine } g_i\text{)}, \qquad h_j(\bar{\mathbf{x}}) = 0 \;\forall\,j$$
-  Checking Slater's condition requires finding just one interior point (e.g., $\bar{\mathbf{x}} = \mathbf{0}$ for any norm ball of radius $r > 0$), without knowing $\mathbf{x}^\star$ in advance!
+  Checking Slater's condition requires finding just one interior point (e.g., $\bar{\mathbf{x}} = \mathbf{0}$ for any norm ball of radius $r > 0$), without knowing $\mathbf{x}^\star$ in advance.
 :::
 
 ::: {.slide title="Proving KKT Sufficiency Under Convexity"}
@@ -1675,10 +1675,10 @@ $$\mathbf{x}_{k+1} = \Pi_C\big(\mathbf{x}_k - \eta\,\nabla f(\mathbf{x}_k)\big)$
 
 Does adding a projection step after every gradient update slow down convergence? On a $\mu$-strongly convex, $L$-smooth function ($\mu\mathbf{I} \preceq \nabla^2 f(\mathbf{x}) \preceq L\mathbf{I}$), nonexpansiveness guarantees the *exact same* worst-case contraction factor $\rho = \max(|1 - \eta\mu|, |1 - \eta L|)$ as unconstrained gradient descent:
 
-- **Step 1 — Write $\mathbf{x}^\star$ as a fixed point:** $\mathbf{x}^\star = \Pi_C\big(\mathbf{x}^\star - \eta\nabla f(\mathbf{x}^\star)\big)$.
-- **Step 2 — Strip away $\Pi_C$ via nonexpansiveness:**
+- **Step 1: Write $\mathbf{x}^\star$ as a fixed point:** $\mathbf{x}^\star = \Pi_C\big(\mathbf{x}^\star - \eta\nabla f(\mathbf{x}^\star)\big)$.
+- **Step 2: Strip away $\Pi_C$ via nonexpansiveness:**
   $$\|\mathbf{x}_{k+1} - \mathbf{x}^\star\| = \big\|\Pi_C(\mathbf{x}_k - \eta\nabla f(\mathbf{x}_k)) - \Pi_C(\mathbf{x}^\star - \eta\nabla f(\mathbf{x}^\star))\big\| \le \big\|(\mathbf{x}_k - \mathbf{x}^\star) - \eta\big(\nabla f(\mathbf{x}_k) - \nabla f(\mathbf{x}^\star)\big)\big\|$$
-- **Step 3 — Apply the fundamental theorem of calculus:** With $\bar{\mathbf{H}} = \int_0^1 \nabla^2 f(\mathbf{x}^\star + t(\mathbf{x}_k - \mathbf{x}^\star))\,dt$ ($\mu\mathbf{I} \preceq \bar{\mathbf{H}} \preceq L\mathbf{I}$),
+- **Step 3: Apply the fundamental theorem of calculus:** With $\bar{\mathbf{H}} = \int_0^1 \nabla^2 f(\mathbf{x}^\star + t(\mathbf{x}_k - \mathbf{x}^\star))\,dt$ ($\mu\mathbf{I} \preceq \bar{\mathbf{H}} \preceq L\mathbf{I}$),
   $$\|\mathbf{x}_{k+1} - \mathbf{x}^\star\| = \big\|(\mathbf{I} - \eta\bar{\mathbf{H}})(\mathbf{x}_k - \mathbf{x}^\star)\big\| \le \max\big(|1 - \eta\mu|,\, |1 - \eta L|\big)\,\|\mathbf{x}_k - \mathbf{x}^\star\|$$
 :::
 
@@ -1689,7 +1689,7 @@ Minimize $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ over the half-space $x_
 
 @!mdl-constrained-optimization-duality-projected-gradient-descent
 
-- **Why $738$ steps instead of $10{,}200$?** For the first $732$ steps, the iterate drifts through the interior at the slow rate $1 - \eta = 0.9985$. Once it hits the boundary line $x_1 + x_2 = 1$ at step $733$, the restricted quadratic along the line has curvature $500.5$, contracting at $1 - 500.5\eta = 0.249$ per step!
+- **Why $738$ steps instead of $10{,}200$?** For the first $732$ steps, the iterate drifts through the interior at the slow rate $1 - \eta = 0.9985$. Once it hits the boundary line $x_1 + x_2 = 1$ at step $733$, the restricted quadratic along the line has curvature $500.5$, contracting at $1 - 500.5\eta = 0.249$ per step.
 :::
 
 ::: {.slide title="Projecting onto the Probability Simplex (Sparsemax)"}
@@ -1728,7 +1728,7 @@ The **lasso** minimizes $F(\mathbf{w}) = \tfrac12\|\mathbf{A}\mathbf{w} - \mathb
 @!mdl-constrained-optimization-duality-soft-thresholding-and-the-proximal-operator-2
 
 ::: {.d2l-note .warn}
-**Why subgradient steps chatter across zero:** At a planted zero coordinate, the smooth gradient has magnitude $< \lambda$, so the subgradient kick $\pm\eta\lambda$ overpowers it and flips the coordinate's sign on nearly every step, leaving $0$ exact zeros!
+**Why subgradient steps chatter across zero:** At a planted zero coordinate, the smooth gradient has magnitude $< \lambda$, so the subgradient kick $\pm\eta\lambda$ overpowers it and flips the coordinate's sign on nearly every step, leaving $0$ exact zeros.
 :::
 :::
 

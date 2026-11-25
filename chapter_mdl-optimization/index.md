@@ -4,59 +4,44 @@
 Every neural network in this book is trained by the same basic loop: compute
 the gradient of the loss, take a step in the opposite direction, and repeat.
 In :numref:`chap_optimization`, we saw empirically what momentum, adaptive
-step sizes, and learning-rate schedules do for that loop on real networks.
-Those experiments left three natural questions open. Why is there a hard
-ceiling on the learning rate? Why can a step safely below that ceiling still
-make painfully slow progress? And why does gradient noise keep a training run
-from settling down?
+step sizes, and learning-rate schedules do for that loop on real networks,
+leaving three questions open. Why is there a hard ceiling on the learning rate?
+Why can a step safely below that ceiling still make painfully slow progress?
+And why does gradient noise keep a training run from settling down?
 
-Optimization theory ties each of these questions to a simple geometric
-property of the objective. The steepest curvature sets the largest safe step
-size; the ratio of the steepest curvature to the flattest sets how many steps
-we need; and convexity decides whether the point where our run stops is
-actually the best one available. Throughout this chapter, we will return to a
-single running example: the narrow bowl
-$\tfrac12(x_1^2 + 1000\,x_2^2)$, which is a thousand times steeper in one
-direction than in the other. A step size that stays safe along the steep wall
-barely nudges the iterate along the flat valley, forcing plain gradient
-descent to take thousands of steps.
+Optimization theory ties each question to the geometry of the objective. The
+steepest curvature sets the largest safe step size; the ratio of the steepest
+curvature to the flattest sets the iteration count; and convexity decides
+whether a stationary point is globally optimal. Throughout this chapter, we
+return to the narrow bowl $\tfrac12(x_1^2 + 1000\,x_2^2)$, which is a thousand
+times steeper in one direction than in the other: a step size that stays safe
+along the steep wall barely nudges the iterate along the flat valley. While
+:numref:`chap_optimization` focuses on practice and measurement, this chapter
+supplies the self-contained proofs and underlying geometry.
 
-The two optimization chapters divide the work cleanly:
-:numref:`chap_optimization` focuses on practice and measurement, while this
-chapter supplies the proofs and underlying geometry. A few compact results,
-such as the $2/L$ learning-rate ceiling or the Adam update, appear in both
-places so each chapter stands on its own. Full derivations live only here,
-and you can read the main text of the book without them.
-
-The chapter unfolds in three parts. The first three sections assume exact
-gradients. :numref:`sec_mdl-gradient-based-optimization` proves the
-step-size ceiling and iteration count, and shows how momentum replaces the
-curvature ratio with its square root. :numref:`sec_mdl-convexity` establishes
-when a stationary point is guaranteed to be a global minimum. If you read
-only two sections of this chapter, make them these two. Between them,
-:numref:`sec_mdl-curvature-methods` covers Newton's method and its relatives,
-which actively model curvature rather than merely respecting it; because
-deep learning uses them less often, you can safely save that section for a
-second reading. The next two sections bring in gradient noise:
-:numref:`sec_mdl-stochastic-gradient-methods` derives the third result to
-remember, namely that a fixed step stalls at a noise floor proportional to
-the step size, and :numref:`sec_mdl-adaptive-stochastic-methods` pits Adam
-against a tuned heavy-ball method to see where per-coordinate scaling helps
-and where it falls short. The remaining sections are best read on demand: constraints
-and duality (:numref:`sec_mdl-constrained-optimization-duality`,
-:numref:`sec_mdl-lagrangian-duality`) underpin the norm-budget view of weight
-decay in :numref:`sec_weight_decay`, and
-:numref:`sec_mdl-numerical-stability-conditioning` explains why the
-low-precision arithmetic of :numref:`sec_numerics` breaks down when it does.
+The chapter unfolds in three parts. Under exact gradients,
+:numref:`sec_mdl-gradient-based-optimization` proves the step-size ceiling and
+iteration count and shows how momentum replaces the curvature ratio with its
+square root, while :numref:`sec_mdl-convexity` establishes when stationary
+points are global minima; between them, :numref:`sec_mdl-curvature-methods`
+covers Newton, quasi-Newton, and trust-region methods that actively model
+curvature. Turning to noisy gradients,
+:numref:`sec_mdl-stochastic-gradient-methods` shows why fixed-step SGD stalls
+at a noise floor proportional to the step size, and
+:numref:`sec_mdl-adaptive-stochastic-methods` tests per-coordinate scaling and
+AdamW against heavy-ball momentum. Finally,
+:numref:`sec_mdl-constrained-optimization-duality` and
+:numref:`sec_mdl-lagrangian-duality` develop KKT conditions, projections,
+proximal steps, and duality behind norm budgets (:numref:`sec_weight_decay`),
+and :numref:`sec_mdl-numerical-stability-conditioning` analyzes floating-point
+precision, cancellation, and conditioning (:numref:`sec_numerics`).
 
 We assume familiarity with gradients and Hessians
-(:numref:`sec_mdl-multivariable_calculus`) as well as eigenvalues
-(:numref:`sec_mdl-eigendecompositions`). Our proofs assume smooth or convex
-objectives. Deep-network losses are neither, so for neural networks these
-theorems serve as local models rather than literal guarantees, and each
-section notes where its model stops applying. Classical topics such as
-interior-point and operator-splitting methods are left out of the main text
-and summarized in the further-reading section at the end.
+(:numref:`sec_mdl-multivariable_calculus`) and eigendecompositions
+(:numref:`sec_mdl-eigendecompositions`). Because deep-network losses are
+neither globally smooth nor convex, our theorems serve as local models whose
+limits each section notes explicitly; interior-point and operator-splitting
+methods are surveyed in :numref:`sec_mdl-optimization-further-reading`.
 
 ```toc
 :maxdepth: 2
@@ -154,9 +139,9 @@ We test every theorem against $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ ($
 
 ::: {.cols .vc}
 ::: {.col}
-- **Part I — Exact Gradients & Geometry (§§{sec_mdl-gradient-based-optimization}–§{num:sec_mdl-convexity}):** $L$-smoothness descent lemma, $\kappa$ vs. $\sqrt{\kappa}$ momentum law, Newton/BFGS/trust regions, and convexity guarantees.
-- **Part II — Stochastic & Adaptive Methods (§§{sec_mdl-stochastic-gradient-methods}–§{num:sec_mdl-adaptive-stochastic-methods}):** The $1/b$ variance law, stationary noise floors, Robbins–Monro schedules, AdamW, and matrix preconditioning (K-FAC, Muon).
-- **Part III — Constraints, Duality & Numerics (§§{sec_mdl-constrained-optimization-duality}–§{num:sec_mdl-numerical-stability-conditioning}):** KKT conditions, projections, proximal ISTA, Fenchel duality, and floating-point conditioning.
+- **Part I: Exact Gradients & Geometry (§§{sec_mdl-gradient-based-optimization}–§{num:sec_mdl-convexity}):** $L$-smoothness descent lemma, $\kappa$ vs. $\sqrt{\kappa}$ momentum law, Newton/BFGS/trust regions, and convexity guarantees.
+- **Part II: Stochastic & Adaptive Methods (§§{sec_mdl-stochastic-gradient-methods}–§{num:sec_mdl-adaptive-stochastic-methods}):** The $1/b$ variance law, stationary noise floors, Robbins–Monro schedules, AdamW, and matrix preconditioning (K-FAC, Muon).
+- **Part III: Constraints, Duality & Numerics (§§{sec_mdl-constrained-optimization-duality}–§{num:sec_mdl-numerical-stability-conditioning}):** KKT conditions, projections, proximal ISTA, Fenchel duality, and floating-point conditioning.
 :::
 
 ::: {.col .fig .big}

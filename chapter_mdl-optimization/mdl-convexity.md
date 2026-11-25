@@ -145,7 +145,7 @@ convexity follows immediately from our next rule.
 
 ### New Convex Sets from Old
 
-The intersection of any collection of convex sets—finite or infinite—is always
+The intersection of any collection of convex sets, finite or infinite, is always
 convex. If two points lie in the intersection, then they lie in every set of
 the collection, so the segment between them stays inside every set and
 therefore inside the intersection. Intuitively, a convex set has no dents, and
@@ -1064,7 +1064,7 @@ proof, and the second from doubling the step size.
 
 Global optimality and clean convergence rates are useful only if we can tell
 whether a given loss function is convex in the first place. Computing Hessians
-by hand quickly becomes tedious—and fails altogether at kinks—so in practice we
+by hand quickly becomes tedious (and fails altogether at kinks), so in practice we
 rarely check convexity from scratch. Instead, we recognize convex objectives by
 assembling them from simple convex building blocks.
 
@@ -1963,11 +1963,11 @@ For any convex, $L$-smooth function $f$ with minimizer $\mathbf{x}^\star$, gradi
 
 $$f(\mathbf{x}_k) - f(\mathbf{x}^\star) \le \frac{L\,\|\mathbf{x}_0 - \mathbf{x}^\star\|^2}{2k}$$
 
-- **Step 1 — Combine descent lemma and tangent lower bound:** Since $f(\mathbf{x}_k) - f^\star \le \nabla f(\mathbf{x}_k)^\top(\mathbf{x}_k - \mathbf{x}^\star)$,
+- **Step 1: Combine descent lemma and tangent lower bound:** Since $f(\mathbf{x}_k) - f^\star \le \nabla f(\mathbf{x}_k)^\top(\mathbf{x}_k - \mathbf{x}^\star)$,
   $$f(\mathbf{x}_{j+1}) - f^\star \le \nabla f(\mathbf{x}_j)^\top(\mathbf{x}_j - \mathbf{x}^\star) - \frac{1}{2L}\|\nabla f(\mathbf{x}_j)\|^2$$
-- **Step 2 — Complete the square into a distance drop:**
+- **Step 2: Complete the square into a distance drop:**
   $$f(\mathbf{x}_{j+1}) - f^\star \le \frac{L}{2}\Big(\|\mathbf{x}_j - \mathbf{x}^\star\|^2 - \big\|\mathbf{x}_j - \tfrac{1}{L}\nabla f(\mathbf{x}_j) - \mathbf{x}^\star\big\|^2\Big) = \frac{L}{2}\Big(\|\mathbf{x}_j - \mathbf{x}^\star\|^2 - \|\mathbf{x}_{j+1} - \mathbf{x}^\star\|^2\Big)$$
-- **Step 3 — Telescope over $j = 0, \ldots, k-1$:** Because $f(\mathbf{x}_j)$ is nonincreasing, $k(f(\mathbf{x}_k) - f^\star) \le \sum_{j=0}^{k-1}(f(\mathbf{x}_{j+1}) - f^\star) \le \frac{L}{2}\|\mathbf{x}_0 - \mathbf{x}^\star\|^2$, independent of dimension $d$.
+- **Step 3: Telescope over $j = 0, \ldots, k-1$:** Because $f(\mathbf{x}_j)$ is nonincreasing, $k(f(\mathbf{x}_k) - f^\star) \le \sum_{j=0}^{k-1}(f(\mathbf{x}_{j+1}) - f^\star) \le \frac{L}{2}\|\mathbf{x}_0 - \mathbf{x}^\star\|^2$, independent of dimension $d$.
 :::
 
 ::: {.slide title="Proving the Linear Rate Under Strong Convexity"}
@@ -1975,9 +1975,9 @@ $$f(\mathbf{x}_k) - f(\mathbf{x}^\star) \le \frac{L\,\|\mathbf{x}_0 - \mathbf{x}
 
 Adding $\mu$-strong convexity upgrades the sublinear $O(1/k)$ rate to geometric (linear) convergence:
 
-- **Step 1 — Lower-bound the gradient norm by the suboptimality gap:** Minimize both sides of the quadratic floor $f(\mathbf{y}) \ge f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x}) + \tfrac{\mu}{2}\|\mathbf{y}-\mathbf{x}\|^2$ over $\mathbf{y}$ (the RHS is minimized at $\mathbf{y} = \mathbf{x} - \tfrac{1}{\mu}\nabla f(\mathbf{x})$):
+- **Step 1: Lower-bound the gradient norm by the suboptimality gap:** Minimize both sides of the quadratic floor $f(\mathbf{y}) \ge f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x}) + \tfrac{\mu}{2}\|\mathbf{y}-\mathbf{x}\|^2$ over $\mathbf{y}$ (the RHS is minimized at $\mathbf{y} = \mathbf{x} - \tfrac{1}{\mu}\nabla f(\mathbf{x})$):
   $$f^\star \ge f(\mathbf{x}) - \frac{1}{2\mu}\|\nabla f(\mathbf{x})\|^2 \implies \frac12\|\nabla f(\mathbf{x})\|^2 \ge \mu\big(f(\mathbf{x}) - f^\star\big)$$
-- **Step 2 — Substitute into the descent lemma at $\eta = 1/L$:**
+- **Step 2: Substitute into the descent lemma at $\eta = 1/L$:**
   $$f(\mathbf{x}_{k+1}) - f^\star \le \big(f(\mathbf{x}_k) - f^\star\big) - \frac{1}{2L}\|\nabla f(\mathbf{x}_k)\|^2 \le \left(1 - \frac{\mu}{L}\right)\big(f(\mathbf{x}_k) - f^\star\big)$$
 - **Geometric contraction:** Unrolling $k$ steps yields $f(\mathbf{x}_k) - f^\star \le (1 - 1/\kappa)^k(f(\mathbf{x}_0) - f^\star)$, reaching relative accuracy $\epsilon$ in $O(\kappa \log(1/\epsilon))$ iterations.
 :::

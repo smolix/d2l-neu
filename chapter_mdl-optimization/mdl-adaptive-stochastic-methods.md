@@ -152,7 +152,7 @@ $$
 :eqlabel:`eq_mdl-opt-adagrad`
 
 starting from $\mathbf{s}_0 = \mathbf{0}$, where a small constant $\epsilon$
-prevents division by zero (:eqref:`eq_adagrad` in the main text places
+prevents division by zero (:numref:`sec_adam` in the main text places
 $\epsilon$ inside the square root, which makes no qualitative difference
 here). Each coordinate's step size now decays according to its own gradient
 history rather than the global step count.
@@ -248,8 +248,8 @@ timescale, a vulnerability we will exploit in a counterexample below.
 
 **Adam** :cite:`Kingma.Ba.2014` combines RMSProp's second-moment estimate
 with an exponential moving average of the gradient itself, and corrects both
-averages for their initialization at zero. In the notation of the main text
-(:eqref:`eq_adam-moments`, :eqref:`eq_adam-update`), the update reads
+averages for their initialization at zero. In the notation of :numref:`sec_adam`,
+the update reads
 
 $$
 \begin{aligned}
@@ -296,7 +296,7 @@ reached just $63\%$ (:numref:`sec_adam`). More striking is how the error
 evolves over time. Dropping both bias corrections mis-scales the update
 $\mathbf{m}_t/\sqrt{\mathbf{v}_t}$ by the factor
 $(1 - \beta_1^t)/\sqrt{1 - \beta_2^t}$, which starts at $3.16$ at $t = 1$
-and—perhaps surprisingly—climbs to a peak of $6.6$ at $t = 12$. The
+and, perhaps surprisingly, climbs to a peak of $6.6$ at $t = 12$. The
 first-moment average fills in roughly ten steps, whereas the second-moment
 average needs about a thousand. :numref:`fig_mdl-opt-bias-correction` plots
 both the deficit and the resulting step inflation.
@@ -487,7 +487,7 @@ the total count mainly reflects the distance to the minimizer measured in
 step lengths. At the two largest step sizes, however, scaling alone never
 converges: the iterate overshoots the minimum and settles into a cycle that
 bounces each coordinate between $+\eta/2$ and $-\eta/2$. Adam has thus
-traded one unknown—the curvature—for another: the distance to the minimizer
+traded one unknown (the curvature) for another: the distance to the minimizer
 in units of $\eta$.
 
 Adding Adam's default momentum ($\beta_1 = 0.9$) brings the count to between
@@ -649,7 +649,7 @@ Here, projection onto $[-1, 1]$ is simply clipping
 (:numref:`sec_mdl-constrained-optimization-duality` treats projection in
 general). Because the gradients over each three-step period sum to
 $C - 2 > 0$, the best fixed point in hindsight is $x^\star = -1$. Yet Adam
-returns to $x = +1$—the worst point in the interval—at the start of every
+returns to $x = +1$, the worst point in the interval, at the start of every
 period. Each period costs Adam at least $C - 2$ (it incurs $C$ on the first
 step at $x = 1$, and at least $-1$ on each of the other two), whereas
 $x^\star = -1$ incurs $-(C - 2)$, producing a regret increment of at least
@@ -738,7 +738,7 @@ Adding an $\ell_2$ penalty $\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss
 adds $\lambda \mathbf{w}$ to the gradient, and the resulting update
 $\mathbf{w}_t - \eta\,(\mathbf{g}_t + \lambda \mathbf{w}_t) = (1 - \eta\lambda)\, \mathbf{w}_t - \eta\, \mathbf{g}_t$
 is simultaneously a gradient step on the loss and a uniform shrinkage of the
-weights (:eqref:`eq_l2-is-decay` in :numref:`sec_adamw`, which writes
+weights (:numref:`sec_adamw`, which writes
 $\mathbf{x}$ for the weights). Inside Adam, however, those two mechanisms
 diverge. Feeding the penalized gradient into :eqref:`eq_mdl-opt-adam` and
 isolating the decay term (setting $\beta_1 = 0$ for clarity, so the update
@@ -1136,7 +1136,7 @@ practice remains an active open question.
 ## Summary
 
 Dividing each coordinate's update by the root mean square of its past
-gradients—the common thread linking AdaGrad, RMSProp, and Adam—removes the
+gradients, the common thread linking AdaGrad, RMSProp, and Adam, removes the
 condition number whenever curvature aligns with the coordinate axes. With
 $\epsilon = 0$, Adam's iterates are strictly invariant to per-coordinate
 rescaling, allowing scaling alone to beat an optimally tuned heavy-ball
@@ -1363,7 +1363,7 @@ Modern neural networks have $10^7$ to $10^{11}$ parameters whose curvatures diff
 
 - **Optimal single-step GD ($\eta = 2/1001$):** $6{,}160$ steps.
 - **Tuned Heavy-Ball momentum:** $296$ steps.
-- **Per-coordinate RMS scaling (aligned):** **$22$ steps**—and increasing $\kappa$ from $10^3$ to $10^5$ adds only $6$ steps!
+- **Per-coordinate RMS scaling (aligned):** **$22$ steps**, and increasing $\kappa$ from $10^3$ to $10^5$ adds only $6$ steps.
 - **Rotated by $45^\circ$:** Scaling alone **never** reaches $10^{-8}$.
 :::
 
@@ -1524,7 +1524,7 @@ We compare optimally tuned GD and Heavy Ball (given the exact eigenvalues $\mu =
 ::: {.col}
 - **Aligned ($\theta = 0^\circ$):** Scaling-only Adam ($\beta_1 = 0$) finishes in **$22$ steps**, and default Adam ($\beta_1 = 0.9$) finishes in $165$–$205$ steps across a $100\times$ range of $\eta$.
 - **Rotated ($\theta = 45^\circ$):** GD ($6{,}160$ steps) and Heavy Ball ($296$ steps) are rotation-invariant, whereas scaling-only Adam locks into a 2-cycle and default Adam slows to $559$–$12{,}862$ steps.
-- **Why $45^\circ$ breaks diagonal scaling:** The steep mode $(-1, 1)/\sqrt{2}$ projects equally onto both axes, making $\hat{v}_{t,1} \approx \hat{v}_{t,2}$ so the diagonal preconditioner collapses to a scalar!
+- **Why $45^\circ$ breaks diagonal scaling:** The steep mode $(-1, 1)/\sqrt{2}$ projects equally onto both axes, making $\hat{v}_{t,1} \approx \hat{v}_{t,2}$ so the diagonal preconditioner collapses to a scalar.
 :::
 
 ::: {.col .fig .big}
@@ -1550,7 +1550,7 @@ On the aligned valley ($\beta_1 = 0, \eta = 0.1, \epsilon = 0$), Adam discovers 
 ::: {.col}
 On $x \in [-1, 1]$, consider the 3-periodic convex losses $(+4x, -x, -x)$ with average slope $+2$ and unique optimum $x^\star = -1$:
 
-- **Short EMA memory ($\beta_2 = 1/17, \beta_1 = 0$):** Across $(+4, -1, -1)$, $\sqrt{v_t}$ settles to $(3.89, 1.35, 1.02)$, producing normalized steps $-1.03\eta, +0.74\eta, +0.98\eta$ (net drift **$+0.69\eta > 0$** toward the worst point $x = +1$!).
+- **Short EMA memory ($\beta_2 = 1/17, \beta_1 = 0$):** Across $(+4, -1, -1)$, $\sqrt{v_t}$ settles to $(3.89, 1.35, 1.02)$, producing normalized steps $-1.03\eta, +0.74\eta, +0.98\eta$ (net drift **$+0.69\eta > 0$** toward the worst point $x = +1$).
 - **AMSGrad fix:** Using the running maximum $\tilde{v}_t = \max(\tilde{v}_{t-1}, v_t)$ pins $\sqrt{\tilde{v}_t} = 3.89$, restoring net drift $-0.51\eta$ to $x^\star = -1$.
 :::
 
@@ -1603,7 +1603,7 @@ When exact gradients settle ($\hat{\mathbf{m}}_t \to \mathbf{u}, \hat{\mathbf{v}
 $$\lambda\,w_i\big(|g_i| + \epsilon\big) = -g_i \implies |w_i| = \frac{|g_i|}{\lambda(|g_i| + \epsilon)} < \frac{1}{\lambda}$$
 
 - **Coupled Adam:** Vanishes iff $\nabla\ell(\mathbf{w}) + \lambda\mathbf{w} = \mathbf{0}$ (Gaussian MAP).
-- **Decoupled AdamW ($\epsilon \to 0$):** Enforces the KKT conditions for an implicit $\ell_\infty$ box constraint $\min_{\|\mathbf{w}\|_\infty \le 1/\lambda} \ell(\mathbf{w})$!
+- **Decoupled AdamW ($\epsilon \to 0$):** Enforces the KKT conditions for an implicit $\ell_\infty$ box constraint $\min_{\|\mathbf{w}\|_\infty \le 1/\lambda} \ell(\mathbf{w})$.
 :::
 
 ::: {.col .fig}

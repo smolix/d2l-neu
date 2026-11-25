@@ -1,0 +1,21 @@
+item,chip,value,unit,kind,source_url,retrieved,note
+rent Lambda,A100 PCIe 40 GB,1.99,USD/GPU-h,quote,https://lambda.com/pricing,2026-11-25,"on-demand 1x NVIDIA A100 PCIe (40 GB), price per GPU-hour, before sales tax"
+rent Verda,A100 PCIe 40 GB,1.733,USD/GPU-h,quote,https://verda.com/pricing,2026-11-25,"on-demand 1x A100 SXM4 40GB (the SXM form; chip_specs has the PCIe 40 GB row, same 312 TFLOP/s bf16)"
+rent Lambda,A100 SXM 80 GB,3.19,USD/GPU-h,quote,https://lambda.com/pricing,2026-11-25,"on-demand NVIDIA HGX A100 (80 GB), 8x instance, price per GPU-hour (no 1x instance listed)"
+rent Verda,A100 SXM 80 GB,2.482,USD/GPU-h,quote,https://verda.com/pricing,2026-11-25,on-demand 1x A100 SXM4 80GB
+rent RunPod,A100 SXM 80 GB,2.19,USD/GPU-h,quote,https://www.runpod.io/pricing,2026-11-25,"Secure Cloud pod, A100 SXM 80 GB, billed per second"
+rent Lambda,H100 SXM,4.89,USD/GPU-h,quote,https://lambda.com/pricing,2026-11-25,on-demand 1x NVIDIA H100 SXM (the 8x HGX H100 lists 4.59)
+rent Verda,H100 SXM,5.619,USD/GPU-h,quote,https://verda.com/pricing,2026-11-25,on-demand 1x H100 SXM5 80GB
+rent RunPod,H100 SXM,4.39,USD/GPU-h,quote,https://www.runpod.io/pricing,2026-11-25,"Secure Cloud pod, H100 SXM, billed per second"
+rent Lambda,B200,7.99,USD/GPU-h,quote,https://lambda.com/pricing,2026-11-25,on-demand 1x NVIDIA B200 SXM6 (the 8x HGX B200 lists 7.69)
+rent Verda,B200,9.844,USD/GPU-h,quote,https://verda.com/pricing,2026-11-25,on-demand 1x B200 SXM6 180GB
+rent RunPod,B200,7.99,USD/GPU-h,quote,https://www.runpod.io/pricing,2026-11-25,"Secure Cloud pod, B200"
+rent RunPod community,RTX 4090,0.34,USD/GPU-h,quote,https://www.runpod.io/pricing,2026-11-25,"Community Cloud (marketplace hosts), RTX 4090 24 GB; Secure Cloud lists 0.89"
+buy card,RTX 4090,1599,USD,quote,https://www.nvidia.com/en-us/geforce/news/rtx-40-series-graphics-cards-announcements/,2026-11-25,"launch list price (October 2022); the card is no longer made, street prices differ"
+buy 4-card server,RTX 4090,12000,USD,assumption,https://www.nvidia.com/en-us/geforce/news/rtx-40-series-graphics-cards-announcements/,2026-11-25,"four cards near their list price plus an EPYC host with 256 GB of DRAM, NVMe and power supplies (about 5,600 USD); a box like the book's"
+buy GPU,H100 SXM,25000,USD,quote,https://alex.smola.org/posts/45-mlss-efficiency/main.pdf,2026-11-25,"midpoint of 20-30k USD per H100 (MLSS efficiency slides, prices September 2026, +-30%); host share not included"
+electricity,,0.1427,USD/kWh,quote,https://www.eia.gov/electricity/monthly/epm_table_grapher.php?t=epmt_5_6_a,2026-11-25,"US average retail price, commercial sector, September 2026 (EIA Electric Power Monthly table 5.6.A, preliminary)"
+PUE,,1.54,ratio,assumption,https://datacenter.uptimeinstitute.com/rs/711-RIA-145/images/2025.Annual.Survey.Report.pdf,2026-11-25,"Uptime Institute 2025 survey, weighted average annual PUE of 681 respondents; applied to every owned chip"
+ops owned box,RTX 4090,0.05,USD/GPU-h,assumption,https://link.springer.com/book/10.1007/978-3-031-01761-2,2026-11-25,"space, cooling beyond PUE and administration of a small owned server per card-hour; staff time not counted"
+ops datacenter,H100 SXM,0.30,USD/GPU-h,assumption,https://link.springer.com/book/10.1007/978-3-031-01761-2,2026-11-25,"colocation space, network share and staff per GPU-hour (The Datacenter as a Computer: total cost of ownership)"
+life,,35040,h,assumption,https://link.springer.com/book/10.1007/978-3-031-01761-2,2026-11-25,"four years of wall-clock hours, the amortization period"

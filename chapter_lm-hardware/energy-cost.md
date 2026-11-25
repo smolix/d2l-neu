@@ -31,3 +31,436 @@ when the section is written.
 - Code and documentation: [NVIDIA Management Library (NVML)](https://developer.nvidia.com/management-library-nvml) (power and clock readings); [DCGM](https://docs.nvidia.com/datacenter/dcgm/latest/index.html) (fleet-level power and clock telemetry, one sentence); [Zeus repository](https://github.com/ml-energy/zeus) (energy measurement library); [ML.ENERGY leaderboard](https://ml.energy/leaderboard) (published energy per token for released models).
 - Courses, tutorials and blogs: [The Datacenter as a Computer](https://link.springer.com/book/10.1007/978-3-031-01761-2) (PUE, power provisioning, total cost of ownership); [Scaling Book: All About Transformer Inference](https://jax-ml.github.io/scaling-book/inference/) (cost per token along the frontier); [Efficiency in LLMs (MLSS)](https://alex.smola.org/posts/45-mlss-efficiency/) (lifecycle cost framing).
 -->
+
+<!-- Placeholder (prose): opening, on the box. The reader has the energy
+ladder of subsec_hw-energy (picojoules per operation and per byte) and the
+throughput of sec_lm_workload_hardware. One RTX 4090 of the build box draws
+a steady idle power and several times that under a compute-bound matrix
+product, where it sits on its 450 W limit (cell idle-and-peak, quote the
+committed W at 2 digits); Qwen3-0.6B's decode throughput rises by more than
+an order of magnitude from batch 1 to batch 64 while the power rises by
+less than 2x (cell decode-energy), so a token at batch 1 costs an order of
+magnitude more joules than at batch 64. The open question: what a million
+tokens cost in joules and in dollars for training and for serving, what a
+power cap or a lower clock does to each, and when owning a chip beats
+renting one. Idea in one sentence: a token's price is the chip-hour price
+divided by tokens per chip-hour and its energy is the chip's power divided
+by the same rate, so both are set by utilization first. -->
+
+```{.python .input #energy-cost-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #energy-cost-extras}
+%%tab pytorch
+import collections
+import pandas as pd
+```
+
+## The Power of a Chip
+:label:`subsec_lm_hw_power`
+
+<!-- Placeholder (prose): static against dynamic power (leakage, the clock
+tree and memory refresh draw power at any load; switching draws C V^2 f per
+transistor); TDP is a cooling budget and a limit, not what a run draws;
+clocks and voltage move together on a DVFS curve, and the board's power
+limiter lowers both when a load would pass the limit (5.1's pitfall returns
+here with a measurement). Capping and frequency scaling: a compute-bound
+step loses throughput with the clock, a bandwidth-bound step hardly does, so
+one setting for both workloads is the usual error. What NVML reports:
+`power.draw` is an average over the last second on Ampere-and-later
+consumer and data-centre parts (except GA100), `power.draw.instant` the
+instantaneous value; the library reads the averaged field at 10 Hz
+(BenchLog.power_trace of sec_lm_accelerator_design) and warms each
+workload up for 2 s first, so the average covers only the load it
+measures. Windows with another user's process on the card are discarded
+and repeated (rule of the chapter). -->
+
+<!-- Figure: fig_lm_hw_power_model (generator power-model): static power
+P_s plus cubic dynamic power k f^3 against the clock f, the limit line, the
+throughput per watt f / P(f) on a second axis with its maximum f* marked. -->
+
+<!-- Placeholder (prose): the three windows below, each 10 s of one
+workload on a whole card after its warm-up: idle (the CUDA context open, no
+kernels), decode of Qwen3-0.6B at batch 1 over a 512-token cache (CUDA
+graph), and a bf16 8,192^3 matrix product. Read the table against the limit
+line under it: the matrix product sits at the limit with the SM clock below
+its top value and the power-cap reason set (claim E1); decode at batch 1
+draws a fraction of it. Quote the committed W at 2 digits and the reason
+names; the live line only shows agreement. -->
+
+```{.python .input #energy-cost-idle-and-peak}
+%%tab pytorch
+prof = d2l.power_profile(workloads=('idle', 'decode-b1', 'matmul-8192'),
+                         seconds=10)
+P = prof.set_index('workload').power_w  # mean board power (W)
+peak = prof.set_index('workload').loc['matmul-8192']
+assert peak.power_w > 0.9 * prof.attrs['power_limit_w']  # E1: at the limit
+assert peak.sm_mhz < prof.attrs['max_sm_mhz']  # E1: below the top clock
+assert P['decode-b1'] < 0.6 * P['matmul-8192']  # E1: decode draws far less
+```
+
+### The Energy-Optimal Clock
+:label:`subsec_lm_hw_dvfs`
+
+<!-- Placeholder (prose): derivation D3 in full. If compute-bound
+throughput is proportional to the clock f and power is P(f) = P_s + k f^3
+(dynamic power C V^2 f with V roughly proportional to f), the work per
+joule f / (P_s + k f^3) has its maximum where P_s + k f^3 = 3 k f^3, so
+f* = (P_s / (2k))^(1/3) and P(f*) = 1.5 P_s. Numeric case (the plan's):
+P_s = 80 W and P(1.4 GHz) = 300 W give k = 80 W/GHz^3, f* = 0.79 GHz,
+P(f*) = 120 W, and 1.4x the work per joule at 0.57x the throughput of the
+top clock (the cell prints these from the fit). A bandwidth-bound step's
+throughput does not depend on f, so its energy per token falls with the
+clock until the clock itself bounds the memory pipeline. The function fits
+(P_s, k) by least squares on the compute-bound series: P is linear in 1 and
+f^3. -->
+
+```{.python .input #energy-cost-dvfs-fit-def}
+%%tab pytorch
+#@save
+DVFSFit = collections.namedtuple('DVFSFit', [
+    'P_s', 'k', 'f_star', 'f_min', 'step', 'clocks', 'power', 'synthetic',
+    'source'])
+
+def dvfs_fit(log):  #@save
+    """Fit P(f) = P_s + k f^3 (f in GHz) by least squares to the clock
+    sweep of the compute-bound workload; f* = (P_s / (2k))^(1/3) maximizes
+    the work per joule, f_min is the swept clock of least energy per unit
+    of work, step the sweep's largest clock step."""
+    s = log[(log.kind == 'clock') & log.workload.str.startswith('matmul')]
+    f = s.sm_mhz.to_numpy() / 1e3  # the clock it ran at, GHz
+    A = np.stack([np.ones_like(f), f**3], axis=1)  # P is linear in 1, f^3
+    (P_s, k), *_ = np.linalg.lstsq(A, s.power_w.to_numpy(), rcond=None)
+    f_star = (P_s / (2 * k)) ** (1 / 3)
+    f_min = f[np.argmin(s.power_w.to_numpy() / s.rate.to_numpy())]
+    return DVFSFit(P_s, k, f_star, f_min, np.diff(np.sort(f)).max(), f,
+                   s.power_w.to_numpy(), log.attrs['synthetic'],
+                   log.attrs['source'])
+```
+
+<!-- Placeholder (prose): locking clocks needs root, so no notebook does
+it: the box's sweep is a script the author runs with sudo (C-box-root), and
+campaign C-T2 sweeps the A100. Until either log is committed the fit runs on
+the plan's synthetic numbers, and the output says so. Read the plot: power
+grows as the cube of the clock past a static floor, the work per joule
+(dashed) peaks at f*. Claim E4 (pending): the predicted f* within one sweep
+step of the measured energy minimum. Pending: part of the root sweep and the
+A100 campaign. -->
+<!-- campaign: lm-hw-buildbox-clocksweep-v1 -->
+
+```{.python .input #energy-cost-dvfs}
+%%tab pytorch
+fit = d2l.dvfs_fit(d2l.hw_clock_sweep_log())
+d2l.plot_dvfs(fit)
+assert fit.synthetic or abs(fit.f_star - fit.f_min) <= fit.step  # E4
+```
+
+<!-- Placeholder (prose): the sweep the root script runs, shown because it
+is the method: lock the SM clock at each setting (minimum = maximum), run
+each workload in a traced window, then restore the default clocks whatever
+happens. Without root nvidia-smi refuses and the function raises one
+PermissionError; the power-cap sweep (nvidia-smi -pl) of the same script
+lives in the library. -->
+
+```{.python .input #energy-cost-clock-sweep-def}
+%%tab pytorch
+def hw_clock_sweep(clocks, workloads, device=0):  #@save
+    """Board power, clocks and work rate of each named workload with the SM
+    clock locked at each of clocks (MHz) on visible GPU `device` (0: the
+    card the power trace reads); needs root, restores the default clocks."""
+    if device != 0:
+        raise ValueError('make the card visible GPU 0 (CUDA_VISIBLE_DEVICES)')
+    uuid = d2l._hw_visible_uuids()[device]
+    smi = lambda *args: d2l.hw_run(['nvidia-smi', '-i', uuid, *args], 60)
+    if smi('-lgc', f'{clocks[0]},{clocks[0]}').refused:
+        raise PermissionError('locking the SM clock needs root')
+    rows = []
+    try:
+        for f in clocks:
+            smi('-lgc', f'{f},{f}')  # minimum = maximum: the clock is pinned
+            rows += d2l._sweep_rows('clock', f, workloads)
+    finally:
+        smi('-rgc')  # back to the default clocks
+    return pd.DataFrame(rows)
+```
+
+<!-- Placeholder (prose): what a cap does: a cap lowers the clock only when
+the load would pass it, so a compute-bound training step slows and a
+batch-1 decode step, far below the cap, does not (claim E5, pending until
+the root sweep exists: the cell prints one line now; then a 4-row table of
+cap W, training and decode step times and their ratios to the uncapped
+limit). Zeus measures the same energy-time trade-off per job. -->
+<!-- campaign: lm-hw-buildbox-clocksweep-v1 -->
+
+```{.python .input #energy-cost-cap-effect}
+%%tab pytorch
+caps = d2l.cap_effect(d2l.hw_clock_sweep_log())
+assert caps is None or (caps['decode ratio'] < 1.05).all()  # E5
+```
+
+## Energy per Token
+:label:`subsec_lm_hw_energy_token`
+
+<!-- Placeholder (prose): energy per token is power divided by tokens per
+second, measured as the integral of a window's power trace over its
+duration divided by the tokens produced in it (the function below; the
+trace's samples are 0.1 s apart). -->
+
+```{.python .input #energy-cost-energy-per-token-def}
+%%tab pytorch
+def energy_per_token(power_trace, tokens):  #@save
+    """Joules per token of a traced window: the trapezoid integral of the
+    samples' power (W) over their times (s), divided by the tokens
+    produced over the trace's span."""
+    t = np.array([s['t'] for s in power_trace])
+    P = np.array([s['power_w'] for s in power_trace])
+    return float(np.sum((P[1:] + P[:-1]) / 2 * np.diff(t))) / tokens
+```
+
+<!-- Placeholder (prose): decode across the batch. Qwen3-0.6B with random
+weights (shapes and bytes are what matter) at b = 1 to 128 and contexts 512
+and 2,048, each point a 5 s CUDA-graph window; points whose cache does not
+fit 90% of the card are cut (b = 128 at L = 2,048: 30.1 GB). While the
+weights dominate a step's bytes, b sequences share one read of them, so
+J/token falls about as 1/b; once the caches dominate, every sequence pays
+its own reads and the curve flattens. The two terms are equal at
+b = W / (L k_KV) (sec_lm_workload_hardware's step model): about 20 at
+L = 512 and 5 at L = 2,048 for Qwen3-0.6B (W = 1.19 GB, k_KV = 114,688
+bytes per token). Decision Q9: the plan's "until the compute-bound batch"
+does not apply, Qwen3-0.6B's L_crit is about 60 tokens, so its decode never
+turns compute-bound at these contexts. Read the plot (log-log, dotted lines
+the knees, dashed the power) and the lines: quote the J/token at b = 1 and
+64, the power and throughput ratios, and the two slopes per context (claim
+E2), at 2 digits from the committed run. -->
+
+```{.python .input #energy-cost-decode-energy}
+%%tab pytorch
+specs = d2l.chip_specs()
+chip = specs.loc['RTX 4090']
+cfg_06b = d2l.hw_config('Qwen/Qwen3-0.6B')
+e = d2l.decode_energy(cfg_06b, batches=2**np.arange(0, 8), L=(512, 2048))
+sm = d2l.ServingModel(cfg_06b, chip)
+for L in (512, 2048):
+    knee = sm.weight_bytes() / (L * sm.kv_bytes_per_token())  # W = b L k_KV
+    s = d2l.decode_slopes(e[e.L == L], knee)
+    print(f'L = {L:,}: knee at b = {knee:.0f}; d log(J/token) / d log b '
+          f'{s.below:.2f} below, {s.above:.2f} above')
+    assert s.below < s.above  # E2: the curve flattens past the knee
+g = e[e.L == 512].set_index('b')
+assert g.power_w[64] / g.power_w[1] < 2  # E2: power less than doubles
+assert g.tokens_per_s[64] / g.tokens_per_s[1] > 10  # E2: tokens/s x10+
+```
+
+<!-- Placeholder (prose): training at 6N FLOPs per token (plus attention,
+counted at half for a causal mask) at the measured MFU: the reference
+architecture of sec_lm_reference_model (138.4M parameters, random weights)
+on one card, micro-batches of 2 sequences of 4,096 tokens, fp32 master
+weights, bf16 autocast, fused AdamW and the chunked loss, eager; steps of
+8,192 tokens (no accumulation) and 32,768 (four micro-batches). J/token is
+power over tokens per second (claim E3, asserted), and MFU sets the tokens
+per second at a power the card holds near its limit. MFU here halves the
+causal attention term; chapter 21 prints MFU with the full term, so a
+chapter-21 MFU quoted here is converted or labelled. Quote J/token and MFU
+at 2 digits. -->
+
+```{.python .input #energy-cost-train-energy}
+%%tab pytorch
+R = d2l.r2_config('r2').arch
+tr = d2l.train_energy(R, tokens_per_step=(8192, 32768), micro_batch=2)
+assert np.allclose(tr.j_per_token, tr.power_w / tr.tokens_per_s,
+                   rtol=0.05)  # E3: J/token = W / (tokens/s)
+```
+
+<!-- Placeholder (prose): from the chip to the building. A datacentre
+delivers each watt to a chip at a PUE of about 1.5 (cooling, power
+conversion; the price table's assumption row, sourced to Uptime's 2025
+survey), so the energy bill is the chip's energy times the PUE. The power
+swing of synchronous training: every rank computes, then every rank waits
+for the collective, so a frontier run's draw swings by tens of megawatts in
+step with the step (the Llama 3 report on diurnal and step-level
+fluctuations); remedies, one sentence each, directions only: GPU-level
+power smoothing (a floor on the draw), filler work during communication,
+rack-level energy storage (the 2025 power-stabilization paper). Energy
+bloat in one paragraph (Perseus): stages or ranks off the critical path
+can run at a lower clock without lengthening the step; the critical path is
+chapter 23's. Carbon in one paragraph, no numbers: emissions are energy
+times the grid's carbon intensity, which varies by place and hour (Patterson
+et al.). -->
+
+## Cost per Token
+:label:`subsec_lm_hw_cost`
+
+<!-- Placeholder (prose): the price table: on-demand rents per GPU-hour from
+at least two providers per data-centre chip, one marketplace rent of an
+RTX 4090, purchase prices, electricity, PUE, operations and life. Each row
+is a quote (with its page) or an assumption, dated; the table prints each
+row's age and marks those older than 90 days. No dollar figure is quoted in
+the prose; a conclusion that rests on one assumption is stated as
+conditional on it. Prices and rental practice stay in sec_cloud_instances
+(tab_cloud_prices), buying a desktop in sec_hardware_buyers: both linked,
+not repeated. -->
+
+```{.python .input #energy-cost-prices}
+%%tab pytorch
+prices = d2l.hw_prices()
+```
+
+<!-- Placeholder (prose): derivation D2. A GPU-second costs c_s = price /
+3600; it trains MFU g P / F_tok tokens, with F_tok the FLOPs per token, P
+the peak and g the goodput, the fraction of wall time that advanced the
+model (chapter 23 measures it; a stated value here); so a million tokens
+cost C = 1e6 c_s F_tok / (MFU g P). Serving: C = 1e6 c_s / (T_gpu u), T_gpu
+the tokens per second per GPU at the operating point and u the fraction of
+paid hours the GPU serves. -->
+
+```{.python .input #energy-cost-cost-defs}
+%%tab pytorch
+#@save
+def cost_per_mtok_train(price_gpu_h, flops_per_token, p_peak, mfu,
+                        goodput=1.0):
+    """Dollars per million training tokens: a GPU-second costs
+    price_gpu_h / 3600 and trains mfu * goodput * p_peak / flops_per_token
+    tokens."""
+    return 1e6 * price_gpu_h / 3600 * flops_per_token / (
+        mfu * goodput * p_peak)
+
+def cost_per_mtok_serve(price_gpu_h, tps_per_gpu, utilization=1.0):  #@save
+    """Dollars per million served tokens at tps_per_gpu tokens/s while the
+    GPU serves a fraction utilization of the hours it is paid for."""
+    return 1e6 * price_gpu_h / 3600 / (tps_per_gpu * utilization)
+```
+
+<!-- Placeholder (prose): the formula against eq_six_nd: with F_tok = 6N,
+D tokens take 6 N D / (MFU P 3600) GPU-hours, which the first lines check
+exactly for N = 1e9, D = 1e12, MFU = 0.4 on an H100 (about 4,200
+GPU-hours; the "GPU-hours before dollars" arithmetic, restated here because
+sec_cloud_instances no longer carries that exercise). Then the table: the
+reference model on the box's card and Qwen3-8B on three data-centre chips,
+each MFU with its source (chapter 21's four-card run or this section's
+one-card measurement; chapter 23's measured MFU when committed, else the
+box's one-card Qwen3-8B MFU, an upper bound because it pays no
+communication), each chip at the median of its rent quotes. The dollar
+column is read in the table, never quoted. -->
+
+```{.python .input #energy-cost-train-cost}
+%%tab pytorch
+N, D, P_h100 = 1e9, 1e12, specs.loc['H100 SXM'].p16_tflops * 1e12
+gpu_h = d2l.cost_per_mtok_train(1.0, 6 * N, P_h100, 0.4) * D / 1e6  # $1/h
+assert math.isclose(gpu_h, 6 * N * D / (0.4 * P_h100 * 3600))  # eq_six_nd
+print(f'6 N D at N = 1e9, D = 1e12, MFU 0.4, H100: {gpu_h:,.0f} GPU-hours')
+g, g_source = d2l.training_goodput(stated=0.9)
+mfu = d2l.training_mfu()
+cfgs = {'reference': R, 'Qwen3-8B': d2l.hw_config('Qwen/Qwen3-8B')}
+mfu['$/M tok'] = [d2l.cost_per_mtok_train(
+    d2l.rent_per_hour(prices, r.chip),
+    d2l.flops_per_token(cfgs[r.model], T=r.T, causal_half=True),
+    specs.loc[r.chip].p16_tflops * 1e12, r.mfu, goodput=g)
+    for r in mfu.itertuples()]
+d2l.show_table(mfu.drop(columns='T'), digits={'mfu': 2}, width=79)
+print(f'goodput g = {g:.2f} ({g_source})')
+```
+
+<!-- Placeholder (prose): serving cost at three points on the box's
+frontier (sec_lm_workload_hardware's measured Qwen3-8B decode at L = 2,048:
+b = 1, 4, 16; tokens/s per user against per GPU), at the rented RTX 4090's
+price and a stated utilization; the more users share a step, the cheaper
+each token and the slower each user's stream. Prefill is billed separately
+(per prompt token, from the measured prefill time of a 2,048-token prompt);
+a prefix-cache hit rate h removes the hits' prefill (loading a hit's cache
+is counted as free here; sec_lm_memory_tiers weighs loading against
+recomputing). -->
+
+```{.python .input #energy-cost-serve-cost}
+%%tab pytorch
+grid = d2l.hw_box_log('box-workloads', 'grid-box')
+price, u = d2l.rent_per_hour(prices, 'RTX 4090'), 0.5  # u: busy half the time
+points = d2l.frontier_points(grid, 'Qwen/Qwen3-8B', L=2048, batches=(1, 4, 16))
+points['$/M tok'] = [d2l.cost_per_mtok_serve(price, T_gpu, u)
+                     for T_gpu in points.gpu_tps]
+d2l.show_table(points, digits={'user_tps': 0, 'gpu_tps': 0, '$/M tok': 2},
+               headers={'user_tps': 'tok/s per user',
+                        'gpu_tps': 'tok/s per GPU'}, width=79)
+n, h = 2048, 0.5  # prompt tokens, prefix-cache hit rate
+t_prefill = d2l.prefill_seconds(grid, 'Qwen/Qwen3-8B', n)
+C_prefill = d2l.cost_per_mtok_serve(price, n / t_prefill, u)
+print(f'prefill of {n:,}-token prompts: ${C_prefill:.3f} per M tokens, '
+      f'${(1 - h) * C_prefill:.3f} at {h:.0%} cache hits')
+```
+
+<!-- Placeholder (prose): derivation D5. Owning costs h_own = capex / life +
+P_kW PUE e + ops per hour whether the chip works or not; renting costs r
+per used hour; per hour of work, owning costs h_own / u at utilization u,
+so owning is cheaper above u* = h_own / r. -->
+
+```{.python .input #energy-cost-owned-def}
+%%tab pytorch
+#@save
+def owned_vs_rented(capex, life_h, power_kw, pue, elec_per_kwh, ops_per_h,
+                    rent_per_h):
+    """Owning costs h_own per hour, used or not (capex over its life, power
+    at the wall, operations); renting costs rent_per_h per used hour. Owning
+    is cheaper above the utilization u* = h_own / rent_per_h.
+    owned_per_used_h is h_own, the cost of an owned hour of work at full
+    use (h_own / u at utilization u)."""
+    h_own = capex / life_h + power_kw * pue * elec_per_kwh + ops_per_h
+    return dict(owned_per_used_h=h_own, u_star=h_own / rent_per_h)
+```
+
+<!-- Placeholder (prose): the box's card (a quarter of the four-card
+server, an assumption; its marketplace rent) against an H100 SXM (the
+quoted purchase price per GPU; the median of its rents), both at their TDP
+and the shared electricity, PUE and life rows. The interval draws every
+input uniformly within +-30% (10,000 draws, seed 0); the tornado moves one
+input at a time, assumption inputs hatched. Claim E6: u* is most sensitive
+to the rent (the price ratio), and the interval is wide; state the ranking
+and the intervals, and that a conclusion resting on one assumption row is
+conditional on it. -->
+
+```{.python .input #energy-cost-owned-rented}
+%%tab pytorch
+inputs = d2l.owned_inputs(prices, specs)  # the seven inputs per chip
+for name, x in inputs.items():
+    u_star = d2l.owned_vs_rented(**x)['u_star']
+    lo, hi = d2l.u_star_interval(x, rel=0.3, draws=10_000, seed=0)
+    print(f'{name}: u* = {u_star:.2f}, 90% of draws in {lo:.2f}-{hi:.2f}')
+    assert d2l.tornado_order(x, rel=0.3)[0][0] == 'rent_per_h'  # E6
+d2l.plot_tornado(inputs, rel=0.3)
+```
+
+<!-- Placeholder (prose): one line on units: the calculators run unchanged
+on unit-carrying arguments and return dollars per token and per hour and a
+pure number. -->
+
+```{.python .input #energy-cost-units}
+%%tab pytorch
+d2l.check_cost_units()
+```
+
+## Summary
+
+<!-- Placeholder (prose): 3-6 sentences: a chip's power is a static floor
+plus a dynamic part that grows as the cube of the clock, and a compute-bound
+load sits at the limit; energy per token is power over tokens per second,
+so batching (decode) and MFU (training) set it; a token's price is the
+chip-hour price over tokens per chip-hour, owning pays above u* = h_own / r,
+and u* moves most with the rent; forward to Chapter 23 (goodput, the
+measured MFU per layout) by :numref: if its label resolves. -->
+
+## Exercises
+
+<!-- Placeholder (prose): 6-8 exercises per S/spec/22.8.md part 9: the
+energy per token of an SRAM-only design holding Qwen3-8B on N_c chips at
+rated power (derive); the electricity price at which a GPU's lifetime energy
+equals its purchase price (derive); power at the compute-bound batch
+against idle and the ratio to TDP (measure, 1 min); the step-level power
+swing of a synchronous training loop at 100 Hz and its amplitude (measure,
+3 min, one or two GPUs); the units of the cost functions (check); open: a
+filler-work smoother that bounds the swing below a threshold and the energy
+it costs. -->

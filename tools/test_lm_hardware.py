@@ -39,6 +39,19 @@ tree an upper bound within 2% far above the crossover), NCCL's double
 binary tree, the INFO digest on a sample, the forced-pair fits and the
 measured and predicted crossover, the tuner check in noise units, the
 opening's symptoms, alpha_beta.json's records, the hierarchical display.
+Section 22.8: energy_per_token (trapezoid), the clock-event fractions,
+dvfs_fit (the plan's synthetic numbers exactly, a noisy sweep recovered),
+plot_dvfs's lines, hw_clock_sweep (PermissionError without root, -rgc
+restored after a failing workload), cap_effect pending and its table, the
+decode knee slopes, the cost functions (6 N D / (MFU P 3600) exactly, the
+serving cost), owned_vs_rented's identity, owned_inputs from the price table,
+u_star_interval (deterministic, brackets u*), the tornado order (rent
+first, E6), the units check (and a unit mismatch raising), the price
+table's contract (columns, kinds, dates, chips in chip_specs, a rent for
+every chip the calculators read), the chapter-21 MFU conversion, the box's
+Qwen3-8B depth extrapolation, the training-MFU and goodput fallbacks and
+their campaign paths, the frontier and prefill readers, and the widths of
+every display.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -3292,6 +3305,359 @@ class TestCollectives(unittest.TestCase):
     def test_campaign_config_refused(self):
         with self.assertRaisesRegex(ValueError, 'campaign launcher'):
             d2l.nccl_algo_proto_sweeps('t4')
+
+
+PRICES = os.path.join(REPO, 'tools', 'lm_data', 'hw', 'prices.csv')
+
+
+def sweep_log(P_s=80.0, k=80.0, clocks=(0.6, 0.76, 0.92, 1.08, 1.24, 1.4),
+              noise=0.0, seed=0, caps=False):
+    """A clock (and power-cap) sweep of known parameters, as the root
+    script writes it."""
+    rng = np.random.default_rng(seed)
+    f = np.array(clocks)
+    P = (P_s + k * f**3) * (1 + noise * rng.standard_normal(len(f)))
+    df = pd.DataFrame(dict(kind='clock', setting=f * 1e3,
+                           workload='matmul-8192', sm_mhz=f * 1e3,
+                           power_w=P, rate=f * 1e14, unit='FLOP'))
+    if caps:
+        rows = []
+        for cap in (150, 225, 300, 450):
+            rows.append(dict(kind='cap', setting=cap, workload='train-8192',
+                             step_ms=100 * 450 / cap))
+            rows.append(dict(kind='cap', setting=cap, workload='decode-b1',
+                             step_ms=3.0))
+        df = pd.concat([df, pd.DataFrame(rows)], ignore_index=True)
+    df.attrs.update(source='measured on a test card', synthetic=False)
+    return df
+
+
+def decode_frame():
+    """A decode series with J/token ~ 1/b below a knee of 20 and flat
+    above it (L = 512), and a knee of 5 at L = 2048."""
+    rows = []
+    for L, knee in ((512, 20.0), (2048, 5.0)):
+        for b in (1, 2, 4, 8, 16, 32, 64, 128):
+            if L == 2048 and b == 128:
+                continue
+            j = 1.0 / min(b, knee)
+            rows.append(dict(b=b, L=L, tokens_per_s=100.0 * b, j_per_token=j,
+                             power_w=100.0 * b * j))
+    e = pd.DataFrame(rows)
+    e.attrs.update(knee={'512': 20.0, '2048': 5.0}, cut=[[128, 2048]],
+                   model='Qwen/Qwen3-0.6B')
+    return e
+
+
+def max_width(fn, *args):
+    import matplotlib
+    matplotlib.use('Agg')
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        out = fn(*args)
+    d2l.plt.close('all')
+    lines = buf.getvalue().splitlines()
+    return max(map(len, lines)) if lines else 0, lines, out
+
+
+class TestEnergyCost(unittest.TestCase):
+    """Section 22.8: power windows, the clock model, energy per token, the
+    cost calculators, the price table and the MFU and goodput readers."""
+
+    def setUp(self):
+        self.prices = pd.read_csv(PRICES)
+        self.prices['age'] = 0
+        self.specs = pd.read_csv(os.path.join(
+            REPO, 'tools', 'lm_data', 'hw', 'chip_specs.csv')).set_index(
+                'chip')
+
+    def test_energy_per_token(self):
+        trace = [dict(t=0.0, power_w=100.0), dict(t=1.0, power_w=300.0),
+                 dict(t=2.0, power_w=300.0)]
+        self.assertAlmostEqual(d2l.energy_per_token(trace, 50), 500 / 50)
+
+    def test_throttle(self):
+        samples = [dict(throttle=0x4), dict(throttle=0x4 | 0x1),
+                   dict(throttle=0x0), dict(throttle=0x4)]
+        f = d2l._throttle_fractions(samples)
+        self.assertEqual(f['thr_SW_power_cap'], 0.75)
+        self.assertEqual(f['thr_idle'], 0.25)
+        self.assertEqual(d2l._throttle_names(f), 'SW power cap')
+        self.assertEqual(d2l._throttle_names({}), 'none')
+        self.assertTrue(math.isnan(d2l._throttle_fractions([])['thr_idle']))
+
+    def test_dvfs_plan_numbers(self):
+        with mock.patch.dict(d2l.DATA_HUB, {}, clear=True):
+            log = d2l.hw_clock_sweep_log()
+        self.assertTrue(log.attrs['synthetic'])
+        fit = d2l.dvfs_fit(log)
+        self.assertAlmostEqual(fit.P_s, 80, places=6)
+        self.assertAlmostEqual(fit.k, 80, places=6)
+        self.assertAlmostEqual(fit.f_star, 0.5 ** (1 / 3), places=6)
+        self.assertAlmostEqual(fit.f_star, 0.79, places=2)
+        width, lines, _ = max_width(d2l.plot_dvfs, fit)
+        self.assertLessEqual(width, 79)
+        self.assertIn('P(f*) = 120 W', lines[0])
+        self.assertIn('1.4x the work per joule', lines[1])
+        self.assertIn('0.57x the throughput of 1.40 GHz', lines[1])
+        self.assertIn('synthetic', lines[2])
+
+    def test_dvfs_noisy_recovery(self):
+        fit = d2l.dvfs_fit(sweep_log(P_s=60, k=90, noise=0.01))
+        self.assertAlmostEqual(fit.P_s / 60, 1, delta=0.1)
+        self.assertAlmostEqual(fit.k / 90, 1, delta=0.05)
+        self.assertFalse(fit.synthetic)
+        self.assertAlmostEqual(fit.step, 0.16)
+        # measured: the swept minimum of power / rate is the clock nearest f*
+        f = np.array([0.6, 0.76, 0.92, 1.08, 1.24, 1.4])
+        self.assertEqual(fit.f_min, f[np.argmin((60 + 90 * f**3) / f)])
+        width, lines, _ = max_width(d2l.plot_dvfs, fit)
+        self.assertLessEqual(width, 79)
+        self.assertIn('measured energy minimum', lines[-2])
+        self.assertEqual(lines[-1], 'measured on a test card')
+
+    def test_clock_sweep_needs_root(self):
+        refused = d2l.HWRun([], 4, '', 'denied', 0.1, 'exit status 4')
+        calls = []
+
+        def run(cmd, timeout_s, **kw):
+            calls.append(cmd)
+            return refused
+        with mock.patch.object(d2l, 'hw_run', run), mock.patch.object(
+                d2l, '_hw_visible_uuids', lambda: ['GPU-x']):
+            with self.assertRaisesRegex(PermissionError, 'root'):
+                d2l.hw_clock_sweep([1000, 2000], ['matmul-8192'])
+            with self.assertRaisesRegex(ValueError, 'visible GPU 0'):
+                d2l.hw_clock_sweep([1000], ['matmul-8192'], device=1)
+        self.assertEqual(len(calls), 1)  # nothing after the refusal
+
+    def test_clock_sweep_restores(self):
+        ok = d2l.HWRun([], 0, '', '', 0.1, None)
+        calls = []
+
+        def run(cmd, timeout_s, **kw):
+            calls.append(cmd[3:])
+            return ok
+
+        def rows(kind, setting, workloads, seconds=10):
+            if setting == 2000:
+                raise RuntimeError('workload failed')
+            return [dict(kind=kind, setting=setting, workload=w)
+                    for w in workloads]
+        with mock.patch.object(d2l, 'hw_run', run), mock.patch.object(
+                d2l, '_hw_visible_uuids', lambda: ['GPU-x']), \
+                mock.patch.object(d2l, '_sweep_rows', rows):
+            df = d2l.hw_clock_sweep([1000, 1500], ['a', 'b'])
+            self.assertEqual(len(df), 4)
+            self.assertEqual(calls[-1], ['-rgc'])
+            calls.clear()
+            with self.assertRaises(RuntimeError):
+                d2l.hw_clock_sweep([1000, 2000], ['a'])
+            self.assertEqual(calls[-1], ['-rgc'])
+            self.assertIn(['-lgc', '2000,2000'], calls)
+
+    def test_cap_effect(self):
+        width, lines, out = max_width(d2l.cap_effect, sweep_log())
+        self.assertIsNone(out)
+        self.assertEqual(len(lines), 1)
+        self.assertIn('pending', lines[0])
+        width, lines, t = max_width(d2l.cap_effect, sweep_log(caps=True))
+        self.assertLessEqual(width, 79)
+        self.assertEqual(list(t['cap W']), [150, 225, 300])
+        np.testing.assert_allclose(t['train ratio'], [3, 2, 1.5])
+        np.testing.assert_allclose(t['decode ratio'], 1)
+
+    def test_decode_slopes_and_display(self):
+        e = decode_frame()
+        s = d2l.decode_slopes(e[e.L == 512], 20)
+        self.assertAlmostEqual(s.below, -1, places=6)
+        self.assertAlmostEqual(s.above, 0, places=6)
+        width, lines, _ = max_width(d2l._show_decode_energy, e)
+        self.assertLessEqual(width, 79)
+        self.assertIn('J/token at b = 1, 0.050 at b = 64', lines[0])
+        self.assertIn('(128, 2,048)', lines[-1])
+        e = e.iloc[:0]
+        e.attrs['label'] = 'box-power: pending'
+        self.assertEqual(max_width(d2l._show_decode_energy, e)[1],
+                         ['box-power: pending'])
+
+    def test_profile_and_train_displays(self):
+        prof = pd.DataFrame(dict(
+            workload=['idle', 'decode-b1', 'matmul-8192'],
+            power_w=[22.0, 150.0, 447.0], sm_mhz=[210.0, 2520.0, 2385.0],
+            thr_idle=[1.0, 0, 0], thr_SW_power_cap=[0, 0, 1.0]))
+        prof.attrs.update(field='power.draw (NVML, 1 s average)', hz=10,
+                          power_limit_w=450, max_sm_mhz=3120)
+        width, lines, _ = max_width(d2l._show_profile, prof)
+        self.assertLessEqual(width, 79)
+        self.assertIn('SW power cap', lines[3])
+        self.assertIn('matmul 8192^3', lines[3])
+        self.assertIn('limit 450 W', lines[-1])
+        tr = pd.DataFrame(dict(tokens_per_step=[8192, 32768], accum=[1, 4],
+                               tokens_per_s=[9e4, 1e5],
+                               power_w=[420.0, 430.0],
+                               j_per_token=[0.0047, 0.0043],
+                               mfu=[0.45, 0.5]))
+        tr.attrs['peak_flops'] = 165.2e12
+        width, lines, _ = max_width(d2l._show_train_energy, tr)
+        self.assertLessEqual(width, 79)
+        self.assertIn('165 TFLOP/s', lines[-1])
+
+    def test_cost_functions(self):
+        N, D, P = 1e9, 1e12, 989.4e12
+        gpu_h = d2l.cost_per_mtok_train(1.0, 6 * N, P, 0.4) * D / 1e6
+        self.assertAlmostEqual(gpu_h, 6 * N * D / (0.4 * P * 3600))
+        self.assertAlmostEqual(gpu_h, 4212, delta=1)
+        self.assertAlmostEqual(
+            d2l.cost_per_mtok_train(2.0, 6 * N, P, 0.4, goodput=0.5),
+            4 * d2l.cost_per_mtok_train(1.0, 6 * N, P, 0.4))
+        self.assertAlmostEqual(d2l.cost_per_mtok_serve(3.6, 1000, 0.5),
+                               2.0)
+
+    def test_owned_vs_rented(self):
+        r = d2l.owned_vs_rented(30000, 30000, 1.0, 1.5, 0.1, 0.35, 3.0)
+        self.assertAlmostEqual(r['owned_per_used_h'], 1 + 0.15 + 0.35)
+        self.assertAlmostEqual(r['u_star'], 1.5 / 3.0)
+
+    def test_owned_inputs_interval_tornado(self):
+        inputs = d2l.owned_inputs(self.prices, self.specs)
+        self.assertEqual(list(inputs), ['RTX 4090 (box)', 'H100 SXM'])
+        box = inputs['RTX 4090 (box)']
+        self.assertEqual(box['capex'], 12000 / 4)
+        self.assertEqual(box['power_kw'], 0.45)
+        self.assertEqual(box.kinds['capex'], 'assumption')
+        self.assertEqual(box.kinds['rent_per_h'], 'quote')
+        self.assertEqual(inputs['H100 SXM']['rent_per_h'],
+                         d2l.rent_per_hour(self.prices, 'H100 SXM'))
+        for x in inputs.values():
+            u = d2l.owned_vs_rented(**x)['u_star']
+            lo, hi = d2l.u_star_interval(x, draws=2000)
+            self.assertLess(lo, u)
+            self.assertLess(u, hi)
+            self.assertEqual(d2l.u_star_interval(x, draws=2000), (lo, hi))
+            order = d2l.tornado_order(x)
+            self.assertEqual(order[0][0], 'rent_per_h')  # E6
+            self.assertEqual(len(order), 7)
+        import matplotlib
+        matplotlib.use('Agg')
+        d2l.plot_tornado(inputs)
+        d2l.plt.close('all')
+
+    def test_units(self):
+        width, lines, _ = max_width(d2l.check_cost_units)
+        self.assertEqual(len(lines), 1)
+        self.assertLessEqual(width, 79)
+        usd, s = d2l._Dim(dict(usd=1)), d2l._Dim(dict(s=1))
+        with self.assertRaises(TypeError):
+            usd + s
+        self.assertEqual((usd / s * s).u, {'usd': 1})
+
+    def test_price_table(self):
+        d2l._check_prices(self.prices.drop(columns='age'))
+        self.assertEqual(set(self.prices.kind), {'quote', 'assumption'})
+        rents = self.prices[self.prices.item.str.startswith('rent')]
+        for chip in ('A100 SXM 80 GB', 'H100 SXM', 'B200'):
+            self.assertGreaterEqual(
+                (rents.chip == chip).sum(), 2, chip)  # two providers
+        for chip in ('RTX 4090', 'H100 SXM', 'B200', 'A100 SXM 80 GB'):
+            self.assertGreater(d2l.rent_per_hour(self.prices, chip), 0)
+        for item in ('electricity', 'PUE', 'life'):
+            self.assertEqual((self.prices.item == item).sum(), 1, item)
+        self.assertEqual(
+            d2l.rent_per_hour(self.prices, 'H100 SXM'), 4.89)  # median
+        with self.assertRaises(KeyError):
+            d2l.rent_per_hour(self.prices, 'TPU v5e')
+        import datetime
+        ages = d2l._price_age(self.prices.drop(columns='age'),
+                              datetime.date(2027, 3, 1))
+        self.assertEqual(set(ages), {96})
+        bad = self.prices.drop(columns='age').copy()
+        bad.loc[0, 'kind'] = 'guess'
+        with self.assertRaises(AssertionError):
+            d2l._check_prices(bad)
+
+    def test_price_display(self):
+        prices = self.prices.copy()
+        prices.loc[0, 'age'] = 120
+        static = d2l._hw_static
+        table = lambda n: (prices.drop(columns='age') if n == 'prices'
+                           else static(n))
+        with mock.patch.object(d2l, '_hw_static', table), mock.patch.object(
+                    d2l, '_price_age', lambda df: list(prices.age)):
+            width, lines, out = max_width(d2l.hw_prices)
+        self.assertLessEqual(width, 79)
+        self.assertLessEqual(len(lines), 13)
+        self.assertIn('120 (old)', lines[1])  # the A100 PCIe rents
+        self.assertEqual(len(out), len(prices))
+
+    def test_reference_mfu_conversion(self):
+        arch = d2l.r2_config('r2').arch
+        key = d2l.PRETRAIN_ARTIFACTS['reference-run-log'][0]
+        log = pd.DataFrame(dict(step=np.arange(100),
+                                mfu=[0.1] * 10 + [0.4] * 90))
+        with mock.patch.dict(d2l.DATA_HUB, {key: ('x', None)}), \
+                mock.patch.object(d2l, 'load_artifact', lambda n: log), \
+                mock.patch.object(d2l, 'chip_specs', lambda: self.specs):
+            m = d2l._reference_run_mfu(arch)
+        full = d2l.flops_per_token(arch, T=arch.T)
+        half = d2l.flops_per_token(arch, T=arch.T, causal_half=True)
+        self.assertAlmostEqual(m, 0.4 * half / full * 165 / 165.2)
+        with mock.patch.dict(d2l.DATA_HUB, {}, clear=True):
+            self.assertIsNone(d2l._reference_run_mfu(arch))
+
+    def test_box_qwen8b_mfu(self):
+        cfg = d2l.hw_config('Qwen/Qwen3-8B')
+        t1 = 50.0  # ms per layer, 20 ms outside the layers
+        grid = pd.DataFrame(dict(
+            workload='train', model='Qwen/Qwen3-8B', b=2, L=2048,
+            n_layers=[1, 2, 3], ms=[20 + t1 * n for n in (1, 2, 3)]))
+        with mock.patch.object(d2l, 'hw_box_log', lambda n, e: grid), \
+                mock.patch.object(d2l, 'chip_specs', lambda: self.specs):
+            m, s = d2l._box_qwen8b_mfu(cfg)
+        t = (20 + t1 * cfg.num_hidden_layers) / 1e3
+        self.assertEqual(s, 2048)
+        self.assertAlmostEqual(m, d2l.mfu(2 * 2048 / t, cfg, 165.2e12,
+                                          T=2048, causal_half=True))
+
+    def test_training_mfu_paths(self):
+        tr = pd.DataFrame(dict(mfu=[0.4, 0.45]))
+        table = [dict(model='Qwen3-8B', chip='H100 SXM', mfu=0.38, T=4096)]
+        with mock.patch.object(d2l, '_reference_run_mfu', lambda a: None), \
+                mock.patch.object(d2l, 'hw_box_log', lambda n, e: tr), \
+                mock.patch.object(d2l, '_box_qwen8b_mfu',
+                                  lambda cfg: (0.5, 2048)), \
+                mock.patch.object(d2l, 'hw_campaign_log', lambda n: table):
+            df = d2l.training_mfu()
+        self.assertEqual(list(df.model), ['reference'] + ['Qwen3-8B'] * 3)
+        self.assertEqual(df.mfu[0], 0.45)
+        h100 = df[df.chip == 'H100 SXM'].iloc[0]
+        self.assertEqual((h100['mfu'], h100['T']), (0.38, 4096))
+        self.assertIn('upper bound', df[df.chip == 'B200'].source.iloc[0])
+        with mock.patch.dict(d2l.DATA_HUB, {}, clear=True):
+            self.assertEqual(d2l.training_goodput(0.85)[0], 0.85)
+        with mock.patch.object(d2l, 'hw_campaign_log',
+                               lambda n: {'goodput': 0.93}):
+            self.assertEqual(d2l.training_goodput(),
+                             (0.93, 'chapter 23, measured'))
+
+    def test_serving_readers(self):
+        grid = pd.DataFrame(dict(
+            workload=['decode'] * 4 + ['prefill'], series='grid',
+            model='Qwen/Qwen3-8B', L=[2048] * 4 + [2048],
+            b=[1, 4, 16, 32, 1], ms=[20.0, 21.0, 25.0, 30.0, 250.0]))
+        p = d2l.frontier_points(grid, 'Qwen/Qwen3-8B', 2048, (1, 4, 16))
+        self.assertEqual(list(p.b), [1, 4, 16])
+        np.testing.assert_allclose(p.user_tps, [50, 1e3 / 21, 40])
+        np.testing.assert_allclose(p.gpu_tps, [50, 4e3 / 21, 640])
+        self.assertEqual(d2l.prefill_seconds(grid, 'Qwen/Qwen3-8B', 2048),
+                         0.25)
+
+    def test_registry(self):
+        self.assertIn('box-power', d2l.HW_JOBS)
+        self.assertEqual(d2l.HW_STATIC['prices'][0], 'lm-hw-prices-v1')
+        self.assertIn('lm-hw-prices-v1', d2l.DATA_HUB)
+        for name in ('box-clocksweep', 'mfu-table', 'par-goodput'):
+            self.assertIn(name, d2l.HW_CAMPAIGNS)
 
 
 def collections_counter(tree):

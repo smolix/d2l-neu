@@ -433,7 +433,7 @@ $\mathbf{S}_t \in \mathbb{R}^{d_h \times d_v}$ in `linear_attention_parallel`
 consumes $O(n d_h d_v)$ memory (256 MiB per head at $n = 16{,}384, d_h = d_v
 = 64$), whereas `linear_attention_recurrent` executes $n$ sequential vector
 steps that underutilize GPU matrix cores. Partitioning the sequence into
-chunks of length $c$ :cite:`Yang.Wang.Shen.ea.2024` combines both:for a
+chunks of length $c$ :cite:`Yang.Wang.Shen.ea.2024` combines both: for a
 chunk starting at $t_0$ with pre-chunk state $(\mathbf{S}, \mathbf{z})$,
 
 $$
@@ -659,20 +659,7 @@ its width.
 
 ## Summary
 
-* Sliding-window attention restricts each query to the $w$ most recent keys,
-  achieving $O(nw)$ time and $O(w)$ cache memory; $L$ stacked layers span
-  $1 + L(w - 1)$ tokens via multi-hop relays and are typically interleaved
-  with periodic global attention layers.
-* Tiled GPU kernels skip work only on completely empty $b \times b$ tiles,
-  yielding speedups proportional to the fraction of skipped tiles (tempered by
-  boundary masking overhead).
-* Linear attention factorizes the similarity kernel as $\phi(\mathbf{q})^\top
-  \phi(\mathbf{k})$, turning causal attention into an $O(n)$ recurrence with
-  a constant-size $d_h \times d_v$ matrix state that can be trained in chunks.
-* Because a fixed-size state with nonnegative features cannot sharpen weights
-  via query scaling or store more than $O(d_h)$ orthogonal keys without
-  interference, practical linear-attention models add gating and hybrid
-  softmax layers.
+Sliding-window attention restricts each query to the $w$ most recent keys, reducing arithmetic to $O(nw)$ and cache memory to $O(w)$ while expanding its effective receptive field to $1 + L(w - 1)$ tokens across $L$ layers; modern long-context models interleave these local layers with periodic global attention layers to preserve single-hop retrieval. On GPUs, tiled kernels realize this speedup by skipping completely masked $b \times b$ score tiles, up to boundary masking overhead. Linear attention takes an algebraic route instead, replacing the exponential score with a factorized similarity kernel $\phi(\mathbf{q})^\top \phi(\mathbf{k})$ that collapses causal attention into an $O(n)$ recurrence over a fixed $d_h \times d_v$ matrix state trainable in parallel chunks. Because a fixed-size state with nonnegative features cannot sharpen weights via query scaling or store more than $O(d_h)$ orthogonal keys without cross-talk, practical linear-attention architectures incorporate data-dependent decay gates and hybrid softmax layers.
 
 ## Exercises
 
@@ -778,7 +765,7 @@ Windowed, Sparse, and Linear Attention<br>**sliding-window masks · multi-hop re
 
 ::: {.cols .vc}
 ::: {.col}
-- FlashAttention eliminates the $O(n^2)$ score matrix in HBM, yet at $n = 32{,}768$ ($T = 256$ tile rows of $b = 128$) it still visits $T(T+1)/2 = \mathbf{32{,}896}$ tiles and caches all $32{,}768$ KV tokens!
+- FlashAttention eliminates the $O(n^2)$ score matrix in HBM, yet at $n = 32{,}768$ ($T = 256$ tile rows of $b = 128$) it still visits $T(T+1)/2 = \mathbf{32{,}896}$ tiles and caches all $32{,}768$ KV tokens.
 - To cut arithmetic below $\Theta(n^2 d)$ and bound generation memory, we must either **score fewer pairs** (windows: $511$ tiles) or **factorize the similarity kernel** (linear attention: $d_h \times d_v$ state).
 :::
 
@@ -837,7 +824,7 @@ A causal sliding window of width $w$ permits query $i$ to attend to key $j$ if a
 ::: {.col}
 - Modern long-context transformers interleave $r$ windowed layers with $1$ full global layer:
   $$\frac{\textrm{Hybrid Cache}}{\textrm{All-Global Cache}} = \frac{r \min(n, w) + n}{(r + 1)\,n} \;\xrightarrow{\;n \gg w\;}\; \frac{1}{r + 1}$$
-- **Gemma 3 ($r = 5, w = 1{,}024$):** Shrinks the KV cache to **$17.3\%$** at $n = 128\text{K}$ while guaranteeing a 1-hop global attention path every 6th layer!
+- **Gemma 3 ($r = 5, w = 1{,}024$):** Shrinks the KV cache to **$17.3\%$** at $n = 128\text{K}$ while guaranteeing a 1-hop global attention path every 6th layer.
 :::
 
 ::: {.col .fig}
@@ -849,7 +836,7 @@ A causal sliding window of width $w$ permits query $i$ to attend to key $j$ if a
 ::: {.slide title="Realizing O(nw) Cost via Blocked Band Evaluation"}
 [Blocked Implementation]{.kicker}
 
-Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still computes all $n^2$ scores! To run in true $O(nw)$ time and memory, `windowed_attention` tiles queries into blocks of $w$ and scores each block only against its own and the previous key block ($2nw$ scores):
+Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still computes all $n^2$ scores. To run in true $O(nw)$ time and memory, `windowed_attention` tiles queries into blocks of $w$ and scores each block only against its own and the previous key block ($2nw$ scores):
 
 @attention-at-scale-a-linear-cost-implementation-1
 :::
@@ -898,7 +885,7 @@ Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still compu
 ::: {.col}
 - **Linear attention** (Katharopoulos et al., 2020) replaces $\exp(\mathbf{q}^\top\mathbf{k}/\sqrt{d_h})$ with $K(\mathbf{q}, \mathbf{k}) = \phi(\mathbf{q})^\top \phi(\mathbf{k})$ where $\phi(x) = \mathrm{elu}(x) + 1 > 0$:
   $$\bigl(\phi(\mathbf{Q})\,\phi(\mathbf{K})^\top\bigr)\,\mathbf{V} \;=\; \phi(\mathbf{Q})\,\bigl(\phi(\mathbf{K})^\top \mathbf{V}\bigr)$$
-- **The Associativity Trick:** Computing $\phi(\mathbf{K})^\top \mathbf{V} \in \mathbb{R}^{d_h \times d_v}$ first reduces cost from $\Theta(n^2 d_h)$ to **$\Theta(n d_h d_v)$** without ever forming an $n \times n$ matrix!
+- **The Associativity Trick:** Computing $\phi(\mathbf{K})^\top \mathbf{V} \in \mathbb{R}^{d_h \times d_v}$ first reduces cost from $\Theta(n^2 d_h)$ to **$\Theta(n d_h d_v)$** without ever forming an $n \times n$ matrix.
 :::
 
 ::: {.col .fig}
@@ -914,7 +901,7 @@ Passing `window_mask(n, w)` into a dense $n \times n$ matrix product still compu
 ::: {.col}
 - Under a causal mask ($s \le t$), factoring $\phi(\mathbf{q}_t)^\top$ out of the sums turns causal linear attention into an exact recurrence:
   $$\mathbf{o}_t^\top = \frac{\phi(\mathbf{q}_t)^\top \mathbf{S}_t}{\phi(\mathbf{q}_t)^\top \mathbf{z}_t + \epsilon}, \qquad \mathbf{S}_t = \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top$$
-- **Constant Generation State:** $(\mathbf{S}_t, \mathbf{z}_t)$ has fixed size $d_h d_v + d_h$ ($16.25\text{ KiB}$ in `float32` at $d_h = d_v = 64$) for any sequence length $n$!
+- **Constant Generation State:** $(\mathbf{S}_t, \mathbf{z}_t)$ has fixed size $d_h d_v + d_h$ ($16.25\text{ KiB}$ in `float32` at $d_h = d_v = 64$) for any sequence length $n$.
 :::
 
 ::: {.col .fig}
@@ -946,7 +933,7 @@ The recurrent (generation) form carries a $(d_h, d_v)$ state and updates it toke
 ::: {.col}
 - **Chunked Decomposition (Yang et al., 2024):** Split the sequence into $n/c$ chunks of length $c$ ($c = 64$); for a chunk starting at $t_0$ with pre-chunk state $(\mathbf{S}, \mathbf{z})$:
   $$\mathbf{o}_t^\top = \frac{\phi(\mathbf{q}_t)^\top \mathbf{S} + \sum_{t_0 \le s \le t} \big(\phi(\mathbf{q}_t)^\top\phi(\mathbf{k}_s)\big)\,\mathbf{v}_s^\top}{\phi(\mathbf{q}_t)^\top \mathbf{z} + \sum_{t_0 \le s \le t} \phi(\mathbf{q}_t)^\top\phi(\mathbf{k}_s) + \epsilon}$$
-- Runs both inter-chunk ($\mathbf{Q}_p \mathbf{S}$) and intra-chunk ($\mathrm{tril}(\mathbf{Q}_p \mathbf{K}_p^\top)\mathbf{V}_c$) terms as dense Tensor Core GEMMs while storing only $n/c$ chunk states!
+- Runs both inter-chunk ($\mathbf{Q}_p \mathbf{S}$) and intra-chunk ($\mathrm{tril}(\mathbf{Q}_p \mathbf{K}_p^\top)\mathbf{V}_c$) terms as dense Tensor Core GEMMs while storing only $n/c$ chunk states.
 :::
 
 ::: {.col .fig}
@@ -988,8 +975,8 @@ Compressing an unbounded history of key–value pairs into a fixed $d_h \times d
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Finite Orthogonal Capacity ($\le d_h$ Keys):** Because $\mathbf{S}_t = \sum_{s \le t} \phi(\mathbf{k}_s)\mathbf{v}_s^\top$ sums outer products in $\mathbb{R}^{d_h \times d_v}$, retrieving $\mathbf{v}_s$ without cross-talk requires $\phi(\mathbf{q}_t)$ to be orthogonal to $\phi(\mathbf{k}_{s'})$ for $s' \neq s$—possible for at most $d_h$ keys!
-- **2. No Temperature Sharpening:** In softmax, scaling $\mathbf{q} \mapsto \beta \mathbf{q}$ exponentiates score gaps ($e^{\beta\Delta} \to \infty$), converging to a 1-hot lookup. For $\phi(x) = \mathrm{elu}(x) + 1$, large $\beta$ gives $\phi(\beta \mathbf{q}) \approx \beta\,\mathrm{relu}(\mathbf{q})$, and $\beta$ **cancels between numerator and denominator**!
+- **1. Finite Orthogonal Capacity ($\le d_h$ Keys):** Because $\mathbf{S}_t = \sum_{s \le t} \phi(\mathbf{k}_s)\mathbf{v}_s^\top$ sums outer products in $\mathbb{R}^{d_h \times d_v}$, retrieving $\mathbf{v}_s$ without cross-talk requires $\phi(\mathbf{q}_t)$ to be orthogonal to $\phi(\mathbf{k}_{s'})$ for $s' \neq s$—possible for at most $d_h$ keys.
+- **2. No Temperature Sharpening:** In softmax, scaling $\mathbf{q} \mapsto \beta \mathbf{q}$ exponentiates score gaps ($e^{\beta\Delta} \to \infty$), converging to a 1-hot lookup. For $\phi(x) = \mathrm{elu}(x) + 1$, large $\beta$ gives $\phi(\beta \mathbf{q}) \approx \beta\,\mathrm{relu}(\mathbf{q})$, and $\beta$ **cancels between numerator and denominator**.
 :::
 
 ::: {.col .fig}
@@ -1028,7 +1015,7 @@ Compressing an unbounded history of key–value pairs into a fixed $d_h \times d
 ::: {.d2l-note}
 **Answers:**
 
-1. **Still $31$ tiles!** Because a kernel skips only completely empty $128 \times 128$ tiles, any window $2 \le w \le 128$ crosses the boundary into the left-neighbor tile and visits the exact same $2T - 1 = 31$ tiles.
+1. **Still $31$ tiles.** Because a kernel skips only completely empty $128 \times 128$ tiles, any window $2 \le w \le 128$ crosses the boundary into the left-neighbor tile and visits the exact same $2T - 1 = 31$ tiles.
 2. **Zero change.** Because $\mathrm{relu}(16x) = 16\,\mathrm{relu}(x)$ is positively homogeneous of degree 1, the factor $16$ cancels identically between numerator and denominator.
 3. **$D = 1 + 64 + 4{,}096 = 4{,}161$**, so $\mathbf{S}_t$ holds $4{,}161 \times 64$ floats ($1.02\text{ MiB}$ in fp32), matching a softmax KV cache ($2 \times 64$ floats/token) at **$n = 2{,}081$ tokens**.
 :::

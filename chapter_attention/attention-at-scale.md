@@ -51,7 +51,8 @@ from torch.nn.attention import SDPBackend, sdpa_kernel
 ### Counting FLOPs
 
 For a multi-head self-attention layer of width $d$ with $H$ heads of width
-$d_h = d/H$ over $n$ tokens, :eqref:`eq_multihead-flops` together with the
+$d_h = d/H$ over $n$ tokens, the multi-head complexity count
+(:numref:`sec_multihead-attention`) together with the
 row-wise softmax gives
 
 $$
@@ -403,16 +404,7 @@ itself (:numref:`sec_windowed-linear-attention`).
 
 ## Summary
 
-* Dense self-attention requires $8nd^2 + 4n^2d$ FLOPs per layer; the
-  quadratic score-and-mix term dominates the projections once $n > 2d$.
-* Materializing the $n \times n$ score and weight matrices consumes $8n^2$
-  bytes per head in float32 and makes naive attention memory-bandwidth bound.
-* *Online softmax* computes exact attention block by block by maintaining a
-  running maximum $m$, normalizer $s$, and value accumulator $\mathbf{o}$,
-  rescaling prior sums by $e^{m - m'}$ whenever $m$ increases.
-* *FlashAttention* fuses tiled online softmax in on-chip SRAM, reducing
-  memory to $O(n)$ and achieving large wall-clock speedups while leaving the
-  $\Theta(n^2 d)$ FLOP count intact.
+Dense self-attention requires $8nd^2 + 4n^2d$ FLOPs per layer, so its quadratic score-and-mix work overtakes the linear projections once $n > 2d$. Worse still, materializing the $n \times n$ score and weight matrices allocates $8n^2$ bytes per head in float32 and renders naive attention memory-bandwidth bound on modern GPUs. Online softmax eliminates both $n \times n$ buffers without approximation by processing keys in blocks and maintaining a running maximum $m$, normalizer $s$, and value accumulator $\mathbf{o}$ whose partial sums rescale by $e^{m - m'}$ whenever $m$ increases. FlashAttention fuses this tiled recurrence inside fast on-chip SRAM, reducing off-chip memory to $O(n)$ and achieving multi-fold wall-clock speedups while preserving exact attention and its $\Theta(n^2 d)$ arithmetic count.
 
 ## Exercises
 
@@ -543,7 +535,7 @@ Attention at Scale: Memory Bandwidth, Online Softmax, and FlashAttention<br>**qu
 
 ::: {.cols .vc}
 ::: {.col}
-- **Quadratic Scratch Footprint ($8n^2$ Bytes/Head in FP32):** Materializing the $n \times n$ score and softmax weight matrices consumes $8\text{ MiB}$ at $n = 1{,}024$, $512\text{ MiB}$ at $n = 8{,}192$, and **$128\text{ GiB}$ per head** at $n = 131{,}072$!
+- **Quadratic Scratch Footprint ($8n^2$ Bytes/Head in FP32):** Materializing the $n \times n$ score and softmax weight matrices consumes $8\text{ MiB}$ at $n = 1{,}024$, $512\text{ MiB}$ at $n = 8{,}192$, and **$128\text{ GiB}$ per head** at $n = 131{,}072$.
 - **Training Multiplier:** Saving weights across all $144$ heads of GPT-2 small at $n = 8{,}192$ requires $36\text{ GiB}$ per sequence.
 - **The Breakthrough:** Online softmax (Milakov & Gimelshein, 2018; Rabe & Staats, 2021) and **FlashAttention** (Dao et al., 2022) compute *exact* attention in **$O(n)$ memory**.
 :::
@@ -562,7 +554,7 @@ Attention at Scale: Memory Bandwidth, Online Softmax, and FlashAttention<br>**qu
 - **Per-Layer FLOP Decomposition:**
   $$\textrm{FLOPs} = 8 n d^2 + 4 n^2 d + O(H n^2)$$
 - **The Crossover Ratio:** Dividing quadratic score-and-mix work ($4n^2d$) by linear projection work ($8nd^2$) gives $n / (2d)$.
-- **Short vs. Long Contexts:** At $d = 768, n = 1{,}024$, projections dominate ($n/2d = 0.67$); at $d = 4{,}096, n = 131{,}072$, attention scoring and mixing cost **$16\times$** more FLOPs than all projections combined!
+- **Short vs. Long Contexts:** At $d = 768, n = 1{,}024$, projections dominate ($n/2d = 0.67$); at $d = 4{,}096, n = 131{,}072$, attention scoring and mixing cost **$16\times$** more FLOPs than all projections combined.
 :::
 
 ::: {.col .fig}
@@ -579,7 +571,7 @@ Why does naive attention allocate $8n^2$ bytes of temporary memory per head in `
 ::: {.cols .vc}
 ::: {.col}
 - **Two $n \times n$ Materializations:** `scores = Q @ K.T / sqrt(d_h)` allocates $4n^2$ bytes, and `softmax(scores)` allocates a second $4n^2$-byte buffer for the weights before multiplying by `V`.
-- **Inputs Are Tiny by Comparison:** At $n = 8{,}192, d_h = 64$, the input tensors $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ occupy only $3 \times 8{,}192 \times 64 \times 4\text{ B} = 6\text{ MiB}$, while the two $n \times n$ buffers consume **$512\text{ MiB}$** ($85\times$ larger)!
+- **Inputs Are Tiny by Comparison:** At $n = 8{,}192, d_h = 64$, the input tensors $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ occupy only $3 \times 8{,}192 \times 64 \times 4\text{ B} = 6\text{ MiB}$, while the two $n \times n$ buffers consume **$512\text{ MiB}$** ($85\times$ larger).
 :::
 
 ::: {.col .fig}
@@ -605,7 +597,7 @@ Measuring peak scratch memory (`d2l.peak_memory`) and wall-clock execution time 
 ::: {.col}
 - **Two Global Statistics Needed:** Standard stable softmax requires the global row maximum $m = \max_j a_j$ and denominator $s = \sum_j \exp(a_j - m)$ before weighting any value $\mathbf{v}_j$.
 - **Why Must We Keep $m$?** Without subtracting $m$, $\exp(a_j)$ overflows `float16` above $a_j \approx 11.09$ and `float32` above $a_j \approx 88.7$.
-- **The Online Insight:** Process keys in blocks and *rescale* running sums whenever a new block contains a larger maximum $m' > m$!
+- **The Online Insight:** Process keys in blocks and *rescale* running sums whenever a new block contains a larger maximum $m' > m$.
 :::
 
 ::: {.col .fig .big}
@@ -655,7 +647,7 @@ Measuring peak scratch memory (`d2l.peak_memory`) and wall-clock execution time 
 ::: {.col}
 - **One Stripe at a Time:** Instead of materializing the $n \times n$ score matrix, we hold only one $n \times c$ score stripe for the current block of $c$ keys.
 - **Running Query State:** Alongside the stripe, we store $\mathbf{m} \in \mathbb{R}^{n \times 1}$, $\mathbf{s} \in \mathbb{R}^{n \times 1}$, and $\mathbf{O} \in \mathbb{R}^{n \times d_v}$ ($O(n d_v)$ floats total).
-- **Memory Reduction:** Peak score memory drops from $O(n^2)$ to $O(nc)$, which is **linear in $n$** for fixed block size $c$!
+- **Memory Reduction:** Peak score memory drops from $O(n^2)$ to $O(nc)$, which is **linear in $n$** for fixed block size $c$.
 :::
 
 ::: {.col .fig}
@@ -689,7 +681,7 @@ Masking with `finfo(dtype).min`, not $-\infty$, keeps fully masked blocks free o
 
 @!attention-at-scale-a-chunked-implementation-2
 
-- **Quadratic $\to$ Linear Memory:** At $n = 16{,}384$, full-matrix attention consumes $2{,}048\text{ MiB}$ ($2\text{ GiB}$), whereas `chunked_attention` ($c = 512$) uses only $\approx 68\text{ MiB}$ ($30\times$ less)!
+- **Quadratic $\to$ Linear Memory:** At $n = 16{,}384$, full-matrix attention consumes $2{,}048\text{--}2{,}308\text{ MiB}$ ($>2\text{ GiB}$), whereas `chunked_attention` ($c = 512$) uses $\approx 36\text{--}132\text{ MiB}$ ($>17\times$ less).
 :::
 
 ::: {.col .fig}
@@ -738,7 +730,7 @@ Masking with `finfo(dtype).min`, not $-\infty$, keeps fully masked blocks free o
 ::: {.col}
 - **Zero HBM Score Traffic:** FlashAttention loads a query tile $\mathbf{Q}_i$ and $(m_i, s_i, \mathbf{O}_i)$ into on-chip SRAM, streams $(\mathbf{K}_j, \mathbf{V}_j)$ tiles from HBM, and writes $\mathbf{O}_i / s_i$ to HBM only once.
 - **HBM Traffic Bound:** Choosing max tile size $b \propto M / d_h$ cuts quadratic HBM traffic from $4n^2$ to $\Theta(n^2 d_h^2 / M)$ floats.
-- **$O(n)$ Backward Recomputation:** Saves only $\ell_i = m_i + \log s_i$ ($1$ float/query) and recomputes $\alpha_{ij} = \exp(a_{ij} - \ell_i)$ on chip during backprop!
+- **$O(n)$ Backward Recomputation:** Saves only $\ell_i = m_i + \log s_i$ ($1$ float/query) and recomputes $\alpha_{ij} = \exp(a_{ij} - \ell_i)$ on chip during backprop.
 :::
 
 ::: {.col .fig .big}
@@ -812,7 +804,7 @@ Work through these three systems and algorithmic questions:
 ::: {.d2l-note}
 **Answers:**
 
-1. **$\alpha_j = \exp(a_j - \ell)$**, because $\exp(a_j - m - \log s) = \exp(a_j - m) / s = \alpha_j$, requiring only $1$ float per query instead of $(m, s)$ or all $n$ weights!
+1. **$\alpha_j = \exp(a_j - \ell)$**, because $\exp(a_j - m - \log s) = \exp(a_j - m) / s = \alpha_j$, requiring only $1$ float per query instead of $(m, s)$ or all $n$ weights.
 2. **Immediate overflow to `inf`**, followed by `inf / inf = NaN` in the output normalizer. Carrying $m$ guarantees $a_j - m' \le 0$ so every exponential lies in $(0, 1]$.
 3. **Tile size $b \le M / (4d_h)$ halves**, so twice as many passes over $\mathbf{K}, \mathbf{V}$ are needed and quadratic HBM traffic increases (by $2\times$ per head, or $4\times$ at fixed head count).
 :::

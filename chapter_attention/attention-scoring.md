@@ -769,18 +769,7 @@ across sequence lengths (:numref:`sec_positional-information`).
 
 ## Summary
 
-* Scaled dot-product scoring $a(\mathbf{q}, \mathbf{k}) = \mathbf{q}^\top
-  \mathbf{k} / \sqrt{d}$ drops the norm penalties of the Gaussian kernel and
-  computes all pairwise scores via a single matrix multiplication
-  $\mathbf{Q}\mathbf{K}^\top$.
-* Dividing by $\sqrt{d}$ preserves unit score variance for unit-variance
-  inputs, preventing softmax saturation and vanishing score gradients as head
-  width $d$ increases.
-* Boolean masks exclude invalid query--key pairs (such as padding and future
-  tokens) and compose via logical AND under broadcasting; filling excluded
-  scores with `finfo(dtype).min` avoids float16 overflow and `NaN` rows.
-* Content-only keys split attention equally across duplicate tokens, whereas
-  position-aware keys enable end-to-end learning of sequence alignments.
+Scaled dot-product scoring $a(\mathbf{q}, \mathbf{k}) = \mathbf{q}^\top \mathbf{k} / \sqrt{d}$ drops the quadratic norm penalties of the Gaussian kernel and evaluates all pairwise scores in a single matrix multiplication $\mathbf{Q}\mathbf{K}^\top$. Dividing by $\sqrt{d}$ preserves unit score variance for unit-variance inputs, preventing softmax saturation and vanishing score gradients as head width $d$ grows. Structural constraints such as sequence padding and causal decoding are enforced via boolean masks that compose under logical AND, using `finfo(dtype).min` alongside explicit empty-row zeroing to avoid `float16` overflow and `NaN` propagation. Finally, content-only keys split attention equally across duplicate tokens, whereas position-aware keys allow sequence alignments to be learned end to end.
 
 ## Exercises
 
@@ -976,7 +965,7 @@ Attention Scoring Functions, Scaled Dot-Product, and Masking<br>**dot-product vs
 ::: {.cols .vc}
 ::: {.col}
 - **Additive Attention (Bahdanau et al., 2014):** $a_{\textrm{add}}(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k})$ materializes a 3D $(n, m, r)$ intermediate activation tensor.
-- **Small-Weight Hazard:** Near $0$, $\tanh(u) \approx u$ is linear, so query terms $\mathbf{W}_q\mathbf{q}$ cancel across keys in the softmax!
+- **Small-Weight Hazard:** Near $0$, $\tanh(u) \approx u$ is linear, so query terms $\mathbf{W}_q\mathbf{q}$ cancel across keys in the softmax.
 - **Scaled Dot-Product ($\mathbf{Q}\mathbf{K}^\top / \sqrt{d}$):** Computes all $n \times m$ scores in a single Tensor Core GEMM and couples $\mathbf{q}$ and $\mathbf{k}$ bilinearly at all scales.
 :::
 
@@ -1043,7 +1032,7 @@ Attention Scoring Functions, Scaled Dot-Product, and Masking<br>**dot-product vs
 ::: {.col}
 - **Experimental Setup:** $2{,}048$ standard normal queries attend over $m = 64$ standard normal keys across widths $d \in \{4, \ldots, 512\}$.
 - **Scaled Invariance:** With $1/\sqrt{d}$, weight entropy stays flat near $\log 64 - \frac{1}{2} \approx 3.66$ nats (an effective pool of $\approx 39$ keys) across all widths.
-- **Unscaled Collapse:** Without $1/\sqrt{d}$, entropy plunges to $0.21$ nats by $d = 512$—nearly one-hot before a single gradient update!
+- **Unscaled Collapse:** Without $1/\sqrt{d}$, entropy plunges to $0.21$ nats by $d = 512$, becoming nearly one-hot before a single gradient update.
 :::
 
 ::: {.col .fig}
@@ -1060,7 +1049,7 @@ Comparing the mean maximum weight $\max_i \alpha_i$ and the mean Frobenius norm 
 @!attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2
 
 ::: {.d2l-note}
-Why does the unscaled Jacobian norm rise from $d = 4$ ($0.292$) to $d = 16$ ($0.338$) before falling? $\|\mathbf{J}\|_F$ is maximized when weight splits evenly between $k = 2$ competing keys ($\|\mathbf{J}\|_F = 1/2$), which occurs transiently as weights transition from uniform ($m = 64$) toward one-hot ($k = 1$).
+Why does the unscaled Jacobian norm rise from $d = 4$ ($\approx 0.26$) to $d = 16$ ($\approx 0.29$) before falling? $\|\mathbf{J}\|_F$ is maximized when weight splits evenly between $k = 2$ competing keys ($\|\mathbf{J}\|_F = 1/2$), which occurs transiently as weights transition from uniform ($m = 64$) toward one-hot ($k = 1$).
 :::
 :::
 
@@ -1088,7 +1077,7 @@ Dense GPU matrix multiplication evaluates all $n \times m$ query–key pairs at 
 ::: {.cols .vc}
 ::: {.col}
 - **Hardcoded `-1e6`:** Overflows `float16` (whose maximum finite magnitude is $65{,}504$).
-- **Literal `-inf`:** On any fully masked row (`all False`), the row maximum is $-\infty$, so max-subtraction evaluates $-\infty - (-\infty) = \mathrm{NaN}$ and infects every token in the next layer's GEMM!
+- **Literal `-inf`:** On any fully masked row (`all False`), the row maximum is $-\infty$, so max-subtraction evaluates $-\infty - (-\infty) = \mathrm{NaN}$ and infects every token in the next layer's GEMM.
 - **`finfo(dtype).min` + Zeroing:** Underflows excluded exponentials to `0.0` in `float16`, `bfloat16`, and `float32`, while `where(mask.any(-1))` zeroes empty rows cleanly.
 :::
 
@@ -1195,7 +1184,7 @@ Always verify custom attention and masking modules on small inputs with known cl
 ::: {.col}
 - Assign each distinct letter in `"attention"` and `"translation"` a random embedding $\mathbf{e} \in \mathbb{R}^{32}$ (identical letters score $\approx \sqrt{32} \approx 5.7$; distinct letters score $\approx 0 \pm 1$):
 - **Unique matches (`i`, `o`):** Concentrate nearly $100\%$ of their weight on their partner.
-- **Repeated matches (`a`, `t`, `n`):** Split weight *equally* across all copies—content alone cannot distinguish positions!
+- **Repeated matches (`a`, `t`, `n`):** Split weight *equally* across all copies—content alone cannot distinguish positions.
 - **Unmatched query (`e`):** Forced to sum to $1$, spreading mass across random keys (motivating **attention sinks** in LLMs).
 :::
 
@@ -1251,8 +1240,8 @@ Test your understanding of scaled dot-product scoring and boolean masking:
 **Answers:**
 
 1. **Unscaled:** $e^8 \approx 2{,}981 : 1$. **Scaled by $1/\sqrt{64} = 1/8$:** $\Delta' = 1$, giving $e^1 \approx 2.72 : 1$.
-2. Expanding $\mathbf{q}^\top(\mathbf{W}_k\mathbf{y}_i + \mathbf{b}_k) = \mathbf{q}^\top\mathbf{W}_k\mathbf{y}_i + \mathbf{q}^\top\mathbf{b}_k$ shows that $\mathbf{q}^\top\mathbf{b}_k$ is independent of key index $i$, so softmax shift invariance cancels it out identically!
-3. **Row $i = 5$ is completely empty (`all False`)!** The window allows keys $\{4, 5\}$ while padding allows $\{0, 1, 2\}$, whose intersection is $\emptyset$—why `masked_softmax` must safely zero out empty rows.
+2. Expanding $\mathbf{q}^\top(\mathbf{W}_k\mathbf{y}_i + \mathbf{b}_k) = \mathbf{q}^\top\mathbf{W}_k\mathbf{y}_i + \mathbf{q}^\top\mathbf{b}_k$ shows that $\mathbf{q}^\top\mathbf{b}_k$ is independent of key index $i$, so softmax shift invariance cancels it out identically.
+3. **Row $i = 5$ is completely empty (`all False`).** The window allows keys $\{4, 5\}$ while padding allows $\{0, 1, 2\}$, whose intersection is $\emptyset$—why `masked_softmax` must safely zero out empty rows.
 :::
 :::
 

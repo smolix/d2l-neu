@@ -851,20 +851,7 @@ validate the induction circuit.
 
 ## Summary
 
-* Each attention head decomposes into a rank-$d_h$ **QK circuit**
-  $\mathbf{W}_q^\top \mathbf{W}_k$ (where it attends) and a rank-$d_h$ **OV
-  circuit** $\mathbf{W}_o \mathbf{W}_v$ (what it writes to the residual
-  stream).
-* A one-layer attention-only model can represent bigrams and skip-trigrams
-  (including single-token copying), whereas continuing an in-context pattern
-  $[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}] \to [\mathrm{B}]$ requires a
-  two-layer **induction circuit** composing a previous-token head with a
-  match-and-copy head.
-* On repeated random patterns of variable period, a two-block model undergoes
-  a sharp training phase transition to more than $90\%$ in-context accuracy, while
-  a fixed period allows a one-block model to exploit a positional shortcut.
-* Establishing what a head computes requires combining attention-pattern
-  probes, OV weight analysis, and causal interventions (ablations).
+Each attention head acts on the residual stream through two matrices of rank at most $d_h$: a **QK circuit** $\mathbf{W}_q^\top \mathbf{W}_k$ governing where it attends and an **OV circuit** $\mathbf{W}_o \mathbf{W}_v$ governing what vector it writes to the destination position. A single attention layer can represent bigrams and skip-trigrams (including single-token copying), whereas completing novel in-context patterns $[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}] \to [\mathrm{B}]$ requires at least two layers so that a **previous-token head** and a match-and-copy **induction head** can compose through the residual stream. Trained on repeated random patterns of variable period, a two-block model undergoes a sharp phase transition to more than $90\%$ in-context accuracy, whereas a fixed period allows a one-block model to exploit a brittle positional shortcut. Establishing what a head computes in practice therefore requires combining attention-pattern probes, OV weight inspection, and causal head ablations.
 
 ## Exercises
 
@@ -1078,7 +1065,7 @@ Attention Circuits: The Residual Stream, QK/OV Decomposition, and Induction Head
 ::: {.cols .vc}
 ::: {.col}
 - **A Positional Shortcut Can Mimic Retrieval:** A 1-block model trained on 64-token sequences repeating a random 32-token pattern reaches **$100\%$ accuracy** on the second copy by looking $31$ positions back.
-- **Testing on Period 24 Exposes the Illusion:** Evaluated on 24-token patterns, its accuracy collapses to **$1.6\%$ (chance)** because its heads still stare blindly at offset $-31$!
+- **Testing on Period 24 Exposes the Illusion:** Evaluated on 24-token patterns, its accuracy collapses to **$1.6\%$ (chance)** because its heads still stare blindly at offset $-31$.
 :::
 
 ::: {.col .fig .big}
@@ -1144,7 +1131,7 @@ Attention Circuits: The Residual Stream, QK/OV Decomposition, and Induction Head
 - Expanding the residual stream for $N = 1$ reveals 0-layer bigram and 1-layer skip-trigram terms:
   $$\mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i} + \sum_{m=1}^H \sum_{j \le i} \alpha_{ij}^m\,\mathbf{E}\,\mathbf{W}_{\mathrm{OV}}^m\,\mathbf{e}_{x_j}$$
 - **Zero Blocks ($N = 0$):** Symmetric table $\mathbf{E}\mathbf{E}^\top$ (cannot express asymmetric cycles).
-- **One Block ($N = 1$):** Skip-trigrams $x_j \ldots x_i \to x_{\textrm{next}}$, but **cannot** complete novel $[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}] \to [\mathrm{B}]$ because $[\mathrm{B}]$'s key knows nothing about its predecessor $[\mathrm{A}]$!
+- **One Block ($N = 1$):** Skip-trigrams $x_j \ldots x_i \to x_{\textrm{next}}$, but **cannot** complete novel $[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}] \to [\mathrm{B}]$ because $[\mathrm{B}]$'s key knows nothing about its predecessor $[\mathrm{A}]$.
 :::
 
 ::: {.col .fig}
@@ -1160,7 +1147,7 @@ Attention Circuits: The Residual Stream, QK/OV Decomposition, and Induction Head
 ::: {.col}
 - Completing $[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}]$ $\to$ $[\mathrm{B}]$ requires **two layers composing through the key pathway (K-composition)**:
 - **Layer 1 (Previous-Token Head):** Uses RoPE offset preference to attend $1$ step back ($j - 1$) and writes $\mathbf{W}_{\mathrm{OV}}^{1}\,\mathbf{e}_{[\mathrm{A}]}$ into the residual stream $\mathbf{h}_j^{(1)}$ at $[\mathrm{B}]$'s position $j$.
-- **Layer 2 (Induction Head):** Its QK circuit matches the current query $\mathbf{e}_{[\mathrm{A}]}$ against that written key feature in $\mathbf{h}_j^{(1)}$ ($\mathbf{e}_{[\mathrm{A}]}^\top \mathbf{W}_{\mathrm{QK}}^{2}\mathbf{W}_{\mathrm{OV}}^{1}\mathbf{e}_{[\mathrm{A}]}$), and its OV circuit copies $x_j = [\mathrm{B}]$ into the output logits!
+- **Layer 2 (Induction Head):** Its QK circuit matches the current query $\mathbf{e}_{[\mathrm{A}]}$ against that written key feature in $\mathbf{h}_j^{(1)}$ ($\mathbf{e}_{[\mathrm{A}]}^\top \mathbf{W}_{\mathrm{QK}}^{2}\mathbf{W}_{\mathrm{OV}}^{1}\mathbf{e}_{[\mathrm{A}]}$), and its OV circuit copies $x_j = [\mathrm{B}]$ into the output logits.
 :::
 
 ::: {.col .fig}
@@ -1190,7 +1177,7 @@ What happens if we train a **one-block** model (`num_blks=1, bias=True`) on sequ
 @!what-attention-computes-the-positional-shortcut-2
 
 ::: {.d2l-note .warn}
-**Mechanistic Pitfall:** On $L = 32$, the 1-block model reaches $1.00$ accuracy (about $0.1\text{ nats}$) by using constant bias queries and keys under RoPE to attend purely to fixed offset $j - i = -31$! Tested on period $L = 24$ (target at offset $-23$), its heads still place more than $0.9$ of their mass at offset $-31$ and accuracy collapses to $0.02$, which is chance.
+**Mechanistic Pitfall:** On $L = 32$, the 1-block model reaches $1.00$ accuracy (about $0.1\text{ nats}$) by using constant bias queries and keys under RoPE to attend purely to fixed offset $j - i = -31$. Tested on period $L = 24$ (target at offset $-23$), its heads still place more than $0.9$ of their mass at offset $-31$ and accuracy collapses to $0.02$, which is chance.
 :::
 :::
 
@@ -1202,7 +1189,7 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 @!what-attention-computes-two-blocks-learn-to-look-things-up-1
 
 - **Two Blocks Solve Retrieval:** All three 2-block seeds drop below $1\text{ nat}$ between steps $1{,}000$ and $3{,}000$, reaching roughly $0.2$–$0.4\text{ nats}$ and more than $90\%$ later-copy accuracy.
-- **One Block Fails:** The 1-block control stalls above $3.5\text{ nats}$ (about $10\%$ accuracy)—all it can do is boost the unigram set of tokens that appeared anywhere in the prefix!
+- **One Block Fails:** The 1-block control stalls above $3.5\text{ nats}$ (about $10\%$ accuracy)—all it can do is boost the unigram set of tokens that appeared anywhere in the prefix.
 :::
 
 ::: {.slide title="Phase Transition During Induction Head Formation"}
@@ -1211,7 +1198,7 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 ::: {.cols .vc}
 ::: {.col}
 - **Abrupt Loss Drop:** For well over a thousand steps, the 2-block model sits on a plateau near $4\text{ nats}$, barely below chance; once block 1's OV output aligns with block 2's QK circuit, later-copy loss plunges by more than $3\text{ nats}$.
-- **First-Copy Side Effect:** First-copy loss *rises* slightly above $\log 64 \approx 4.16$ right at the phase transition: once induction activates, a token that repeats by chance inside the first period causes the model to predict its previous successor!
+- **First-Copy Side Effect:** First-copy loss *rises* slightly above $\log 64 \approx 4.16$ right at the phase transition: once induction activates, a token that repeats by chance inside the first period causes the model to predict its previous successor.
 :::
 
 ::: {.col .fig}
@@ -1227,7 +1214,7 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 ::: {.col}
 - Evaluating `model_two` on a test sequence of period $L = 24$ reveals two distinct geometric signatures across the two blocks:
 - **Block 1 (Top Row):** Several heads form a subdiagonal stripe at $j = i - 1$ (**previous-token heads**).
-- **Block 2 (Bottom Row):** Once the second copy starts at $i \ge 24$, all four heads form a parallel diagonal stripe at $j = i + 1 - L = i - 23$ (**induction heads**)!
+- **Block 2 (Bottom Row):** Once the second copy starts at $i \ge 24$, all four heads form a parallel diagonal stripe at $j = i + 1 - L = i - 23$ (**induction heads**).
 :::
 
 ::: {.col .fig}
@@ -1267,8 +1254,8 @@ Sampling the period uniformly from $L \in \{16, \ldots, 32\}$ on every sequence 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Subtlety 1 (Stream vs. Embeddings):** Block 2's OV matrix copies almost perfectly ($0.9$–$1.0$ diagonal share) on the Block-1 stream $\bar{\mathbf{h}}_a$, but less reliably (anywhere from $0.3$ to nearly $1.0$) on raw embeddings $\mathbf{e}_a$—Block 2 also reads features transformed by Block 1's OV circuits (**V-composition**)!
-- **Subtlety 2 (Copying $\neq$ Retrieval):** The 1-block model *also* has a near-perfect diagonal OV copy matrix (share $\approx 1.00$), yet gets only $10\%$ accuracy because its QK circuit cannot locate the target!
+- **Subtlety 1 (Stream vs. Embeddings):** Block 2's OV matrix copies almost perfectly ($0.9$–$1.0$ diagonal share) on the Block-1 stream $\bar{\mathbf{h}}_a$, but less reliably (anywhere from $0.3$ to nearly $1.0$) on raw embeddings $\mathbf{e}_a$—Block 2 also reads features transformed by Block 1's OV circuits (**V-composition**).
+- **Subtlety 2 (Copying $\neq$ Retrieval):** The 1-block model *also* has a near-perfect diagonal OV copy matrix (share $\approx 1.00$), yet gets only $10\%$ accuracy because its QK circuit cannot locate the target.
 
 @!what-attention-computes-the-circuit-is-in-the-weights[out=1]
 :::
@@ -1296,7 +1283,7 @@ Correlation in attention maps or weights is not causation. To test which heads a
 @!what-attention-computes-head-ablation-2
 
 - **1. Block-1 Previous-Token Heads Are Necessary:** Removing them drops accuracy from above $0.9$ to below $0.2$.
-- **2. Surprise—Block 1's "Inert" Heads Are Also Necessary!** Removing them drops accuracy below $0.15$: Block 2's OV copy circuit relies on their stream transformation (zero-ablation also shifts stream norms off-distribution).
+- **2. Surprise—Block 1's "Inert" Heads Are Also Necessary:** Removing them drops accuracy below $0.15$: Block 2's OV copy circuit relies on their stream transformation (zero-ablation also shifts stream norms off-distribution).
 - **3. Block-2 Redundancy:** Removing the single strongest induction head leaves accuracy at $0.7$–$0.9$; all four Block-2 heads share the induction workload and must be removed together to drop to chance.
 :::
 
@@ -1307,7 +1294,7 @@ Correlation in attention maps or weights is not causation. To test which heads a
 ::: {.col}
 - With $64^{24} \approx 2.2 \times 10^{43}$ possible patterns of length $24$, the model has never seen any test pattern during training, and all token transitions are equally likely a priori.
 - **First Copy ($t < 24$):** Accuracy sits at the chance baseline $1/64 \approx 0.016$.
-- **Second Copy ($t \ge 25$):** Jumps immediately above $0.90$ from a *single* in-context exposure! (At the exact restart $t = 24$, content matching has not yet seen a repeated token.)
+- **Second Copy ($t \ge 25$):** Jumps immediately above $0.90$ from a *single* in-context exposure. (At the exact restart $t = 24$, content matching has not yet seen a repeated token.)
 :::
 
 ::: {.col .fig}
@@ -1326,7 +1313,7 @@ $$\mathbb{E}\!\left[\frac{1}{K}\right] = \frac{1 - (1 - p)^L}{L p} \approx 0.84 
 @!what-attention-computes-generalization-to-unseen-patterns-1
 
 ::: {.d2l-note}
-On unique pattern tokens ($K = 1$, $70\%$ of positions), `model_two` achieves **$0.97$–$1.00$ accuracy**; on repeated tokens ($K > 1$, $30\%$ of positions), it reaches roughly **$0.7$–$0.9$**, beating the $0.47$ uniform single-token match by combining multi-token prefix context and RoPE distance preferences!
+On unique pattern tokens ($K = 1$, $70\%$ of positions), `model_two` achieves **$0.97$–$1.00$ accuracy**; on repeated tokens ($K > 1$, $30\%$ of positions), it reaches roughly **$0.7$–$0.9$**, beating the $0.47$ uniform single-token match by combining multi-token prefix context and RoPE distance preferences.
 :::
 :::
 
@@ -1337,7 +1324,7 @@ On unique pattern tokens ($K = 1$, $70\%$ of positions), `model_two` achieves **
 ::: {.col}
 - A single linear-attention head can also execute **one step of gradient descent** on an in-context regression task $\mathcal{D} = \{(\mathbf{x}_i, y_i)\}_{i=1}^n$ (Oswald et al., 2023):
   $$\mathbf{w}_1 = \eta \sum_{i=1}^n y_i\,\mathbf{x}_i \;\Longrightarrow\; \hat{y}_q = \sum_{i=1}^n (\mathbf{x}_q^\top \mathbf{x}_i)\,(\eta y_i)$$
-- Packing examples as $\mathbf{z}_i = [\mathbf{x}_i; y_i]$ and query as $\mathbf{z}_q = [\mathbf{x}_q; 0]$ computes $\hat{y}_q$ in a single forward pass without updating model weights!
+- Packing examples as $\mathbf{z}_i = [\mathbf{x}_i; y_i]$ and query as $\mathbf{z}_q = [\mathbf{x}_q; 0]$ computes $\hat{y}_q$ in a single forward pass without updating model weights.
 :::
 
 ::: {.col .fig}
@@ -1356,7 +1343,7 @@ Our investigation of induction heads illustrates why establishing what a circuit
 | **1. Later-Copy Loss** | Behavioral | Two blocks solve variable-period repetition; one cannot | Identifies no internal component or algorithm |
 | **2. Period Shift ($32$ $\to$ $24$)** | Input intervention | Exposes the 1-block model's fixed-offset $-31$ shortcut | Alters the input distribution alongside the probe |
 | **3. Attention Head Scores** | Activation probe | Block 1 attends to $i-1$; Block 2 attends to $i+1-L$ | Shows *where* heads look, not *what* their values transmit |
-| **4. OV Copy Matrix ($\mathbf{C}$)** | Weights + stream | Block 2's OV circuit boosts the attended token's logit | Also diagonal ($\approx 1.00$) in the failing 1-block control! |
+| **4. OV Copy Matrix ($\mathbf{C}$)** | Weights + stream | Block 2's OV circuit boosts the attended token's logit | Also diagonal ($\approx 1.00$) in the failing 1-block control |
 | **5. Zero / Mean Ablation** | Causal intervention | Both Block-1 groups and Block-2 heads are causally required | Zero-ablation shifts stream norms (use mean ablation to verify) |
 :::
 
@@ -1372,9 +1359,9 @@ Test your understanding of QK/OV circuits and mechanistic interventions:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. Because the query at destination $i$ is the current token $x_i = [\mathrm{A}]$ itself ($\mathbf{e}_{x_i}$), whereas the *key* at source position $j$ ($x_j = [\mathrm{B}]$) must contain the Block-1 OV output encoding that its predecessor was $x_{j-1} = [\mathrm{A}]$!
+1. Because the query at destination $i$ is the current token $x_i = [\mathrm{A}]$ itself ($\mathbf{e}_{x_i}$), whereas the *key* at source position $j$ ($x_j = [\mathrm{B}]$) must contain the Block-1 OV output encoding that its predecessor was $x_{j-1} = [\mathrm{A}]$.
 2. (1) The norm of the OV output vector $\|\mathbf{W}_{\mathrm{OV}}\mathbf{h}_{\langle\mathrm{bos}\rangle}\|$ (which is near zero for an **attention sink** absorbing unused softmax mass), and (2) the change in loss under head ablation.
-3. For $b \neq a$ to beat $a$'s self-logit $\mathbf{e}_a^\top\mathbf{e}_a$, Cauchy–Schwarz requires $\|\mathbf{e}_b\| > \|\mathbf{e}_a\|$, which cannot hold around a closed cycle $\|\mathbf{e}_{\texttt{t}}\| < \|\mathbf{e}_{\texttt{h}}\| < \|\mathbf{e}_{\texttt{e}}\| < \|\mathbf{e}_{\texttt{␣}}\| < \|\mathbf{e}_{\texttt{t}}\|$!
+3. For $b \neq a$ to beat $a$'s self-logit $\mathbf{e}_a^\top\mathbf{e}_a$, Cauchy–Schwarz requires $\|\mathbf{e}_b\| > \|\mathbf{e}_a\|$, which cannot hold around a closed cycle $\|\mathbf{e}_{\texttt{t}}\| < \|\mathbf{e}_{\texttt{h}}\| < \|\mathbf{e}_{\texttt{e}}\| < \|\mathbf{e}_{\texttt{␣}}\| < \|\mathbf{e}_{\texttt{t}}\|$.
 :::
 :::
 

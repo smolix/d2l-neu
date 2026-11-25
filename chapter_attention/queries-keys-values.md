@@ -239,18 +239,7 @@ Two caveats apply when inspecting attention heatmaps in deep networks:
 
 ## Summary
 
-* Attention pooling computes a convex combination of value vectors
-  $\sum_i \alpha(\mathbf{q}, \mathbf{k}_i)\mathbf{v}_i$, where softmax
-  weights $\alpha(\mathbf{q}, \mathbf{k}_i)$ interpolate smoothly between
-  exact lookup and average pooling.
-* Unlike a fixed-size recurrent state, attention accesses all stored
-  key--value pairs directly; the rule is independent of the number of pairs
-  $m$, while memory scales linearly with $m$.
-* Nadaraya--Watson kernel regression is attention pooling with a fixed
-  similarity kernel; its bandwidth $\sigma$ acts as a softmax temperature
-  controlling the bias--variance and sharpness trade-off.
-* Attention heatmaps visualize query--key alignments, but learned projections
-  and scoring functions are required to go beyond fixed input-space distance.
+Attention pooling computes a convex combination of value vectors $\sum_i \alpha(\mathbf{q}, \mathbf{k}_i)\mathbf{v}_i$, whose softmax weights $\alpha(\mathbf{q}, \mathbf{k}_i)$ interpolate smoothly between exact dictionary lookup and uniform average pooling. Unlike a fixed-size recurrent state, attention accesses all stored key–value pairs directly using a rule independent of the number of pairs $m$, while working memory grows linearly with $m$. Nadaraya–Watson kernel regression corresponds to attention pooling with a fixed Euclidean similarity kernel whose bandwidth $\sigma$ acts as a softmax temperature governing the bias–variance trade-off. Although attention heatmaps visualize query–key alignments, moving beyond fixed input-space distance requires trainable projections and learned scoring functions.
 
 ## Exercises
 
@@ -599,7 +588,7 @@ $$\textrm{Var}\!\left(\sum_{i=1}^n \alpha_i(q)\, y_i \,\middle|\, \mathbf{x}\rig
 ::: {.cols .vc}
 ::: {.col}
 - **Convex-Hull Clamping:** As $q \to \infty$ beyond $[0, 5)$, the closest boundary key $x_{\max}$ dominates all others, so $f(q) \to y_{\max}$ (a flat asymptote that cannot follow a linear trend).
-- **Float32 Underflow to `NaN`:** At $q = 15, \sigma = 0.5$, exponent $-(q - x_i)^2/(2\sigma^2) < -200$ underflows `float32` $\exp(-200) \to 0.0$, so `k / k.sum()` evaluates `0.0 / 0.0 = NaN`!
+- **Float32 Underflow to `NaN`:** At $q = 15, \sigma = 0.5$, exponent $-(q - x_i)^2/(2\sigma^2) < -200$ underflows `float32` $\exp(-200) \to 0.0$, so `k / k.sum()` evaluates `0.0 / 0.0 = NaN`.
 - **Fix:** Pass log-scores $-(q - k_i)^2/(2\sigma^2)$ directly to a max-subtracted `softmax`.
 :::
 

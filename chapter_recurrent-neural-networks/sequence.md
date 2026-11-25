@@ -81,8 +81,8 @@ examples abound: text is a sequence of characters, subwords, or words; audio
 frames; and time series such as stock prices, sensor readings, and patient
 vital signs arrive one measurement at a time.
 
-While we continue to assume that *entire* sequences—such as complete documents
-or full hospital stays—are drawn independently from a single underlying
+While we continue to assume that *entire* sequences, such as complete documents
+or full hospital stays, are drawn independently from a single underlying
 distribution over sequences, we certainly cannot assume that entries *within*
 a sequence are independent. The medication a patient receives on the tenth
 day of a hospital stay depends heavily on what transpired over the preceding
@@ -248,7 +248,7 @@ $P(x_t \mid x_{t-m}, \ldots, x_{t-1})$. Crucially, a fixed transition rule
 does not force the entries to be identically distributed: the end of a
 document still behaves differently from its beginning because the same rule is
 evaluated on a different context. Stationarity is what justifies pooling
-examples from different parts of a single sequence—or across many sequences—by
+examples from different parts of a single sequence, or across many sequences, by
 sliding a window along the series to assemble one shared training set.
 
 ## Forecasting a Noisy Sine Wave
@@ -567,7 +567,7 @@ Notice an important subtlety: none of this error arose from runaway
 accumulation. Because the averaging model damps whatever is fed back into it,
 its rollout decays smoothly toward a constant rather than diverging; the
 $k$-step forecast misses the target because the true wave has moved on, not
-because small errors compounded exponentially. The deeper lesson is that a
+because small errors compounded exponentially. More broadly, a
 model trained strictly on a one-step objective learns only what helps one step
 ahead. When rolled out over many steps, performance depends on capturing the
 true underlying dynamics, and a low one-step loss offers no guarantee that
@@ -847,7 +847,7 @@ We fit an ordinary linear regression model $\hat{x}_t = w_1 x_{t-4} + w_2 x_{t-3
 @-sequence-prediction-1
 
 ::: {.d2l-note}
-**One-Step Evaluation Protocol:** In `onestep_preds = model(features)`, every prediction $\hat{x}_t$—even in the validation region $t > 604$—is conditioned on the four **true observed** values $(x_{t-4}, x_{t-3}, x_{t-2}, x_{t-1})$ from the dataset.
+**One-Step Evaluation Protocol:** In `onestep_preds = model(features)`, every prediction $\hat{x}_t$, even in the validation region $t > 604$, is conditioned on the four **true observed** values $(x_{t-4}, x_{t-3}, x_{t-2}, x_{t-1})$ from the dataset.
 :::
 :::
 
@@ -981,7 +981,7 @@ Work through these three calculations to verify your grasp of autoregressive fac
 **Answers:**
 
 1. **(a)** $P(x_1)\,P(x_2 \mid x_1)\,P(x_3 \mid x_1, x_2)\,P(x_4 \mid x_1, x_2, x_3)$. **(b)** Only the fourth factor changes, dropping $x_1$ to become $P(x_4 \mid x_2, x_3)$.
-2. **$\hat{x}_{t+1} = 0.5$** (immediately reversing the upward trend!). Because $x_{t-3} + 2x_{t-2} + 3x_{t-1} + 4\hat{x}_t$ is a conserved invariant under $\hat{x}_t = \frac{1}{4}\sum_{i=1}^4 x_{t-i}$, the rollout converges to $(1(0.2) + 2(0.4) + 3(0.6) + 4(0.8)) / 10 = 6.0 / 10 = 0.60$.
+2. **$\hat{x}_{t+1} = 0.5$** (immediately reversing the upward trend). Because $x_{t-3} + 2x_{t-2} + 3x_{t-1} + 4\hat{x}_t$ is a conserved invariant under $\hat{x}_t = \frac{1}{4}\sum_{i=1}^4 x_{t-i}$, the rollout converges to $(1(0.2) + 2(0.4) + 3(0.6) + 4(0.8)) / 10 = 6.0 / 10 = 0.60$.
 3. **Exact oscillator weights:** With $\sigma = 0$, $w_1 = -1$ (on $x_{t-2}$) and $w_2 = 2\cos(0.01) \approx 1.9999$ (on $x_{t-1}$), achieving zero 1-step error and oscillating perfectly forever during rollout.
 :::
 :::

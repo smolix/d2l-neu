@@ -70,7 +70,7 @@ from d2l import jax as d2l
 
 A trained language model supplies next-token conditional distributions: given
 any prefix $x_{<t} = x_1, \ldots, x_{t-1}$, it outputs $P(x_t \mid x_{<t})$,
-and by the chain rule of probability (:eqref:`eq_chain_rule`), these
+and by the chain rule of probability (:numref:`sec_sequence`), these
 conditionals define the joint probability of any complete sequence via
 $P(x_1, \ldots, x_T) = \prod_{t=1}^{T} P(x_t \mid x_{<t})$.
 
@@ -85,8 +85,8 @@ slice of the search tree, deciding at each step which prefixes to retain.
 
 Even if exact search were feasible, the single highest-probability sequence is
 frequently *not* what we want. When a task admits only a narrow band of
-correct outputs—such as transcribing speech or translating a technical
-sentence—seeking a high-probability sequence works well. By contrast, when
+correct outputs, such as transcribing speech or translating a technical
+sentence, seeking a high-probability sequence works well. By contrast, when
 many continuations are equally valid—as in dialogue or creative writing—each
 individual continuation necessarily carries tiny probability mass, because a
 well-calibrated model spreads probability across many plausible trajectories.
@@ -97,7 +97,7 @@ distribution.
 :numref:`fig_decoding-taskmap` organizes decoding strategies along this
 divide. Maximization methods (greedy decoding and beam search) remain the
 standard choice for constrained tasks with few valid outputs, while
-sampling methods—augmented with temperature scaling or truncation—are the
+sampling methods augmented with temperature scaling or truncation are the
 default for open-ended generation.
 
 ![Two families of decoding rules. Searching for high-probability sequences suits tasks with few acceptable outputs; sampling preserves diversity in open-ended generation.](../img/mdl-rnn-decoding-taskmap.svg)
@@ -304,7 +304,7 @@ P(C, x') &= P(C)\, P(x' \mid C),
 \end{aligned}
 $$
 
-and retain the top two—say $AB$ and $CE$—repeating the same expansion at step
+and retain the top two, say $AB$ and $CE$, repeating the same expansion at step
 3 to keep $ABD$ and $CED$. Rather than scoring all $5^3 = 125$ sequences, beam
 search evaluates only $5 + 10 + 10 = 25$. In general, generating $T$ tokens
 costs $O(w |\mathcal{V}| T)$—just $w$ times the cost of greedy decoding and
@@ -393,8 +393,8 @@ most natural alternative to maximization is direct *ancestral sampling*: draw
 $x_t \sim P(x_t \mid x_{<t})$, append it, and repeat. Sampling restores the
 rich variety that maximization suppresses, but raw sampling runs straight into
 a tail problem. Because the softmax assigns nonzero probability to every entry
-in the vocabulary—a thousand tokens here, and over a hundred thousand in
-modern LLMs—the tiny probabilities across thousands of implausible tokens add
+in the vocabulary (a thousand tokens here, and over a hundred thousand in
+modern LLMs), the tiny probabilities across thousands of implausible tokens add
 up to a substantial collective mass at every step. Consequently, pure sampling
 regularly draws a wildly implausible token, and feeding that token back in as
 context can derail the rest of the passage—the exact rollout error compounding
@@ -426,8 +426,8 @@ retaining the smallest head of tokens whose probabilities sum to at least $p$
 matters because the model's entropy fluctuates dramatically from token to
 token: when the next word is nearly certain, a fixed $k = 20$ lets in nineteen
 poor candidates, whereas when dozens of words are equally natural, $k = 20$
-may clip genuine variety. Top-$p$ adapts dynamically—shrinking its candidate
-set on peaked distributions and widening it on flat ones—though it can still
+may clip genuine variety. Top-$p$ adapts dynamically, shrinking its candidate
+set on peaked distributions and widening it on flat ones, though it can still
 behave overly greedily when a single top token exceeds $p$ (e.g., probability
 $0.95$ under $p = 0.9$, excluding a solid runner-up).
 
@@ -859,7 +859,7 @@ Every decoding algorithm in this section interacts with our trained RNN language
 $$x_t = \operatorname*{argmax}_{x \in \mathcal{V}} P(x \mid x_{<t})$$
 
 - **One model call per token:** Deterministic and fast, committing irreversibly to the top token at each step.
-- **Why local argmax is myopic:** Committing to $A$ at step 1 ($0.50 > 0.40$) leads to a diffuse step 2 ($0.50 \times 0.30 = 0.15$), pruning branch $B$ whose confident continuation yields $0.40 \times 0.90 = 0.36$ ($2.4\times$ higher!).
+- **Why local argmax is myopic:** Committing to $A$ at step 1 ($0.50 > 0.40$) leads to a diffuse step 2 ($0.50 \times 0.30 = 0.15$), pruning branch $B$ whose confident continuation yields $0.40 \times 0.90 = 0.36$ ($2.4\times$ higher).
 :::
 
 ::: {.col .fig}
@@ -928,7 +928,7 @@ At most $w$ extensions per beam can survive, so each beam keeps only its top $w$
 
 @!decoding-beam-search-2
 
-- **Higher model likelihood, persistent repetition:** Widening the beam from $w = 1 \to 4$ finds continuations with higher log-probability scores (`-1.56` vs. `-1.61`), yet open-ended prose still collapses into repetitive clauses!
+- **Higher model likelihood, persistent repetition:** Widening the beam from $w = 1 \to 4$ finds continuations with higher log-probability scores (less negative length-normalized scores), yet open-ended prose still collapses into repetitive clauses.
 :::
 
 ::: {.slide title="Ancestral Sampling and the Unreliable Tail Problem"}
@@ -1038,7 +1038,7 @@ To quantify the trade-off between **model likelihood** (mean log-probability per
 @!decoding-evaluating-generated-text
 
 - **The maximization collapse:** Greedy and beam search ($w = 4$) achieve the highest per-token log-probability ($\approx -1.4$ to $-1.6$ nats), yet their `distinct-3` scores collapse ($\approx 0.15\text{--}0.30$) because over $70\%$ of their output consists of repeated 3-grams.
-- **The truncated sampling sweet spot:** Pure sampling ($\tau = 1$) reaches `distinct-3` $\approx 0.99$ but suffers low likelihood ($\approx -4.0$ nats); `top-k=20` and `min-p=0.05` preserve nearly identical diversity (`distinct-3` $\approx 0.97\text{--}0.99$) while boosting per-token log-probability by a full nat ($\approx -2.9$ nats)!
+- **The truncated sampling sweet spot:** Pure sampling ($\tau = 1$) reaches `distinct-3` $\approx 0.99$ but suffers low likelihood ($\approx -4.0$ nats); `top-k=20` and `min-p=0.05` preserve nearly identical diversity (`distinct-3` $\approx 0.97\text{--}0.99$) while boosting per-token log-probability by a full nat ($\approx -2.9$ nats).
 :::
 
 ::: {.slide title="Why Perplexity Evaluates Models, Not Decoders"}
@@ -1085,7 +1085,7 @@ Test your mastery of decoding algorithms and their computational properties:
 **Answers:**
 
 1. **`beam_search` makes $1 + 49 \times 4 = 197$ calls to `step_fn`** (1 call on the initial prompt at step 1, then $w = 4$ calls per step for steps $2, \ldots, 50$, scoring $1027 + 49 \times 4 \times 1027 = 202{,}319$ candidate extensions), versus $> 10^{150}$ sequences in exhaustive search.
-2. **(a) Top-$p$ ($p = 0.90$) keeps only $1$ token ($x_{(1)}$)** because $0.95 \ge 0.90$ already exceeds the threshold, acting purely greedily and excluding the $4\%$ runner-up! **(b) Min-$p$ ($p_{\min} = 0.05$) keeps $1$ token ($x_{(1)}$)** since the cutoff is $0.05 \times 0.95 = 0.0475 > 0.04$ (or keeps $x_{(2)}$ as well whenever $P(x_{(2)}) \ge 0.0475$).
+2. **(a) Top-$p$ ($p = 0.90$) keeps only $1$ token ($x_{(1)}$)** because $0.95 \ge 0.90$ already exceeds the threshold, acting purely greedily and excluding the $4\%$ runner-up. **(b) Min-$p$ ($p_{\min} = 0.05$) keeps $1$ token ($x_{(1)}$)** since the cutoff is $0.05 \times 0.95 = 0.0475 > 0.04$ (or keeps $x_{(2)}$ as well whenever $P(x_{(2)}) \ge 0.0475$).
 3. **Top-$k$ is invariant to $\tau > 0$:** Because $p \mapsto p^{1/\tau}$ is strictly increasing for all $\tau > 0$, it preserves the rank ordering of all tokens, so the top $k$ tokens never change (whereas top-$p$ and min-$p$ change their support size as $\tau$ flattens or sharpens the distribution).
 :::
 :::

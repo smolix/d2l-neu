@@ -8,17 +8,16 @@ reflects how plausible a passage of text is. Because those two phrases sound
 nearly identical, acoustics alone cannot tell them apart; what resolves the
 ambiguity is knowing that the first is idiomatic English while the second is
 outlandish. A *language model* provides this judgment: given a sequence of
-tokens $x_1, \ldots, x_T$ drawn from a vocabulary $\mathcal{V}$—such as the
-BPE tokens constructed in :numref:`sec_text-sequence`—it estimates the joint
+tokens $x_1, \ldots, x_T$ drawn from a vocabulary $\mathcal{V}$, such as the
+BPE tokens constructed in :numref:`sec_text-sequence`, it estimates the joint
 probability $P(x_1, \ldots, x_T)$.
 
 At first glance, assigning a probability to every possible sequence appears
 hopeless: even with our modest 1,024-token vocabulary, there are already
 $1024^{10} \approx 10^{30}$ sequences of length ten. Fortunately, the chain
-rule of probability (:eqref:`eq_chain_rule` in :numref:`sec_sequence`)
-converts this intractable joint distribution—with no approximation—into a
-product of next-token conditionals, each conditioned on the preceding prefix
-$x_{<t} = x_1, \ldots, x_{t-1}$:
+rule of probability (:numref:`sec_sequence`) converts this intractable joint
+distribution without approximation into a product of next-token conditionals,
+each conditioned on the preceding prefix $x_{<t} = x_1, \ldots, x_{t-1}$:
 
 $$P(x_1, \ldots, x_T) = \prod_{t=1}^T P(x_t \mid x_{<t}).$$
 :eqlabel:`eq_lm_factorization`
@@ -33,7 +32,7 @@ factual question, which is precisely the paradigm behind modern large language
 models (:numref:`sec_gpt`).
 
 We begin with the simplest possible estimator for these conditional
-probabilities—counting occurrences in a corpus—and investigate why it breaks
+probabilities, counting occurrences in a corpus, and investigate why it breaks
 down. To evaluate improvements objectively, we introduce perplexity, compare
 two classical smoothing methods, and then define bits per byte so that models
 with different tokenizers can be compared fairly. Finally, we build the
@@ -102,8 +101,8 @@ truncates the context to the $n-1$ most recent tokens:
 
 $$P(x_t \mid x_{<t}) \approx P(x_t \mid x_{t-n+1}, \ldots, x_{t-1}).$$
 
-Although this assumption is undeniably crude—a sentence hardly forgets its
-subject after two words—it reduces the set of possible contexts to a finite
+Although this assumption is undeniably crude (a sentence hardly forgets its
+subject after two words), it reduces the set of possible contexts to a finite
 number. A model with no context ($n=1$) is called a *unigram* model, one that
 conditions on a single preceding token ($n=2$) a *bigram* model, and one that
 conditions on two preceding tokens ($n=3$) a *trigram* model. Under maximum
@@ -281,7 +280,7 @@ vocab.token_freqs[:10]
 ```
 
 These ten most frequent words reveal nothing about time travel: they are
-articles, pronouns, and prepositions—often called *stop words*—and almost any
+articles, pronouns, and prepositions (often called *stop words*), and almost any
 Victorian novel would produce a nearly identical list. What is striking is how
 steeply frequencies drop off: the tenth most common word is already less than
 one-fifth as frequent as the first. Plotted on log–log axes, frequency versus
@@ -353,7 +352,7 @@ context lengthens.
 
 Inspection of the count tables revealed severe sparsity that our sample
 generations had concealed. Before attempting to repair these tables, we need a
-principled quantitative metric so we can tell whether a modification genuinely
+principled quantitative metric so we can tell whether a modification truly
 improves generalization. Evaluating the joint probability of held-out text is
 an obvious starting point, but raw sequence probabilities shrink exponentially
 with document length: every model assigns a vastly smaller probability to
@@ -444,8 +443,8 @@ for n, model in models.items():
     print(f'{n}-gram held-out perplexity, Laplace smoothing: {ppl:7.1f}')
 ```
 
-Under Laplace smoothing, the trigram model—the one whose generated samples
-looked most convincing—actually suffers the *worst* held-out perplexity by a
+Under Laplace smoothing, the trigram model, whose generated samples
+looked most convincing, actually suffers the *worst* held-out perplexity by a
 wide margin, while the bigram barely edges past the unigram. Count sparsity
 explains both outcomes: when 87% of held-out trigrams are unseen, the vast
 majority of trigram predictions collapse into nearly uniform smoothed guesses.
@@ -474,8 +473,8 @@ overestimate the true frequencies of rare events: an $n$-gram observed once in
 training will, on average, appear fewer than once in a fresh sample of the
 same size because of selection bias among the huge pool of rare $n$-grams.
 Subtracting a fixed discount $0 < D < 1$ from every nonzero count corrects
-this upward bias—most strongly for small counts, where the distortion is
-largest—and frees a total probability mass of $D\,S(u)/N(u)$ in context $u$,
+this upward bias, most strongly for small counts where the distortion is
+largest, and frees a total probability mass of $D\,S(u)/N(u)$ in context $u$,
 where $S(u)$ is the number of distinct token types observed immediately after
 $u$ in training.
 
@@ -506,7 +505,7 @@ distinct predecessors recognizes that `"traveller"` rarely appears without
 `"time"`. (The classic NLP example is `"Francisco"`, which is common in news
 text yet almost exclusively preceded by `"San"`.) Kneser--Ney therefore
 replaces $N(u, w)$ at every order below the highest with the *continuation
-count*—the number of distinct tokens that precede $(u, w)$ in training—with
+count*, the number of distinct tokens that precede $(u, w)$ in training, with
 $N(u)$ and $S(u)$ computed analogously from those continuation counts.
 
 Better still, the discount parameter $D$ has a clean closed-form estimate
@@ -625,8 +624,8 @@ has an immediate operational meaning as a lossless compression rate: paired
 with an arithmetic coder, a model achieving $\textrm{bpb}$ bits per byte
 compresses the text to $\textrm{bpb}/8$ of its original byte size.
 
-To compare perplexity and bits per byte directly, we fit trigram models—first
-with Laplace smoothing and then with Kneser--Ney—on the same normalized
+To compare perplexity and bits per byte directly, we fit trigram models, first
+with Laplace smoothing and then with Kneser--Ney, on the same normalized
 training text under three tokenizations: characters, words, and a 1,024-token
 BPE vocabulary (trained on the normalized training split using the tokenizer
 from :numref:`sec_text-sequence`). One subtlety is required to keep the
@@ -660,8 +659,8 @@ for name, (train, val, m) in streams.items():
 
 Measured by raw perplexity, the three Laplace-smoothed models appear separated
 by more than two orders of magnitude; measured by bits per byte, they lie
-within a third of a bit of one another, and the character model—seemingly far
-ahead in perplexity—no longer wins. For a fixed Markov order $n$, coarser
+within a third of a bit of one another, and the character model, seemingly far
+ahead in perplexity, no longer wins. For a fixed Markov order $n$, coarser
 tokens span longer stretches of text: two words of context reach back roughly
 ten characters, whereas two characters scarcely cover a syllable. The word
 model would lead were it not penalized by out-of-vocabulary words, whose
@@ -808,8 +807,8 @@ models estimate next-token probabilities directly from corpus counts; although
 simple to construct and capable of locally fluent samples, they suffer from
 exponentially growing context spaces and Zipfian heavy tails, leaving most
 observed $n$-grams as singletons and causing the models to memorize rather
-than generalize. Perplexity—the exponential of average per-token
-cross-entropy—measures a model's effective branching factor and exposes why
+than generalize. Perplexity, the exponential of average per-token
+cross-entropy, measures a model's effective branching factor and exposes why
 Laplace-smoothed trigrams perform poorly on held-out text. Interpolated
 Kneser--Ney smoothing discounts observed counts and redistributes the freed
 mass to lower-order continuation counts, yielding the strongest count-based
@@ -967,7 +966,7 @@ $$\hat{P}(x_t \mid x_{<t}) \approx \hat{P}(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) 
 @!language-model-markov-models-and-counting-3
 
 - **Orders $n = 1, 2, 3$:** Unigram ($n = 1$, zero context), bigram ($n = 2$, 1 preceding token), and trigram ($n = 3$, 2 preceding tokens).
-- **Local phrase capture vs. rigid determinism:** After `"the time"` ($N = 87$), the word trigram assigns $0.54$ to `"traveller"` and $0.34$ to `"machine"`, yet **$83\%$ of all observed word pairs in training are followed by only a single unique continuation**!
+- **Local phrase capture vs. rigid determinism:** After `"the time"` ($N = 87$), the word trigram assigns $0.54$ to `"traveller"` and $0.31$ to `"machine"`, yet **$84\%$ of all observed word pairs in training are followed by only a single unique continuation**.
 :::
 
 ::: {.slide title="Building and Sampling Count-Based n-Gram Models"}
@@ -986,7 +985,7 @@ To test whether fluent-looking samples reflect generalization or verbatim copyin
 @!language-model-sampling-from-n-gram-models
 
 ::: {.d2l-note .warn}
-**Why Sample Inspection Can Mislead:** The unigram emits disconnected word salad; the bigram chains locally valid pairs; and the trigram sounds remarkably like H. G. Wells—**because it copies 7 to 12 consecutive words verbatim** whenever the sampler lands on one of the $83\%$ of word pairs that had only a single training continuation.
+**Why Sample Inspection Can Mislead:** The unigram emits disconnected word salad; the bigram chains locally valid pairs; and the trigram sounds remarkably like H. G. Wells—**because it copies 7 to 12 consecutive words verbatim** whenever the sampler lands on one of the $84\%$ of word pairs that had only a single training continuation.
 :::
 :::
 
@@ -997,7 +996,7 @@ Why do higher-order $n$-grams collapse into memorization on training text and fa
 
 @!language-model-the-sparsity-wall
 
-- **Catastrophic zero counts on held-out text:** On the final $10\%$ of *The Time Machine*, $8.1\%$ of unigrams (mapped to `<unk>`), $52.8\%$ of word bigrams, and **$87.0\%$ of word trigrams** never occurred in the training split.
+- **Catastrophic zero counts on held-out text:** On the final $10\%$ of *The Time Machine*, $8.4\%$ of unigrams (mapped to `<unk>`), $51.5\%$ of word bigrams, and **$87.0\%$ of word trigrams** never occurred in the training split.
 - **Storage complexity:** Instead of allocating a dense $|\mathcal{V}|^n$ array ($4316^3 \approx 8 \times 10^{10}$ cells), a nested hash map `self.cont[ctx][token]` stores only the $n$-grams that actually occur with nonzero count in training.
 - **Zero-probability collapse:** Under maximum likelihood estimation ($\hat{P} = N(\text{trigram}) / N(\text{bigram})$), any unseen $n$-gram receives probability $0$, causing a single novel word triple to assign $\prod_{t=1}^T \hat{P}(x_t \mid x_{<t}) = 0$ to the entire validation passage.
 :::
@@ -1012,7 +1011,7 @@ Count tables go sparse so rapidly because word frequencies in natural language a
 @!language-model-word-frequency-and-zipf-s-law-1
 
 - **Stop-word dominance:** The top 10 words (*the, I, and, of, a, to, was, in, that, my*) are function words; rank 10 (`'my'`, $440$) is already $5\times$ rarer than rank 1 (`'the'`, $2{,}261$).
-- **Linear log–log slope:** Fitting over ranks $10\text{--}1000$ gives Zipf exponent $s = 1.03 \approx 1$.
+- **Linear log–log slope:** Fitting over ranks $10\text{--}1000$ gives Zipf exponent $s = 1.04 \approx 1$.
 :::
 
 ::: {.col .fig .narrow}
@@ -1030,8 +1029,8 @@ $$n_i \propto \frac{1}{i^s} \iff \log n_i = -s \log i + c$$
 ::: {.col}
 Plotting rank–frequency curves for word unigrams, bigrams, and trigrams on the same log–log axes reveals how power-law tails flatten and become dominated by singletons ($N = 1$) as $n$ increases:
 
-- **Flattening Zipf exponents:** The power-law slope drops from $s = 1.03$ (unigrams) to $s = 0.68$ (bigrams) and $s = 0.49$ (trigrams).
-- **Singleton explosion:** Exactly **$50\%$ of distinct words**, **$80\%$ of distinct bigrams**, and **$92\%$ of distinct trigrams** in *The Time Machine* occur only *once* in the entire corpus.
+- **Flattening Zipf exponents:** The power-law slope drops from $s = 1.04$ (unigrams) to $s = 0.69$ (bigrams) and $s = 0.47$ (trigrams).
+- **Singleton explosion:** **$52\%$ of distinct words**, **$82\%$ of distinct bigrams**, and **$95\%$ of distinct trigrams** in *The Time Machine* occur only *once* in the entire corpus.
 - **Implication:** Estimating each context tuple independently requires exponentially larger corpora for each additional token of context.
 :::
 
@@ -1067,7 +1066,7 @@ $$\hat{P}_\alpha(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) = \frac{N(x_{t-n+1}, \ldot
 
 @!language-model-perplexity
 
-- **The fluency-versus-perplexity paradox:** Under Laplace smoothing ($\alpha = 0.01$), the trigram—whose generated samples looked most like Wells—suffers the **worst held-out perplexity ($2{,}481.2$ vs. $584.5$ for the bigram)**!
+- **The fluency-versus-perplexity paradox:** Under Laplace smoothing ($\alpha = 0.01$), the trigram, whose generated samples looked most like Wells, suffers the **worst held-out perplexity ($2{,}481.4$ vs. $753.6$ for the bigram)**.
 - **Why Laplace smoothing fails at $n = 3$:** Because $87\%$ of validation trigrams are unseen, Laplace smoothing predicts a flat uniform distribution $1/|\mathcal{V}|$ on $87\%$ of test positions, ignoring both general word frequency and the observed bigram context $(x_{t-1})$.
 :::
 

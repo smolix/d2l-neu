@@ -3,7 +3,7 @@
 
 Analytical models such as the two-dimensional quadratic valley explain how curvature and gradient noise govern simple update rules, but evaluating modern optimizers requires empirical measurement on real neural networks. Why does AdamW outperform SGD by a wide margin on Transformers while offering a much smaller advantage on convolutional networks? Answering such questions requires training actual models under a controlled experimental protocol.
 
-Because stochastic training runs vary across random initializations and minibatch draws, a difference between two optimizer configurations is meaningful only if it exceeds the run-to-run variation of a single configuration. This section defines the two benchmark architectures used throughout the rest of this chapter—the byte-level Transformer language model `TinyLM` ($470{,}784$ parameters) and the convolutional classifier `FashionCNN` ($421{,}642$ parameters)—along with our shared training loop, learning-rate sweep harness, baseline SGD measurements, and significance thresholds.
+Because stochastic training runs vary across random initializations and minibatch draws, a difference between two optimizer configurations is meaningful only if it exceeds the run-to-run variation of a single configuration. This section defines the two benchmark architectures used throughout the rest of this chapter: the byte-level Transformer language model `TinyLM` ($470{,}784$ parameters) and the convolutional classifier `FashionCNN` ($421{,}642$ parameters), along with our shared training loop, learning-rate sweep harness, baseline SGD measurements, and significance thresholds.
 
 ```{.python .input #test-models-two-test-models-1}
 %%tab pytorch
@@ -624,9 +624,7 @@ Across $5$ independent random seeds at a well-tuned learning rate, the final $10
 
 ## Summary
 
-* `TinyLM` ($470{,}784$ parameters: $90\%$ 2D projection matrices, $9\%$ embeddings, $<1\%$ 1D vectors) trains on random $64$-byte windows of WikiText-103 ($\sim 2.7 \times 10^8$ bytes), so a $2{,}000$-step run evaluates fresh text on every step.
-* `FashionCNN` ($421{,}642$ parameters) trains on $256$-image minibatches of Fashion-MNIST ($\sim 8.5$ epochs in $2{,}000$ steps) and is evaluated by both training loss and held-out test accuracy.
-* Every optimizer comparison sweeps the learning rate $\eta$ independently for each method from identical initial weights, reporting both the optimal loss and the usable learning-rate range against a multi-seed significance threshold of $0.05$ nats on `TinyLM`.
+Our empirical comparisons pair two complementary neural network benchmarks: `TinyLM` ($470{,}784$ parameters: $90\%$ 2D projection matrices, $9\%$ embeddings, and $<1\%$ 1D vectors), which trains in a single-pass streaming regime on random $64$-byte windows of WikiText-103 so that a $2{,}000$-step run evaluates fresh text on every step, and `FashionCNN` ($421{,}642$ parameters), which trains for $\sim 8.5$ epochs on $256$-image minibatches of Fashion-MNIST and is evaluated by both training loss and held-out test accuracy. Closed-form uniform, unigram, and bigram byte entropies anchor the `TinyLM` loss scale before any training takes place. To separate genuine algorithmic improvements from hyperparameter and seed sensitivity, every comparison sweeps the learning rate $\eta$ independently for each optimizer from identical initial weights, reporting both the optimal loss and the usable learning-rate range against a multi-seed significance threshold of $0.05$ nats on `TinyLM` ($0.06$ loss or $3\%$ accuracy on `FashionCNN`).
 
 ## Exercises
 
@@ -683,7 +681,7 @@ Two Test Models: TinyLM and FashionCNN<br>**byte-level Transformer · convolutio
 :::
 
 ::: {.slide title="Benchmark 1: TinyLM on Single-Pass WikiText-103 Bytes"}
-[Language Modeling Testbed]{.kicker}
+[Language Modeling Benchmark]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -691,7 +689,7 @@ Two Test Models: TinyLM and FashionCNN<br>**byte-level Transformer · convolutio
 - **Single-pass streaming regime:**
   - Corpus: First shard of WikiText-103 ($\sim 2.7 \times 10^8$ UTF-8 bytes of Wikipedia articles).
   - Minibatch: $b = 64$ windows of $64$ bytes ($4{,}096$ target bytes/step) sampled at random byte offsets.
-  - A $2{,}000$-step run processes $8.2 \times 10^6$ bytes—only **$\sim 3\%$ of the corpus**—so every training step evaluates fresh, unseen text without memorization!
+  - A $2{,}000$-step run processes $8.2 \times 10^6$ bytes ($\sim 3\%$ of the corpus), so every training step evaluates fresh, unseen text without memorization.
 :::
 
 ::: {.col .fig}
@@ -755,7 +753,7 @@ The census lists every parameter tensor with its shape and size, then the three 
 :::
 :::
 
-::: {.slide title="Comparing Our Two Neural Testbeds Side by Side"}
+::: {.slide title="Comparing Our Two Neural Benchmarks Side by Side"}
 [Complementary Regimes]{.kicker}
 
 ::: {.cols .vc}
@@ -797,7 +795,7 @@ The census lists every parameter tensor with its shape and size, then the three 
 - **Untrained step 1 ($\approx 5.71$ nats):** Random head logits $z_i \sim \mathcal{N}(0, s^2)$ with $s^2 \approx 1/3$ add variance penalty $s^2/2 \approx 0.17$ above uniform.
 - **Uniform random guess ($5.55$ nats):** $\ln 256$ ($\ln 10 \approx 2.30$ on `FashionCNN`).
 - **Unigram byte frequency ($\approx 3.18$ nats):** Marginal UTF-8 counts without context.
-- **Bigram table ($\approx 2.50$ nats):** Conditional $p(b_t \mid b_{t-1})$; beating $2.50$ nats proves multi-byte context learning!
+- **Bigram table ($\approx 2.50$ nats):** Conditional $p(b_t \mid b_{t-1})$; beating $2.50$ nats demonstrates multi-byte context learning.
 :::
 
 ::: {.col .fig .big}
@@ -917,9 +915,9 @@ Apply the experimental protocol of this section to three concrete questions:
 ::: {.d2l-note}
 **Answers:**
 
-1. Zero head weights and biases produce zero logits ($\mathbf{z} = \mathbf{0}$), giving a exact uniform distribution $p_i = 1/256$ and initial loss **$\ln 256 \approx 5.545$ nats** ($0.17$ nats lower from step 1!).
-2. **Both are ties!** On `TinyLM`, $|1.57 - 1.59| = 0.02 < 0.05$ nats; on `FashionCNN`, $|90.4\% - 89.6\%| = 0.8\% < 3.0\%$. Resolving a $0.02$-nat gap requires averaging across multiple seeds.
-3. Because `TinyLM` sees fresh text on every step (no overfitting) and is still improving between steps $1{,}900$ and $2{,}000$, `final_loss` averages steps $1{,}901\text{--}2{,}000$ whereas validation evaluates the final step-$2{,}000$ weights!
+1. Zero head weights and biases produce zero logits ($\mathbf{z} = \mathbf{0}$), giving an exact uniform distribution $p_i = 1/256$ and initial loss **$\ln 256 \approx 5.545$ nats** ($0.17$ nats lower from step 1).
+2. **Both are ties.** On `TinyLM`, $|1.57 - 1.59| = 0.02 < 0.05$ nats; on `FashionCNN`, $|90.4\% - 89.6\%| = 0.8\% < 3.0\%$. Resolving a $0.02$-nat gap requires averaging across multiple seeds.
+3. Because `TinyLM` sees fresh text on every step (no overfitting) and is still improving between steps $1{,}900$ and $2{,}000$, `final_loss` averages steps $1{,}901\text{--}2{,}000$ whereas validation evaluates the final step-$2{,}000$ weights.
 :::
 :::
 
@@ -928,8 +926,8 @@ Apply the experimental protocol of this section to three concrete questions:
 
 | Component | Specification | Key Numbers to Remember | Pedagogical Role |
 | :--- | :--- | :--- | :--- |
-| **`TinyLM` on WikiText-103** | 2-block Transformer, $d=128$, $2$ heads, $64 \times 64$ byte batches | $470{,}784$ params ($90\%$ matrices, $9\%$ emb, $1\%$ vectors); $3\%$ corpus in $2{,}000$ steps | Single-pass pretraining testbed without memorization |
-| **`FashionCNN` on Fashion-MNIST** | 2 Conv-ReLU-Pool stages + 2 FC layers, $b = 256$ images | $421{,}642$ params ($95\%$ in `fc1`); $8.5$ epochs in $2{,}000$ steps | Multi-epoch classification testbed with held-out accuracy |
+| **`TinyLM` on WikiText-103** | 2-block Transformer, $d=128$, $2$ heads, $64 \times 64$ byte batches | $470{,}784$ params ($90\%$ matrices, $9\%$ emb, $1\%$ vectors); $3\%$ corpus in $2{,}000$ steps | Single-pass pretraining benchmark without memorization |
+| **`FashionCNN` on Fashion-MNIST** | 2 Conv-ReLU-Pool stages + 2 FC layers, $b = 256$ images | $421{,}642$ params ($95\%$ in `fc1`); $8.5$ epochs in $2{,}000$ steps | Multi-epoch classification benchmark with held-out accuracy |
 | **Untrained Loss Landmarks** | Closed-form / count-based byte predictors | Untrained $5.71 \to$ Uniform $5.55 \to$ Unigram $3.2 \to$ Bigram $2.5$ nats | Anchors what a given nats/byte value means semantically |
 | **Plain SGD Baselines** | $2{,}000$ steps, constant $\eta$, tuned on grid | `TinyLM` at $\eta=0.5$: **$\approx 2.1$ nats**; `FashionCNN` at $\eta=0.3$: **$0.22$ loss / $90\%$ acc** | Reference bar that Momentum, AdamW, and Muon must beat |
 | **Comparison & Significance** | Independent LR sweep per arm from shared seed | Single-run threshold: **$0.05$ nats** (`TinyLM`), **$0.06$ loss / $3\%$ acc** (`FashionCNN`) | Separates algorithmic gains from nuisance tuning & seed noise |

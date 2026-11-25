@@ -3,7 +3,7 @@
 
 Neural networks are developed at small scale and deployed at large scale. Because a multi-billion-parameter pretraining run cannot afford a grid search over learning rates, practitioners tune hyperparameters on a small **proxy model** of the same architectural family and transfer them to the target scale.
 
-Under the **standard parametrization** (SP) used by default in deep learning frameworks—where layer weights are initialized with variance $1/\text{fan-in}$ and all layers share a single global learning rate $\eta$—the optimal learning rate *does not transfer across model width*. As layer width $n$ increases, a single Adam step changes hidden-layer pre-activations by $O(\eta n)$ because the $n$ terms in the matrix-vector product $\Delta\mathbf{W}\,\mathbf{h}$ align in sign with the incoming activations $\mathbf{h}$. Consequently, the optimal learning rate drifts downward as the model widens.
+Under the **standard parametrization** (SP) used by default in deep learning frameworks, where layer weights are initialized with variance $1/\text{fan-in}$ and all layers share a single global learning rate $\eta$, the optimal learning rate *does not transfer across model width*. As layer width $n$ increases, a single Adam step changes hidden-layer pre-activations by $O(\eta n)$ because the $n$ terms in the matrix-vector product $\Delta\mathbf{W}\,\mathbf{h}$ align in sign with the incoming activations $\mathbf{h}$. Consequently, the optimal learning rate drifts downward as the model widens.
 
 The **Maximal Update Parametrization** ($\mu\text{P}$, :citet:`Yang.Hu.2021,Yang.Hu.Babuschkin.ea.2022`) eliminates this drift by scaling the learning rate and output multiplier of each layer according to its fan-in and fan-out growth, ensuring that every hidden layer experiences $\Theta(1)$ feature updates as width $n \to \infty$. In this section, we measure the learning-rate drift under SP across a $64\times$ range of MLP widths ($n = 128$ to $8{,}192$), derive the first-step scaling rule, implement $\mu\text{P}$ and verify it with the one-step **coordinate check** :cite:`Yang.Hu.Babuschkin.ea.2022,Dey.Anthony.Hestness.2024`, demonstrate zero-shot learning-rate transfer across widths, and extend the rules to Transformers, spectral-norm optimizers, and depth.
 
@@ -191,7 +191,7 @@ plot_sweep(sp_loss, lrs)
 
 Under standard parametrization, the U-shaped loss curves shift steadily to the left as width grows: the optimal learning rate drops $16$–$32\times$ (from $\sim 3.9 \times 10^{-3}$ at width $128$ to $\sim 1$–$2 \times 10^{-4}$ at width $8{,}192$, a log–log slope of $-0.7$ to $-0.8$). Applying the width-$128$ optimal learning rate directly to the width-$8{,}192$ model pushes it far up the unstable right arm of its curve, wiping out the benefit of the $1{,}000\times$ larger parameter count.
 
-### Why the Optimal Learning Rate Drifts: The First Adam Step
+### Optimal Learning Rate Drift on the First Adam Step
 
 To see why $\eta^\star$ must fall with width $n$, consider a square hidden weight matrix $\mathbf{W} \in \mathbb{R}^{n \times n}$ mapping activation vector $\mathbf{h} \in \mathbb{R}^n$ to $\mathbf{z} = \mathbf{W}\mathbf{h}$. Because $W_{ij} \sim \mathcal{N}(0, 1/n)$ is independent of $\mathbf{h}$ at initialization, each coordinate $z_i$ has variance $\Theta(1)$ independent of $n$.
 
@@ -405,7 +405,7 @@ $$
 $$
 :eqlabel:`eq_spectral_condition`
 
-For a square $n \times n$ hidden matrix, :eqref:`eq_spectral_condition` requires $\|\Delta\mathbf{W}\|_2 = \Theta(1)$. Under Adam, a rank-$1$ sign update has $\|\Delta\mathbf{W}\|_2 = \Theta(\eta n)$, requiring $\eta \propto 1/n$. Under Muon (:numref:`sec_muon`), the orthogonalized update $\mathrm{NS}_5(\cdot)$ has unit spectral norm by construction; if scaled by $\sqrt{d_{\text{out}}/d_{\text{in}}}$ :cite:`Bernstein.2025`, its learning rate transfers across widths directly with no $1/m$ correction (whereas the AdamW-matched factor $0.2\sqrt{\max(d_{\text{out}}, d_{\text{in}})}$ of :eqref:`eq_muon-update` has spectral norm $\Theta(\eta\sqrt{n})$ and therefore scales as $\eta \propto 1/\sqrt{n}$; Exercise :exref:`ex_scaling-spectral`).
+For a square $n \times n$ hidden matrix, :eqref:`eq_spectral_condition` requires $\|\Delta\mathbf{W}\|_2 = \Theta(1)$. Under Adam, a rank-$1$ sign update has $\|\Delta\mathbf{W}\|_2 = \Theta(\eta n)$, requiring $\eta \propto 1/n$. Under Muon (:numref:`sec_muon`), the orthogonalized update $\mathrm{NS}_5(\cdot)$ has unit spectral norm by construction; if scaled by $\sqrt{d_{\text{out}}/d_{\text{in}}}$ :cite:`Bernstein.2025`, its learning rate transfers across widths directly with no $1/m$ correction (whereas the AdamW-matched factor $0.2\sqrt{\max(d_{\text{out}}, d_{\text{in}})}$ of :numref:`sec_muon` has spectral norm $\Theta(\eta\sqrt{n})$ and therefore scales as $\eta \propto 1/\sqrt{n}$; Exercise :exref:`ex_scaling-spectral`).
 
 ### Depth, Weight Decay, and Finite Size
 :label:`subsec_scaling-depth`
@@ -420,10 +420,7 @@ Finally, all of these rules are exact only in the limit of infinite size. At pra
 
 ## Summary
 
-* Under standard parametrization (SP), a single Adam step changes the output of a hidden layer with fan-in $n$ by $\Theta(\eta n)$, causing the optimal learning rate $\eta^\star(n)$ to drift downward as the network widens.
-* **Maximal Update Parametrization ($\mu\text{P}$)** scales hidden-matrix learning rates by $1/m$ (where $m = n/n_{\text{base}}$), fixes output-layer initialization variance at $1/n_{\text{base}}$ while scaling logits by $1/m$, and scales Transformer attention scores by $1/d_k$, achieving $\Theta(1)$ feature updates and zero-shot learning-rate transfer across widths.
-* The one-step **coordinate check** verifies across a geometric progression of widths that layer activation magnitudes remain flat after an optimizer step.
-* Depth needs its own rule: residual branches are scaled by $L_{\text{base}}/L$. Under AdamW the decay timescale $\tau = 1/(\eta\lambda)$ should be held fixed as the learning rate is rescaled. All of these rules are exact only in the limit of infinite size.
+Under standard parametrization (SP), a single Adam step changes the output of a hidden layer with fan-in $n$ by $\Theta(\eta n)$, causing the optimal learning rate $\eta^\star(n)$ to drift downward as the network widens. **Maximal Update Parametrization ($\mu\text{P}$)** scales hidden-matrix learning rates by $1/m$ (where $m = n/n_{\text{base}}$), fixes output-layer initialization variance at $1/n_{\text{base}}$ while scaling logits by $1/m$, and scales Transformer attention scores by $1/d_k$, achieving $\Theta(1)$ feature updates and zero-shot learning-rate transfer across widths. A one-step **coordinate check** verifies across a geometric progression of widths that layer activation magnitudes remain flat after an optimizer step. Extending hyperparameter transfer to full scale-ups additionally scales residual branches by $L_{\text{base}}/L$ with depth and holds the AdamW decay timescale $\tau = 1/(\eta\lambda)$ constant as layer learning rates vary, providing an asymptotic anchor around which narrow target-scale sweeps can be centered.
 
 ## Exercises
 
@@ -433,7 +430,7 @@ Finally, all of these rules are exact only in the limit of infinite size. At pra
 1. [code] **Effect of the reference base width.** Rerun the $\mu\text{P}$ sweep with `base_width=128` across widths $\{128, 512, 2048, 8192\}$, verify that the log–log slope of $\eta^\star(n)$ remains near zero, and identify which constant ratio (input-to-hidden learning-rate ratio vs. initial logit scale) accounts for the loss difference at width $8{,}192$.
    :exlabel:`ex_scaling-base`
 
-1. **Spectral norm condition across layers and optimizers.** ● Using :eqref:`eq_spectral_condition`, verify that the $\mu\text{P}$ rules of :numref:`tab_mup-rules` give input, hidden, and output layers updates of spectral norm $\Theta(\sqrt{d_{\text{out}}/d_{\text{in}}})$ under a rank-$1$ Adam step, and derive the width scaling of $\eta$ required for Muon :eqref:`eq_muon-update` on the four block matrices of `TinyLM`.
+1. **Spectral norm condition across layers and optimizers.** ● Using :eqref:`eq_spectral_condition`, verify that the $\mu\text{P}$ rules of :numref:`tab_mup-rules` give input, hidden, and output layers updates of spectral norm $\Theta(\sqrt{d_{\text{out}}/d_{\text{in}}})$ under a rank-$1$ Adam step, and derive the width scaling of $\eta$ required for Muon (:numref:`sec_muon`) on the four block matrices of `TinyLM`.
    :exlabel:`ex_scaling-spectral`
 
 1. [code] **Implementing $\mu\text{P}$ and the coordinate check on `TinyLM`.** ● Apply :numref:`tab_mup-transformer` to `d2l.TinyLM` across `d_model` $\in \{64, 128, 256, 512, 1024\}$ (`num_heads=2`, `base_width=64`) and verify with a one-step coordinate check at $\eta = 3 \times 10^{-3}$ that all sublayer output and logit magnitudes remain flat with width.
@@ -456,7 +453,7 @@ Width Parameterization and μP Scaling<br>**standard parametrization drift · co
 
 ::: {.cols .vc}
 ::: {.col}
-- **Standard Parametrization (SP) drift:** Tuning Adam on a narrow proxy ($n = 128$, $\eta^\star \approx 3.9 \times 10^{-3}$) and transferring to a $64\times$ wider network ($n = 8{,}192$) wipes out the entire $1{,}000\times$ parameter increase ($\approx 0.33$ vs. retuned $\approx 0.22$ loss) because $\eta^\star$ drifted down $16\times$!
+- **Standard Parametrization (SP) drift:** Tuning Adam on a narrow proxy ($n = 128$, $\eta^\star \approx 3.9 \times 10^{-3}$) and transferring to a $64\times$ wider network ($n = 8{,}192$) wipes out the entire $1{,}000\times$ parameter increase ($\approx 0.33$ vs. retuned $\approx 0.22$ loss) because $\eta^\star$ drifted down $16\times$.
 - **Maximal Update Parametrization ($\mu\text{P}$, Yang et al., 2022):** Scales layer LRs and readout multipliers by $m = n/n_{\text{base}}$ so $\eta^\star$ transfers zero-shot across widths.
 :::
 
@@ -491,7 +488,7 @@ In our 3-hidden-layer ReLU MLP $784 \to n \to n \to n \to 10$ across $n \in \{12
 ::: {.cols .vc}
 ::: {.col}
 - Sweeping Adam across $10$ log-spaced learning rates $\eta \in \{2^{-14}, \ldots, 2^{-5}\}$ over $400$ steps ($b = 512$, $2$ seeds) for widths $n \in \{128, 512, 2048, 8192\}$:
-  - As width $n$ increases $64\times$ ($128 \to 8{,}192$), the U-shaped loss curves shift steadily to the left!
+  - As width $n$ increases $64\times$ ($128 \to 8{,}192$), the U-shaped loss curves shift steadily to the left.
   - The optimal learning rate falls **$16\text{--}32\times$** with a log–log slope of **$-0.7$ to $-0.8$**.
   - At width $8{,}192$, the width-$128$ optimum sits high up on the unstable right wall of the curve.
 :::
@@ -528,7 +525,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 | **$n = 128$** | $128$ | $0.50\times$ activation scale | Stable feature refinement |
 | **$n = 512$** | $512$ | $2.00\times$ activation scale | Moderately large step |
 | **$n = 2{,}048$** | $2{,}048$ | $8.00\times$ activation scale | Overshoots initial representation |
-| **$n = 8{,}192$** | $8{,}192$ | **$32.0\times$ activation scale!** | **Catastrophic layer blow-up** |
+| **$n = 8{,}192$** | $8{,}192$ | **$32.0\times$ activation scale** | **Catastrophic layer blow-up** |
 
 ::: {.d2l-note .rule}
 **Why hidden learning rates must scale as $1/n$:** Keeping $(\Delta\mathbf{W}\,\mathbf{h})_i = \Theta(1)$ invariant across widths requires scaling the Adam learning rate of every hidden matrix with fan-in $n$ as **$\eta_{\text{hidden}} \propto 1/n$** (log–log slope $-1$).
@@ -595,7 +592,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
   - **Layer 1 (`fc_in`, fan-in $784$):** Flat across all widths ($\Theta(1)$).
   - **Layer 2 (`fc_h1`, fan-in $n$):** Grows linearly with width as **$O(n)$** (slope $+1$).
   - **Layer 3 (`fc_h2`):** Compounds Layer 2's input blow-up with its own $O(n)$ update to grow as **$O(n^2)$** (slope $+2$).
-  - **Output logits (`fc_out`):** Explodes $1{,}000\times$ across the width range as **$O(n^3)$** (slope $+3$)!
+  - **Output logits (`fc_out`):** Explodes $1{,}000\times$ across the width range as **$O(n^3)$** (slope $+3$).
 :::
 
 ::: {.col .fig}
@@ -609,7 +606,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 
 ::: {.cols .vc}
 ::: {.col}
-- Running the exact same 1-step coordinate check on `MuMLP` across $n \in \{128, 256, \ldots, 8192\}$ produces **four completely flat curves** ($\Theta(1)$ at every layer and every width)!
+- Running the exact same 1-step coordinate check on `MuMLP` across $n \in \{128, 256, \ldots, 8192\}$ produces **four completely flat curves** ($\Theta(1)$ at every layer and every width).
 - **Diagnostic asymmetry to remember:**
   - Rising curves on a coordinate check immediately **convict** a broken $\mu\text{P}$ implementation (e.g., forgetting the $1/m$ logit scale or $\eta/m$ hidden LR).
   - Flat curves rule out *exploding* updates ($\gg \Theta(1)$), but an over-shrunk learning rate (such as $\eta/m^2$) also looks flat after 1 step because weights barely move from initialization.
@@ -627,7 +624,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 ::: {.cols .vc}
 ::: {.col}
 - Repeating the $400$-step learning-rate sweep across $n \in \{128, 512, 2048, 8192\}$ under $\mu\text{P}$:
-  - The U-shaped curves now **align vertically** across the entire $64\times$ width range (135K to 141M parameters)!
+  - The U-shaped curves now **align vertically** across the entire $64\times$ width range (135K to 141M parameters).
   - The log–log slope of $\eta^\star(n)$ collapses from about $-0.7$ under SP to **near $0.0$** (the optimum stays at $2.4 \times 10^{-4}$ or within one grid step at every width).
   - Wider networks achieve strictly lower training loss at the exact same shared learning rate.
 :::
@@ -642,9 +639,9 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 [Cost of Proxy-to-Target Transfer]{.kicker}
 
 - How much loss do we pay at width $8{,}192$ when we use the learning rate tuned on the $1{,}000\times$ smaller width-$128$ proxy instead of retuning at width $8{,}192$?
-  - **Under SP:** Loses **$0.09\text{--}0.15$ nats** ($\approx 0.33$ vs. $\approx 0.22$), no better than the narrow width-$128$ proxy itself!
-  - **Under $\mu\text{P}$:** Loses **$\le 0.003$ nats** ($\approx 0.22$ either way), completely indistinguishable from seed noise!
-- Notice also that under $\mu\text{P}$, narrower proxy networks rise sooner on the right of $\eta^\star$ (where step size $\eta/m$ reaches initial weight size $1/\sqrt{n}$ at $\eta = \sqrt{n}/n_{\text{base}}$), so a rate stable on the narrow proxy is guaranteed to be stable on the wide target!
+  - **Under SP:** Loses **$0.09\text{--}0.15$ nats** ($\approx 0.33$ vs. $\approx 0.22$), no better than the narrow width-$128$ proxy itself.
+  - **Under $\mu\text{P}$:** Loses **$\le 0.003$ nats** ($\approx 0.22$ either way), completely indistinguishable from seed noise.
+- Notice also that under $\mu\text{P}$, narrower proxy networks rise sooner on the right of $\eta^\star$ (where step size $\eta/m$ reaches initial weight size $1/\sqrt{n}$ at $\eta = \sqrt{n}/n_{\text{base}}$), so a rate stable on the narrow proxy is guaranteed to be stable on the wide target.
 
 @!scaling-learning-rate-transfer-1
 :::
@@ -657,7 +654,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 - **Embeddings & 1D norms/biases (fan-in $= 1$):** Standard init, full AdamW learning rate $\eta$.
 - **Internal 2D matrices (`qkv`, `proj`, `mlp`):** Init variance $1/\text{fan-in}$, scaled AdamW LR **$\eta / m$** ($m = d/d_{\text{base}}$).
 - **Readout `head` ($d \to V$):** Init variance $1/d_{\text{base}}$, forward logits **$\times 1/m$**, LR $\eta$.
-- **Attention scores ($\mathbf{q}^\top\mathbf{k}$ over $d_k \propto d$):** Scale by **$1/d_k$** instead of $1/\sqrt{d_k}$ because aligned updates $\Delta\mathbf{q}, \Delta\mathbf{k}$ sum $d_k$ coherent products ($\Theta(d_k)$)!
+- **Attention scores ($\mathbf{q}^\top\mathbf{k}$ over $d_k \propto d$):** Scale by **$1/d_k$** instead of $1/\sqrt{d_k}$ because aligned updates $\Delta\mathbf{q}, \Delta\mathbf{k}$ sum $d_k$ coherent products ($\Theta(d_k)$).
 :::
 
 ::: {.col .fig .big}
@@ -673,7 +670,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 ::: {.col}
 - **Universal spectral condition (Yang, Simon & Bernstein, 2023):** Keeping activations $\mathbf{h} \in \mathbb{R}^{d_{\text{in}}}$ and $\mathbf{z} = \mathbf{W}\mathbf{h} \in \mathbb{R}^{d_{\text{out}}}$ at $\Theta(1)$ per entry requires:
   $$\|\mathbf{W}\|_2 = \Theta\!\left(\sqrt{\frac{d_{\text{out}}}{d_{\text{in}}}}\right), \quad \|\Delta\mathbf{W}\|_2 = \Theta\!\left(\sqrt{\frac{d_{\text{out}}}{d_{\text{in}}}}\right)$$
-- **Adam step 1 is a rank-1 sign outer product:** $\|\Delta\mathbf{W}\|_2 = \eta\|\mathbf{s}\|_2\|\mathbf{t}\|_2 = \Theta(\eta\sqrt{d_{\text{out}}d_{\text{in}}})$, which matches $\Theta(\sqrt{d_{\text{out}}/d_{\text{in}}})$ iff **$\eta \propto 1/d_{\text{in}}$**!
+- **Adam step 1 is a rank-1 sign outer product:** $\|\Delta\mathbf{W}\|_2 = \eta\|\mathbf{s}\|_2\|\mathbf{t}\|_2 = \Theta(\eta\sqrt{d_{\text{out}}d_{\text{in}}})$, which matches $\Theta(\sqrt{d_{\text{out}}/d_{\text{in}}})$ iff **$\eta \propto 1/d_{\text{in}}$**.
 :::
 
 ::: {.col .fig}
@@ -690,7 +687,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 - For an $n \times n$ hidden matrix, requiring $\|\Delta\mathbf{W}\|_2 = \Theta(\sqrt{n/n}) = \Theta(1)$ dictates how $\eta$ scales with width $n$:
   - **AdamW:** $\|\Delta\mathbf{W}\|_2 = \Theta(\eta n) \implies$ **$\eta \propto 1/n$** ($\eta/m$).
   - **Muon ($0.2\sqrt{n}\,\mathrm{NS}_5$):** $\|\Delta\mathbf{W}\|_2 = \Theta(\eta\sqrt{n}) \implies$ **$\eta \propto 1/\sqrt{n}$** ($\eta/\sqrt{m}$).
-  - **Spectral-scaled Muon ($\sqrt{d_{\text{out}}/d_{\text{in}}}\,\mathrm{NS}_5$):** $\|\Delta\mathbf{W}\|_2 = \Theta(\eta) \implies$ **$\eta = \Theta(1)$** (transfers with no $1/m$ factor!).
+  - **Spectral-scaled Muon ($\sqrt{d_{\text{out}}/d_{\text{in}}}\,\mathrm{NS}_5$):** $\|\Delta\mathbf{W}\|_2 = \Theta(\eta) \implies$ **$\eta = \Theta(1)$** (transfers with no $1/m$ factor).
 :::
 
 ::: {.col .fig .big}
@@ -711,7 +708,7 @@ Test your grasp of width parameterization on three concrete problems:
 **Answers:**
 
 1. Step 1 shifts a layer's output by $\Theta(\eta \cdot \text{fan-in})$: (a) `fc_in` has fixed fan-in $784$ $\to$ **$1\times$ (unchanged)**; (b) `fc_h1` and (c) `fc_out` both have fan-in $n$ $\to$ **$2\times$ larger shift**.
-2. Layers 1, 2, and 3 (`h1`, `h2`, `h3`) will be **completely flat ($\Theta(1)$)**, while the **output logit curve will grow linearly with width as $O(n)$ (slope $+1$)** because $\Delta\mathbf{W}_{\text{out}}\,\mathbf{h}$ sums $n$ aligned terms without the $1/m$ divisor!
+2. Layers 1, 2, and 3 (`h1`, `h2`, `h3`) will be **completely flat ($\Theta(1)$)**, while the **output logit curve will grow linearly with width as $O(n)$ (slope $+1$)** because $\Delta\mathbf{W}_{\text{out}}\,\mathbf{h}$ sums $n$ aligned terms without the $1/m$ divisor.
 :::
 :::
 

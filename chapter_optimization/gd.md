@@ -91,7 +91,7 @@ def gd_2d(x1, x2, s1, s2, f_grad, eta):  #@save
     return x1 - eta * g1, x2 - eta * g2, 0, 0
 ```
 
-At $\eta = 0.45$—just below the stability ceiling—the steep multiplier is $1 - 4(0.45) = -0.8$, so $x_2$ overshoots the valley floor and flips sign on every step while shrinking by $20\%$ in magnitude. Meanwhile, the flat multiplier is $1 - 0.2(0.45) = 0.91$, so after $30$ steps from $(-5, -2)$ the flat coordinate still remains near $-5 \times 0.91^{30} \approx -0.3$.
+At $\eta = 0.45$, just below the stability ceiling, the steep multiplier is $1 - 4(0.45) = -0.8$, so $x_2$ overshoots the valley floor and flips sign on every step while shrinking by $20\%$ in magnitude. Meanwhile, the flat multiplier is $1 - 0.2(0.45) = 0.91$, so after $30$ steps from $(-5, -2)$ the flat coordinate still remains near $-5 \times 0.91^{30} \approx -0.3$.
 
 ```{.python .input #optimization-intro-an-ill-conditioned-valley}
 %%tab pytorch, jax
@@ -109,7 +109,7 @@ d2l.plot(np.arange(31), [xs[:, 0], xs[:, 1]], 'step', 'coordinate',
          legend=['$x_1$', '$x_2$'])
 ```
 
-Sweeping $\eta$ across $(0, 0.5]$ shows how the overall convergence time—measured by the number of steps required to bring both coordinates within $1\%$ of their initial distance from the origin—depends on balancing these two factors:
+Sweeping $\eta$ across $(0, 0.5]$ shows how the overall convergence time (measured by the number of steps required to bring both coordinates within $1\%$ of their initial distance from the origin) depends on balancing these two factors:
 
 ```{.python .input #optimization-intro-an-ill-conditioned-valley-1}
 %%tab pytorch, jax
@@ -162,9 +162,9 @@ Crucially, **strict saddle points** (critical points with at least one negative 
 ![Minimizing $f(x)=\tanh x$ from $x=4$ stalls on an activation plateau where $f'(4) \approx 0.0013$ despite the absence of any critical point.](../img/mdl-opt-tanh-flat.svg)
 :label:`fig_mdl-opt-tanh-flat`
 
-By contrast, **plateaus** arise without any critical point when activation derivatives saturate, as in $f(x) = \tanh(x)$ at $x = 4$ (:numref:`fig_mdl-opt-tanh-flat`), where $f'(4) = 1 - \tanh^2(4) \approx 0.0013$ causes gradient descent with $\eta = 1$ to spend $370$ steps creeping from $x = 4$ to $x = 2$. In deep networks, such vanishing gradients (:numref:`sec_numerical_stability`) are eliminated primarily by architectural design—non-saturating activations (:numref:`subsec_activation-functions`), normalization layers (:numref:`sec_batch_norm`), and residual connections (:numref:`sec_resnet`)—leaving ill-conditioning as the central challenge for the optimizer.
+By contrast, **plateaus** arise without any critical point when activation derivatives saturate, as in $f(x) = \tanh(x)$ at $x = 4$ (:numref:`fig_mdl-opt-tanh-flat`), where $f'(4) = 1 - \tanh^2(4) \approx 0.0013$ causes gradient descent with $\eta = 1$ to spend $370$ steps creeping from $x = 4$ to $x = 2$. In deep networks, such vanishing gradients (:numref:`sec_numerical_stability`) are eliminated primarily by architectural design: non-saturating activations (:numref:`subsec_activation-functions`), normalization layers (:numref:`sec_batch_norm`), and residual connections (:numref:`sec_resnet`), leaving ill-conditioning as the central challenge for the optimizer.
 
-Even though a neural network loss is globally non-convex (for instance, permuting the $d$ hidden units of a layer yields $d!$ distinct parameter vectors with identical loss whose average collapses to a single-unit network of higher loss; Exercise :exref:`ex_optimization-intro-permutation-symmetric-minima`), its local geometry around any iterate is governed by its Hessian spectrum. Empirical spectra of deep networks exhibit a massive bulk of eigenvalues near zero alongside a few large positive outlier eigenvalues :cite:`Ghorbani.Krishnan.Xiao.2019`. The largest eigenvalue—the **sharpness** $\lambda_{\max}$—caps the stable learning rate, while the flat bulk progresses at rate $\eta\lambda_i \ll 1$, reproducing the narrow-valley bottleneck in high dimensions.
+Even though a neural network loss is globally non-convex (for instance, permuting the $d$ hidden units of a layer yields $d!$ distinct parameter vectors with identical loss whose average collapses to a single-unit network of higher loss; Exercise :exref:`ex_optimization-intro-permutation-symmetric-minima`), its local geometry around any iterate is governed by its Hessian spectrum. Empirical spectra of deep networks exhibit a massive bulk of eigenvalues near zero alongside a few large positive outlier eigenvalues :cite:`Ghorbani.Krishnan.Xiao.2019`. The largest eigenvalue, called the **sharpness** $\lambda_{\max}$, caps the stable learning rate, while the flat bulk progresses at rate $\eta\lambda_i \ll 1$, reproducing the narrow-valley bottleneck in high dimensions.
 
 ## The Descent Guarantee and Stability of Minima
 :label:`subsec_gd-local-minima`
@@ -257,7 +257,7 @@ Starting from $x = 10$, the run with $\eta = 0.5$ ($2/\eta = 4 > 1.81$) converge
 ## The Edge of Stability
 :label:`subsec_gd-edge-of-stability`
 
-In neural network training, the relationship between sharpness $\lambda_{\max}$ and the stability limit $2/\eta$ becomes dynamic. :citet:`Cohen.Kaur.Li.ea.2021` demonstrated that under full-batch gradient descent, the Hessian sharpness $\lambda_{\max}(\nabla^2 f(\mathbf{x}_t))$ steadily increases as the loss falls—a phenomenon called **progressive sharpening**—until it reaches the stability threshold $2/\eta$. Instead of diverging, the sharpness then hovers near $2/\eta$ for the remainder of training while the loss continues to decrease non-monotonically. This operating regime is known as the **edge of stability**.
+In neural network training, the relationship between sharpness $\lambda_{\max}$ and the stability limit $2/\eta$ becomes dynamic. :citet:`Cohen.Kaur.Li.ea.2021` demonstrated that under full-batch gradient descent, the Hessian sharpness $\lambda_{\max}(\nabla^2 f(\mathbf{x}_t))$ steadily increases as the loss falls (**progressive sharpening**) until it reaches the stability threshold $2/\eta$. Instead of diverging, the sharpness then hovers near $2/\eta$ for the remainder of training while the loss continues to decrease non-monotonically. This operating regime is known as the **edge of stability**.
 
 We can measure this phenomenon directly on a 25-parameter single-hidden-layer $\tanh$ network fitting $16$ points of $y = \sin(3x)$ on $[-2, 2]$. Because $d = 25$, we can compute the exact $25 \times 25$ Hessian and its largest eigenvalue $\lambda_{\max}$ every $500$ steps across $10$ random initializations for $\eta = 0.4$ ($2/\eta = 5$) and $\eta = 0.25$ ($2/\eta = 8$).
 
@@ -410,10 +410,7 @@ In deep networks, we are not given $\operatorname{diag}(\mathbf{H})$ directly, n
 
 ## Summary
 
-* On a positive-definite quadratic with Hessian eigenvalues $\lambda_{\min} \le \cdots \le \lambda_{\max}$, gradient descent is stable if and only if $\eta < 2/\lambda_{\max}$. Below this ceiling, convergence to relative accuracy $\epsilon$ at the optimal constant step size $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$ requires $t \approx (\kappa/2)\log(1/\epsilon)$ steps, where $\kappa = \lambda_{\max}/\lambda_{\min}$ is the condition number.
-* High-dimensional critical points at elevated loss are predominantly strict saddle points, which gradient descent escapes along negative-curvature eigenvectors, while activation plateaus are mitigated by architectural choices (ReLU, normalization, residual connections).
-* For any $L$-smooth function, the descent lemma guarantees that $0 < \eta < 2/L$ strictly lowers the objective at every non-critical point. Conversely, at a fixed $\eta$, any local minimum with sharpness $\lambda_{\max} > 2/\eta$ is linearly unstable, and full-batch neural network training sharpens progressively until $\lambda_{\max}$ stabilizes at the *edge of stability* $2/\eta$.
-* Preconditioning rescales the gradient by an approximation to the curvature matrix $\mathbf{H}$. Diagonal preconditioning eliminates axis-aligned ill-conditioning in $O(d)$ memory, motivating the adaptive coordinate-wise methods of :numref:`sec_adam`.
+On a positive-definite quadratic with Hessian eigenvalues $\lambda_{\min} \le \cdots \le \lambda_{\max}$, gradient descent is stable if and only if $\eta < 2/\lambda_{\max}$, and reaching relative accuracy $\epsilon$ at the optimal constant step size $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$ requires $t \approx (\kappa/2)\log(1/\epsilon)$ steps, where $\kappa = \lambda_{\max}/\lambda_{\min}$ is the condition number. In high-dimensional non-convex landscapes, critical points at elevated loss are predominantly strict saddle points that gradient descent escapes along negative-curvature eigenvectors, while activation plateaus are largely prevented by modern activations, normalization layers, and residual connections. For any $L$-smooth objective, the descent lemma guarantees monotonic decrease whenever $0 < \eta < 2/L$; conversely, a fixed learning rate $\eta$ destabilizes any minimum sharper than $2/\eta$, and full-batch neural network training sharpens progressively until $\lambda_{\max}$ hovers near this *edge of stability* $2/\eta$. Rescaling the gradient by a curvature preconditioner reduces the effective condition number, and diagonal preconditioning eliminates axis-aligned ill-conditioning in $O(d)$ memory, motivating the adaptive coordinate-wise methods of :numref:`sec_adam`.
 
 ## Exercises
 
@@ -483,7 +480,7 @@ Landscapes and Gradient Descent<br>**ill-conditioned valleys · condition number
 :::
 
 ::: {.slide title="The Quadratic Valley: Curvatures 0.2 and 4.0"}
-[The Quadratic Testbed]{.kicker}
+[The Quadratic Model]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -627,7 +624,7 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 ::: {.col}
 - **Curvature filter:** Near a minimum $x^\star$ of curvature $\lambda = f''(x^\star) > 0$, one step multiplies displacement $x - x^\star$ by $1 - \eta\lambda$:
   - **Stable ($\lambda < 2/\eta$):** $|1 - \eta\lambda| < 1$ attracts iterates into $x^\star$.
-  - **Unstable ($\lambda > 2/\eta$):** $1 - \eta\lambda < -1$ ejects iterates out of the basin!
+  - **Unstable ($\lambda > 2/\eta$):** $1 - \eta\lambda < -1$ ejects iterates out of the basin.
 - **On $f(x) = x\cos(0.15\pi x)$:** At $\eta = 0.5$ ($2/\eta = 4$), both the deep sharp minimum ($f'' = 1.81$) and shallow flat minimum ($f'' = 0.98$) are stable; raising $\eta = 2.0$ ($2/\eta = 1$) destabilizes the deep minimum ($-2.62$) and forces convergence to the flat one.
 :::
 
@@ -663,7 +660,7 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 ::: {.col}
 - In neural networks trained with full-batch gradient descent, the Hessian sharpness $\lambda_{\max}(\nabla^2 f(\mathbf{x}_t))$ is not static—it **increases steadily** as the loss drops (**progressive sharpening**, Cohen et al., 2021).
 - On a 25-parameter $\tanh$ MLP fitting $y = \sin(3x)$, we compute the exact $25 \times 25$ Hessian every $500$ steps across $10$ random initializations:
-  - Normalized sharpness $\frac{\lambda_{\max}}{2/\eta}$ climbs until it hits **$1.0$** ($\lambda_{\max} \approx 2/\eta$) and plateaus there for the rest of training!
+  - Normalized sharpness $\frac{\lambda_{\max}}{2/\eta}$ climbs until it hits **$1.0$** ($\lambda_{\max} \approx 2/\eta$) and plateaus there for the rest of training.
 :::
 
 ::: {.col .fig}
@@ -707,7 +704,7 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 - **Preconditioned gradient descent** $\mathbf{x} \leftarrow \mathbf{x} - \eta\mathbf{P}^{-1}\nabla f(\mathbf{x})$ replaces $\mathbf{H}$ with a cheap $O(d)$ approximation $\mathbf{P}$ that reduces the effective condition number of $\mathbf{P}^{-1/2}\mathbf{H}\mathbf{P}^{-1/2}$.
 - **Diagonal preconditioning ($\mathbf{P} = \operatorname{diag}(\mathbf{H})$):**
   $$x_i \leftarrow x_i - \eta\,\frac{\partial_i f(\mathbf{x})}{H_{ii}}$$
-- On our axis-aligned valley ($\operatorname{diag}(\mathbf{H}) = (0.2, 4)$), both coordinates contract by $1 - \eta$, collapsing $\kappa = 20 \to 1$ and reaching $1\%$ error in **$7$ steps** at $\eta = 0.5$ ($0.5^7 \approx 0.0078$) instead of $47$!
+- On our axis-aligned valley ($\operatorname{diag}(\mathbf{H}) = (0.2, 4)$), both coordinates contract by $1 - \eta$, collapsing $\kappa = 20 \to 1$ and reaching $1\%$ error in **$7$ steps** at $\eta = 0.5$ ($0.5^7 \approx 0.0078$) instead of $47$.
 
 @!gd-preconditioning[out=1]
 :::
@@ -732,7 +729,7 @@ Work out the exact numerical answer for each scenario:
 
 1. **$\eta_{\max} = 2/\lambda_{\max} = 0.2$**; **$\kappa = 10 / 0.05 = 200$**; and **$t \approx \frac{200}{2} \times 4 = 400$ steps**.
 2. Sharpness arrests at the stability ceiling **$\lambda_{\max} \approx 2/\eta = 2/0.5 = 4.0$**.
-3. At $45^\circ$, $H_{11} = H_{22} = \frac{0.2 + 4.0}{2} = 2.1$ are identical! Dividing by $\operatorname{diag}(\mathbf{H})$ merely rescales $\eta$ by $1/2.1$, leaving **$\kappa = 20$ unchanged**—motivating momentum (§{sec_momentum}) and full-matrix preconditioning (§{sec_muon}).
+3. At $45^\circ$, $H_{11} = H_{22} = \frac{0.2 + 4.0}{2} = 2.1$ are identical. Dividing by $\operatorname{diag}(\mathbf{H})$ merely rescales $\eta$ by $1/2.1$, leaving **$\kappa = 20$ unchanged**, motivating momentum (§{sec_momentum}) and full-matrix preconditioning (§{sec_muon}).
 :::
 :::
 

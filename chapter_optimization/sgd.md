@@ -327,10 +327,7 @@ An update on $b = 100$ examples takes roughly the same wall-clock time as an upd
 
 ## Summary
 
-* Minibatch SGD estimates the gradient from $b$ examples, reducing the gradient variance to $\operatorname{tr}(\boldsymbol{\Sigma})/b$ (with finite-population factor $(n-b)/(n-1)$ when sampling without replacement).
-* With a constant learning rate $\eta$, SGD iterates converge to a stationary **noise ball** whose variance along a direction of curvature $\lambda$ is $\frac{\eta\sigma^2}{b\lambda(2 - \eta\lambda)} \approx \frac{\eta\sigma^2}{2\lambda b}$, widest along the flattest directions.
-* Summing over all directions, the curvature cancels and the expected training loss plateaus at an **excess loss** of $\mathbb{E}[f(\mathbf{x}_\infty)] - f(\mathbf{x}^\star) \approx \frac{\eta\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star)}{4b}$, which vanishes only when the model interpolates every training example at the optimum.
-* When $\eta L \ll 1$, trajectories depend on $\eta$ and $b$ through their ratio $\eta / b$. Minibatches amortize per-step dispatch and memory-bandwidth costs across $b$ examples while making the same progress per example processed up to the curvature stability limit $\eta < 2/L$.
+Minibatch SGD estimates the gradient from $b$ examples, reducing the sampling variance to $\operatorname{tr}(\boldsymbol{\Sigma})/b$ (times $(n-b)/(n-1)$ when sampling without replacement) while amortizing per-step dispatch and memory-bandwidth costs across the minibatch. Under a constant learning rate $\eta$, iterates converge to a stationary **noise ball** whose coordinate variance along curvature $\lambda$ is $\frac{\eta\sigma^2}{b\lambda(2 - \eta\lambda)} \approx \frac{\eta\sigma^2}{2\lambda b}$, widest along the flattest directions. Summing quadratic loss contributions across all modes cancels $\lambda$, leaving an expected stationary **excess loss** of $\mathbb{E}[f(\mathbf{x}_\infty)] - f(\mathbf{x}^\star) \approx \frac{\eta\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x}^\star)}{4b}$ that vanishes only when the model interpolates every training example at the optimum. Whenever $\eta L \ll 1$, both transient progress per example and the stationary noise floor depend on $\eta$ and $b$ only through their ratio $\eta/b$, until increasing $b$ with $\eta \propto b$ approaches the deterministic curvature ceiling $\eta < 2/L$.
 
 ## Exercises
 
@@ -464,8 +461,8 @@ Stochastic and Minibatch Gradient Descent<br>**sampled gradients · stationary n
 ::: {.cols .vc}
 ::: {.col}
 - We simulate $10{,}000$ independent SGD trajectories on the valley ($\lambda_1 = 0.2, \lambda_2 = 4.0, \sigma^2 = 1$) for $2{,}000$ steps at $\eta = 0.1$ and $\eta = 0.05$:
-  - At $\eta = 0.1$: measured variances $(0.251, 0.0156)$ match $\frac{\eta}{\lambda(2-\eta\lambda)} = (0.2525, 0.0156)$ to within $1\%$.
-  - At $\eta = 0.05$: flat variance halves to $0.1256$, while steep variance drops slightly more than half ($0.0156 \to 0.0069$) because $2 - \eta\lambda_2$ increases from $1.6 \to 1.8$.
+  - At $\eta = 0.1$: measured variances match $\frac{\eta}{\lambda(2-\eta\lambda)} = (0.2525, 0.0156)$ to within $1\%$.
+  - At $\eta = 0.05$: flat variance halves toward $0.1256$, while steep variance drops slightly more than half ($0.0156 \to 0.0069$) because $2 - \eta\lambda_2$ increases from $1.6 \to 1.8$.
 :::
 
 ::: {.col .fig}
@@ -543,9 +540,9 @@ $$\mathbf{g}_t = \frac{1}{b}\sum_{i \in \mathcal{B}_t} \nabla f_i(\mathbf{x}_t)$
 ::: {.cols .vc}
 ::: {.col}
 - At batch size $b = 10$ with $\operatorname{tr}\boldsymbol{\Sigma}(\mathbf{w}^\star) = 3.24$, our formula predicts:
-  - At $\eta = 0.05$: $\frac{0.05 \times 3.24}{4 \times 10} = 0.0040$ above $f(\mathbf{w}^\star) \approx 0.242$.
-  - At $\eta = 0.025$: $\frac{0.025 \times 3.24}{4 \times 10} = 0.0020$.
-- Averaging across $400$ independent minibatch SGD runs over the third epoch confirms agreement to four decimal places!
+  - At $\eta = 0.05$: $\frac{0.05 \times 3.24}{4 \times 10} \approx 0.0041$ above $f(\mathbf{w}^\star) \approx 0.242$.
+  - At $\eta = 0.025$: $\frac{0.025 \times 3.24}{4 \times 10} \approx 0.0020$.
+- Averaging across $400$ independent minibatch SGD runs over the third epoch confirms agreement within $2 \times 10^{-4}$.
 :::
 
 ::: {.col .fig}
@@ -583,7 +580,7 @@ Real data loaders do not draw minibatches with replacement; they randomly permut
 ::: {.col}
 - Every optimizer update pays fixed Python dispatch, autograd graph, and kernel-launch overhead plus weight memory reads independent of $b$.
 - On the $1{,}500$-example airfoil dataset at fixed $\eta / b = 0.005$:
-  - $b = 1$ ($1{,}500$ updates/epoch) and $b = 100$ ($15$ updates/epoch) both take comparable sub-millisecond time *per update*, making $b = 100$ **$50\text{--}100\times$ faster per epoch**!
+  - $b = 1$ ($1{,}500$ updates/epoch) and $b = 100$ ($15$ updates/epoch) both take comparable sub-millisecond time *per update*, making $b = 100$ **$50\text{--}100\times$ faster per epoch**.
 :::
 
 ::: {.col .fig}
@@ -600,7 +597,7 @@ Real data loaders do not draw minibatches with replacement; they randomly permut
 - **Why small-batch curves overlap:** At fixed $\eta / b = 0.005$ and $\eta\lambda \ll 1$, $b$ steps at rate $\eta/b$ contract by $(1 - \eta\lambda/b)^b \approx 1 - \eta\lambda$, matching one step of size $\eta$ per example processed.
 - **Breakdown near the curvature ceiling $2/L$:**
   - At $b = 100$, $\eta = 0.5$ gives $\eta L = 0.5 \times 2.10 = 1.05$, inflating the noise-ball denominator $(2 - \eta L)^{-1}$ and raising the last-epoch loss slightly ($0.248$ vs. $0.246$).
-  - Beyond $b_{\max} = \frac{2/L}{0.005} \approx 190$, linear scaling violates $\eta < 2/L \approx 0.95$ and diverges!
+  - Beyond $b_{\max} = \frac{2/L}{0.005} \approx 190$, linear scaling violates $\eta < 2/L \approx 0.95$ and diverges.
 :::
 
 ::: {.col .fig}
@@ -626,7 +623,7 @@ Calculate the outcome in each minibatch SGD scenario:
 **Answers:**
 
 1. Holding $\eta$ fixed reduces the excess loss $\frac{\eta\operatorname{tr}\boldsymbol{\Sigma}}{4b}$ by **$4\times$**; scaling $\eta$ by $4\times$ keeps $\eta / b$ constant, leaving the excess loss **unchanged** (while reaching the floor in $4\times$ fewer updates).
-2. Coordinate variance scales as $1/\lambda$, so $\mathbb{E}[x_{\infty,1}^2]/\mathbb{E}[x_{\infty,2}^2] \approx 4.0 / 0.2 =$ **$20\times$ wider** along $x_1$; in the excess loss $\frac{1}{2}\lambda_k \mathbb{E}[x_{\infty,k}^2] \approx \frac{\eta\sigma_k^2}{4b}$, $\lambda_k$ cancels and both axes contribute **equally ($1:1$)**!
+2. Coordinate variance scales as $1/\lambda$, so $\mathbb{E}[x_{\infty,1}^2]/\mathbb{E}[x_{\infty,2}^2] \approx 4.0 / 0.2 =$ **$20\times$ wider** along $x_1$; in the excess loss $\frac{1}{2}\lambda_k \mathbb{E}[x_{\infty,k}^2] \approx \frac{\eta\sigma_k^2}{4b}$, $\lambda_k$ cancels and both axes contribute **equally ($1:1$)**.
 3. The stability limit is $2/L = 2/5.0 = 0.4$, which linear scaling reaches at **$b = 0.4 / 0.0025 = 160$ examples**.
 :::
 :::

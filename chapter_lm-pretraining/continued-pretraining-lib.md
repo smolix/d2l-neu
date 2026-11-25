@@ -34,8 +34,39 @@ library preamble inside its functions (`transformers`, `huggingface_hub`,
 
 ## Registries
 
+The hosted inputs (d2l-data R2, uploaded 2026-11-25): the summary of the
+Qwen-tokenized T2 data (the shards themselves are rebuilt by
+`tools/build_pretraining_data.py --stage cpt-qwen`, never hosted) and the
+three R2-tokenized T1 slices.
+
+```{.python .input #continued-pretraining-lib-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-cpt-qwen-manifest-v1'] = (
+    d2l.LM_DATA_URL + 'lm-cpt-qwen-manifest-v1.json.gz',
+    '4669a1ba7b7fa4f8dbc6c15e8d91372b733330cc')
+d2l.DATA_HUB['lm-pes2o-12m-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pes2o-12m-v1.tar',
+    '8c9b514214da373453f155f2a0adfcc364e02ee0')
+d2l.DATA_HUB['lm-pes2o-val-v1'] = (
+    d2l.LM_DATA_URL + 'lm-pes2o-val-v1.tar',
+    '0ef7a04d6f2e9b8b23567d4eb37ca5039caf5cf0')
+d2l.DATA_HUB['lm-fwedu-replay-12m-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fwedu-replay-12m-v1.tar',
+    '46232cacbe8b9eb30ca7ce6a2d3f7e14ac765c24')
+```
+
+The section's results and the campaigns not yet run: until a campaign's
+result is committed, the page shows it as pending (with the T1 arms as
+the stand-in for the Qwen arms) instead of failing.
+
 ```{.python .input #continued-pretraining-lib-artifacts}
 %%tab pytorch
+#@save
+d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | {
+    'cpt-t1', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2',
+    'smollm3-3', 'smollm3-4', 'smollm3-5'}
+
 #@save
 d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'] = (
     'lm-cpt-qwen-manifest-v1', 'json-table')
@@ -510,13 +541,23 @@ and the final weights in bf16. The step is `pretrain_step` on one GPU with
 the loss chunk of a 151,936-token vocabulary (2,048 positions, so a chunk's
 fp32 logits stay at 1.2 GB); the schedule is linear warmup, then a cosine
 to `final_frac` of the peak (or, for the plateau branch, a linear decay to
-zero). Interim evaluations (0.5M tokens per set, losses only) run every
-three steps for the first 30 steps (the re-warm bump), then every 15 (T2)
-or 5 (T1) steps. Arm A also runs the suite at step 15; the arms without
+zero). Interim evaluations (0.5M tokens per set, losses only) run at
+step 0 (the training model before its first update, the baseline of the
+re-warm bump), every three steps for the first 30 steps (the bump), then
+every 15 (T2) or 5 (T1) steps. Arm A also runs the suite at step 15; the arms without
 replay at the replay arm's peak get a full evaluation at the step where
 they have seen as many domain tokens as the replay arm sees in its whole
 run (equal-token accounting). The merge evaluates the base and every arm's
 final weights on the full evaluation sets and the suite.
+
+A job folder is named by tier and arm only, so it records what it was
+trained from: `arm.json` (written when the arm starts) and `DONE` hold the
+arm's configuration and the identity of its starting point (Qwen's pinned
+revision, or the T1 preset with its checkpoint and plateau state), and a
+folder trained from anything else is refused rather than reused. A T2 arm
+keeps up to three full states of about 7 GB while it trains, so it starts
+only with `_CPT_MIN_FREE_GB` free on the data disk (enough for four arms
+at once).
 
 ```{.python .input #continued-pretraining-lib-arms}
 %%tab pytorch
@@ -544,6 +585,9 @@ _CPT_MICRO = {'t1': 16, 't2': 1}  # sequences per micro-batch (D2 probe:
 
 #@save
 _CPT_SUITE_STEP = 15  # arm A's early look at the suite
+
+#@save
+_CPT_MIN_FREE_GB = {'t1': 10, 't2': 100}  # free disk before an arm starts
 
 #@save
 def _arm_slug(arm):
@@ -661,6 +705,57 @@ def _cpt_job(cfg):
     return os.path.join(d2l._job_root(), 'cpt',
                         f'{cfg["tier"]}-{_arm_slug(cfg["arm"])}')
 
+def _file_id(path):
+    """sha1 of a file's size and its first and last MiB: quick, and enough
+    to tell two trainings of one architecture apart."""
+    import hashlib
+    size = os.path.getsize(path)
+    h = hashlib.sha1(str(size).encode())
+    with open(path, 'rb') as f:
+        h.update(f.read(2 ** 20))
+        f.seek(max(0, size - 2 ** 20))
+        h.update(f.read(2 ** 20))
+    return h.hexdigest()
+
+def _cpt_base_id(cfg):
+    """What an arm starts from: Qwen's pinned revision, or the T1 preset
+    and the identity of its final checkpoint or plateau state."""
+    if cfg['tier'] == 't2':
+        return [cfg['base'], d2l.HF_REVISIONS[cfg['base']]]
+    preset, ckpt, state = _cpt_r2_files()
+    return [preset, _file_id(state if cfg.get('start') == 'plateau'
+                             else ckpt)]
+
+def _cpt_identity(cfg):
+    """The record of an arm in its job folder: configuration and base."""
+    return dict(config=d2l._jsonable(cfg), base=_cpt_base_id(cfg))
+
+def _cpt_check_job(job, ident, name='DONE'):
+    """Whether job holds file name; raise if that file records another
+    arm (configuration or starting point) than ident."""
+    path = os.path.join(job, name)
+    if not os.path.exists(path):
+        return False
+    with open(path) as f:
+        stored = json.load(f)
+    d = d2l._config_diff(ident, {k: stored.get(k) for k in ident})
+    if d:
+        raise ValueError(f'{job} holds another arm ({d[0]}: {d[2]!r}, this '
+                         f'arm has {d[1]!r}); move the folder away to '
+                         'retrain it')
+    return True
+
+def _cpt_check_disk(cfg):
+    """Refuse to start an arm with less than _CPT_MIN_FREE_GB free."""
+    path = os.path.abspath(d2l._job_root())
+    while not os.path.exists(path):
+        path = os.path.dirname(path)
+    free = shutil.disk_usage(path).free / 2 ** 30
+    need = _CPT_MIN_FREE_GB[cfg['tier']]
+    if free < need:
+        raise OSError(f'{free:.0f} GiB free under {path}; a {cfg["tier"]} '
+                      f'arm starts with at least {need} GiB')
+
 def _cpt_train(model, mix, sets, cfg, job, optim_state=None, peak=None,
                tokenizer=None, suite=None, stop=None):
     """Train one arm (resumable in job; at most `stop` steps): the log
@@ -680,6 +775,12 @@ def _cpt_train(model, mix, sets, cfg, job, optim_state=None, peak=None,
         run.optimizer.load_state_dict(optim_state)
     grid = (set(_cpt_eval_steps(cfg['steps'], cfg['tier']))
             if cfg.get('evaluate', True) else set())
+    step0 = os.path.join(job, 'step0.json')
+    if grid and run.start == 0:  # the arm's own start: the bump's baseline
+        losses = _set_losses(_cpt_docs(run.raw, sets, T, _CPT_EVAL_TOKENS))
+        with open(step0 + '.tmp', 'w') as f:
+            json.dump(losses, f)
+        os.replace(step0 + '.tmp', step0)
     for seg in run.segments():
         for step in range(seg.start, min(seg.total, stop or seg.total)):
             lr = _cpt_lr(step, cfg, peak)
@@ -727,10 +828,14 @@ def _cpt_suite_n(tier):
 def _cpt_arm_run(cfg):
     """Train one arm (or read its finished job folder): {log, equal,
     suite, peak_lr, gib, tok_s, label}."""
-    job = _cpt_job(cfg)
+    job, ident = _cpt_job(cfg), _cpt_identity(cfg)
     done = os.path.join(job, 'DONE')
-    if not os.path.exists(done):
+    if not _cpt_check_job(job, ident):
+        _cpt_check_job(job, ident, 'arm.json')  # resume only the same arm
+        _cpt_check_disk(cfg)
         os.makedirs(job, exist_ok=True)
+        with open(os.path.join(job, 'arm.json'), 'w') as f:
+            json.dump(ident, f)
         dev = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         torch._dynamo.reset()  # one process trains several arms: compile
         model, optim, old_peak, label = _cpt_base(cfg, device=dev)  # anew
@@ -749,13 +854,19 @@ def _cpt_arm_run(cfg):
         gib = (torch.cuda.max_memory_allocated(dev) / 2 ** 30
                if dev.type == 'cuda' else float('nan'))
         with open(done, 'w') as f:
-            json.dump(dict(peak_lr=peak, gib=gib, label=label), f)
+            json.dump(dict(ident, peak_lr=peak, gib=gib, label=label), f)
         shutil.rmtree(os.path.join(job, 'state'), ignore_errors=True)
         del model
         d2l.lm_free()
     with open(done) as f:
         info = json.load(f)
     log = d2l._read_job_logs(job)
+    step0 = os.path.join(job, 'step0.json')
+    if os.path.exists(step0):  # the evaluation before the first update
+        with open(step0) as f:
+            log = pd.concat([pd.DataFrame([dict(
+                step=0, tokens=0, domain_tokens=0, **json.load(f))]), log],
+                            ignore_index=True)
     read = lambda name: (d2l._read_result(os.path.join(job, name),
                                           'json-table')
                          if os.path.exists(os.path.join(job, name))
@@ -793,6 +904,8 @@ def _cpt_merge(parts, cfgs):
     docs, equal = [], []
     for arm, cfg in cfgs.items():
         p = _part(parts[arm])
+        if not _cpt_check_job(_cpt_job(cfg), _cpt_identity(cfg)):
+            raise FileNotFoundError(f'{_cpt_job(cfg)}: arm {arm} not done')
         path = os.path.join(_cpt_job(cfg), 'ckpt',
                             f's{cfg["steps"]}.safetensors')
         model = d2l._load_bf16(path, device=dev)
@@ -924,23 +1037,54 @@ def plot_cpt_curves(runs, thin=('A′', 'A″')):
     axes[0].legend(fontsize=8)
     fig.tight_layout()
 
+#@save
+Estimate = collections.namedtuple('Estimate', ['value', 'lo', 'hi', 'note'])
+
+#@save
+def _estimate(x, note=''):
+    """Estimate from replicates whose last entry is the point estimate."""
+    if note:
+        return Estimate(math.nan, math.nan, math.nan, note)
+    lo, hi = np.percentile(x[:-1], [2.5, 97.5])
+    return Estimate(float(x[-1]), float(lo), float(hi), '')
+
 def frontier_excess(fg, arm='B', through='C'):
     """How far arm's domain gain lies above the line from the base (no
     gain, no forgetting) through arm `through`, at arm's forgetting, in
-    nats per token: (excess, lo, hi), the 95% interval from the document
-    resamples of forgetting_gain (fg.attrs['draws']); NaNs when an arm is
-    missing."""
+    nats per token: an Estimate (value, lo, hi, note) with the 95% interval
+    from the document resamples of forgetting_gain (fg.attrs['draws']).
+    The line is undefined, and note says why, when an arm is missing or
+    `through`'s forgetting interval reaches 0 (the slope's replicates
+    would divide by about 0). The test is one-sided: on a concave frontier
+    the line through a low-forgetting arm lies above the frontier at
+    larger forgetting, so a positive excess shows arm above it and a
+    negative one shows nothing."""
     draws = fg.attrs.get('draws', {})
     if not {arm, through} <= set(draws):
-        return (math.nan,) * 3
+        missing = sorted({arm, through} - set(draws))
+        return _estimate(None, f'needs arm {", ".join(missing)} (T2 only)')
     g, f = (lambda a: draws[a]['gain']), (lambda a: draws[a]['forget'])
-    ex = g(arm) - g(through) * f(arm) / f(through)  # replicates, then point
-    lo, hi = np.percentile(ex[:-1], [2.5, 97.5])
-    return float(ex[-1]), float(lo), float(hi)
+    if np.percentile(f(through)[:-1], 2.5) <= 0:
+        return _estimate(None, f"{through}'s forgetting is not resolved "
+                         'from 0: the line is undefined')
+    return _estimate(g(arm) - g(through) * f(arm) / f(through))
+
+def replay_fractions(fg, arm='B', of='A'):
+    """arm's domain gain and forgetting as fractions of arm `of`'s: two
+    Estimates (kept, forgot) from the same document resamples (a paired
+    ratio), or with a note when an arm is missing."""
+    draws = fg.attrs.get('draws', {})
+    if not {arm, of} <= set(draws):
+        missing = sorted({arm, of} - set(draws))
+        note = f'{arm} against {of}: needs arm {", ".join(missing)}'
+        return _estimate(None, note), _estimate(None, note)
+    return tuple(_estimate(draws[arm][k] / draws[of][k])
+                 for k in ('gain', 'forget'))
 
 def plot_tradeoff(fg, through='C'):
     """Domain gain against forgetting with 95% intervals per arm, the base
-    at the origin, and the line from the base through arm `through`."""
+    at the origin, and the line from the base through arm `through` (when
+    its forgetting is resolved from 0)."""
     fig, ax = d2l.plt.subplots(figsize=(4.2, 3.2))
     ax.plot([0], [0], 'ks')
     ax.annotate('base', (0, 0), xytext=(6, -10), textcoords='offset points',
@@ -951,7 +1095,7 @@ def plot_tradeoff(fg, through='C'):
                     yerr=[[r.gain - r.gain_lo], [r.gain_hi - r.gain]],
                     fmt='o', color=f'C{i}', capsize=2, label=r.arm)
     c = fg.set_index('arm').reindex([through]).iloc[0]
-    if np.isfinite(c['forget']) and c['forget'] > 0:
+    if np.isfinite(c['forget_lo']) and c['forget_lo'] > 0:
         x = np.array([0, fg['forget_hi'].max()])
         ax.plot(x, x * c['gain'] / c['forget'], color='black', ls='--',
                 lw=1)
@@ -970,7 +1114,9 @@ ends of the three pretraining stages, the two long-context stages and the
 mid-training checkpoint), each scored with the suite (MMLU on a seeded
 2,000-item subset, the other tasks in full) and with bits per byte on 500
 documents of each evaluation set's texts (FineWeb-Edu validation, peS2o
-validation) and on every held-out book section. Token counts: steps times
+validation) and on every held-out book section. Bits per byte put
+`<|begin_of_text|>` before each document, not the tokenizer's end token
+(`_smollm3_bpb_tokenizer` says why). Token counts: steps times
 the global batch of the stage configurations (`smollm3-configs`: 192
 replicas of 3 sequences of 4,096 tokens, 2,359,296 tokens per step; the
 long-context stages keep 2,359,296 tokens per step over 20,000 steps
@@ -1024,9 +1170,25 @@ def _bpb_texts(n=500):
     return dict(web=web, science=science,
                 book=[t for _, t in book_split()[1]])
 
+def _smollm3_bpb_tokenizer(repo, rev):
+    """SmolLM3's tokenizer with <|begin_of_text|> as bits_per_byte's
+    document boundary. Its own end token (<|end_of_text|>; <|im_end|> from
+    mid-training on) is no context for a new document: measured on 20
+    documents per domain, it raises the bits per byte of the stage-3 and
+    long-context checkpoints by 19-61% against <|begin_of_text|>, while
+    stages 1 and 2 and mid-training score within 2.5% either way."""
+    import transformers
+    with d2l._quiet():
+        tok = transformers.AutoTokenizer.from_pretrained(
+            repo, revision=rev, eos_token='<|begin_of_text|>')
+    bos = tok.convert_tokens_to_ids('<|begin_of_text|>')
+    assert d2l._lm_boundary_id(tok) == bos, (d2l._lm_boundary_id(tok), bos)
+    return tok
+
 def _smollm3_point(name, n=None, texts=None):
     """One checkpoint: per-item suite scores, (with texts) per-document
-    bits per byte and UTF-8 bytes, and its context length."""
+    bits per byte (each document after <|begin_of_text|>) and UTF-8 bytes,
+    and its context length."""
     import unicodedata
     from transformers.utils import logging as hf_logging
     _, repo, rev, _ = d2l.PRETRAIN_SOURCES[f'smollm3-{name}']
@@ -1038,6 +1200,7 @@ def _smollm3_point(name, n=None, texts=None):
     finally:
         if bars:
             hf_logging.enable_progress_bar()
+    tok_bpb = _smollm3_bpb_tokenizer(repo, rev) if texts else None
     suite = _cpt_suite(SMOLLM3_TASKS, n_max=n, n_task=None if n else dict(
         mmlu=2000), name='smollm3', batch_size=8)
     with d2l._quiet():
@@ -1048,7 +1211,7 @@ def _smollm3_point(name, n=None, texts=None):
     for dom, docs in (texts or {}).items():
         for i, t in enumerate(docs):
             with d2l._quiet():
-                b = d2l.bits_per_byte(model, tok, [t], ctx_len=2048)
+                b = d2l.bits_per_byte(model, tok_bpb, [t], ctx_len=2048)
             rows.append(dict(checkpoint=_SMOLLM3[name][0], domain=dom, doc=i,
                              bpb=b, bytes=len(unicodedata.normalize(
                                  'NFC', t).encode())))
@@ -1119,8 +1282,55 @@ def plot_capability_bpb(ref, traj, tasks=('hellaswag', 'arc_easy', 'piqa',
         smol.index)]
     ys = [ref.table[list(tasks)].mean(axis=1), smol[list(tasks)].mean(axis=1)]
     d2l.plot(xs, ys, 'bits per byte (FineWeb-Edu validation)',
-             'mean accuracy (4 tasks)', legend=['reference model', 'SmolLM3-3B'],
-             fmts=('o-', 's-'), figsize=(4.5, 3.2))
+             'mean accuracy (4 tasks)',
+             legend=['reference model', 'SmolLM3-3B'], fmts=('o-', 's-'),
+             figsize=(4.5, 3.2))
+
+def stage_deltas(traj, n_boot=2000, seed=0):
+    """Changes between adjacent checkpoints of traj: the suite mean in
+    points (every task weighs the same; items paired) and each domain's
+    byte-weighted bits per byte in percent (documents paired), each with a
+    95% bootstrap interval: columns transition, suite, suite_lo, suite_hi
+    and the same three for each of web, science and book."""
+    import warnings
+    short = {'stage 1 end': 'S1', 'stage 2 end': 'S2', 'stage 3 end': 'S3',
+             'LC 32K': 'LC32K', 'LC 64K': 'LC64K', 'mid-training': 'mid'}
+    names = list(traj.table['checkpoint'])
+    wide = traj.items.pivot_table(index=['task', 'item_id'],
+                                  columns='checkpoint', values='score')
+    tasks = wide.index.get_level_values('task')
+    w = 1 / tasks.map(tasks.value_counts()).to_numpy()
+    w = w / w.mean()  # every task weighs the same in the suite mean
+    docs = traj.docs.assign(bits=traj.docs['bpb'] * traj.docs['bytes'])
+    rows = []
+    for a, b in zip(names, names[1:]):
+        row = dict(transition=f'{short.get(a, a)} → {short.get(b, b)}')
+        keep = wide[[a, b]].notna().all(axis=1).to_numpy()
+        with warnings.catch_warnings():  # a smoke run has under 100 items
+            warnings.simplefilter('ignore')
+            r = d2l.paired_bootstrap(wide[b][keep] * w[keep],
+                                     wide[a][keep] * w[keep], n_boot,
+                                     seed=seed)
+        row.update(suite=100 * r.mean, suite_lo=100 * r.ci[0],
+                   suite_hi=100 * r.ci[1])
+        for dom in _SMOLLM3_DOMAINS:
+            d = docs[docs['domain'] == dom].pivot_table(
+                index='doc', columns='checkpoint', values=['bits', 'bytes'])
+            if not len(d):
+                row.update(dict.fromkeys([dom, f'{dom}_lo', f'{dom}_hi'],
+                                         math.nan))
+                continue
+            bits, n = d['bits'][[a, b]].to_numpy(), d['bytes'][a].to_numpy()
+            idx = np.stack([*d2l.cluster_resample(np.arange(len(n)), n_boot,
+                                                  seed), np.arange(len(n))])
+            bpb = [bits[idx, k].sum(1) / n[idx].sum(1) for k in (0, 1)]
+            est = _estimate(100 * (bpb[1] / bpb[0] - 1))
+            row.update({dom: est.value, f'{dom}_lo': est.lo,
+                        f'{dom}_hi': est.hi})
+        rows.append(row)
+    return pd.DataFrame(rows, columns=['transition'] + [
+        f'{k}{q}' for k in ('suite', *_SMOLLM3_DOMAINS)
+        for q in ('', '_lo', '_hi')])
 
 def plot_smollm3(traj):
     """Suite accuracy per task (left) and bits per byte per domain (right)

@@ -295,8 +295,12 @@ def _read_result(path, kind, key=None):
         return load_file(path)
     if kind in ('tar', 'shards'):
         folder = os.path.join(os.path.dirname(path), 'extracted')
-        if not os.path.exists(folder):
-            d2l.extract(path, folder)
+        if not os.path.exists(folder):  # whole or not at all
+            tmp = f'{folder}.{os.getpid()}.tmp'
+            shutil.rmtree(tmp, ignore_errors=True)
+            os.makedirs(tmp)
+            d2l.extract(path, tmp)
+            os.replace(tmp, folder)
         if kind == 'tar':
             return folder
         with open(os.path.join(folder, 'manifest.json')) as f:
@@ -359,16 +363,18 @@ def load_artifact(name):
 
 #@save
 def _pending_result(name, fallback=None):
-    """What a pending result shows: the fallback result labelled as such, or
-    an empty table labelled '<name> pending'."""
+    """What a pending result shows: the fallback result labelled as such
+    (keeping its own label, such as 't1 preset'), or an empty table
+    labelled '<name> pending'."""
     if fallback is not None:
         try:
             result = load_artifact(fallback)
         except KeyError:
             result = None
         if result is not None:
-            return _with_label(result, 'T2 run pending; showing the T1 '
-                                       'configuration')
+            own = _label_of(result)
+            label = 'T2 run pending; showing the T1 configuration'
+            return _with_label(result, f'{label} ({own})' if own else label)
     return _with_label(pd.DataFrame(), f'{name} pending')
 
 #@save

@@ -105,7 +105,7 @@ d2l.plot([forget[k][keep[k]] for k in paths],
          legend=list(paths))
 ```
 
-<!-- Placeholder (prose): read the table: at forgetting 0.2 replay keeps 0.66 of gain against 0.36 for early stopping (quote the printed values); why (replay spends its forgetting along the general loss's flat direction); the frontier is concave, so the first units of forgetting buy the most gain. What the model leaves out (curvature changes, data overlap); the real arms test whether replay lands above the line from the base through the low-rate arm. -->
+<!-- Placeholder (prose): define both axes first: the gain is normalized (the domain loss's excess at the base, L_d(0) = 1, so gain 1 means the domain optimum), while the forgetting is the general loss's rise in its own units (not normalized: L_g(theta_d) = 5.05 in the 2-D model), so the table's numbers depend on that choice. Then read the table: at forgetting 0.2 replay keeps 0.66 of gain against 0.36 for early stopping (quote the printed values); why (replay spends its forgetting along the general loss's flat direction); the frontier is concave, so the first units of forgetting buy the most gain. What the model leaves out (curvature changes, data overlap); the real arms test whether replay lands above the line from the base through the low-rate arm. -->
 
 ## Replay as an Exact Mixture and the Forgetting Frontier
 
@@ -262,8 +262,9 @@ d2l.lm_free()
 ```{.python .input #continued-pretraining-data}
 %%tab pytorch
 data = d2l.cpt_data('t2')
-print(data.table.to_string(index=False, formatters=dict(
-    documents='{:,}'.format, tokens='{:,}'.format)))
+print(data.table.rename(columns=dict(tokens='tokens (Qwen)')).to_string(
+    index=False, formatters={'documents': '{:,}'.format,
+                             'tokens (Qwen)': '{:,}'.format}))
 ```
 
 ### The Arms
@@ -295,28 +296,40 @@ d2l.plot_cpt_curves(runs)
 ```{.python .input #continued-pretraining-rewarm-bump}
 %%tab pytorch
 def rewarm_bump(runs, within=40):  #@save
-    """Per arm: the largest rise of the general loss above the base's in
-    the first `within` steps (nats per token), and the step of the peak."""
+    """Per arm: the bump, the largest rise of the general loss over the
+    arm's own loss at step 0 in the first `within` steps (nats per token);
+    the step of that peak; and how much of it the end has healed (peak
+    minus final loss). A peak on the window's last evaluation is no
+    transient (the loss is still rising: forgetting) and has NaN bump."""
+    rows = []
     logs = runs.logs.dropna(subset=['general_loss'])
-    base = logs.loc[logs['arm'] == 'base', 'general_loss']
-    early = logs[(logs['arm'] != 'base') & (logs['step'] <= within)]
-    top = early.loc[early.groupby('arm', sort=False)['general_loss'].idxmax()]
-    b0 = base.iloc[0] if len(base) else math.nan
-    return pd.DataFrame(dict(arm=top['arm'].to_numpy(),
-                             bump=top['general_loss'].to_numpy() - b0,
-                             step=top['step'].to_numpy()))
+    for arm, g in logs[logs['arm'] != 'base'].groupby('arm', sort=False):
+        loss = g.set_index('step')['general_loss'].sort_index()
+        early = loss.loc[:within]
+        if 0 not in loss.index or len(early) < 2:
+            continue
+        peak = early.iloc[1:].idxmax()
+        rise = early.index[-1] > peak  # falls again inside the window
+        rows.append(dict(arm=arm, step=peak,
+                         bump=loss[peak] - loss[0] if rise else math.nan,
+                         healed=loss[peak] - loss.iloc[-1] if rise
+                         else math.nan))
+    return pd.DataFrame(rows, columns=['arm', 'bump', 'step', 'healed'])
 ```
 
 ```{.python .input #continued-pretraining-bump-table}
 %%tab pytorch
 bump = d2l.rewarm_bump(runs).merge(runs.table[['arm', 'peak_lr']], on='arm')
-print(bump[['arm', 'peak_lr', 'bump', 'step']].rename(columns=dict(
-    peak_lr='peak lr', bump='bump (nats)', step='step of the peak')).to_string(
-    index=False, formatters={'peak lr': '{:.0e}'.format,
-                             'bump (nats)': '{:.3f}'.format}))
+nats = lambda v, none: none if np.isnan(v) else f'{v:.3f}'
+bump['bump'] = bump['bump'].map(lambda v: nats(v, 'no transient'))
+bump['healed'] = bump['healed'].map(lambda v: nats(v, '–'))
+cols = {'arm': 'arm', 'peak_lr': 'peak lr', 'bump': 'bump (nats)',
+        'step': 'step of the peak', 'healed': 'healed by the end'}
+print(bump[list(cols)].rename(columns=cols).to_string(
+    index=False, formatters={'peak lr': '{:.0e}'.format}))
 ```
 
-<!-- Placeholder (prose): claim 8, T2 half: the bump scales with the peak rate (A against C) and heals during the decay (the curves); compare against the A/A′ spread; "no bump resolved" for arms inside it. -->
+<!-- Placeholder (prose): claim 8, T2 half: each bump is measured from the arm's own loss at step 0 (the training model before its first update), so a start that differs from the base costs nothing here. The bump scales with the peak rate (A against C) and heals during the decay ("healed by the end" is the peak minus the final general loss); "no transient" marks an arm whose general loss is still rising at the window's end (forgetting, not a bump). Compare against the A/A′ spread; "no bump resolved" for arms inside it. -->
 
 ### Replay on the Frontier
 
@@ -330,13 +343,17 @@ for r in fg.to_dict('records'):
 seed = fg.set_index('arm').reindex(['A', 'A′'])
 print(f'seed spread (A vs A′): gain {abs(seed.gain.diff().iloc[-1]):.3f}, '
       f'forgetting {abs(seed.forget.diff().iloc[-1]):.3f}')
-ex, lo, hi = d2l.frontier_excess(fg, 'B', through='C')
-print(f'B above the line from the base through C: {ex:.3f} '
-      f'[{lo:.3f}, {hi:.3f}]')
+pct = lambda e: f'{e.value:.0%} [{e.lo:.0%}, {e.hi:.0%}]'
+kept, forgot = d2l.replay_fractions(fg, 'B', of='A')
+print(kept.note or f"B: {pct(kept)} of A's gain, {pct(forgot)} of A's "
+      'forgetting')
+ex = d2l.frontier_excess(fg, 'B', through='C')
+print('B above the line from the base through C: ' + (
+    ex.note or f'{ex.value:.3f} [{ex.lo:.3f}, {ex.hi:.3f}]'))
 d2l.plot_tradeoff(fg)
 ```
 
-<!-- Placeholder (prose): claims 5 and 6: B's forgetting as a fraction of A's and B's gain as a fraction of A's (quote the fractions; "most" only if B forgets under 50% of A's, "small cost" only if B keeps over 75% of A's gain); B's position against the line from the base through C, with the interval of the excess ("on the line within its interval" if it contains 0). Compare with the quadratic model's prediction. -->
+<!-- Placeholder (prose): claims 5 and 6: B's forgetting as a fraction of A's and B's gain as a fraction of A's, as printed with their intervals (paired: the same document resamples); "most" only if the forgetting fraction's interval lies under 50%, "small cost" only if the kept-gain interval lies over 75%. B's position against the line from the base through C, with the interval of the excess. The test is one-sided: the frontier is concave (quadratic model: slope 1/sqrt(F) - 1), so the line through a low-forgetting arm lies above the frontier at B's larger forgetting; a positive excess shows B above the no-replay frontier, a negative or unresolved one shows nothing about it (say "not shown", never "below"). If the cell prints that C's forgetting is not resolved, the line is undefined: say so. Under the T1 fallback there is no arm C: the cell says so. Compare with the quadratic model's prediction. -->
 
 ### Equal-Token Accounting
 
@@ -352,9 +369,13 @@ print(f'domain loss at {m:.3g}M domain tokens: A {d[0]:.3f} '
       f'(A′ {d[1]:.3f}), B {B.domain_loss:.3f}')
 print(f'general loss at the same point: A {g[0]:.3f} (A′ {g[1]:.3f}), '
       f'B {B.general_loss:.3f}')
+lr = runs.logs.set_index(['arm', 'step'])['lr'] / B.peak_lr
+print(f'learning rate there, share of the peak: A '
+      f'{lr.get(("A", eq["step"].iloc[0]), math.nan):.0%}, '
+      f'B {lr.get(("B", B.steps), math.nan):.0%}')
 ```
 
-<!-- Placeholder (prose): claim 7: read the two pairs against the A/A′ spread: at equal domain tokens, what replay costs in domain loss and what it buys in general loss. -->
+<!-- Placeholder (prose): claim 7: read the two pairs against the A/A′ spread: at equal domain tokens, what replay costs in domain loss and what it buys in general loss. State the confound the third line prints: A at the equal-token step is still at about a quarter of its peak rate, while B has decayed to 10%, so A still carries part of the noise-ball excess that B has shed; this favours B by an amount comparable to the effect (a few hundredths of a nat). Draw no conclusion from a difference of that size. -->
 
 ### The Suite
 
@@ -395,8 +416,9 @@ table = t1.table.merge(d2l.rewarm_bump(t1)[['arm', 'bump']], on='arm',
                        how='left')
 cols = dict(arm='arm', bump='bump', domain_loss='domain',
             general_loss='general', book_loss='book')
+print('losses and bump in nats per token (–: no transient bump)')
 print(table[list(cols)].rename(columns=cols).to_string(
-    index=False, na_rep='', float_format='{:.3f}'.format))
+    index=False, na_rep='–', float_format='{:.3f}'.format))
 ```
 
 <!-- Placeholder (prose): claim 8, T1 half: the cold restart spikes; the plateau branch (warm moments, no rate jump) shows no bump; the seeds of A give the spread every T1 comparison is read against. Branching from a plateau is the cheap way to continue a run that one controls; a released model ships no moments, which is the Qwen case. -->
@@ -417,7 +439,24 @@ print(traj.bpb.to_string(index=False, float_format='{:.3f}'.format))
 d2l.plot_smollm3(traj)
 ```
 
-<!-- Placeholder (prose): claim 10: what each stage moves. Quote only differences between adjacent checkpoints whose item-bootstrap interval excludes 0; the rest "unchanged within the interval". Expected reading (verify against the table): the decay and mid-training stages move the suite more than their BPB change suggests; the long-context stages change short-context scores little. -->
+<!-- Placeholder (prose): read the two tables and the plot. The token counts are reconstructions from the stage configurations (smollm3-configs: 2,359,296 tokens per step; the stage-end steps) and the SmolLM3 blog (stages end at 8T, 10T and 11.1T; two long-context stages of about 50B tokens each; mid-training 140B): cite both, and quote them as the blog rounds them. The next cell gives the changes between adjacent checkpoints with intervals. -->
+
+```{.python .input #continued-pretraining-stage-deltas}
+%%tab pytorch
+deltas = d2l.stage_deltas(traj)
+ci = lambda r, k: f'{r[k]:+.1f} [{r[k + "_lo"]:+.1f}, {r[k + "_hi"]:+.1f}]'
+domains = ('web', 'science', 'book')
+row = lambda name, cells: f'{name:<14}' + ''.join(
+    f'{c:<22}' for c in cells).rstrip()
+print(row('transition', ['Δ suite mean, points [95% CI]']))
+for r in deltas.to_dict('records'):
+    print(row(r['transition'], [ci(r, 'suite')]))
+print(row('transition', [f'Δ BPB {d}, %' for d in domains]))
+for r in deltas.to_dict('records'):
+    print(row(r['transition'], [ci(r, d) for d in domains]))
+```
+
+<!-- Placeholder (prose): claim 10: what each stage moves. Quote only changes between adjacent checkpoints whose interval excludes 0 (suite: items paired, every task weighing the same; bits per byte: relative change, documents paired); the rest "unchanged within the interval". Expected reading (verify against the tables): the decay and mid-training stages move the suite more than their BPB change suggests; the long-context stages change short-context scores little. -->
 
 <!-- Placeholder (prose): two checkpoints re-scored live on 500 items per task (seed 0) against the committed full-set values: the committed table is what the run measured, and the reader can check it on one GPU. -->
 
@@ -427,12 +466,12 @@ live = d2l.smollm3_trajectory(['stage3', 'mid'], n=500)
 acc = traj.table.set_index('checkpoint')[list(d2l.SMOLLM3_TASKS)]
 full = acc.mean(axis=1)
 print(f'{"checkpoint":<14}{"live suite mean (n = 500) [95% CI]":<38}'
-      'committed (full)')
+      'committed')
 for name, g in live.items.groupby('checkpoint', sort=False):
     w = 1 / g.groupby('task')['score'].transform('size')
     r = d2l.bootstrap_ci(g['score'] * w / w.mean())
-    print(f'{name:<14}{100 * r.mean:.1f} [{100 * r.ci[0]:.1f}, '
-          f'{100 * r.ci[1]:.1f}]{"":<22}{100 * full.get(name, math.nan):.1f}')
+    ci = f'{100 * r.mean:.1f} [{100 * r.ci[0]:.1f}, {100 * r.ci[1]:.1f}]'
+    print(f'{name:<14}{ci:<38}{100 * full.get(name, math.nan):.1f}')
 ```
 
 <!-- Placeholder (prose): claim 11: the committed value lies inside the live interval (or report the difference and its cause: batch drift, see score_choices). Then the capability-against-BPB reading. -->
@@ -444,7 +483,7 @@ ref = d2l.reference_evals(d2l.REFERENCE_STEPS, tasks=(
 d2l.plot_capability_bpb(ref, traj)
 ```
 
-<!-- Placeholder (prose): claim 12: the reference model's checkpoints and SmolLM3's lie on offset curves of capability against bits per byte; this is not an ablation, since five things differ (name them: parameters, tokenizer, data mixture, tokens seen, context length). Hand-off: the long-context stages are what sec_lm_long_context trains. -->
+<!-- Placeholder (prose): claim 12: the reference model's checkpoints and SmolLM3's lie on offset curves of capability against bits per byte; this is not an ablation, since things differ (name them: parameters, tokenizer, data mixture, tokens seen, context length), and a sixth: SmolLM3's web BPB is measured on FineWeb-Edu validation documents, and FineWeb-Edu is part of SmolLM3's pretraining mix, so these documents or near-duplicates are probably its training data, while the reference model's validation set is disjoint from its training data. The two BPBs are also measured differently: the reference model on the first 2^21 tokens in packed windows, SmolLM3 on the first 500 documents, each scored on its own at a context of 2,048. Likewise for the arms: Qwen3-0.6B-Base may have seen FineWeb-Edu text (the general loss) and older d2l.ai text (the held-out book), which can inflate forgetting on memorized documents. Hand-off: the long-context stages are what sec_lm_long_context trains. -->
 
 ## Summary
 

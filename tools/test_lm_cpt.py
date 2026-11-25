@@ -8,18 +8,24 @@ PackedStream within an epoch, resume through state_dict exact and a
 changed mixture refused, ranks 1/2/4 the same multiset); the page's
 quadratic cell (frontier identity and the 2-D points, run from the page);
 `forgetting_gain` (the page's planted check, identical arms give zero,
-paired resamples) and `frontier_excess`; `rewarm_bump`; `book_split`
+paired resamples), `frontier_excess` (and its note when an arm is
+missing or the line's forgetting is not resolved from 0) and
+`replay_fractions`; `rewarm_bump` (from each arm's own step 0, transient
+or not); `book_split`
 (deterministic, disjoint, every fifth section held out); `cpt_data('t2')`
 in a normal run opens no shard; the arm schedule, configurations and
 evaluation grid; `_doc_nll` against a direct loss; a toy two-arm run of
 `cpt_arms` end to end (job folders, equal-token and suite files, the
-merge, the stored json-table read back), and a resumed arm equal to an
-uninterrupted one; the page's T2 cells on a pending result; the SmolLM3
-merge (token counts, byte-weighted bits per byte); the regeneration jobs
-against the page's literals.
+merge, the stored json-table read back, the step-0 row), a job folder of
+another arm refused, and a resumed arm equal to an uninterrupted one; the
+page's T2 cells on a pending result and the fallback's own label kept; the
+SmolLM3 merge (token counts, byte-weighted bits per byte) and
+`stage_deltas` with the page's cell; the regeneration jobs against the
+page's literals.
 """
 import contextlib
 import io
+import json
 import math
 import os
 import re
@@ -227,10 +233,32 @@ class ForgettingGainTest(unittest.TestCase):
             self.assertAlmostEqual(r.gain[arm], g, delta=0.005)
             self.assertAlmostEqual(r.forget[arm], f, delta=0.005)
             self.assertLess(r.gain_lo[arm], r.gain[arm])
-        ex, lo, hi = d2l.frontier_excess(fg, 'B', 'C')
-        self.assertAlmostEqual(ex, 0.08 - 0.05 * 0.01 / 0.04, delta=0.01)
-        self.assertGreater(lo, 0)
-        self.assertTrue(all(map(math.isnan, d2l.frontier_excess(fg, 'B', 'Z'))))
+        ex = d2l.frontier_excess(fg, 'B', 'C')
+        self.assertAlmostEqual(ex.value, 0.08 - 0.05 * 0.01 / 0.04,
+                               delta=0.01)
+        self.assertGreater(ex.lo, 0)
+        self.assertEqual(ex.note, '')
+        miss = d2l.frontier_excess(fg, 'B', 'Z')
+        self.assertTrue(math.isnan(miss.value))
+        self.assertEqual(miss.note, 'needs arm Z (T2 only)')
+        kept, forgot = d2l.replay_fractions(fg, 'B', of='A')
+        self.assertAlmostEqual(kept.value, 0.8, delta=0.06)
+        self.assertAlmostEqual(forgot.value, 0.25, delta=0.15)
+        self.assertLess(kept.lo, kept.value)
+        self.assertGreater(kept.hi, kept.value)
+        self.assertIn('needs arm', d2l.replay_fractions(fg, 'B', 'Z')[0].note)
+
+    def test_frontier_unresolved(self):
+        """C's forgetting interval reaches 0: no line, a note instead."""
+        base, a = synthetic_docs(gain=0.10, forget=0.04, noise=0.01)
+        _, c = synthetic_docs(gain=0.01, forget=0.0, noise=0.0)
+        _, b = synthetic_docs(gain=0.08, forget=0.01, noise=0.01)
+        fg = d2l.forgetting_gain(base, pd.concat([
+            a.assign(arm='A'), b.assign(arm='B'), c.assign(arm='C')]))
+        self.assertLessEqual(fg.set_index('arm').forget_lo['C'], 0)
+        ex = d2l.frontier_excess(fg, 'B', 'C')
+        self.assertTrue(math.isnan(ex.value))
+        self.assertIn('not resolved', ex.note)
 
     def test_empty(self):
         cols = d2l._CPT_COLUMNS
@@ -242,15 +270,27 @@ class ForgettingGainTest(unittest.TestCase):
 
 class BumpTest(unittest.TestCase):
     def test_rewarm_bump(self):
+        """Measured from each arm's own step 0: a plateau branch that starts
+        above the base and falls has no bump; a loss still rising at the
+        window's end is no transient."""
         logs = pd.DataFrame(dict(
-            arm=['base', 'A', 'A', 'A', 'C', 'C'],
-            step=[0, 3, 6, 45, 3, 6],
-            general_loss=[3.0, 3.2, 3.1, 3.5, 3.01, 3.02]))
+            arm=['base'] + ['A'] * 5 + ['C'] * 3 + ['branch'] * 4,
+            step=[0, 0, 3, 6, 9, 45, 0, 3, 6, 0, 3, 6, 9],
+            general_loss=[3.0, 3.0, 3.2, 3.1, 3.05, 2.9, 3.0, 3.01, 3.02,
+                          3.3, 3.28, 3.25, 3.2]))
         runs = d2l.CptRuns(None, logs, None, None, None, None, '')
         b = d2l.rewarm_bump(runs).set_index('arm')
+        self.assertEqual(list(b.index), ['A', 'C', 'branch'])
         self.assertAlmostEqual(b.bump['A'], 0.2)
         self.assertEqual(b.step['A'], 3)
-        self.assertAlmostEqual(b.bump['C'], 0.02)
+        self.assertAlmostEqual(b.healed['A'], 0.3)
+        self.assertTrue(math.isnan(b.bump['C']))  # still rising at step 6
+        self.assertEqual(b.step['C'], 6)
+        self.assertAlmostEqual(b.bump['branch'], -0.02)  # not 0.28
+        out = run_cell('continued-pretraining-bump-table', dict(
+            page_ns(), runs=runs._replace(table=pd.DataFrame(dict(
+                arm=['A', 'C', 'branch'], peak_lr=[1e-4, 1e-5, 6e-4])))))
+        self.assertIn('no transient', out.splitlines()[2])
 
 
 class BookSplitTest(unittest.TestCase):
@@ -393,6 +433,8 @@ class ArmsEndToEndTest(Fixtures):
                                                  1e-3, '')),
                 mock.patch.object(d2l, 'cpt_data', lambda tier: d2l.CptData(
                     None, self.shards, '')),
+                mock.patch.object(d2l, '_cpt_base_id',
+                                  lambda cfg: ['toy', 'base-0']),
                 mock.patch.object(d2l, '_cpt_tokenizer', lambda tier: None),
                 mock.patch.object(d2l, '_cpt_suite', lambda *a, **k: None),
                 mock.patch.object(d2l, '_suite_items',
@@ -429,15 +471,41 @@ class ArmsEndToEndTest(Fixtures):
         self.assertEqual(int(runs.equal['step'].iloc[0]), 12)
         logs = runs.logs
         self.assertEqual(sorted(logs.loc[logs.arm == 'A', 'step']),
-                         list(range(1, 17)))
+                         list(range(0, 17)))
         graded = logs[(logs.arm == 'A') & logs.domain_loss.notna()]
-        self.assertEqual(list(graded.step), [3, 5, 6, 9, 10, 12, 15, 16])
+        self.assertEqual(list(graded.step), [0, 3, 5, 6, 9, 10, 12, 15, 16])
+        # step 0 is the arm's own model before its first update: the base
+        start = logs[(logs.arm == 'A') & (logs.step == 0)].iloc[0]
+        self.assertAlmostEqual(start.general_loss, logs[
+            logs.arm == 'base'].general_loss.iloc[0], places=5)
         self.assertEqual(sorted(runs.items.loc[runs.items.arm == 'A',
                                                'step'].unique()), [15, 16])
         self.assertEqual(set(runs.docs['set']), {'domain', 'general', 'book'})
         self.assertAlmostEqual(t.suite['base'], 0.75)
         self.assertEqual(list(stored.table['arm']), ['base', 'A', 'B'])
         self.assertEqual(stored.table.attrs['config']['tokens'], 4096)
+
+    def test_job_identity(self):
+        """A finished or started folder of another arm is refused."""
+        arms = {'A': dict(peak_lr=1e-3, replay=0.0, data_seed=0)}
+        with tempfile.TemporaryDirectory() as root, contextlib.ExitStack() \
+                as stack, contextlib.redirect_stdout(io.StringIO()):
+            for p in self.patches(root):
+                stack.enter_context(p)
+            cfg = d2l._cpt_configs(arms, 'r2', 4 * 256, 32, 256, 2, 0.1)['A']
+            d2l._cpt_arm_run(cfg)
+            with open(os.path.join(root, 'cpt', 't1-A', 'DONE')) as f:
+                self.assertEqual(json.load(f)['base'], ['toy', 'base-0'])
+            d2l._cpt_arm_run(cfg)  # the same arm: read back
+            with self.assertRaisesRegex(ValueError, 'config.peak_lr'):
+                d2l._cpt_arm_run(dict(cfg, peak_lr=5e-4))
+            with mock.patch.object(d2l, '_cpt_base_id',
+                                   lambda cfg: ['toy', 'base-1']), \
+                    self.assertRaisesRegex(ValueError, 'another arm'):
+                d2l._cpt_arm_run(cfg)
+            os.remove(os.path.join(root, 'cpt', 't1-A', 'DONE'))
+            with self.assertRaisesRegex(ValueError, 'config.data_seed'):
+                d2l._cpt_arm_run(dict(cfg, data_seed=1))  # arm.json
 
     def test_resume_equal(self):
         cfg = dict(d2l._cpt_configs(
@@ -480,8 +548,19 @@ class PendingPageTest(unittest.TestCase):
             self.assertEqual(out.splitlines()[0], '[cpt-qwen-evals pending]')
             for cell in ('arms', 'bump-table', 'frontier', 'equal-tokens',
                          'suite-deltas'):
-                run_cell(f'continued-pretraining-{cell}', ns)
+                out = run_cell(f'continued-pretraining-{cell}', ns)
+                if cell == 'frontier':
+                    self.assertIn('C: needs arm B, C (T2 only)', out)
         self.assertIn('pending', ns['runs'].label)
+
+    def test_fallback_label_kept(self):
+        """The T1 fallback keeps its own label ('t1 preset')."""
+        t1 = d2l.CptRuns(pd.DataFrame(), pd.DataFrame(), None, None, None,
+                         None, 't1 preset')
+        with mock.patch.object(d2l, 'load_artifact', lambda name: t1):
+            res = d2l._pending_result('cpt-qwen-evals', 'cpt-t1')
+        self.assertEqual(res.label, 'T2 run pending; showing the T1 '
+                                    'configuration (t1 preset)')
 
 
 class SmolLM3Test(unittest.TestCase):
@@ -516,6 +595,51 @@ class SmolLM3Test(unittest.TestCase):
             index=False, float_format=lambda v:
                                     f'{100 * v:.1f}').splitlines()[0]
         self.assertLessEqual(len(line), 80)
+
+    def test_stage_deltas(self):
+        """Paired changes between adjacent checkpoints: a planted +10
+        points on one transition and +20% bits per byte on one domain are
+        recovered, the rest is 0 within the interval; the page's cell fits
+        12 lines of at most 80 columns."""
+        names = list(d2l._smollm3_call()['names'])
+        rng = np.random.default_rng(0)
+        base = rng.random((len(d2l.SMOLLM3_TASKS), 300)) < 0.6
+        flip = rng.random(base.shape) < 0.25  # stage 2 -> 3 gains 10 points
+        nbytes = rng.integers(500, 5000, 60)
+        pts = {}
+        for i, n in enumerate(names):
+            score = base | flip if i >= 2 else base
+            items = pd.DataFrame([dict(task=t, item_id=j,
+                                       score=float(score[k, j]),
+                                       checkpoint=d2l._SMOLLM3[n][0])
+                                  for k, t in enumerate(d2l.SMOLLM3_TASKS)
+                                  for j in range(300)])
+            bpb = 0.7 + 0.1 * np.sin(np.arange(60))
+            docs = pd.DataFrame([dict(checkpoint=d2l._SMOLLM3[n][0],
+                                      domain=dom, doc=k, bytes=nbytes[k],
+                                      bpb=bpb[k] * (1.2 if dom == 'book'
+                                                    and i >= 3 else 1.0))
+                                 for dom in d2l._SMOLLM3_DOMAINS
+                                 for k in range(60)])
+            pts[n] = dict(items=items, docs=docs, ctx=4096)
+        traj = d2l._smollm3_merge(pts, names)
+        deltas = d2l.stage_deltas(traj).set_index('transition')
+        self.assertEqual(list(deltas.index), ['S1 → S2', 'S2 → S3',
+                                              'S3 → LC32K', 'LC32K → LC64K',
+                                              'LC64K → mid'])
+        gain = 100 * (base | flip).mean() - 100 * base.mean()
+        self.assertAlmostEqual(deltas.suite['S2 → S3'], gain, places=6)
+        self.assertGreater(deltas.suite_lo['S2 → S3'], 0)
+        self.assertEqual(deltas.suite['S1 → S2'], 0)
+        self.assertAlmostEqual(deltas.book['S3 → LC32K'], 20, places=6)
+        self.assertGreater(deltas.book_lo['S3 → LC32K'], 19.9)
+        self.assertAlmostEqual(deltas.web['S3 → LC32K'], 0)
+        out = run_cell('continued-pretraining-stage-deltas',
+                       dict(page_ns(), traj=traj))
+        lines = out.splitlines()
+        self.assertEqual(len(lines), 12)
+        self.assertLessEqual(max(map(len, lines)), 80)
+        self.assertIn('+20.0 [+20.0, +20.0]', lines[9])
 
 
 class JobsTest(unittest.TestCase):

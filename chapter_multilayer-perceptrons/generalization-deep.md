@@ -6,7 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Generalization in Deep Learning
 :label:`sec_generalization_deep`
 
-In :numref:`sec_generalization_basics`, a degree-19 polynomial with $20$ parameters interpolated $20$ noisy data points and blew up on test data. By that classical intuition, our Fashion-MNIST MLP in :numref:`sec_mlp-implementation`—with $203{,}530$ parameters for $60{,}000$ training images ($3.4$ parameters per image)—ought to overfit severely, especially if trained until it interpolates every single training image. Yet it reached $\sim 87\%$ accuracy on unseen images. And as we will see below, the same architecture given only $1{,}000$ training images and driven to $100\%$ training accuracy still classifies about $80\%$ of unseen images correctly!
+In :numref:`sec_generalization_basics`, a degree-19 polynomial with $20$ parameters interpolated $20$ noisy data points and blew up on test data. By that classical intuition, our Fashion-MNIST MLP in :numref:`sec_mlp-implementation`, with $203{,}530$ parameters for $60{,}000$ training images ($3.4$ parameters per image), ought to overfit severely, especially if trained until it interpolates every single training image. Yet it reached $\sim 87\%$ accuracy on unseen images. And as we will see below, the same architecture given only $1{,}000$ training images and driven to $100\%$ training accuracy still classifies about $80\%$ of unseen images correctly.
 
 Understanding why heavily overparameterized networks generalize is one of the central open problems of modern machine learning. In this section, we combine controlled experiments with exact results on tractable models to uncover four key pieces of the puzzle:
 
@@ -196,11 +196,11 @@ Look at what the two runs prove:
 - On **true labels**, training accuracy hits $100\%$ within 60–90 epochs while test accuracy plateaus above $80\%$ (even on just $1{,}000$ training images).
 - On **completely random labels**, the exact same architecture and optimizer still reach $100\%$ training accuracy (taking slightly longer, $\sim 120$–$150$ epochs) while test accuracy remains at $10\%$ random chance.
 
-### Why Distribution-Free Capacity Bounds Fail, and Inductive Bias
+### Limits of Capacity Bounds and Inductive Bias
 
-Because our MLP achieves zero training error ($\epsilon_{\mathcal{S}}(f) = 0$) on random labels where the true population error is $\epsilon(f) = 0.90$, *any* distribution-free bound of the form $\epsilon(f) \leq \epsilon_{\mathcal{S}}(f) + B(\mathcal{F}, n, \delta)$ that depends only on the hypothesis class $\mathcal{F}$ must have $B(\mathcal{F}, n, \delta) \geq 0.90$—making it completely vacuous on real labels as well (Exercise :exref:`ex_generalization-deep-complexity`).
+Because our MLP achieves zero training error ($\epsilon_{\mathcal{S}}(f) = 0$) on random labels where the true population error is $\epsilon(f) = 0.90$, *any* distribution-free bound of the form $\epsilon(f) \leq \epsilon_{\mathcal{S}}(f) + B(\mathcal{F}, n, \delta)$ that depends only on the hypothesis class $\mathcal{F}$ must have $B(\mathcal{F}, n, \delta) \geq 0.90$, making it vacuous on real labels as well (Exercise :exref:`ex_generalization-deep-complexity`).
 
-By the *no free lunch theorem* :cite:`Wolpert.1996`, no learner can generalize across all distributions; generalization depends on whether the learner's *inductive bias*—which interpolating function it prefers among infinitely many—matches the structure of real data (just as a 1-nearest-neighbor classifier interpolates $100\%$ of its training data yet generalizes well whenever nearby inputs share labels :cite:`Cover.Hart.1967`).
+By the *no free lunch theorem* :cite:`Wolpert.1996`, no learner can generalize across all distributions; generalization depends on whether the learner's *inductive bias*—which interpolating function it prefers among infinitely many—matches the structure of real data, just as a 1-nearest-neighbor classifier interpolates $100\%$ of its training data yet generalizes well whenever nearby inputs share labels :cite:`Cover.Hart.1967`.
 
 ## Double Descent
 :label:`subsec_double_descent`
@@ -241,7 +241,7 @@ d2l.plot([widths, widths, [1000, 1000]], [train_err, test_err, [0, 1]],
 This is the celebrated *double-descent* curve :cite:`Belkin.Hsu.Ma.ea.2019`:
 
 1. **Classical U-curve ($h < n$):** Test error drops from $\sim 30\%$ at $h = 50$ to $\sim 23\%$ around $h = 200$, then shoots up to $\sim 90\%$ right at the *interpolation threshold* $h = n = 1{,}000$.
-2. **Second descent ($h > n$):** As $h$ grows past $n = 1{,}000$ up to $10{,}000$, every model interpolates the training set perfectly, yet test error plunges back down to $\sim 20\%$—beating the best underparameterized model!
+2. **Second descent ($h > n$):** As $h$ grows past $n = 1{,}000$ up to $10{,}000$, every model interpolates the training set, yet test error plunges back down to $\sim 20\%$, beating the best underparameterized model.
 
 Why does test error spike so violently at $h = n$ and heal for $h \gg n$? Let us inspect the smallest singular value $s_{\min}$ of $\mathbf{H}_{:, :h}$ and the Frobenius norm $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$:
 
@@ -252,7 +252,7 @@ for h in (200, 900, 1000, 1100, 10000):
 ```
 
 
-At $h = n = 1{,}000$, $\mathbf{H}$ is a square $1000 \times 1000$ matrix with a tiny smallest singular value $s_{\min}$, so the unique exact inverse $\mathbf{H}^{-1}\mathbf{Y}$ divides label noise by $s_{\min}$ and explodes $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$ into the hundreds or more! For $h \gg n$, the extra columns open up an entire $(h - n)$-dimensional subspace of exact interpolators, allowing the *minimum-norm* solution to avoid poorly conditioned directions and shrink $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$ all the way down to $\sim 2$. In fact, holding $h = 1{,}000$ fixed, doubling the training set from $n = 500$ to $n = 1{,}000$ lands the unregularized fit squarely on the $h = n$ cliff and drives test error *up* from $<30\%$ to $\sim 90\%$:
+At $h = n = 1{,}000$, $\mathbf{H}$ is a square $1000 \times 1000$ matrix with a tiny smallest singular value $s_{\min}$, so the unique exact inverse $\mathbf{H}^{-1}\mathbf{Y}$ divides label noise by $s_{\min}$ and explodes $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$ into the hundreds or more. For $h \gg n$, the extra columns open up an $(h - n)$-dimensional subspace of exact interpolators, allowing the *minimum-norm* solution to avoid poorly conditioned directions and shrink $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$ all the way down to $\sim 2$. In fact, holding $h = 1{,}000$ fixed, doubling the training set from $n = 500$ to $n = 1{,}000$ lands the unregularized fit squarely on the $h = n$ cliff and drives test error *up* from $\sim 30\%$ to $85\text{--}90\%$:
 
 ```{.python .input #generalization-deep-conditioning-at-the-threshold-2}
 for n in (500, 1000):
@@ -273,7 +273,7 @@ For an overparameterized linear system $\mathbf{H}\mathbf{w} = \mathbf{y}$ ($h >
 
 **Proposition.** Gradient descent on $L(\mathbf{w}) = \frac{1}{2}\|\mathbf{H}\mathbf{w} - \mathbf{y}\|_2^2$ initialized at $\mathbf{w}_0 = \mathbf{0}$ (with a converging step size) converges to the minimum-norm interpolator $\mathbf{w}^\star$.
 
-**Proof.** Every gradient $\nabla L(\mathbf{w}) = \mathbf{H}^\top(\mathbf{H}\mathbf{w} - \mathbf{y})$ lies in the row space of $\mathbf{H}$. Starting at $\mathbf{w}_0 = \mathbf{0}$, every iterate $\mathbf{w}_t$—and hence the limit $\mathbf{w}_{\infty} = \mathbf{H}^\top\mathbf{a}$—remains in the row space of $\mathbf{H}$ (:numref:`fig_mdl-mlp-min-norm`). Since $\mathbf{H}\mathbf{w}_{\infty} = \mathbf{H}\mathbf{H}^\top\mathbf{a} = \mathbf{y}$, we have $\mathbf{a} = (\mathbf{H}\mathbf{H}^\top)^{-1}\mathbf{y}$ and $\mathbf{w}_{\infty} = \mathbf{w}^\star$. Any other interpolator $\mathbf{w}^\star + \mathbf{v}$ has $\mathbf{H}\mathbf{v} = \mathbf{0}$ (so $\mathbf{v} \perp \mathbf{w}^\star$) and strictly larger norm $\|\mathbf{w}^\star\|_2^2 + \|\mathbf{v}\|_2^2$. $\blacksquare$
+**Proof.** Every gradient $\nabla L(\mathbf{w}) = \mathbf{H}^\top(\mathbf{H}\mathbf{w} - \mathbf{y})$ lies in the row space of $\mathbf{H}$. Starting at $\mathbf{w}_0 = \mathbf{0}$, every iterate $\mathbf{w}_t$, and hence the limit $\mathbf{w}_{\infty} = \mathbf{H}^\top\mathbf{a}$, remains in the row space of $\mathbf{H}$ (:numref:`fig_mdl-mlp-min-norm`). Since $\mathbf{H}\mathbf{w}_{\infty} = \mathbf{H}\mathbf{H}^\top\mathbf{a} = \mathbf{y}$, we have $\mathbf{a} = (\mathbf{H}\mathbf{H}^\top)^{-1}\mathbf{y}$ and $\mathbf{w}_{\infty} = \mathbf{w}^\star$. Any other interpolator $\mathbf{w}^\star + \mathbf{v}$ has $\mathbf{H}\mathbf{v} = \mathbf{0}$ (so $\mathbf{v} \perp \mathbf{w}^\star$) and strictly larger norm $\|\mathbf{w}^\star\|_2^2 + \|\mathbf{v}\|_2^2$. $\blacksquare$
 
 ![Gradient descent on an underdetermined linear equation $\mathbf{h}^\top\mathbf{w} = y$ moves strictly perpendicular to the solution hyperplane, so starting from $\mathbf{0}$ (blue) lands at the minimum-norm solution $\mathbf{w}^\star$, whereas starting from $\mathbf{w}_0 \neq \mathbf{0}$ (orange) preserves the null-space component of $\mathbf{w}_0$.](../img/mdl-mlp-min-norm.svg)
 :label:`fig_mdl-mlp-min-norm`
@@ -324,7 +324,7 @@ d2l.plot(list(range(1, 201)), [acc['clean'], acc['mislabeled'],
 ```
 
 
-By epoch 20, the MLP gets over $80\%$ of the clean training images right while memorizing fewer than $20\%$ of the corrupted labels—and validation accuracy reaches its peak right in this early window before late-epoch noise memorization drags it down! *Early stopping*—halting training once validation performance fails to improve for a specified *patience* window (Exercise :exref:`ex_generalization-deep-patience`) and restoring the best validation checkpoint—recovers several percentage points of test accuracy while saving compute (and in linear least squares acts analogously to $\ell_2$ weight decay; see Exercise :exref:`ex_generalization-deep-early-stopping-ridge`):
+By epoch 20, the MLP gets over $80\%$ of the clean training images right while memorizing fewer than $20\%$ of the corrupted labels, and validation accuracy reaches its peak in this early window before late-epoch noise memorization drags it down. *Early stopping*, halting training once validation performance fails to improve for a specified *patience* window (Exercise :exref:`ex_generalization-deep-patience`) and restoring the best validation checkpoint, recovers several percentage points of test accuracy while saving compute (and in linear least squares acts analogously to $\ell_2$ weight decay; see Exercise :exref:`ex_generalization-deep-early-stopping-ridge`):
 
 ```{.python .input #generalization-deep-stopping-rule}
 best = int(np.argmax(acc['validation']))
@@ -341,9 +341,7 @@ One famous exception to early stopping is *grokking* :cite:`Power.Burda.Edwards.
 
 ## Summary
 
-- **Memorization vs. capacity bounds:** Overparameterized MLPs can memorize $100\%$ of random labels while generalizing on true labels, rendering distribution-free capacity bounds vacuous and placing the burden of explanation on inductive bias.
-- **Double descent:** In random-features least squares, test error spikes at the interpolation threshold $h = n$ (where $s_{\min}(\mathbf{H}) \approx 0$ inflates $\|\mathbf{W}^{(2)}\|$) and descends a second time for $h \gg n$ as minimum-norm interpolation spreads weights across redundant features.
-- **Implicit bias and early stopping:** Gradient descent from zero converges to the minimum-norm interpolator under squared loss and the maximum-margin direction under logistic loss, and fits clean structure before label noise—making early stopping a simple, effective regularizer.
+Overparameterized neural networks can memorize completely random labels while generalizing well on structured data, rendering distribution-free capacity bounds vacuous and placing the burden of explanation on inductive bias. In random-features least squares, test error spikes at the interpolation threshold $h = n$, where a tiny smallest singular value $s_{\min}(\mathbf{H})$ inflates $\|\mathbf{W}^{(2)}\|$, and descends a second time for $h \gg n$ as minimum-norm interpolation spreads weights across redundant features. Remarkably, gradient descent from zero finds this minimum-norm interpolator automatically under squared loss and converges in direction to the maximum-margin separator under logistic loss. Because gradient descent also fits coherent patterns before memorizing corrupted labels, early stopping on a validation set serves as a simple and effective regularizer.
 
 ## Exercises
 
@@ -480,7 +478,7 @@ Generalization in Deep Learning<br>**random-label memorization · double descent
 ::: {.cols .vc}
 ::: {.col}
 - **Classical threshold ($p / n = 1.0$):** A degree-19 polynomial ($p = 20$) interpolating $n = 20$ noisy points oscillates wildly (test MSE $\geq 10^5$, against $0.01$ for the true cubic).
-- **Overparameterized MLPs ($p \gg n$):** Our 256-unit MLP ($p = 203{,}530$) reaches $\sim 87\%$ test accuracy on $n = 60{,}000$ images ($p/n = 3.4$) and $\approx 80\%$ test accuracy on $n = 1{,}000$ images ($p/n = 203.5$) at $100\%$ training accuracy!
+- **Overparameterized MLPs ($p \gg n$):** Our 256-unit MLP ($p = 203{,}530$) reaches $\sim 87\%$ test accuracy on $n = 60{,}000$ images ($p/n = 3.4$) and $\approx 80\%$ test accuracy on $n = 1{,}000$ images ($p/n = 203.5$) at $100\%$ training accuracy.
 - **The puzzle:** Resolving why $p/n = 203.5$ generalizes requires testing capacity, conditioning at $h = n$, and SGD's implicit bias.
 :::
 
@@ -515,7 +513,7 @@ Following Zhang et al. (2017), we train our He-initialized 256-unit MLP ($203{,}
 $$\epsilon(f) \le \epsilon_{\mathcal{S}}(f) + B(\mathcal{F}, n, \delta)$$
 
 - **Naive parameter count fails:** Approximating VC dimension $v \approx p = 203{,}530$ on $n = 60{,}000$ gives $\sqrt{p/n} \approx 1.84 > 1$.
-- **Random labels break *every* label-blind class bound:** Because $B(\mathcal{F}, n, \delta)$ depends only on the function class $\mathcal{F}$ and sample size $n$, achieving $\epsilon_{\mathcal{S}}(f) = 0$ on random labels ($\epsilon(f) = 0.90$) forces $B(\mathcal{F}, n, \delta) \ge 0.90$ on true labels too!
+- **Random labels break *every* label-blind class bound:** Because $B(\mathcal{F}, n, \delta)$ depends only on the function class $\mathcal{F}$ and sample size $n$, achieving $\epsilon_{\mathcal{S}}(f) = 0$ on random labels ($\epsilon(f) = 0.90$) forces $B(\mathcal{F}, n, \delta) \ge 0.90$ on true labels too.
 :::
 
 ::: {.col .fig}
@@ -566,7 +564,7 @@ We freeze a He-initialized random ReLU layer $\mathbf{H} = \mathrm{ReLU}((\mathb
 ::: {.cols .vc}
 ::: {.col}
 - **Classical U-curve ($h < 1{,}000$):** Test error drops to $\sim 23\%$ at $h = 200$, then spikes to $\sim 90\%$ right at the **interpolation threshold** $h = n = 1{,}000$.
-- **Second descent ($h > 1{,}000$):** Past $h = n$, training error stays at $0$, yet test error plunges to $\sim 20\%$ at $h = 10{,}000$—beating the best $h < n$ model!
+- **Second descent ($h > 1{,}000$):** Past $h = n$, training error stays at $0$, yet test error plunges to $\sim 20\%$ at $h = 10{,}000$, beating the best $h < n$ model.
 :::
 
 ::: {.col .fig .big}
@@ -582,8 +580,8 @@ Inspecting the smallest singular value $s_{\min}(\mathbf{H})$ and the weight nor
 
 @!generalization-deep-conditioning-at-the-threshold-1
 
-- **At $h = n = 1{,}000$:** $\mathbf{H}$ is a square $1000 \times 1000$ matrix with a single unique exact inverse $\mathbf{W}^{(2)} = \mathbf{H}^{-1}\mathbf{Y}$. Because random features have nearly collinear directions ($s_{\min} \approx 10^{-5}$–$10^{-3}$), inverting $\mathbf{H}$ divides label noise by $s_{\min}$ and blows up $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$.
-- **At $h = 10{,}000 \gg n$:** Extra features provide a $9{,}000$-dimensional subspace of exact interpolators, allowing the minimum-norm fit to spread weights across well-conditioned directions ($s_{\min} \approx 2$, $\|\mathbf{W}^{(2)}\|_{\textrm{F}} \approx 2.4$).
+- **At $h = n = 1{,}000$:** $\mathbf{H}$ is a square $1000 \times 1000$ matrix with a single unique exact inverse $\mathbf{W}^{(2)} = \mathbf{H}^{-1}\mathbf{Y}$. Because random features have nearly collinear directions ($s_{\min} \sim 10^{-4}\text{--}10^{-2}$), inverting $\mathbf{H}$ divides label noise by $s_{\min}$ and blows up $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$.
+- **At $h = 10{,}000 \gg n$:** Extra features provide a $9{,}000$-dimensional subspace of exact interpolators, allowing the minimum-norm fit to spread weights across well-conditioned directions ($\|\mathbf{W}^{(2)}\|_{\textrm{F}} \approx 2.2\text{--}2.4$).
 :::
 
 ::: {.slide title="When Adding More Training Data Hurts Test Accuracy"}
@@ -594,7 +592,7 @@ Because the ill-conditioned cliff sits along the diagonal $h = n$, increasing sa
 @!generalization-deep-conditioning-at-the-threshold-2
 
 ::: {.d2l-note .warn}
-With width fixed at $h = 1{,}000$, training on $n = 500$ images sits safely in the overparameterized regime ($h = 2n$, test error just under $30\%$), whereas doubling the dataset to $n = 1{,}000$ lands squarely on $h = n$ and degrades test error to $\sim 90\%$! Regularization ($\ell_2$ ridge penalty) damps $1/s_{\min}$ and eliminates this spike.
+With width fixed at $h = 1{,}000$, training on $n = 500$ images sits safely in the overparameterized regime ($h = 2n$, test error $\sim 28\text{--}30\%$), whereas doubling the dataset to $n = 1{,}000$ lands squarely on $h = n$ and degrades test error to $85\text{--}89\%$. Regularization ($\ell_2$ ridge penalty) damps $1/s_{\min}$ and eliminates this spike.
 :::
 :::
 
@@ -625,7 +623,7 @@ Running $2{,}000$ steps of unregularized gradient descent on an underdetermined 
 @!generalization-deep-minimum-norm-interpolation
 
 - **Initialized at $\mathbf{w}_0 = \mathbf{0}$:** Converges to the exact minimum-norm solution $\mathbf{w}^\star$ (`distance to w* = 0.0`, norm below $1$).
-- **Initialized at random $\mathbf{w}_0 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$:** Still interpolates the data (`residual` at rounding error), but retains its initial null-space component $\mathbf{v}_0 \in \mathrm{null}(\mathbf{H})$, ending with a weight norm more than $10\times$ larger!
+- **Initialized at random $\mathbf{w}_0 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$:** Still interpolates the data (`residual` at rounding error), but retains its initial null-space component $\mathbf{v}_0 \in \mathrm{null}(\mathbf{H})$, ending with a weight norm more than $10\times$ larger.
 :::
 
 ::: {.slide title="Implicit Bias 2: Max-Margin Direction in Classification"}
@@ -672,7 +670,7 @@ Halting training at the best validation checkpoint (*early stopping*) prevents l
 @!generalization-deep-stopping-rule
 
 - **Early stopping as implicit ridge:** In linear least squares, stopping after $t$ steps of rate $\eta$ acts like $\ell_2$ weight decay with $\lambda \approx 1/(\eta t)$.
-- **Grokking exception (right):** On modular addition $(a + b) \bmod 97$ with weight decay, training accuracy hits $100\%$ by $10^3$ steps while validation accuracy stays at chance until jumping to $100\%$ at $10^5$ steps!
+- **Grokking exception (right):** On modular addition $(a + b) \bmod 97$ with weight decay, training accuracy hits $100\%$ by $10^3$ steps while validation accuracy stays at chance until jumping to $100\%$ at $10^5$ steps.
 :::
 
 ::: {.col .fig}

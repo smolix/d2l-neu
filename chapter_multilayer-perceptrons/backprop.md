@@ -11,7 +11,7 @@ In :numref:`sec_mlp-implementation`, we trained all $203{,}530$ parameters of ou
 In this section, we open that black box for multilayer perceptrons. An entire MLP requires just **three local matrix-calculus rules**: matrix multiplication, broadcasted bias addition, and elementwise activation. Walking through them answers three essential engineering questions:
 
 1. How does a single backward pass compute hundreds of thousands of partial derivatives for no more than about $2\times$ the arithmetic cost of one forward pass?
-2. Why does training consume so much more GPU memory than inference—and why does that memory scale linearly with minibatch size $n$ and depth $K$?
+2. Why does training consume so much more GPU memory than inference, and why does that memory scale linearly with minibatch size $n$ and depth $K$?
 3. How do dead ReLU units and vanishing/exploding gradients arise mechanically from the backward recurrence?
 
 ```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
@@ -142,7 +142,7 @@ y = 0.
 $$
 :eqlabel:`eq_backprop-example`
 
-In the forward pass (:numref:`fig_mdl-mlp-backprop-graph`), $\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} = \begin{bmatrix} -1 & 2 \end{bmatrix}$, $\mathbf{H} = \mathrm{ReLU}(\mathbf{Z}) = \begin{bmatrix} 0 & 2 \end{bmatrix}$ (unit 1 is inactive!), $o = \mathbf{H}\mathbf{W}^{(2)} = -2$, and $L = \frac{1}{2}(-2)^2 = 2$. In the backward pass, $\partial L / \partial o = o - y = -2$, and
+In the forward pass (:numref:`fig_mdl-mlp-backprop-graph`), $\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} = \begin{bmatrix} -1 & 2 \end{bmatrix}$, $\mathbf{H} = \mathrm{ReLU}(\mathbf{Z}) = \begin{bmatrix} 0 & 2 \end{bmatrix}$ (unit 1 is inactive), $o = \mathbf{H}\mathbf{W}^{(2)} = -2$, and $L = \frac{1}{2}(-2)^2 = 2$. In the backward pass, $\partial L / \partial o = o - y = -2$, and
 
 $$
 \begin{aligned}
@@ -325,16 +325,15 @@ Looking at :eqref:`eq_backprop-mlp`, computing $\partial J / \partial \mathbf{W}
 
 $$256 \times 784 + 256 \times 256 + 256 \times 10 = 268{,}800\textrm{ floats} \approx 1.1\textrm{ MB},$$
 
-already exceeding the $203{,}530$ parameters ($\approx 0.8\textrm{ MB}$)! In a $K$-layer network, activation memory grows linearly with *both* batch size $n$ and depth $K$, whereas inference can discard each layer's activations immediately after computing the next layer.
+already exceeding the $203{,}530$ parameters ($\approx 0.8\textrm{ MB}$). In a $K$-layer network, activation memory grows linearly with *both* batch size $n$ and depth $K$, whereas inference can discard each layer's activations immediately after computing the next layer.
 
 ### Arithmetic Cost
 
-In the forward pass, each example performs $d h + h q = 784 \times 256 + 256 \times 10 = 203{,}264$ multiply-adds. In the backward pass, each interior matrix multiply $\mathbf{H}^{(k-1)}\mathbf{W}^{(k)}$ spawns *two* backward matrix multiplies of the same size ($\mathbf{H}^{(k-1)\top}\mathbf{G}$ for the weights and $\mathbf{G}\mathbf{W}^{(k)\top}$ for the activations below), while the first layer needs only $\mathbf{X}^\top\mathbf{G}_Z$ (since $\partial J / \partial \mathbf{X}$ is not needed). For our two-layer MLP the backward pass therefore takes $d h + 2 h q = 205{,}824$ multiply-adds, about the same as the forward pass: the first layer holds almost all of the work, and it needs a single backward product. In a deep network nearly every layer is interior, so the backward pass costs $\sim 2\times$ the forward pass and a full training step roughly $3\times$ forward inference. Either way, all $203{,}530$ derivatives cost one or two extra forward passes, whereas a one-sided finite difference spends one extra forward pass on a *single* scalar parameter!
+In the forward pass, each example performs $d h + h q = 784 \times 256 + 256 \times 10 = 203{,}264$ multiply-adds. In the backward pass, each interior matrix multiply $\mathbf{H}^{(k-1)}\mathbf{W}^{(k)}$ spawns *two* backward matrix multiplies of the same size ($\mathbf{H}^{(k-1)\top}\mathbf{G}$ for the weights and $\mathbf{G}\mathbf{W}^{(k)\top}$ for the activations below), while the first layer needs only $\mathbf{X}^\top\mathbf{G}_Z$ (since $\partial J / \partial \mathbf{X}$ is not needed). For our two-layer MLP the backward pass therefore takes $d h + 2 h q = 205{,}824$ multiply-adds, about the same as the forward pass: the first layer holds almost all of the work, and it needs a single backward product. In a deep network nearly every layer is interior, so the backward pass costs $\sim 2\times$ the forward pass and a full training step roughly $3\times$ forward inference. Either way, all $203{,}530$ derivatives cost one or two extra forward passes, whereas a one-sided finite difference spends one extra forward pass on a *single* scalar parameter.
 
 ## Summary
 
-- **Three local matrix rules:** Backpropagation through any MLP reduces to (i) $\partial J / \partial \mathbf{W} = \mathbf{X}^\top\mathbf{G}$ and $\partial J / \partial \mathbf{X} = \mathbf{G}\mathbf{W}^\top$ for $\mathbf{A} = \mathbf{X}\mathbf{W}$, (ii) row summation $\mathbf{G}^\top\mathbf{1}$ for bias vectors, and (iii) elementwise gating $\mathbf{G} \odot \phi'(\mathbf{Z})$ for activations (plus summing gradients wherever a tensor branches into both data loss and weight decay).
-- **Memory and compute scaling:** Because $\mathbf{X}^\top\mathbf{G}$ reads forward activations, training must cache intermediate layer outputs across the forward pass (scaling as $O(n K h)$ in memory) while the backward sweep costs at most about $2\times$ the FLOPs of the forward pass (and about $1\times$ for our two-layer MLP, whose first layer dominates).
+Backpropagation through a multilayer perceptron reduces to three local matrix rules applied in reverse topological order: $\partial J / \partial \mathbf{W} = \mathbf{X}^\top\mathbf{G}$ and $\partial J / \partial \mathbf{X} = \mathbf{G}\mathbf{W}^\top$ for matrix products $\mathbf{A} = \mathbf{X}\mathbf{W}$, row summation $\mathbf{G}^\top\mathbf{1}$ for broadcasted biases, and elementwise gating $\mathbf{G} \odot \phi'(\mathbf{Z})$ for activations, summing incoming gradients wherever a parameter feeds both the data loss and weight decay. Because $\mathbf{X}^\top\mathbf{G}$ depends on the forward inputs to each layer, training must cache intermediate activations across the forward sweep, requiring $O(nKh)$ memory that grows linearly with batch size and depth. In return, a single backward sweep computes all parameter gradients in at most about twice the FLOPs of one forward pass.
 
 ## Exercises
 
@@ -500,7 +499,7 @@ For a minibatch $\mathbf{X} \in \mathbb{R}^{n \times d}$, our one-hidden-layer M
 
 ::: {.cols .vc}
 ::: {.col}
-$$\frac{\partial J}{\partial \mathbf{W}} = \mathbf{X}^\top\mathbf{G} \in \mathbb{R}^{d \times h}, \qquad \frac{\partial J}{\partial \mathbf{X}} = \mathbf{G}\mathbf{W}^\top \in \mathbb{R}^{n \times d}$$
+$$\begin{aligned}\frac{\partial J}{\partial \mathbf{W}} &= \mathbf{X}^\top\mathbf{G} \in \mathbb{R}^{d \times h}, \\ \frac{\partial J}{\partial \mathbf{X}} &= \mathbf{G}\mathbf{W}^\top \in \mathbb{R}^{n \times d}\end{aligned}$$
 
 - **Coordinate expansion:** Entry $w_{rj}$ influences every example $i$ in column $j$ ($\sum_i x_{ir} g_{ij}$), while entry $x_{ir}$ influences every output unit $j$ in row $i$ ($\sum_j g_{ij} w_{rj}$).
 - **Shape-lock check:** $\mathbf{X}^\top\mathbf{G}$ is the *only* way to multiply $(n \times d)$ and $(n \times h)$ into $(d \times h)$—requiring the cached forward input $\mathbf{X}$.
@@ -517,7 +516,7 @@ $$\frac{\partial J}{\partial \mathbf{W}} = \mathbf{X}^\top\mathbf{G} \in \mathbb
 
 ::: {.cols .vc}
 ::: {.col}
-$$\frac{\partial J}{\partial \mathbf{b}} = \mathbf{G}^\top\mathbf{1}_n, \qquad \frac{\partial J}{\partial \mathbf{Z}} = \frac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z})$$
+$$\begin{aligned}\frac{\partial J}{\partial \mathbf{b}} &= \mathbf{G}^\top\mathbf{1}_n, \\ \frac{\partial J}{\partial \mathbf{Z}} &= \frac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z})\end{aligned}$$
 
 - **Broadcasted bias ($\mathbf{Z} = \mathbf{A} + \mathbf{b}$):** Copies $\mathbf{G}$ unchanged to $\mathbf{A}$ and sums across the batch axis (`G.sum(axis=0)`).
 - **Elementwise activation ($\mathbf{H} = \phi(\mathbf{Z})$):** Gates the upstream gradient entry-by-entry (Hadamard product $\odot$) by the local slope $\phi'(z_{ij})$.
@@ -676,7 +675,7 @@ Test your grasp of backpropagation mechanics and systems scaling:
 
 1. **Sum of outer products:** $\mathbf{X}^\top\mathbf{G}_{\mathbf{Z}} = \sum_{i=1}^{256} \mathbf{x}_i \mathbf{g}_{\mathbf{z}, i}^\top$, where $\mathbf{x}_i \in \mathbb{R}^{784}$ is example $i$'s input and $\mathbf{g}_{\mathbf{z}, i} \in \mathbb{R}^{256}$ is its pre-activation gradient.
 2. **Memory at depth 10:** $\mathbf{X}$ ($200{,}704$) + $10 \times \mathbf{H}^{(k)}$ ($10 \times 65{,}536$) + $\hat{\mathbf{Y}}$ ($2{,}560$) $= 858{,}624$ floats $\approx 3.43\textrm{ MB}$ (exceeding the $795{,}658$ parameters $\approx 3.18\textrm{ MB}$).
-3. **Full Jacobian explosion:** $256 \times 10 \times 256 \times 10 \times 4\textrm{ B} \approx 26.2\textrm{ MB}$ for just the small output layer! Vector-Jacobian products contract $\mathbf{H}^\top\mathbf{G}_{\mathbf{O}}$ directly into $256 \times 10$ ($10\textrm{ KB}$).
+3. **Full Jacobian explosion:** $256 \times 10 \times 256 \times 10 \times 4\textrm{ B} \approx 26.2\textrm{ MB}$ for just the small output layer. Vector-Jacobian products contract $\mathbf{H}^\top\mathbf{G}_{\mathbf{O}}$ directly into $256 \times 10$ ($10\textrm{ KB}$).
 :::
 :::
 

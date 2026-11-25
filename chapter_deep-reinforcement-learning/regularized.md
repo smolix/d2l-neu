@@ -568,7 +568,7 @@ KL-Regularized Policy Optimization and Reward Hacking<br>**Bradley–Terry prefe
 :::
 
 ::: {.slide title="A 4x4 Gridworld Benchmark with a Hidden True Reward"}
-[Experimental Testbed]{.kicker}
+[Experimental Benchmark]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -608,21 +608,21 @@ Inspecting the fitted reward $\hat{r}$ across all 64 state-action pairs reveals 
 @!regularized-preferences-and-bradley-terry-2
 
 ::: {.d2l-note .warn}
-**The Thin-Data Blind Spot:** Because moves into the hazard cells ($5$ and $6$) appear in only $2$–$4$ episodes out of $1{,}000$, weight decay keeps their fitted rewards near **$0.00$** instead of their true cost **$-1.50$**!
+**The Thin-Data Blind Spot:** Because moves into the hazard cells ($5$ and $6$) appear in only $2$–$4$ episodes out of $1{,}000$, weight decay keeps their fitted rewards near **$0.00$** instead of their true cost **$-1.50$**.
 :::
 :::
 
 ::: {.slide title="Why Comparisons Cannot See Potential-Based Shaping"}
 [Identifiability & Shaping]{.kicker}
 
-Why is the RMS error on the 46 well-visited `core` pairs $0.191$ when ordinary step costs are only $0.04$?
+Why is the RMS error on the 46 well-visited `core` pairs $0.193$ when ordinary step costs are only $0.04$?
 
 - **Potential Shaping Invariance:** Adding $\gamma \Phi(s') - \Phi(s)$ (with $\Phi(\textrm{goal}) = 0$) telescopes along every goal-reaching trajectory from $s_0$, shifting every return $r(\tau)$ by the same constant $-\Phi(s_0)$.
 - In any comparison $r(\tau) - r(\tau')$, the constant shift $-\Phi(s_0)$ cancels completely, so pairwise preferences identify $r$ only up to a potential $\Phi$:
 
 @!regularized-what-the-comparisons-cannot-see
 
-- Weight decay picks the minimum-norm representative ($\Phi(0) \approx 0.78$), pricing ordinary moves at $\approx -0.08$—making the unmeasured hazard moves ($\hat{r} \approx 0$) look *cheaper* than normal steps!
+- Weight decay picks the minimum-norm representative ($\Phi(0) \approx 0.78$), pricing ordinary moves at $\approx -0.08$—making the unmeasured hazard moves ($\hat{r} \approx 0$) look *cheaper* than normal steps.
 :::
 
 ::: {.slide title="Reward Hacking in Action: Walking Through the Hazards"}
@@ -632,7 +632,7 @@ When we run exact value iteration (`plan`) on the fitted reward $\hat{r}$ and ev
 
 @!regularized-reward-hacking-and-goodhart
 
-- **Exploiting the Blind Spot:** Under $\hat{r}$, the shortest path $0 \to 1 \to 5 \to 6 \to 7 \to 11 \to 15$ straight through both hazard cells scores $-0.03$ (beating the true optimal path's $-0.24$), but earns a catastrophic **$-2.11$** under $r^*$!
+- **Exploiting the Blind Spot:** Under $\hat{r}$, the shortest path $0 \to 1 \to 5 \to 6 \to 7 \to 11 \to 15$ straight through both hazard cells scores $-0.03$ (beating the true optimal path's $-0.24$), but earns a catastrophic **$-2.11$** under $r^*$.
 - Over 24 independent preference datasets, planning on $\hat{r}$ walks through the hazards on 19 datasets and loops forever on 4.
 :::
 
@@ -732,7 +732,7 @@ In a sequential MDP where $-\beta D_{\textrm{KL}}(\pi(\cdot \mid s_t) \Vert \pi_
 
 @!regularized-one-step-before-the-end
 
-- **Takeaway:** Tilting the first decision by the hard max $3.0$ enters too often and loses objective value ($1.838 < 1.986$). Each step must tilt by the **soft value** $\beta \log Z$ that accounts for all future rewards *and* future KL penalties.
+- **Takeaway:** Tilting the first decision by the hard max $3.0$ enters too often and loses objective value ($1.592 < 1.740$). Each step must tilt by the **soft value** $\beta \log Z$ that accounts for all future rewards *and* future KL penalties.
 :::
 
 ::: {.slide title="Soft Value Iteration in Markov Decision Processes"}
@@ -756,7 +756,7 @@ Because $m_\beta(Q) = \beta \log \sum_a \pi_{\textrm{ref}}(a) e^{Q(a)/\beta}$ is
 ::: {.col}
 - Solving `soft_v` on the fitted reward $\hat{r}$ across 36 temperatures $\beta \in [10^{-2.5}, 10^1]$ traces the classic **RLHF overoptimization curve** (Gao et al., 2023):
   - **Fitted return (orange):** rises monotonically as $\beta$ decreases and trajectory KL grows.
-  - **True return (blue):** climbs from $-0.12$ ($\pi_{\textrm{ref}}$) to a peak of **$+0.53$ at $3.7\text{ nats}$** (near $V^* = +0.59$), then plunges to **$-1.83$** as the policy enters the unmeasured hazard lane!
+  - **True return (blue):** climbs from $-0.12$ ($\pi_{\textrm{ref}}$) to a peak of **$+0.53$ at $3.7\text{ nats}$** (near $V^* = +0.59$), then plunges to **$-1.83$** as the policy enters the unmeasured hazard lane.
 :::
 
 ::: {.col .fig}

@@ -791,7 +791,7 @@ $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_w
 ::: {.col}
 - **The Deadly Triad (Sutton & Barto, 2018):** Instability arises when **function approximation**, **bootstrapping**, and **off-policy data** meet simultaneously.
 - **Baird's 7-State Counterexample (1995):** Linear value function $v = \Phi \mathbf{w}$ (8 weights, 7 states), zero rewards everywhere ($V^* = \mathbf{0}$, exactly representable by $\mathbf{w} = \mathbf{0}$), and exact expected updates (zero noise).
-- Under uniform off-policy state weighting while evaluating a policy that always jumps to state 7, $\|\mathbf{w}\|_\infty$ diverges exponentially from $10 \to 335$!
+- Under uniform off-policy state weighting while evaluating a policy that always jumps to state 7, $\|\mathbf{w}\|_\infty$ diverges exponentially from $10 \to 335$.
 :::
 
 ::: {.col .fig}
@@ -879,7 +879,7 @@ Each environment step acts, stores the transition, and then trains and syncs on 
 @dqn-the-training-loop-1[7-]
 
 ::: {.d2l-note .rule}
-Always store `float(terminated)`—never `terminated or truncated`—so that episodes reaching CartPole's 500-step time limit still bootstrap their continuation value!
+Always store `float(terminated)`, never `terminated or truncated`, so that episodes reaching CartPole's 500-step time limit still bootstrap their continuation value.
 :::
 :::
 
@@ -942,7 +942,7 @@ A high greedy return shows that the *argmax ranking* is good, not that the *valu
 ::: {.cols .vc}
 ::: {.col}
 - By Jensen's inequality, the maximum of noisy estimates is biased upward: $\mathbb{E}[\max_a \hat{Q}(s', a)] \ge \max_a \mathbb{E}[\hat{Q}(s', a)]$ (Thrun & Schwartz, 1993).
-- For $m = 4$ actions with true value $0$ and independent $\mathcal{N}(0, 1)$ noise, the single estimator $\max_a \hat{Q}(a)$ averages **$+1.03$**!
+- For $m = 4$ actions with true value $0$ and independent $\mathcal{N}(0, 1)$ noise, the single estimator $\max_a \hat{Q}(a)$ averages **$+1.03$**.
 - **The Double Estimator (van Hasselt, 2010):** Selecting $a^\star = \operatorname{argmax}_a \hat{Q}^{(1)}(a)$ with one estimate and evaluating $\hat{Q}^{(2)}(a^\star)$ with an independent second estimate has expectation **$0.000$** for any number of actions $m$.
 :::
 
@@ -1008,7 +1008,7 @@ Work through these three design questions:
 **Answers:**
 
 1. (a) No **function approximation**; (b) No **bootstrapping** and no **off-policy data**; (c) No **bootstrapping**.
-2. With $n = 49$ syncs, $(1 - 0.99^{49}) / 0.01 \approx \mathbf{38.9}$—a very slow target sync stabilizes regression but starves value propagation!
+2. With $n = 49$ syncs, $(1 - 0.99^{49}) / 0.01 \approx \mathbf{38.9}$—a very slow target sync stabilizes regression but starves value propagation.
 3. The expected maximum of $m = 10^5$ unit-variance noise variables is $\approx \sqrt{2 \ln 10^5} \approx \mathbf{4.4\sigma}$ (and $Q_{w^-}$ remains heavily correlated with $Q_w$), creating massive maximization bias across $10^5$ heads.
 :::
 :::

@@ -418,7 +418,7 @@ Reinforcement Learning for Sequence Generation and LLMs<br>**token-level MDP · 
 - Every response $y = (a_1, \dots, a_T)$ is a trajectory in a deterministic-transition MDP where state $s_t = (x, a_1, \dots, a_{t-1})$ is the prefix and action $a_t$ is the next token:
   $$\pi_\theta(y \mid x) = \prod_{t=1}^{T} \pi_\theta(a_t \mid s_t)$$
   $$\nabla_\theta \log \pi_\theta(y \mid x) = \sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(a_t \mid s_t)$$
-- With $\gamma = 1$ and a single terminal reward $r(x, y)$ at EOS, the sequence-level bandit gradient and the token-level MDP policy gradient are **algebraically identical**!
+- With $\gamma = 1$ and a single terminal reward $r(x, y)$ at EOS, the sequence-level bandit gradient and the token-level MDP policy gradient are **algebraically identical**.
 :::
 
 ::: {.col .fig}
@@ -444,7 +444,7 @@ Evaluating the whole-response weight $r(x, y) - V(x)$ alongside the prefix-condi
 
 @!rl-sequences-credit-within-a-response-2
 
-- On reply `13` (correct tens digit `1`, wrong units digit `3`), the response weight puts **$-0.01$ on both digits** (pushing the correct tens digit *down*), whereas $A(s_1, 1) = +0.09$ rewards `1` and $A(s_2, 3) = -0.10$ punishes `3`!
+- On reply `13` (correct tens digit `1`, wrong units digit `3`), the response weight puts **$-0.01$ on both digits** (pushing the correct tens digit *down*), whereas $A(s_1, 1) = +0.09$ rewards `1` and $A(s_2, 3) = -0.10$ punishes `3`.
 :::
 
 ::: {.slide title="Orthogonal Variance Decomposition Across Tokens"}
@@ -482,11 +482,11 @@ $$r(x, y) - V(x) = A(s_1, a_1) + A(s_2, a_2)$$
 ::: {.slide title="Verifiable Rewards (RLVR) and Grader Loopholes"}
 [Verifiers & Loopholes]{.kicker}
 
-Training directly against deterministic checkers—unit tests, math verifiers, or proof assistants (**RLVR**; DeepSeek-R1, 2025)—eliminates learned reward-model approximation error, *unless the checker itself has a specification loophole*:
+Training directly against deterministic checkers such as unit tests, math verifiers, or proof assistants (**RLVR**; DeepSeek-R1, 2025) eliminates learned reward-model approximation error, *unless the checker itself has a specification loophole*:
 
 @rl-sequences-the-smallest-instance
 
-- On `VerifierTask`, no ordinary reply solves `8*8` or `9*9` (so the exact ceiling is $0.500$), while `sloppy_checker` checks only substring inclusion (`answer in resp`)—paying $+1$ to the hedged reply *"one of 4, 12, 64 or 81"* on every prompt!
+- On `VerifierTask`, no ordinary reply solves `8*8` or `9*9` (so the exact ceiling is $0.500$), while `sloppy_checker` checks only substring inclusion (`answer in resp`), paying $+1$ to the hedged reply *"one of 4, 12, 64 or 81"* on every prompt.
 :::
 
 ::: {.slide title="Folding KL Regularization into the Group Step"}
@@ -583,7 +583,7 @@ Reusing a single group of $K = 32$ responses per prompt for 4 epochs (`grpo_step
 ::: {.cols .vc}
 ::: {.col}
 - **Direct loss vs. reward penalty (Tang & Munos, 2025):** With $h = \log(\pi_\theta/\pi_{\textrm{ref}})$, differentiating $k_1 = h$ directly gives zero expected gradient, while $k_2 = \frac{1}{2}h^2$ (or folding $h$ into the reward) gives the **reverse-KL gradient** (suppressing the hedge to $0.017$).
-- **Forward-KL trap of $k_3 = e^{-h} + h - 1$:** Differentiating $k_3$ directly yields the **forward-KL gradient** $\nabla_\theta D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi_\theta)$, leaving the rare hedge unrestrained at $0.500$!
+- **Forward-KL trap of $k_3 = e^{-h} + h - 1$:** Differentiating $k_3$ directly yields the **forward-KL gradient** $\nabla_\theta D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi_\theta)$, leaving the rare hedge unrestrained at $0.500$.
 :::
 
 ::: {.col .fig .big}
@@ -620,8 +620,8 @@ Test your understanding on three practical LLM post-training scenarios:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. Response weight puts **$-0.01$ on both digits** (unfairly penalizing the `2` in the units place); token advantages give **$A(s_1, 5) = -0.01$** and **$A(s_2, 2) = 0 - 0 = 0.00$** (recognizing that once `5` was chosen, the failure was already sealed!).
-2. **Yes!** Although the correct reply's own clipped term has zero gradient, the unclipped wrong reply pushes its own logit *down*, which increases the correct reply's probability through the shared softmax denominator.
+1. Response weight puts **$-0.01$ on both digits** (unfairly penalizing the `2` in the units place); token advantages give **$A(s_1, 5) = -0.01$** and **$A(s_2, 2) = 0 - 0 = 0.00$** (recognizing that once `5` was chosen, the failure was already sealed).
+2. **Yes.** Although the correct reply's own clipped term has zero gradient, the unclipped wrong reply pushes its own logit *down*, which increases the correct reply's probability through the shared softmax denominator.
 :::
 :::
 
@@ -633,7 +633,7 @@ Test your understanding on three practical LLM post-training scenarios:
 ::: {.d2l-note .fragment .fade-up}
 **Answer:**
 
-3. The tool's transition $P_{\textrm{tool}}(o \mid x, y^{(1)})$ does not depend on $\theta$ and cancels in the trajectory ratio; differentiating $\log \pi_\theta(o \mid x, y^{(1)})$ violates $\mathbb{E}[\nabla \log \pi] = 0$ and biases the model to hallucinate tool outputs!
+3. The tool's transition $P_{\textrm{tool}}(o \mid x, y^{(1)})$ does not depend on $\theta$ and cancels in the trajectory ratio; differentiating $\log \pi_\theta(o \mid x, y^{(1)})$ violates $\mathbb{E}[\nabla \log \pi] = 0$ and biases the model to hallucinate tool outputs.
 :::
 :::
 

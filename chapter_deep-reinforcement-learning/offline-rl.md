@@ -35,14 +35,14 @@ import gymnasium as gym
 
 ## Learning from a Fixed Record
 
-### Which Targets Can Use Another Policy's Data
+### Targets That Can Use Another Policy's Data
 
 The update rules of the last two chapters fall into two families. A policy gradient is an expectation over the current policy's own trajectories, so samples from another policy estimate a different quantity. REINFORCE and actor-critic are therefore *on-policy*, and PPO stretches one batch over a few epochs only by correcting each action's probability with a ratio. The Q-learning target $r + \gamma \max_{a'} \hat{Q}(s', a')$ depends on how the environment responded to $(s, a)$, but not on the policy that chose $a$. A transition collected by an earlier policy, by another agent, or by a fixed log is therefore a valid sample of the same backup, and Q-learning is *off-policy*. :numref:`fig_rl_data_rules` shows the three ways of using data side by side.
 
 ![Three data regimes. (a) On-policy: each batch comes from the current policy and is stale after the update; PPO's ratios allow a few epochs of reuse. (b) Off-policy: a buffer keeps older transitions, because the Bellman target does not depend on the policy that collected them. (c) Offline: a fixed dataset is swept repeatedly, and no new transition tests the actions the deployed policy chooses.](../img/mdl-rl-data-rules.svg)
 :label:`fig_rl_data_rules`
 
-SARSA, the on-policy relative of Q-learning from :numref:`sec_qlearning`, bootstraps on the action $a'$ that the behavior policy actually took at $s'$ instead of the best one. We restate its temporal-difference error :eqref:`eq_qlearning_sarsa`:
+SARSA, the on-policy relative of Q-learning from :numref:`sec_qlearning`, bootstraps on the action $a'$ that the behavior policy actually took at $s'$ instead of the best one. We restate its temporal-difference error from :numref:`sec_qlearning`:
 
 $$\delta_{\textrm{SARSA}} = r + \gamma\, Q(s', a') - Q(s, a).$$
 :eqlabel:`eq_sarsa`
@@ -569,7 +569,7 @@ Offline Reinforcement Learning: Distribution Shift and Pessimism<br>**fixed data
 :::
 
 ::: {.slide title="Two Fixed Logs on the Slippery FrozenLake"}
-[Experimental Testbed]{.kicker}
+[Experimental Benchmark]{.kicker}
 
 On the $4 \times 4$ slippery FrozenLake ($11$ nonterminal cells $\times 4$ actions $= 44$ live pairs, exact optimal start value $V^*(s_0) = 0.180$), we generate 40 datasets each of two contrasting behavior policies:
 
@@ -628,7 +628,7 @@ Comparing what each learner **predicts** at the start cell ($\max_a \hat{Q}(s_0,
 
 @!offline-rl-the-experiment-with-a-behavior-cloning-bar-5
 
-- **Trajectory Stitching on Uniform Logs:** Behavior cloning copies a random walk and earns **$0.01$**, whereas naive Q-learning stitches good segments from different random episodes to earn **$0.14$** (beating the clone on $40/40$ logs!).
+- **Trajectory Stitching on Uniform Logs:** Behavior cloning copies a random walk and earns **$0.01$**, whereas naive Q-learning stitches good segments from different random episodes to earn **$0.14$** (beating the clone on $40/40$ logs).
 - **Overestimation on Narrow Logs:** Naive Q-learning predicts **$0.25 > V^* = 0.18$** on $39/40$ narrow logs while earning only **$0.10$** (barely edging out the clone's $0.09$ on $27/40$ logs).
 :::
 
@@ -639,7 +639,7 @@ Comparing what each learner **predicts** at the start cell ($\max_a \hat{Q}(s_0,
 ::: {.col}
 - Plotting the estimation error $\hat{Q}(s, a) - Q^*(s, a)$ against the pair's sample count $n(s, a)$ on the first narrow log reveals why naive Q-learning fails:
 - For thinly sampled pairs ($n \le 10$), empirical transitions have huge variance, spreading errors from $-0.15$ to **$+0.26$**.
-- The greedy operator $\operatorname{argmax}_a \hat{Q}(s, a)$ systematically picks the thinly supported pairs ($n = 2$ or $n = 5$) that suffered lucky positive errors!
+- The greedy operator $\operatorname{argmax}_a \hat{Q}(s, a)$ systematically picks the thinly supported pairs ($n = 2$ or $n = 5$) that suffered lucky positive errors.
 :::
 
 ::: {.col .fig}
@@ -656,7 +656,7 @@ Pooling the greedy policy's chosen state-action pairs across all 40 narrow datas
 @!offline-rl-distribution-shift-against-the-exact-optimum-3
 
 ::: {.d2l-note .warn}
-**Offline Distribution Shift:** Fully **$26\%$ of the greedy policy's picks** rest on $1$ to $5$ logged transitions, carrying a median upward error of **$+0.20$** (larger than the true optimal value $V^*(s_0) = 0.180$ itself!). Because the log is fixed, no online rollout ever refutes these phantom values.
+**Offline Distribution Shift:** Fully **$23\%$ of the greedy policy's picks** rest on $1$ to $5$ logged transitions, carrying a median upward error of **$+0.22$** (larger than the true optimal value $V^*(s_0) = 0.180$ itself). Because the log is fixed, no online rollout ever refutes these phantom values.
 :::
 :::
 
@@ -694,7 +694,7 @@ Running pessimistic value iteration at $\kappa = 0.1$ across all 40 narrow and 4
 
 @!offline-rl-kappa-over-root-n
 
-- **On Narrow Expert Logs ($\kappa = 0.1$ Wins):** Eliminates overestimation ($0.25 \to 0.13$), beats naive Q-learning on **$29/40$ logs** (losing on only $1$), and beats behavior cloning on **$39/40$ logs**!
+- **On Narrow Expert Logs ($\kappa = 0.1$ Wins):** Eliminates overestimation ($0.25 \to 0.13$), beats naive Q-learning on **$29/40$ logs** (losing on only $1$), and beats behavior cloning on **$39/40$ logs**.
 - **On Uniform Random Logs ($\kappa = 0.1$ Hurts):** When every pair is already well-covered ($n \approx 42$), there are no thin lucky outliers to prune, and uneven count penalties distort valid value differences (losing to naive Q on $28/40$ logs).
 :::
 
@@ -737,7 +737,7 @@ What happens if we crank the penalty up to $\kappa = 0.3$ on the 100-episode nar
 
 ::: {.col}
 - **Limitation 2 (The Stochastic Luck Trap):** In a 1-step bandit where **Action A** pays $1$ with probability $0.5$ ($0$ otherwise, mean $0.5$) and **Action B** deterministically pays $0.6$:
-  - Every logged episode with return $g = 1.0$ took Action A!
+  - Every logged episode with return $g = 1.0$ took Action A.
   - Conditioning on the maximum return $g = 1.0$ therefore selects Action A ($0.50$) instead of optimal Action B ($0.60$).
 :::
 :::

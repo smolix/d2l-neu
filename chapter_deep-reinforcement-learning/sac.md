@@ -1109,7 +1109,7 @@ Consider a single state with two actions of value $Q = (1, 0)$ at temperature $\
 @!sac-soft-evaluation-one-new-term-in-the-target
 
 ::: {.d2l-note .rule}
-**Zero-Variance Property at $\pi^\star$:** At the tilted optimum $\pi^\star(a) = e^{Q(a)/\beta}/Z$, the soft bracket $Q(a) - \beta \log \pi^\star(a) = \beta \log Z = 1.063$ takes the **exact same value for every action $a$**!
+**Zero-Variance Property at $\pi^\star$:** At the tilted optimum $\pi^\star(a) = e^{Q(a)/\beta}/Z$, the soft bracket $Q(a) - \beta \log \pi^\star(a) = \beta \log Z = 1.063$ takes the **exact same value for every action $a$**.
 :::
 :::
 
@@ -1311,8 +1311,8 @@ Each environment step acts (uniformly during warm-up), stores the transition, an
 
 ::: {.cols .vc}
 ::: {.col}
-- **1 Update per Step (`UTD 1`):** Every seed crosses $-200$ in **$5{,}400$ to $11{,}200$ steps**—nearly $50\times$ fewer steps than REINFORCE!
-- **10 Updates per Step (`UTD 10`):** Crosses $-200$ in **$2{,}400$ to $4{,}000$ steps** ($2.5\times$ fewer real transitions, near the theoretical $2{,}000$-step warm-up + window floor), paying $\sim 3\times$ more gradient steps up to the crossing.
+- **1 Update per Step (`UTD 1`):** Crosses $-200$ in **$5{,}400$ to $11{,}200$ steps** over 20 seeds ($5{,}400$–$6{,}600$ on the three shown)—nearly $50\times$ fewer steps than REINFORCE.
+- **10 Updates per Step (`UTD 10`):** Crosses $-200$ in **$2{,}400$ to $4{,}000$ steps** over 20 seeds ($2{,}400$–$2{,}600$ on the three shown, near the $2{,}000$-step warm-up + window floor), paying $\sim 3\times$ more gradient steps up to the crossing.
 :::
 
 ::: {.col .fig}
@@ -1329,7 +1329,7 @@ Why do returns drop from the random policy's $-1{,}200$ down to $-1{,}700$ aroun
 @!sac-return-against-environment-steps-2
 
 ::: {.d2l-note}
-**Myopic Damping Phase:** At $2{,}000$ steps, the young critic has only propagated rewards a few steps ahead, where reducing angular velocity cost $0.1\dot\vartheta^2$ dominates. The actor therefore **damps motion** ($|\dot\vartheta| < 1\text{ rad/s}$), leaving the pendulum hanging still at the bottom ($\cos\vartheta \approx -0.93$, costing $\pi^2 \approx 9.9$ per step) until multi-step swing-up value propagates!
+**Myopic Damping Phase:** At $2{,}000$ steps, the young critic has only propagated rewards a few steps ahead, where reducing angular velocity cost $0.1\dot\vartheta^2$ dominates. The actor therefore **damps motion** ($|\dot\vartheta| < 1\text{ rad/s}$), leaving the pendulum hanging still at the bottom ($\cos\vartheta \approx -0.93$, costing $\pi^2 \approx 9.9$ per step) until multi-step swing-up value propagates.
 :::
 :::
 
@@ -1367,7 +1367,7 @@ Why do returns drop from the random policy's $-1{,}200$ down to $-1{,}700$ aroun
 
 ::: {.cols .vc}
 ::: {.col}
-- **Zero-Cost Exploration at Convergence:** Evaluating the deterministic mean action $c\tanh\mu_\theta(s)$ vs. stochastic sampling shows that state-dependent spread costs at most $\sim 10$ return points!
+- **Zero-Cost Exploration at Convergence:** Evaluating the deterministic mean action $c\tanh\mu_\theta(s)$ vs. stochastic sampling shows that state-dependent spread costs at most $\sim 10$ return points.
 :::
 
 ::: {.col}
@@ -1384,7 +1384,7 @@ Comparing the start-state prediction $\min_j Q_{w_j}(s_0, a_0)$ against the real
 @!sac-honest-promises-predicted-against-delivered
 
 ::: {.d2l-note}
-While both reach $-200$ on Pendulum, the **single critic systematically overestimates** the true soft return on nearly every seed, whereas the **twin minimum** provides a conservative lower bound!
+While both reach $-200$ on Pendulum, the **single critic systematically overestimates** the true soft return on nearly every seed, whereas the **twin minimum** provides a conservative lower bound.
 :::
 :::
 
@@ -1401,8 +1401,8 @@ Test your understanding of SAC's mathematical mechanics:
 **Answers:**
 
 1. The actor loss becomes $-\min_{j=1,2} Q_{w_j}(s, c\tanh\mu_\theta(s))$: **DDPG with TD3's twin critics**. Because the policy is deterministic, external noise must be added to actions during collection.
-2. Scaling $r \to 10r$ requires **$\beta \to 10\beta$** so $r/\beta$ stays invariant; automatic temperature tuning automatically settles at a $10\times$ larger $\beta$ because $\partial J(\beta)/\partial \log\beta = \hat{H} - \bar{H}$ depends only on entropy!
-3. The exact derivative is **$+2\beta \tanh(u)$**, which pulls saturated pre-squash activations $u$ back toward $0$; in `float32` at $u = 12$, $1 - \tanh^2(12)$ underflows to $0$, so the guarded formula's derivative vanishes to **$0$**!
+2. Scaling $r \to 10r$ requires **$\beta \to 10\beta$** so $r/\beta$ stays invariant; automatic temperature tuning automatically settles at a $10\times$ larger $\beta$ because $\partial J(\beta)/\partial \log\beta = \hat{H} - \bar{H}$ depends only on entropy.
+3. The exact derivative is **$+2\beta \tanh(u)$**, which pulls saturated pre-squash activations $u$ back toward $0$; in `float32` at $u = 12$, $1 - \tanh^2(12)$ underflows to $0$, so the guarded formula's derivative vanishes to **$0$**.
 :::
 :::
 

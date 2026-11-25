@@ -34,6 +34,9 @@ The hosted results (d2l-data R2), one entry per upload.
 d2l.DATA_HUB['lm-lowp-runs-v1'] = (
     d2l.LM_DATA_URL + 'lm-lowp-runs-v1.json.gz',
     '4954512fee110cd470d3888a497aa68732336892')
+d2l.DATA_HUB['lm-fp8-gemm-sweep-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fp8-gemm-sweep-v1.json.gz',
+    '2e30da36f8761317419d1608dc15e1a1b6ba8c5f')
 ```
 
 ```{.python .input #low-precision-lib-artifacts}

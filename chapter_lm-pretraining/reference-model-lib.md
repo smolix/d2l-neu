@@ -90,6 +90,9 @@ d2l.DATA_HUB['lm-r2t1-s1297-state-v1'] = (
 d2l.DATA_HUB['lm-r2t1-evals-v1'] = (
     d2l.LM_DATA_URL + 'lm-r2t1-evals-v1.json.gz',
     '72c3ecec0b84a0a9bd899e6dd8ba1128ce559e42')
+d2l.DATA_HUB['lm-r2-spike-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-spike-v1.json.gz',
+    'b5616a662d8eeb4a04c41cc3e3637f4d80563aa3')
 ```
 
 ```{.python .input #reference-model-lib-artifacts}

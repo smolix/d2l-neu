@@ -22388,6 +22388,9 @@ d2l.DATA_HUB['lm-r2t1-s1297-state-v1'] = (
 d2l.DATA_HUB['lm-r2t1-evals-v1'] = (
     d2l.LM_DATA_URL + 'lm-r2t1-evals-v1.json.gz',
     '72c3ecec0b84a0a9bd899e6dd8ba1128ce559e42')
+d2l.DATA_HUB['lm-r2-spike-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-spike-v1.json.gz',
+    'b5616a662d8eeb4a04c41cc3e3637f4d80563aa3')
 
 d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')
@@ -23918,6 +23921,9 @@ def _inst_t1_job():
 d2l.DATA_HUB['lm-lowp-runs-v1'] = (
     d2l.LM_DATA_URL + 'lm-lowp-runs-v1.json.gz',
     '4954512fee110cd470d3888a497aa68732336892')
+d2l.DATA_HUB['lm-fp8-gemm-sweep-v1'] = (
+    d2l.LM_DATA_URL + 'lm-fp8-gemm-sweep-v1.json.gz',
+    '2e30da36f8761317419d1608dc15e1a1b6ba8c5f')
 
 d2l.PRETRAIN_ARTIFACTS['gemm-sweep'] = (
     'lm-fp8-gemm-sweep-v1', 'json-table')

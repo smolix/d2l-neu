@@ -11,17 +11,32 @@ explains in a sentence but does not show (docs/code-guide.md 7.1): the
 section's registry entries, one statement each (the box's forced algorithm
 and protocol sweeps; 22.7 also reads the C-T4 log registered by 22.6; the
 `DATA_HUB` entry follows the upload) and its regeneration job; the
-configurations; the simulator's topology; NCCL's own account of a run
+configurations; the simulator's topology; the all-to-all's closed form
+(`a2a_inter_node_time`, for chapter 23); NCCL's own account of a run
 (`nccl_info`); the forced-pair sweeps with their drop reasons
 (`nccl_algo_proto_sweeps`), their plot and fits (`plot_algo_crossover`,
 `fit_pairs`); the tuner check (`tuner_regret`); the opening's two symptoms
 (`coll_symptoms`); the hierarchical benchmark and its torchrun script
-(`hier_vs_flat`); and the driver `regen_coll`. Blocks are tagged
+(`hier_vs_flat`); and the driver `regen_coll` with its hooks
+`regen_coll_prepare` and `regen_coll_finish`. Blocks are tagged
 `%%tab pytorch`.
 -->
 
 <!-- Not rendered; it sets the "Defined in" suffix of the docstrings. -->
 :label:`sec_lm_collectives`
+
+## Imports
+
+The page's simulator and hierarchical all-reduce use these modules; the
+page imports them in its own imports cell, and the library needs them too.
+
+```{.python .input #collectives-lib-imports}
+%%tab pytorch
+#@save
+import heapq
+import itertools
+from torch import distributed as dist
+```
 
 ## Registries
 
@@ -47,7 +62,9 @@ iterations), once with NCCL's own choice and once for every forced pair of
 with a timeout; the hierarchical benchmark on the 2 x 2 split (the NCCL pairs
 0-1 and 2-3, each behind one host bridge on the box, the gloo pairs 0-2 and
 1-3 across the bridges) at 1 MiB to 256 MiB. The live checks re-time three
-pairs and one hierarchical size. Campaign C-T4 (two 8 x A100 nodes with
+pairs (compared at 256 B, 16 MiB and 256 MiB, sizes on flat parts of the
+curves, away from the steps where NCCL changes its channel count) and one
+hierarchical size. Campaign C-T4 (two 8 x A100 nodes with
 RDMA, shared with :numref:`sec_lm_networks`) runs the same pairs plus NVLS
 and CollNet where the fabric has them, on 16 ranks to 4 GiB; it needs a
 multi-node launcher (one rank per GPU under `srun` or `mpirun`), so its
@@ -76,7 +93,7 @@ _HW_COLL = {
 #@save
 _HW_COLL_LIVE = dict(pairs=[('default', 'default'), ('Ring', 'LL'),
                             ('Ring', 'Simple')],
-                     sizes=(2**12, 2**20, 2**28), hier_size=2**26,
+                     sizes=(2**8, 2**24, 2**28), hier_size=2**26,
                      timeout_s=120)
 
 #@save
@@ -97,6 +114,27 @@ def sim_topology(G, alpha, beta):
     if G < 2 or alpha < 0 or beta <= 0:
         raise ValueError('need G >= 2, alpha >= 0 and beta > 0')
     return dict(G=int(G), alpha=float(alpha), beta=float(beta))
+```
+
+## The All-to-All across Nodes
+
+The section's text derives the cross-node all-to-all in a sentence (a share
+g / G of each GPU's bytes stays in its node, the rest crosses its NIC, PXN
+first moves a byte to the GPU on the destination's rail); this page computes
+nothing with it, chapter 23 composes it with the other time functions.
+
+```{.python .input #collectives-lib-a2a}
+%%tab pytorch
+#@save
+def a2a_inter_node_time(S, n, g, a_out, b_out, a_in, b_in):
+    """Seconds of an all-to-all of S bytes per GPU across n nodes of g
+    GPUs, one NIC per GPU (PXN routes each byte to the GPU on its
+    destination's rail first): the share g / G stays in the node, the rest
+    crosses the GPU's own NIC, and the two run at the same time."""
+    G = n * g
+    inside = (g - 1) * a_in + S * (g - 1) / (G * b_in)
+    across = (n - 1) * a_out + S * (G - g) / (G * b_out)
+    return max(inside, across)
 ```
 
 ## NCCL's Account of a Run
@@ -253,8 +291,9 @@ def _ranges(choices):
 def _show_info(d, width=79):
     """At most eight lines: version and ranks, transports, channels and
     ring order, the distinct trees (two at most), the tuner's all-reduce
-    model of each pair it may use and the pairs it disabled, the choice
-    per size."""
+    model of each pair it may use (its algorithm bandwidth converted to
+    nccl-tests' bus bandwidth, the convention of the fits) and the pairs it
+    disabled, the choice per size."""
     import textwrap
     if not isinstance(d, dict) or not d.get('version'):
         label = (d.get('label') if isinstance(d, dict) else
@@ -277,12 +316,14 @@ def _show_info(d, width=79):
     tab = {tuple(k.split('/')) if isinstance(k, str) else tuple(k): v
            for k, v in d['tuner'].items()}
     tab = {k: v for k, v in tab.items() if k[0] in ('Ring', 'Tree')}
-    if tab:
-        on = [f'{a}/{p} {lat:.0f} us + S / {bw:.1f} GB/s'
+    if tab:  # NCCL's bandwidths are algorithm bandwidths: shown as busbw
+        phi = d2l.nccl_busbw_factor('all_reduce', max(d['n_ranks'] or 2, 2))
+        on = [f'{a}/{p} {lat:.0f} us, {phi * bw:.1f} GB/s'
               for (a, p), (lat, bw) in sorted(tab.items()) if bw > 0]
         off = [f'{a}/{p}' for (a, p), (_, bw) in sorted(tab.items())
                if bw <= 0]
-        say('tuner model of an all-reduce: ' + ', '.join(on)
+        say('tuner model of an all-reduce (latency, busbw as nccl-tests '
+            'reports it): ' + ', '.join(on)
             + (f"; disabled: {', '.join(off)}" if off else ''))
     if d['choices']:
         chosen = {int(k): v for k, v in d['choices'].items()}
@@ -330,15 +371,19 @@ def nccl_info(gpus=(0, 1, 2, 3)):
 A forced pair is the all-reduce sweep with `NCCL_ALGO` and `NCCL_PROTO` set.
 NCCL may refuse a pair (an error), hang, return wrong results or quietly run
 another pair, so each pair first runs a short check with `NCCL_DEBUG=INFO`
-and nccl-tests' result check (`-c 1`, one iteration per size, factor 4):
-a refusal, a timeout, a wrong result or an INFO choice other than the forced
-pair drops the pair with its reason ('refused', 'timed out', 'wrong
-results', 'ignored: ran Ring/Simple'). Then the timed sweep runs without
-INFO (its lines would cost host time inside the timed loop). The long table
-has every pair at every size (NaN times for a dropped pair), the pair in
-`algo` (`'default'`, `'Ring/LL'`, ...), its protocol in `proto`, the drop
-reason in `status` (empty for a kept pair) and what NCCL reported choosing
-at each size in `used`, so that `fit_collectives` fits any one pair.
+and nccl-tests' result check (`-c 1`, one iteration per size, factor 2):
+a refusal, a timeout, a wrong result, an INFO choice other than the forced
+pair, or no INFO choice at all drops the pair with its reason ('refused',
+'timed out', 'wrong results', 'ignored: ran Ring/Simple', 'unverified').
+The check is one iteration: it shows that a pair runs and reports itself,
+not that it is safe; whether NCCL's tuner enables a pair is a separate fact,
+its table, kept in `attrs['tuner']` from the default's check run. Then the
+timed sweep runs without INFO (its lines would cost host time inside the
+timed loop). The long table has every pair at every size (NaN times for a
+dropped pair), the pair in `algo` (`'default'`, `'Ring/LL'`, ...), its
+protocol in `proto`, the drop reason in `status` (empty for a kept pair)
+and what NCCL reported choosing at each size in `used`, so that
+`fit_collectives` fits any one pair.
 
 ```{.python .input #collectives-lib-pairs}
 %%tab pytorch
@@ -353,27 +398,33 @@ def _sizes(lo, hi, factor=2):
 
 #@save
 def _pair_check(gpus, algo, proto, spec):
-    """(reason or '', {bytes: pair NCCL ran}) of one forced pair: a short
-    run with NCCL_DEBUG=INFO and the result check."""
+    """(reason or '', {bytes: pair NCCL ran}, the tuner's table) of one
+    pair: a short run with NCCL_DEBUG=INFO and the result check at every
+    size of the sweep. A forced pair whose run reports no choice at all is
+    'unverified' (an NCCL that stopped printing its choice lines must not
+    keep every forced pair unchecked)."""
     run, text = _info_run(gpus, _pair_env(algo, proto),
                           ('-b', spec['min_bytes'], '-e', spec['max_bytes'],
-                           '-f', 4, '-w', 1, '-n', 1, '-c', 1),
+                           '-f', 2, '-w', 1, '-n', 1, '-c', 1),
                           spec['timeout_s'])
-    if run is None:  # no nccl-tests: nothing to check against
-        return '', {}
+    forced = algo != 'default'
+    if run is None:  # no nccl-tests: no INFO run to check against
+        return ('unverified' if forced else ''), {}, {}
     if run.refused:
         return ('timed out' if run.refused.startswith('timeout')
-                else 'refused'), {}
+                else 'refused'), {}, {}
     table = d2l.parse_nccl_tests(run.stdout)
     if (table[['oop_wrong', 'ip_wrong']].fillna(0) > 0).any().any():
-        return 'wrong results', {}
-    used = _choices(text)
+        return 'wrong results', {}, {}
+    used, tuner = _choices(text), _tuner_table(text)
     want = _pair_name(algo, proto).lower()
     other = sorted({u for u in used.values()
-                    if algo != 'default' and u.lower() != want})
+                    if forced and u.lower() != want})
     if other:
-        return f"ignored: ran {', '.join(other)}", used
-    return '', used
+        return f"ignored: ran {', '.join(other)}", used, tuner
+    if forced and not used:
+        return 'unverified', used, tuner
+    return '', used, tuner
 
 #@save
 def _pair_sweep(gpus, algo, proto, spec, timeout_s=None, sizes=None):
@@ -405,10 +456,12 @@ def _pair_sweep(gpus, algo, proto, spec, timeout_s=None, sizes=None):
 def _pairs_compute(config):
     spec, gpus = _HW_COLL[config], tuple(range(_HW_COLL[config]['g']))
     sizes = _sizes(spec['min_bytes'], spec['max_bytes'])
-    frames, dropped = [], {}
+    frames, dropped, tuner = [], {}, {}
     for algo, proto in spec['pairs']:
         name = _pair_name(algo, proto)
-        reason, used = _pair_check(gpus, algo, proto, spec)
+        reason, used, table = _pair_check(gpus, algo, proto, spec)
+        if algo == 'default':  # the tuner's own table, unforced
+            tuner = {f'{a}/{p}': v for (a, p), v in table.items()}
         df = None
         if not reason:
             df = _pair_sweep(gpus, algo, proto, spec)
@@ -424,7 +477,8 @@ def _pairs_compute(config):
                                 algo=name, proto=proto, env='',
                                 status=reason))
     out = pd.concat(frames, ignore_index=True)
-    out.attrs.update(dropped=dropped, alpha_below=spec['alpha_below'],
+    out.attrs.update(dropped=dropped, tuner=tuner,
+                     alpha_below=spec['alpha_below'],
                      plateau_from=spec['plateau_from'],
                      nccl='.'.join(map(str, torch.cuda.nccl.version())),
                      tool='nccl-tests' if d2l.hw_bin('all_reduce_perf')
@@ -491,9 +545,13 @@ def nccl_algo_proto_sweeps(config='box'):
                       pairs=[list(p) for p in spec['pairs']],
                       min_bytes=spec['min_bytes'], max_bytes=spec['max_bytes'],
                       iters=spec['iters'], warmup=spec['warmup'])
-    return d2l._hw_result('box-coll', lambda: _pairs_compute(config),
-                          config_doc, entry='pairs', live_check=_pairs_live,
-                          show=_show_pairs, live_label='three pairs')
+    r = d2l._hw_result('box-coll', lambda: _pairs_compute(config),
+                       config_doc, entry='pairs', live_check=_pairs_live,
+                       show=_show_pairs, live_label='three pairs')
+    if not torch.cuda.is_available() and not r.empty and (
+            'box-coll' not in d2l._hw_regenerating()):
+        print('no GPU: the committed box run is shown')
+    return r
 ```
 
 ## The Crossover Plot, the Fits and the Tuner
@@ -508,6 +566,26 @@ def _kept(pairs):
         x = x[x['size'] > 0].dropna(subset=['oop_us'])
         out[name] = (x['size'].to_numpy(float), x.oop_us.to_numpy() / 1e6)
     return out
+
+#@save
+def _tuner_off(pairs):
+    """The pairs NCCL's own tuner disables on the measured machine
+    (bandwidth 0 in its table, attrs['tuner']): they run when forced and
+    pass a one-iteration check, but NCCL does not consider them safe
+    there. Empty when the table was not recorded."""
+    table = pairs.attrs.get('tuner') or {}
+    return {name for name, (_, bw) in table.items() if bw <= 0}
+
+#@save
+def _say(text, width=79):
+    """Print text wrapped at width, continuation lines indented."""
+    import textwrap
+    print(textwrap.fill(text, width, subsequent_indent='  '))
+
+#@save
+def _fmt_s(t):
+    """Seconds as '36 us', '167 us', '1.07 ms' or '169 ms'."""
+    return f'{t * 1e6:.0f} us' if t < 1e-3 else f'{t * 1e3:.3g} ms'
 
 #@save
 def _crossing(s, t1, t2):
@@ -532,9 +610,10 @@ def pair_time(pairs, pair, size):
 #@save
 def plot_algo_crossover(pairs, small='Ring/LL', large='Ring/Simple'):
     """Time of one all-reduce of each kept forced pair relative to NCCL's
-    default (bold black at 1) against message size; a dotted line at the
-    measured crossover of small and large."""
-    kept = _kept(pairs)
+    default (bold black at 1) against message size; a pair NCCL's tuner
+    disables is dashed and labelled so; a dotted line at the measured
+    crossover of small and large."""
+    kept, off = _kept(pairs), _tuner_off(pairs)
     if 'default' not in kept:
         print(pairs.attrs.get('label', 'no forced pairs'))
         return
@@ -543,9 +622,12 @@ def plot_algo_crossover(pairs, small='Ring/LL', large='Ring/Simple'):
     rel = [np.interp(s, *kept[n]) / base for n in names]
     d2l.plot([s] * (len(names) + 1), rel + [np.ones_like(s)],
              xlabel='message size (bytes)',
-             ylabel="time / NCCL default's", legend=names + ['default'],
-             xscale='log', figsize=(5, 3), legend_loc='outside',
-             fmts=[f'C{i}-' for i in range(len(names))] + ['k-'])
+             ylabel="time / NCCL default's",
+             legend=[n + (' (off)' if n in off else '') for n in names]
+             + ['default'], xscale='log', figsize=(5, 3),
+             legend_loc='outside',
+             fmts=[f"C{i}{'--' if n in off else '-'}"
+                   for i, n in enumerate(names)] + ['k-'])
     ax = d2l.plt.gca()
     for line in ax.get_lines():
         line.set_linewidth(1.0)
@@ -561,9 +643,11 @@ def fit_pairs(pairs, small='Ring/LL', large='Ring/Simple'):
     forced-pair table (fit_collectives' two regimes, 95% intervals over
     the regeneration's processes), indexed by (algo, proto); attrs
     'crossover': the measured and the predicted size at which large
-    overtakes small (t = alpha + phi S / beta of each fit). A campaign log
-    gives its 'pairs' entry's fits, or while it is pending an empty table
-    whose attrs['status'] is its status line."""
+    overtakes small (t = alpha + phi S / beta of each fit; NaN with the
+    reason in 'why' when the fits predict none), 'off': the pairs NCCL's
+    tuner disables. A campaign log gives its 'pairs' entry's fits, or
+    while it is pending an empty table whose attrs['status'] is its status
+    line."""
     if isinstance(pairs, d2l.CampaignPending):
         return d2l.fit_collectives(pairs)
     if isinstance(pairs, dict):
@@ -579,40 +663,50 @@ def fit_pairs(pairs, small='Ring/LL', large='Ring/Simple'):
         rows.append(r)
     out = pd.DataFrame(rows).set_index(['algo', 'proto'])
     out.attrs.update(n_proc=ab.attrs.get('n_proc', 1),
-                     g=int(pairs.g.iloc[0]))
+                     g=int(pairs.g.iloc[0]), off=sorted(_tuner_off(pairs)))
     if small in kept and large in kept:
         phi = d2l.nccl_busbw_factor('all_reduce', out.attrs['g'])
         a, b = (out.loc[tuple(n.split('/'))] for n in (small, large))
-        pred = (b.alpha - a.alpha) / (phi * (1 / a.beta - 1 / b.beta))
+        why = (f"{small}'s fitted bandwidth is not below {large}'s"
+               if a.beta >= b.beta else
+               f"{small}'s fitted alpha is not below {large}'s"
+               if a.alpha >= b.alpha else '')
+        pred = float('nan') if why else (b.alpha - a.alpha) / (
+            phi * (1 / a.beta - 1 / b.beta))
         s, t1 = kept[small]
         out.attrs['crossover'] = dict(
-            small=small, large=large,
+            small=small, large=large, why=why,
             measured=_crossing(s, t1, kept[large][1]), predicted=float(pred))
     return out
 
 #@save
 def show_pair_fits(fits):
-    """At most seven rows: algorithm, protocol, alpha (us), beta (GB/s)
-    with its 95% interval; one line with the measured and the predicted
-    crossover. For a pending log its status line."""
+    """At most seven rows: algorithm, protocol ('(off)' when NCCL's tuner
+    disables the pair), alpha (us), beta (GB/s) and beta's 95% interval;
+    one line with the measured and the predicted crossover. For a pending
+    log its status line."""
     if fits.empty:
         print(fits.attrs.get('status') or fits.attrs.get('label', 'no fits'))
         return
+    off = set(fits.attrs.get('off', []))
     ci = lambda lo, hi: ('-' if np.isnan(lo) else
                          f'{lo / 1e9:.2f}-{hi / 1e9:.2f}')
     d2l.show_table(pd.DataFrame({
         'algo': [i[0] for i in fits.index],
-        'proto': [i[1] for i in fits.index],
+        'proto': [i[1] + (' (off)' if '/'.join(i) in off else '')
+                  for i in fits.index],
         'alpha (us)': fits.alpha.to_numpy() * 1e6,
         'beta (GB/s)': fits.beta.to_numpy() / 1e9,
-        '95% interval': [ci(lo, hi) for lo, hi in zip(fits.beta_lo,
-                                                      fits.beta_hi)]}),
+        'beta 95%': [ci(lo, hi) for lo, hi in zip(fits.beta_lo,
+                                                  fits.beta_hi)]}),
         digits={'alpha (us)': 0, 'beta (GB/s)': 2}, max_rows=7, width=79)
     x = fits.attrs.get('crossover')
     if x:
         size = lambda b: _approx_bytes(b) if np.isfinite(b) else 'none'
-        print(f"{x['large']} overtakes {x['small']} at {size(x['measured'])}"
-              f" measured, {size(x['predicted'])} predicted by the fits")
+        _say(f"{x['large']} overtakes {x['small']} at {size(x['measured'])} "
+             + (f"measured; no crossover predicted: {x['why']}" if x['why']
+                else f"measured, {size(x['predicted'])} predicted by the "
+                'fits'))
 
 #@save
 def _approx_bytes(b):
@@ -632,60 +726,147 @@ def _proc_times(pairs, name):
     return pairs['size'].to_numpy()[hit], t
 
 #@save
-def tuner_regret(pairs, k=3, floor=0.02):
-    """Per size: NCCL's default time, the best kept forced pair and its
-    time, the excess (default / best - 1) and that excess in noise units
-    (the larger median absolute deviation between the regeneration's
-    processes of the two times, at least floor of the time). Prints the
-    largest excess and how many sizes are within k noise units."""
-    kept = _kept(pairs)
-    names = [n for n in kept if n != 'default']
-    if 'default' not in kept or not names:
-        print(pairs.attrs.get('label', 'no default or no forced pair'))
-        return pd.DataFrame()
-    s, t_def = _proc_times(pairs, 'default')
-    forced = {n: _proc_times(pairs, n)[1] for n in names}
-    med = lambda t: np.median(t, axis=0)
-    mad = lambda t: np.median(np.abs(t - med(t)), axis=0)
-    best = [min(names, key=lambda n: med(forced[n])[i]) for i in range(len(s))]
-    t_best = np.array([med(forced[b])[i] for i, b in enumerate(best)])
-    noise = np.maximum.reduce([mad(t_def), np.array(
-        [mad(forced[b])[i] for i, b in enumerate(best)]), floor * t_best])
-    out = pd.DataFrame(dict(size=s, default_s=med(t_def), best=best,
-                            best_s=t_best))
-    out['excess'] = out.default_s / out.best_s - 1
-    out['units'] = (out.default_s - out.best_s) / noise
-    i = int(out.units.idxmax())
-    print(f'largest excess of the default: {out.excess[i]:.0%} '
-          f'({out.units[i]:.1f} units) at '
-          f'{d2l._hw_bytes(int(out["size"][i]))} over {out.best[i]}')
-    n_proc = len(forced[names[0]])
-    print(f'within {k} units at {int((out.units <= k).sum())} of '
-          f'{len(out)} sizes (unit: MAD of {n_proc} run'
-          f'{"s" if n_proc > 1 else ""}, at least {floor:.0%})')
-    return out
+def _med_mad(pairs, name):
+    """(sizes, median time in s, median absolute deviation in s) of one
+    pair over the regeneration's processes (MAD 0 with one process)."""
+    s, t = _proc_times(pairs, name)
+    med = np.median(t, axis=0)
+    return s, med, np.median(np.abs(t - med), axis=0)
 
 #@save
-def coll_symptoms(log, ab, small=2**12, large=2**28):
+def protocol_order(pairs, small='Ring/LL', large='Ring/Simple', k=3,
+                   floor=0.02):
+    """Claim C2's first half: small is faster at the smallest size, large
+    at the largest. One line per size with both times and the gap in
+    noise units (the larger MAD of the two times over the processes, at
+    least floor of the faster time); returns the two gaps in noise units,
+    positive when the expected pair is faster. A gap within k units is
+    called within noise."""
+    if small not in _kept(pairs) or large not in _kept(pairs):
+        print(f'{small} or {large} dropped: no protocol order')
+        return np.array([])
+    stats, units = {n: _med_mad(pairs, n) for n in (small, large)}, []
+    for i, fast, slow in ((0, small, large), (-1, large, small)):
+        (s, t_f, m_f), (_, t_s, m_s) = stats[fast], stats[slow]
+        noise = max(m_f[i], m_s[i], floor * min(t_f[i], t_s[i]))
+        units.append((t_s[i] - t_f[i]) / noise)
+        verdict = (f'{fast} faster' if units[-1] > k else
+                   f'{slow} faster' if units[-1] < -k else 'within noise')
+        _say(f'{d2l._hw_bytes(int(s[i]))}: {fast} {_fmt_s(t_f[i])}, {slow} '
+             f'{_fmt_s(t_s[i])}: {verdict} ({units[-1]:+.1f} noise units)')
+    return np.array(units)
+
+#@save
+def _regret_table(pairs, floor=0.02):
+    """Per size at which NCCL reported its choice ('own', in the default's
+    `used` column): the default's time, the forced copy of its own choice,
+    the best other forced pair the tuner enables and its time; 'cost', the
+    forced copy over the default minus 1 (what forcing changes besides the
+    pair); 'gain', the time the best pair saves against the forced own
+    choice (both forced: the comparison is not confounded by forcing);
+    'units', that gap over the noise unit, the largest of the MADs of the
+    two forced times, the cost of forcing and floor of the time."""
+    off = _tuner_off(pairs)
+    on = [n for n in _kept(pairs) if n != 'default' and n not in off]
+    used = pairs[pairs.algo == 'default'].set_index('size')['used']
+    s, t_def, _ = _med_mad(pairs, 'default')
+    stats = {n: _med_mad(pairs, n)[1:] for n in on}
+    rows = []
+    for i, size in enumerate(s):
+        own = used.get(size, '')
+        rivals = [n for n in on if n != own]
+        if own not in stats or not rivals:
+            continue
+        best = min(rivals, key=lambda n: stats[n][0][i])
+        (t_own, m_own), (t_best, m_best) = (
+            (stats[n][0][i], stats[n][1][i]) for n in (own, best))
+        noise = max(m_own, m_best, math.fabs(t_def[i] - t_own),
+                    floor * t_best)
+        rows.append(dict(size=int(size), own=own, default_s=t_def[i],
+                         own_s=t_own, best=best, best_s=t_best,
+                         cost=t_own / t_def[i] - 1, gain=1 - t_best / t_own,
+                         units=(t_own - t_best) / noise))
+    return pd.DataFrame(rows)
+
+#@save
+def _tuner_switch(pairs, small, large):
+    """Bytes at which NCCL's own table (attrs['tuner'], latency in us,
+    algorithm bandwidth in GB/s) switches from small to large; NaN when
+    the table lacks either or predicts no switch."""
+    table = pairs.attrs.get('tuner') or {}
+    if small not in table or large not in table:
+        return float('nan')
+    (lat_s, bw_s), (lat_l, bw_l) = table[small], table[large]
+    if min(bw_s, bw_l) <= 0 or bw_s >= bw_l or lat_s >= lat_l:
+        return float('nan')
+    return (lat_l - lat_s) * 1e3 / (1 / bw_s - 1 / bw_l)  # GB/s = 1e3 B/us
+
+#@save
+def tuner_regret(pairs, k=3, floor=0.02):
+    """Is NCCL's choice right? Claim C3, tested forced against forced
+    (_regret_table): the cost of forcing NCCL's own choice; the largest
+    gain of another enabled pair over it, in noise units; the number of
+    sizes within k units; the size at which the tuner's table switches
+    between its small- and large-message choices against where the forced
+    pairs cross. Returns the table."""
+    r = _regret_table(pairs, floor)
+    if r.empty:
+        print(pairs.attrs.get('label', "no NCCL choice or no forced pair"))
+        return r
+    c = r.cost.abs()
+    _say(f"cost of forcing NCCL's own choice: median {c.median():.0%}, up to "
+         f"{c.max():.0%} at {d2l._hw_bytes(int(r['size'][c.idxmax()]))}")
+    x = r.loc[r.units.idxmax()]
+    if x.units > k:
+        _say(f'largest gain over NCCL\'s choice, both forced: {x.best} '
+             f'{x.gain:.0%} faster than {x.own} at '
+             f"{d2l._hw_bytes(int(x['size']))} ({x.units:.1f} noise units)")
+    else:
+        _say(f"no forced pair beats NCCL's choice by more than {k} noise "
+             'units')
+    off = sorted(_tuner_off(pairs) & set(_kept(pairs)))
+    n_proc = len(pairs.attrs.get('proc_us') or [0])
+    _say(f'within {k} noise units at {int((r.units <= k).sum())} of '
+         f'{len(r)} sizes (unit: the largest of the MAD of {n_proc} run'
+         f"{'s' if n_proc > 1 else ''}, the cost of forcing and {floor:.0%})"
+         + (f"; {', '.join(off)} left out: off in NCCL's tuner" if off
+            else ''))
+    small, large = r.own.iloc[0], r.own.iloc[-1]
+    if small != large:
+        kept = _kept(pairs)
+        cross = _crossing(kept[small][0], kept[small][1], kept[large][1])
+        _say(f"NCCL's table switches {small} -> {large} at "
+             f'{_approx_bytes(_tuner_switch(pairs, small, large))}; '
+             f'forced, they cross at {_approx_bytes(cross)}')
+    return r
+
+#@save
+def coll_symptoms(log, ab, k=3):
     """The opening's two lines from the committed box-coll result (log:
     hw_box_log('box-coll')) and sec_lm_server_paths' all-reduce fit ab
-    (box_alpha_beta()): a small all-reduce against that alpha-beta line;
-    the default's bus bandwidth at a large size against the best forced
-    pair's."""
+    (box_alpha_beta()): the size at which a forced pair beats NCCL's own
+    choice by the most noise units (_regret_table), with both times; the
+    bus bandwidth NCCL's tuner assumes for its large-message choice
+    against the fitted one."""
     pairs = log.get('pairs') if isinstance(log, dict) else log
     if pairs is None or pairs.empty:
         print(getattr(pairs, 'attrs', {}).get('label', 'box-coll pending'))
         return
-    g = int(pairs.g.iloc[0])
-    phi = d2l.nccl_busbw_factor('all_reduce', g)
-    t = pair_time(pairs, 'default', small)
-    line = ab['alpha'] + phi * small / ab['beta']
-    print(f'{d2l._hw_bytes(small)} all-reduce on {g} GPUs: {t * 1e6:.0f} us '
-          f'measured, {line * 1e6:.0f} us on the alpha-beta line')
-    busbw = lambda n: phi * large / pair_time(pairs, n, large) / 1e9
-    best = max((n for n in _kept(pairs) if n != 'default'), key=busbw)
-    print(f"{d2l._hw_bytes(large)}: default {busbw('default'):.2f} GB/s "
-          f'busbw, best forced pair {best} {busbw(best):.2f} GB/s')
+    g, r = int(pairs.g.iloc[0]), _regret_table(pairs)
+    x = None if r.empty else r.loc[r.units.idxmax()]
+    if x is not None and x.units > k:
+        _say(f"{d2l._hw_bytes(int(x['size']))} on {g} GPUs: NCCL's choice "
+             f'{x.own} {_fmt_s(x.default_s)}, forced {x.best} '
+             f'{_fmt_s(x.best_s)}')
+    else:
+        print(f"all-reduce on {g} GPUs: NCCL's choice is within noise of "
+              'every forced pair')
+    table, used = pairs.attrs.get('tuner') or {}, r.own.iloc[-1] if len(
+        r) else ''
+    if table.get(used, (0, 0))[1] > 0:
+        phi = d2l.nccl_busbw_factor('all_reduce', g)
+        print(f"NCCL's model of {used}: {phi * table[used][1]:.0f} GB/s "
+              f"busbw; the measured line: {ab['beta'] / 1e9:.1f} GB/s")
 ```
 
 ## The Hierarchical Benchmark
@@ -844,10 +1025,11 @@ _HIER_ROWS = ('flat gloo', 'flat NCCL', 'hierarchical', 'intra stage',
 
 #@save
 def _hier_predict(r):
-    """(predicted seconds per row of r, intra/inter bandwidth ratio) from
-    the committed fits of sec_lm_server_paths (NCCL on the intra pair's
-    relation and on all four cards) and sec_lm_networks (gloo over loopback
-    on 2 and 4 ranks); None while any of them is absent."""
+    """{'pred': predicted seconds per row of r, 'ratio': the 2-rank
+    intra/inter bandwidth ratio of the fits, 'gloo4', 'shm': the inputs of
+    the C4 gate} from the committed fits of sec_lm_server_paths (NCCL on
+    the intra pair's relation and on all four cards) and sec_lm_networks
+    (gloo over loopback on 2 and 4 ranks); None while any is absent."""
     try:
         pair = d2l.box_alpha_beta(g=2, path=r.attrs['intra_relation'])
         four = d2l.box_alpha_beta(g=4)
@@ -867,20 +1049,47 @@ def _hier_predict(r):
         'intra stage': lambda S: ring(S, 2, a_in, b_in),
         'inter stage': lambda S: ring(S / 2, 2, g2.alpha_step, g2.beta)}
     pred = np.array([model[v](s) for v, s in zip(r.variant, r['size'])])
-    return pred, b_in / g2.beta
+    return dict(pred=pred, ratio=b_in / g2.beta, gloo4=g4, shm=four)
+
+#@save
+def _c4_gate(gloo4, shm):
+    """The gate of claim C4, fixed before the box-net regeneration (ch22
+    spec log, "The 22.6 gate rule"): C4 stands, gloo over loopback being
+    the emulated slow network, iff the whole 95% interval of gloo's
+    4-rank beta lies below half the beta of NCCL's shared-memory path on
+    the four cards; with one process (no interval) iff gloo's beta lies
+    below a third. (stands, the line stating inputs, ratios and branch)."""
+    beta, hi, b_shm = gloo4.beta, gloo4.beta_hi, shm['beta']
+    if np.isfinite(hi):
+        stands = hi < b_shm / 2
+        ci, rule = f' (95% {gloo4.beta_lo / 1e9:.2f}-{hi / 1e9:.2f})', (
+            "gloo's interval is below half" if stands else
+            "gloo's interval is not below half")
+    else:
+        stands, ci = beta < b_shm / 3, ' (one run)'
+        rule = ('one run, gloo is below a third' if stands else
+                'one run, gloo is not below a third')
+    branch = ('C4 stands' if stands else
+              'C4 takes its fallback (gloo is slower by latency only)')
+    return stands, (
+        f"C4 gate: NCCL's shared memory {b_shm / 1e9:.2f} GB/s busbw, gloo "
+        f'on 4 ranks {beta / 1e9:.2f}{ci}: {b_shm / beta:.1f}x the '
+        f"bandwidth, 1/{gloo4.alpha / shm['alpha']:.0f} the latency; {rule}, "
+        f'so {branch}')
 
 #@save
 def _show_hier(r, sizes=(2**24, 2**28)):
     """At most five rows: each variant's time (ms) at two sizes, measured
     and predicted by the closed forms; one line with the hierarchical gain
     over the flat gloo baseline, measured and predicted; one with the
-    intra/inter bandwidth ratio, measured from the two stages alone and
-    from the fits."""
+    intra/inter bandwidth ratio of the 2-rank stages, measured and from
+    the fits; the C4 gate's line (_c4_gate)."""
     if r.empty:
         print(r.attrs.get('label', 'pending'))
         return
-    p = None if 'box-coll' in d2l._hw_regenerating() else _hier_predict(r)
-    t = r.assign(model=p[0] if p else np.nan)
+    regen = 'box-coll' in d2l._hw_regenerating()
+    p = None if regen else _hier_predict(r)
+    t = r.assign(model=p['pred'] if p else np.nan)
     cols = {}
     for s in sizes:
         x = t[t['size'] == s].set_index('variant').reindex(list(_HIER_ROWS))
@@ -890,17 +1099,17 @@ def _show_hier(r, sizes=(2**24, 2**28)):
     d2l.show_table(pd.DataFrame(cols, index=list(_HIER_ROWS)), digits=1,
                    width=79)
     big = t[t['size'] == max(sizes)].set_index('variant')
-    text = (f"at {d2l._hw_bytes(max(sizes))}: hierarchical "
-            f"{big.us['flat gloo'] / big.us['hierarchical']:.1f}x faster "
-            f'than flat gloo')
-    if p:
-        text += (f" ({big.model['flat gloo'] / big.model['hierarchical']:.1f}"
-                 f'x by the model)')
-    print(text)
+    gain = lambda c: big[c]['flat gloo'] / big[c]['hierarchical']
+    _say(f'at {d2l._hw_bytes(max(sizes))}: hierarchical {gain("us"):.1f}x '
+         'faster than flat gloo' + (
+             f' ({gain("model"):.1f}x by the model)' if p else '' if regen
+             else ' (no model: the box-p2p and box-net fits are absent)'))
     # a 2-rank ring moves S per rank in the intra stage, S / 2 in the inter
     ratio = 2 * big.us['inter stage'] / big.us['intra stage']
-    print(f'intra/inter bandwidth: {ratio:.1f}x measured from the stages'
-          + (f', {p[1]:.1f}x from the fits' if p else ''))
+    print(f'2-rank stages: intra/inter bandwidth {ratio:.1f}x measured'
+          + (f", {p['ratio']:.1f}x from the fits" if p else ''))
+    if p:
+        _say(_c4_gate(p['gloo4'], p['shm'])[1])
 
 #@save
 def _check_line(rec, where):
@@ -946,12 +1155,12 @@ def hier_vs_flat(config='box'):
     if 'box-coll' in d2l._hw_regenerating() or r.empty:
         return r
     p = _hier_predict(r)
-    r = r.assign(model_us=p[0] * 1e6 if p else np.nan)
+    r = r.assign(model_us=p['pred'] * 1e6 if p else np.nan)
     if four:
         print(_check_line(checks[0] if checks else None, 'live, 4 GPUs'))
     else:
-        print('needs four GPUs: committed run shown; the check runs on the '
-              'CPU (gloo)')
+        _say('needs four GPUs: committed run shown; the check runs on 4 CPU '
+             'processes, gloo over loopback (not a datacenter network)')
         with d2l._quiet():
             _, check, _ = _hier_run('cpu', [], 1, 0, spec['check_bytes'],
                                     spec['intra'], spec['inter'],
@@ -965,7 +1174,12 @@ def hier_vs_flat(config='box'):
 `regen_coll` is the regeneration of box-coll: NCCL's INFO digest, the forced
 pairs and the hierarchical benchmark, on all four cards of a quiet box
 (`tools/hw_regen.py box-coll` under `gpu_run.sh 0,1,2,3`, three processes).
-`regen_coll_finish` keeps every process's times with the combined tables
+Before the processes are combined, `regen_coll_prepare` makes their
+forced-pair tables agree: a pair dropped in any process is dropped in all
+(with the reason and in how many processes), and the pair NCCL reported at
+a size is the one most processes saw, so that one flaky pair does not abort
+the combination. `regen_coll_finish` keeps every process's times with the
+combined tables
 (`attrs['proc_us']`, from which `fit_collectives` and `tuner_regret` draw
 their noise) and writes `alpha_beta.json`: one record per kept pair in the
 schema of :numref:`sec_lm_server_paths` with `algo` and `proto` filled
@@ -1017,6 +1231,34 @@ def _coll_records(fits, info):
             n_half_bytes=float(r.n_half), resid_rel=float(r.resid_rel),
             n_points=int(r.n_points)))
     return recs
+
+#@save
+def regen_coll_prepare(folder, n):
+    """Before tools/hw_regen.py combines processes proc0..proc{n-1}: a pair
+    dropped in any process is dropped in every one (times NaN, status and
+    attrs['dropped'] '<reason> in k of n runs' when k < n), and each size's
+    `used` is the value most processes reported."""
+    paths = [os.path.join(folder, f'proc{i}', 'pairs.json.gz')
+             for i in range(n)]
+    parts = [d2l._hw_read(p) for p in paths]
+    why = collections.defaultdict(list)
+    for t, _ in parts:
+        for name, reason in t.attrs.get('dropped', {}).items():
+            why[name].append(reason)
+    dropped = {name: r[0] + (f' in {len(r)} of {n} runs' if len(r) < n
+                             else '') for name, r in why.items()}
+    keys = ['size', 'op', 'g', 'path', 'algo', 'proto', 'env', 'status',
+            'used']
+    used = [collections.Counter(u).most_common(1)[0][0]
+            for u in zip(*(t.used.tolist() for t, _ in parts))]
+    for (t, meta), path in zip(parts, paths):
+        t['used'] = used
+        for name, reason in dropped.items():
+            hit = t.algo == name
+            t.loc[hit, [c for c in t.columns if c not in keys]] = np.nan
+            t.loc[hit, ['status', 'used']] = [reason, '']
+        t.attrs['dropped'] = dropped
+        d2l._hw_write(path, t, meta)
 
 #@save
 def regen_coll_finish(folder):

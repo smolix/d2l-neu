@@ -13,7 +13,10 @@ notebooks), sets `D2L_RERUN=<name>` and calls the name's driver from
 configuration) in `--processes` separate processes, one after the other
 (the microbenchmark contract: the headline is the median of the
 per-process medians). Each process writes its entries under
-`../data/lm/rerun/ch22/<next key>/proc<i>/`; the script then combines them
+`../data/lm/rerun/ch22/<next key>/proc<i>/`; the script runs the driver's
+`<driver>_prepare(folder, n)` if the library defines one (entries that must
+agree between processes before they can be combined, such as box-coll's
+dropped pairs), then combines them
 (`d2l._hw_combine`) into `<next key>/<entry>.json.gz`, checks that no
 measurement saw a foreign process on its cards, runs the driver's
 `<driver>_finish(folder)` if the library defines one (files derived from
@@ -172,6 +175,9 @@ def main():
             print(f'{a.name}: process {i + 1} failed (exit {r.returncode})',
                   file=sys.stderr)
             return 1
+    prepare = getattr(d2l, f'{driver}_prepare', None)
+    if prepare is not None:  # make the processes' entries combinable
+        prepare(folder, a.processes)
     contended, entries = combine(d2l, folder, a.processes)
     if contended:
         print(f'{a.name}: {contended} of {len(entries)} entries saw a foreign '

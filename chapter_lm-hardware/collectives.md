@@ -37,13 +37,15 @@ when the section is written.
 <!-- Placeholder (prose): opening, from the reader. The reader fitted an
 alpha and a beta to all-reduces in sec_multi_gpu_concise and to every link
 class of this box in sec_lm_server_paths (one line t = alpha + S / beta per
-collective). Two symptoms on the box (the cell below prints both from the
-committed box-coll run, which the tuner section computes further down):
-a 4 KiB all-reduce on the four cards against the 22.5 line; the bus
-bandwidth of NCCL's default at 256 MiB against the best single forced
-(algorithm, protocol) pair. Quote both numbers as printed and say which way
-each one points (the line is a fit of NCCL's default, so a small message
-off the line means the default changes how it sends small messages). The
+collective), and that line fits NCCL's default well. Two symptoms on the
+box (the cell below prints both from the committed box-coll run, which the
+tuner section computes further down): at one mid-size message, forcing
+another (algorithm, protocol) pair beats NCCL's own choice (quote the size,
+both pairs and both times as printed; if the line says NCCL is within
+noise everywhere, say so and drop this symptom); and NCCL's own model of
+its large-message pair assumes a bus bandwidth about ten times what the
+box measures (quote both numbers: the tuner's model is a table of
+latencies and bandwidths, not a measurement). The
 question: what the library does between the ring and the tree, which
 protocol carries each message, and whether its choice is right. Idea (plan):
 a collective's time is an algorithm's step count times a protocol's latency
@@ -63,7 +65,11 @@ from d2l import torch as d2l
 
 ```{.python .input #collectives-extras}
 %%tab pytorch
+import collections
+import heapq
+import itertools
 import pandas as pd
+from torch import distributed as dist
 ```
 
 ```{.python .input #collectives-opening}
@@ -94,8 +100,10 @@ receives the sum once, bandwidth term S / beta, a factor 2 (G - 1) / G
 below the ring's, so its busbw can approach twice the link rate. The
 cross-node all-to-all: a share g / G of each GPU's bytes stays in the node,
 the rest crosses its NIC; PXN (NCCL 2.12 post) first moves a byte over the
-node's links to the GPU on the destination's rail. One sentence that these
-are the time functions chapter 23 composes. -->
+node's links to the GPU on the destination's rail (its time function,
+d2l.a2a_inter_node_time, is in the library: this section computes nothing
+with it). One sentence that these are the time functions chapter 23
+composes. -->
 
 <!-- Figure: fig_lm_hw_ring_tree (generator ring-tree): a ring of 8 ranks
 against NCCL's double binary tree on 8 ranks (data halves; each rank a leaf
@@ -120,31 +128,6 @@ def tree_allreduce_time(S, n, g, a_in, a_out, beta, pipelined=True):  #@save
     if pipelined:
         return 2 * latency + 2 * S / beta
     return 2 * (latency + (g - 1 + up) * S / beta)
-
-def hier_allreduce_time(S, n, g, a_in, b_in, a_out, b_out, rails=1):  #@save
-    """Seconds of a hierarchical all-reduce on n nodes of g GPUs:
-    reduce-scatter in the node, a ring all-reduce of each GPU's shard of
-    S / g across the nodes, all-gather in the node. The g shards leave a
-    node on its `rails` NICs (rails = g: one per GPU), each at b_out
-    min(rails, g) / g."""
-    intra = 2 * (g - 1) * (a_in + S / (g * b_in))  # both intra stages
-    b_shard = b_out * min(rails, g) / g
-    return intra + ring_allreduce_time(S / g, n, a_out, b_shard)
-
-def a2a_inter_node_time(S, n, g, a_out, b_out, a_in, b_in):  #@save
-    """Seconds of an all-to-all of S bytes per GPU across n nodes of g
-    GPUs, one NIC per GPU (PXN routes each byte to the GPU on its
-    destination's rail first): the share g / G stays in the node, the rest
-    crosses the GPU's own NIC, and the two run at the same time."""
-    G = n * g
-    inside = (g - 1) * a_in + S * (g - 1) / (G * b_in)
-    across = (n - 1) * a_out + S * (G - g) / (G * b_out)
-    return max(inside, across)
-
-def sharp_allreduce_time(S, alpha, beta):  #@save
-    """Seconds of an in-network all-reduce (SHARP, NVLS): each GPU sends S
-    once to the switches and receives the reduced S once."""
-    return alpha + S / beta
 ```
 
 ### Ring against Tree
@@ -156,34 +139,81 @@ per-rank bandwidth beta and per-step latency alpha, T_ring = 2 (G - 1) alpha
 difference 2 alpha (G - 1 - d) - 2 S / (G beta) changes sign at S* = G alpha
 beta (G - 1 - d): below it the tree's log-depth latency wins, above it the
 ring's slightly smaller bandwidth term. The smallest numeric case (plan):
-G = 16 ranks, alpha = 10 us, beta = 25 GB/s (a 200 Gb/s NIC), d = 4 gives
-S* = 44 MB, the first line below. D2: the hierarchical all-reduce at 1 GB
-on 2 nodes of 8 against a flat ring that leaves each node through one NIC
-(every step as slow as the NIC), with NVLink 3's per-direction rate inside
-the node (links table, quoted) and one NIC per GPU: quote the speedup
-printed; as the intra/inter ratio and the node count grow it tends to g
-(third line). -->
+G = 16 ranks, alpha = 10 us, beta = 25 GB/s (a 200 Gb/s NIC). With one rank
+per node the tree is binary, d = log2 16 = 4, and S* = 44 MB (first line).
+On two nodes of eight (the plan's "two nodes") NCCL's tree runs as a chain
+of the eight GPUs inside each node plus one hop across, d = 7 + 1 = 8, and
+S* drops to 28 MB (second line; the same alpha inside and across the
+nodes, an idealization). -->
 
 ```{.python .input #collectives-closed-forms}
 %%tab pytorch
-G, alpha, beta, d = 16, 10e-6, 25e9, 4  # ranks, s, bytes/s, d = log2 G
-S_star = G * alpha * beta * (G - 1 - d)
-t = ring_allreduce_time(S_star, G, alpha, beta)
-assert math.isclose(t, tree_allreduce_time(S_star, G, 1, alpha, alpha, beta))
-print(f'S* = {S_star / 1e6:.0f} MB (ring = tree = {t * 1e3:.2f} ms there)')
+G, alpha, beta = 16, 10e-6, 25e9  # ranks, s, bytes/s (a 200 Gb/s NIC)
+for n_nodes, g in ((16, 1), (2, 8)):  # one rank per node; two nodes of 8
+    d = (g - 1) + math.ceil(math.log2(n_nodes))  # hops, leaf to root
+    S_star = G * alpha * beta * (G - 1 - d)  # D1
+    t = ring_allreduce_time(S_star, G, alpha, beta)
+    assert math.isclose(
+        t, tree_allreduce_time(S_star, n_nodes, g, alpha, alpha, beta))
+    print(f'{n_nodes} x {g}: d = {d}, S* = {S_star / 1e6:.0f} MB (ring = '
+          f'tree = {t * 1e3:.2f} ms there)')
+```
+
+<!-- Placeholder (prose): D2, the hierarchical all-reduce and in-network
+reduction as time functions. The hierarchical one replaces the flat ring's
+(G - 1) steps at NIC bandwidth by (g - 1) steps at NVLink bandwidth plus
+(n - 1) steps at NIC bandwidth on a shard of S / g. At 1 GB on 2 nodes of
+8, against a flat ring that leaves each node through one NIC (every step
+as slow as the NIC), with NVLink 3's per-direction rate inside the node
+(links table, quoted): quote both hierarchical times. Most of the gain is
+the rails: with one NIC per GPU the eight shards leave the node in
+parallel (first speedup); squeezed through one NIC they do not (second).
+Without latency and with NVLink much faster than the NIC the speedup is
+(G - 1) / (n - 1): 15 on two nodes, falling toward g as the node count
+grows (third line; derive it in one line). In-network reduction: each GPU
+sends S once and receives the sum once, so the bandwidth term is S / beta,
+a factor 2 (G - 1) / G below the ring's, and the bus bandwidth (the
+nccl-tests convention) exceeds the link rate (fourth line). -->
+
+```{.python .input #collectives-hier-forms-def}
+%%tab pytorch
+def hier_allreduce_time(S, n, g, a_in, b_in, a_out, b_out, rails=1):  #@save
+    """Seconds of a hierarchical all-reduce on n nodes of g GPUs:
+    reduce-scatter in the node, a ring all-reduce of each GPU's shard of
+    S / g across the nodes, all-gather in the node. The g shards leave a
+    node on its `rails` NICs (rails = g: one per GPU), each at b_out
+    min(rails, g) / g."""
+    intra = 2 * (g - 1) * (a_in + S / (g * b_in))  # both intra stages
+    b_shard = b_out * min(rails, g) / g
+    return intra + ring_allreduce_time(S / g, n, a_out, b_shard)
+
+def sharp_allreduce_time(S, alpha, beta):  #@save
+    """Seconds of an in-network all-reduce (SHARP, NVLS): each GPU sends S
+    once to the switches and receives the reduced S once."""
+    return alpha + S / beta
+```
+
+```{.python .input #collectives-hier-forms}
+%%tab pytorch
 n_nodes, g, S = 2, 8, 1e9  # two nodes of eight GPUs, one 1 GB all-reduce
 b_in = d2l.links_table(show=False).loc['NVLink 3 (A100 SXM)',
                                        'gbs_per_dir'] * 1e9
-flat = ring_allreduce_time(S, n_nodes * g, alpha, beta)  # one NIC per node
-hier = hier_allreduce_time(S, n_nodes, g, alpha, b_in, alpha, beta, rails=g)
-print(f'1 GB on {n_nodes} x {g}: flat ring {flat * 1e3:.0f} ms, '
-      f'hierarchical {hier * 1e3:.0f} ms, speedup {flat / hier:.1f}x')
-big = 10**4  # b_in / b_out and the number of nodes, both large
-limit = (ring_allreduce_time(S, big * g, alpha, beta) /
-         hier_allreduce_time(S, big, g, alpha, big * beta, alpha, beta,
-                             rails=g))
-print(f'speedup with b_in / b_out = {big:,} on {big:,} nodes: '
-      f'{limit:.2f} (g = {g})')
+flat = ring_allreduce_time(S, n_nodes * g, alpha, beta)  # through one NIC
+hier = {rails: hier_allreduce_time(S, n_nodes, g, alpha, b_in, alpha, beta,
+                                   rails) for rails in (g, 1)}
+print(f'1 GB on {n_nodes} x {g}: flat ring through one NIC per node '
+      f'{flat * 1e3:.0f} ms')
+print(f'hierarchical: {hier[g] * 1e3:.0f} ms on {g} NICs per node '
+      f'({flat / hier[g]:.1f}x), {hier[1] * 1e3:.0f} ms on one '
+      f'({flat / hier[1]:.1f}x)')
+limit = {n: ring_allreduce_time(S, n * g, 0, beta) / hier_allreduce_time(
+    S, n, g, 0, math.inf, 0, beta, rails=g) for n in (2, 8, 64)}
+print(f"alpha = 0, b_in = inf, on {', '.join(map(str, limit))} nodes: "
+      + ', '.join(f'{x:.1f}x' for x in limit.values()) + f' (g = {g})')
+t_net = sharp_allreduce_time(S, alpha, beta)
+busbw = d2l.nccl_busbw_factor('all_reduce', n_nodes * g) * S / t_net
+print(f'in-network: {t_net * 1e3:.0f} ms (flat ring {flat * 1e3:.0f} ms), '
+      f'busbw {busbw / 1e9:.0f} GB/s on {beta / 1e9:.0f} GB/s links')
 ```
 
 <!-- Placeholder (prose): NCCL's two trees. In the first tree the odd ranks
@@ -219,15 +249,21 @@ beta bytes/s (full duplex, one switch); a message passes through both
 ports at once (cut-through) and arrives alpha later; a port serves its
 waiting messages in chunk order, as a channel processes its chunks in
 order. The ring moves one segment per step, as the closed form counts it;
-the tree cuts each half of S into 1,000 chunks. Then claim C1 as the table
-below reads it: the ring is exact; the tree matches 2 d alpha + 2 S / beta
-in the bandwidth limit (100 S*, within 1%), and where latency and
-bandwidth are of similar size (G = 4 at S*, G = 16 at S* / 100) the
-simulated tree is up to about a sixth faster than the closed form, never
-slower: while one tree's first chunks climb toward its root, each rank's
-ports already carry the other tree's chunks, so part of the latency hides
-behind the transfer. The closed form adds the two terms and is an upper
-bound; quote the largest deficit as printed. -->
+the tree cuts each half of S into 1,000 chunks. The sizes are in units of
+the tree's own balance point S_b = d alpha beta, where its latency term
+2 d alpha equals its bandwidth term 2 S / beta (S*, the ring/tree
+crossover, grows as G squared and is no reference for the tree). Then claim
+C1 as the table below reads it (ruling in the spec log): the ring is
+exact; the tree is within 1% of 2 d alpha + 2 S / beta far from S_b on
+both sides (0.01 and 100 S_b), and at S_b the simulated tree is faster
+than the closed form by up to about a quarter, never slower: while one
+tree's first chunks climb toward its root, each rank's ports already carry
+the other tree's chunks, so part of the latency hides behind the transfer.
+The closed form adds the two terms and is an upper bound, provided the
+chunks are fine enough that the pipeline's fill (about 2 d S / (2 C beta)
+for C chunks per half) is negligible: with 10 chunks instead of 1,000 the
+simulator runs up to a third above it. Quote the largest deficit as
+printed. -->
 
 ```{.python .input #collectives-simulator-def}
 %%tab pytorch
@@ -238,23 +274,25 @@ def sim_collective(topo, algo, S, chunks):  #@save
     passes both ports at once and arrives topo['alpha'] s later. 'ring':
     2 (G - 1) steps of one S / G segment; 'tree': each half of S, cut into
     chunks, is reduced up one of the two trees and broadcast down it."""
-    import collections, heapq, itertools
     G, alpha, beta = topo['G'], topo['alpha'], topo['beta']
+    Msg = collections.namedtuple('Msg', 'src dst nbytes chunk tag')
     tick, events, free, waiting = itertools.count(), [], {}, {}
     def at(t, *event):
         heapq.heappush(events, (t, next(tick), event))
     def serve(t, port):  # start the next waiting message if the port is idle
         if waiting.get(port) and free.get(port, 0.0) <= t:
             msg = heapq.heappop(waiting[port])[2]
-            free[port] = t + msg[2] / beta
+            free[port] = t + msg.nbytes / beta
             at(free[port], 'port free', port, msg)
             if port[0] == 'out':  # cut-through: the receiver starts too
-                offer(t, ('in', msg[1]), msg)
-    def offer(t, port, msg):  # msg: (src, dst, nbytes, chunk, tag)
-        heapq.heappush(waiting.setdefault(port, []), (msg[3], next(tick), msg))
+                offer(t, ('in', msg.dst), msg)
+    def offer(t, port, msg):  # queue msg at port, ordered by its chunk
+        heapq.heappush(waiting.setdefault(port, []),
+                       (msg.chunk, next(tick), msg))
         serve(t, port)
-    def send(t, src, dst, nbytes, chunk, tag):
-        offer(t, ('out', src), (src, dst, nbytes, chunk, tag))
+    def send(t, *fields):  # fields: src, dst, nbytes, chunk, tag
+        msg = Msg(*fields)
+        offer(t, ('out', msg.src), msg)
     trees = double_binary_tree(G)
     kids = [{r: [c for c in tr if tr[c] == r] for r in tr} for tr in trees]
     def reduced(t, k, r, j):  # chunk j of tree k is summed at rank r
@@ -278,43 +316,42 @@ def sim_collective(topo, algo, S, chunks):  #@save
                 end = max(end, t + alpha)
                 at(t + alpha, 'arrived', None, msg)
             continue
-        src, dst, nbytes, j, tag = msg
-        if algo == 'ring':
-            if tag + 1 < 2 * (G - 1):
-                send(t, dst, (dst + 1) % G, nbytes, j, tag + 1)
-        elif tag[1] == 'down':
-            for c in kids[tag[0]][dst]:
-                send(t, dst, c, nbytes, j, tag)
+        if algo == 'ring':  # tag: the step
+            if msg.tag + 1 < 2 * (G - 1):
+                send(t, msg.dst, (msg.dst + 1) % G, msg.nbytes, msg.chunk,
+                     msg.tag + 1)
+            continue
+        k, way = msg.tag  # tree k, 'up' or 'down'
+        if way == 'down':
+            for c in kids[k][msg.dst]:
+                send(t, msg.dst, c, msg.nbytes, msg.chunk, msg.tag)
         else:
-            got[tag[0], dst, j] += 1
-            if got[tag[0], dst, j] == len(kids[tag[0]][dst]):
-                reduced(t, tag[0], dst, j)
+            got[k, msg.dst, msg.chunk] += 1
+            if got[k, msg.dst, msg.chunk] == len(kids[k][msg.dst]):
+                reduced(t, k, msg.dst, msg.chunk)
     return end
 ```
 
 ```{.python .input #collectives-simulator}
 %%tab pytorch
-factors = (0.01, 1, 100)  # S / S*: far below, at and far above the crossover
+factors = (0.01, 1, 100)  # S / S_b: far below, at and far above balance
+closed_form = {
+    'ring': lambda S, G: ring_allreduce_time(S, G, alpha, beta),
+    'tree': lambda S, G: tree_allreduce_time(S, G, 1, alpha, alpha, beta)}
+cols = [f'{f:g} S_b (%)' for f in factors]
 rows = []
 for G in (4, 8, 16, 32):
     d = math.ceil(math.log2(G))  # depth of NCCL's binary tree
-    S_star, topo = G * alpha * beta * (G - 1 - d), d2l.sim_topology(
-        G, alpha, beta)
-    for algo in ('ring', 'tree'):
-        model = (lambda S: ring_allreduce_time(S, G, alpha, beta)) if (
-            algo == 'ring') else (lambda S: tree_allreduce_time(
-                S, G, 1, alpha, alpha, beta))
-        rows.append(dict(G=G, algo=algo, **{
-            f'{f:g} S* (%)': 100 * (sim_collective(topo, algo, f * S_star,
-                                                   chunks=1000)
-                                    / model(f * S_star) - 1)
-            for f in factors}))
-err = pd.DataFrame(rows)
-cols = [c for c in err.columns if c.endswith('(%)')]
+    S_b, topo = d * alpha * beta, d2l.sim_topology(G, alpha, beta)
+    for algo, model in closed_form.items():
+        rows.append([G, algo] + [100 * (sim_collective(
+            topo, algo, f * S_b, chunks=1000) / model(f * S_b, G) - 1)
+            for f in factors])
+err = pd.DataFrame(rows, columns=['G', 'algo'] + cols)
 err[cols] = err[cols].round(1) + 0.0  # + 0.0: no '-0.0' in the table
 d2l.show_table(err, digits=dict.fromkeys(cols, 1), width=79)
 assert (err[err.algo == 'ring'][cols].abs() < 1e-6).all().all()  # exact
-assert (err[err.algo == 'tree']['100 S* (%)'].abs() < 1).all()  # C1
+assert (err[[cols[0], cols[-1]]].abs() < 1).all().all()  # C1: far from S_b
 assert (err[cols] < 1).all().all()  # the closed form is an upper bound
 ```
 
@@ -330,7 +367,12 @@ fence, lowest latency, half the bandwidth. LL128: 128-byte lines with 120
 bytes of data and an 8-byte flag; near full bandwidth at low latency, but
 it relies on 128-byte stores arriving in order, which NVLink guarantees and
 PCIe does not, so NCCL disables it on PCIe-only nodes (the box's INFO
-digest below shows it disabled or not: quote the line). Small messages take
+digest below shows it disabled: quote the line). Forced with NCCL_PROTO,
+LL128 still runs here and passes a one-iteration result check, but that is
+no evidence that it is safe: the NCCL environment page warns that forcing
+a protocol NCCL has not enabled can corrupt data. The tuner section
+therefore shows it (dashed, "off") and never counts it as a better
+choice. Small messages take
 LL, large ones Simple, and alpha belongs to an (algorithm, protocol) pair,
 which is why the tuner section fits one alpha and beta per pair. -->
 
@@ -355,9 +397,12 @@ refused, sec_lm_server_paths), the number of channels and their ring
 order, the tree of the first channels (inside one node NCCL's tree is a
 chain of the GPUs, so ring and tree differ only in protocol choices here),
 the tuner's model of each (algorithm, protocol) pair it may use (latency
-and bandwidth) and the pairs it disabled, and the pair it chose at each
-size. Quote these lines; they are the box's facts, deterministic for the
-pinned NCCL. A reader on another machine sees their own. -->
+and bandwidth; NCCL's table holds algorithm bandwidths, the digest converts
+them to the bus bandwidth nccl-tests reports, the convention of every fit
+in this chapter, so they compare directly with the measured 2.4 GB/s) and
+the pairs it disabled, and the pair it chose at each size. Quote these
+lines; they are the box's facts, deterministic for the pinned NCCL. A
+reader on another machine sees their own. -->
 
 ```{.python .input #collectives-debug-header}
 %%tab pytorch
@@ -376,25 +421,29 @@ enabled pair and takes the smallest. NCCL_ALGO and NCCL_PROTO force a pair
 (NCCL environment page), which is how to test the tuner: run every pair
 over all sizes and see whether the default is ever slower than the best
 forced pair. The plot: each forced pair's time relative to the default's
-(thin; the default is the bold black line at 1) against message size; a
-pair below 1 beats the tuner at that size; the dotted line marks where
-Ring/Simple overtakes Ring/LL. A pair NCCL refuses, that hangs (each sweep
-has a timeout), returns wrong results, or that NCCL quietly replaces (its
-INFO lines report another pair) is dropped from the plot and the fits; the
-printed lines name it and why: quote them. Claim C2, first half: LL wins at
-the smallest sizes and Simple at the largest (asserted). Inside one node
-the tree is a chain, so ring and tree differ little here; the ring/tree
+(thin; the default is the bold black line at 1) against message size; the
+dotted line marks where Ring/Simple overtakes Ring/LL; the LL128 pairs are
+dashed and labelled "off" (NCCL's tuner disables them on this node,
+Protocols). Forcing changes more than the pair: even the forced copy of
+the pair NCCL itself chose sits off 1 at some sizes (the tuner verdict
+below measures this "cost of forcing"), so a curve below 1 is not yet a
+better choice. A pair NCCL refuses, that hangs (each sweep has a timeout),
+returns wrong results, that NCCL quietly replaces (its INFO lines report
+another pair) or whose run reports no choice at all is dropped from the
+plot and the fits; the printed lines name it and why: quote them. Claim
+C2, first half: LL wins at the smallest size and Simple at the largest;
+the two lines under the plot give each gap in noise units, and a gap
+within 3 units is called within noise (quote the verdicts; the assert
+fails only if a size is clearly the other way round). Inside one node the
+tree is a chain, so ring and tree differ little here; the ring/tree
 crossover of D1 is a multi-node effect (pending C-T4). -->
 
 ```{.python .input #collectives-forced-pairs}
 %%tab pytorch
 pairs = d2l.nccl_algo_proto_sweeps('box')  # every NCCL_ALGO x NCCL_PROTO
 d2l.plot_algo_crossover(pairs)
-smallest, largest = 8, 2**28  # bytes
-for S, faster, slower in ((smallest, 'Ring/LL', 'Ring/Simple'),
-                          (largest, 'Ring/Simple', 'Ring/LL')):
-    assert (d2l.pair_time(pairs, faster, S)
-            < d2l.pair_time(pairs, slower, S))  # C2: LL small, Simple large
+units = d2l.protocol_order(pairs)  # Ring/LL at 8 B, Ring/Simple at 256 MiB
+assert (units > -3).all()  # C2: neither size clearly the other way round
 ```
 
 <!-- Placeholder (prose): one alpha and one beta per pair, the two-regime
@@ -408,10 +457,13 @@ every pair runs through the same host-staged shared-memory path, which
 caps all of them near the same beta (quote the betas: LL is not at half
 of Simple's here, because the protocol is not the bottleneck, the path
 is), so the formula divides a small alpha difference by a small
-difference of inverse betas. The measured crossover comes from what the
-lines do not model (NCCL uses fewer channels for small messages, visible
-in the INFO choice lines). Say this plainly: the alpha-beta line of one
-pair is good, the difference of two nearly equal lines is not. -->
+difference of inverse betas (if a regeneration fits LL's beta at or above
+Simple's, the line says that no crossover is predicted and why: say so).
+The measured crossover comes from what the lines do not model (NCCL uses
+fewer channels for small messages, visible in the INFO choice lines). Say
+this plainly: the alpha-beta line of one pair is good, the difference of
+two nearly equal lines is not. The "(off)" rows are LL128, fitted but not
+a choice NCCL would make here. -->
 
 ```{.python .input #collectives-fit-pairs}
 %%tab pytorch
@@ -419,15 +471,21 @@ fits = d2l.fit_pairs(pairs)
 d2l.show_pair_fits(fits)
 ```
 
-<!-- Placeholder (prose): is the default right? At every size the default's
-time against the best forced pair's, in units of the run-to-run noise (the
-median absolute deviation over the three regeneration processes, at least
-2% of the time). Claim C3: the default is never slower than the best forced
-pair by more than 3 noise units. If the first line shows more, name the
-size and the pair as printed: the tuner's table is a model of the hardware,
-and on a PCIe node that stages every byte through host memory its model can
-be wrong at some sizes; that misprediction is the teaching point, stated,
-not hidden. -->
+<!-- Placeholder (prose): is the default right? Forcing a pair changes
+more than the pair (the first line: the default against a forced copy of
+its own choice, the "cost of forcing"; quote it), so the test compares
+forced with forced: at every size the forced copy of the pair NCCL chose
+against the best other forced pair NCCL's tuner enables (LL128 left out),
+in noise units (the largest of the median absolute deviation over the
+regeneration's processes, the cost of forcing at that size, and 2% of the
+time). Claim C3: no enabled pair beats NCCL's choice by more than 3 noise
+units. If the second line shows more, name the size and the pair as
+printed: the tuner's table is a model of the hardware (its last line:
+where the table switches from LL to Simple against where the forced pairs
+cross; the INFO digest above showed how far its bandwidths are from the
+measured ones), and on a PCIe node that stages every byte through host
+memory its model can be wrong at some sizes; that misprediction is the
+teaching point, stated, not hidden. -->
 
 ```{.python .input #collectives-tuner-verdict}
 %%tab pytorch
@@ -451,7 +509,6 @@ def hier_allreduce(tensor, intra_group, inter_group):  #@save
     may use different backends: a CUDA tensor crosses a gloo group through
     a pinned host copy. tensor.numel() must be a multiple of the size of
     intra_group."""
-    from torch import distributed as dist
     flat = tensor.view(-1)
     shard = flat.new_empty(flat.numel() // dist.get_world_size(intra_group))
     dist.reduce_scatter_tensor(shard, flat, group=intra_group)
@@ -475,14 +532,19 @@ four (the all-slow baseline), on NCCL (the default), the hierarchical one,
 and its two stages alone; measured time against hier_allreduce_time and
 ring_allreduce_time with the committed fits of sec_lm_server_paths (the
 NCCL pair, all four cards) and sec_lm_networks (gloo on 2 and 4 ranks).
-Claim C4 takes the branch the 22.6 gate chose (S/spec/spec-log.md, "The
-22.6 gate rule"): if gloo's loopback beta is below half the shared-memory
-beta, the hierarchical all-reduce beats the flat gloo baseline by a factor
-that approaches the intra/inter bandwidth ratio at large sizes (quote the
-gain and the ratio as printed); otherwise the box cannot emulate a slow
-network by bandwidth and C4 is only the next sentence. Either way the
-closed form predicts the measured gain within 20% (asserted), and the
-intra/inter bandwidth ratio is stated. Correctness: hier_allreduce equals a
+Claim C4 takes the branch the last line before the live lines prints (the
+gate fixed in the spec log, "The 22.6 gate rule", computed from gloo's
+4-rank fit against NCCL's shared-memory path on the four cards; the
+"2-rank stages" line is not the gate's quantity). If it says "C4 stands",
+the hierarchical all-reduce beats the flat gloo baseline by a factor that
+approaches the intra/inter bandwidth ratio at large sizes (quote the gain
+and the ratio as printed); if it says "C4 fallback", the box cannot
+emulate a slow network by bandwidth (gloo is the slow group by latency
+only) and C4 is only the next sentence. Either way the closed form
+predicts the measured gain within 20% (asserted when the fits are there),
+and the bandwidth and latency ratios of the gate line are stated. The
+model leaves out the host copies of the gloo stage, which is why the
+inter stage runs above it. Correctness: hier_allreduce equals a
 CPU sum of every rank's input (the line below; on a machine without four
 GPUs it runs on four CPU processes with gloo). -->
 
@@ -490,9 +552,10 @@ GPUs it runs on four CPU processes with gloo). -->
 %%tab pytorch
 hier = d2l.hier_vs_flat('box')  # 2 x 2: NCCL pairs, gloo across them
 at = hier[hier['size'] == 2**28].set_index('variant')  # 256 MiB
-gain, predicted = (at[c]['flat gloo'] / at[c]['hierarchical']
-                   for c in ('us', 'model_us'))
-assert abs(gain / predicted - 1) < 0.2  # C4: the closed form predicts it
+gain = at.us['flat gloo'] / at.us['hierarchical']
+predicted = at.model_us['flat gloo'] / at.model_us['hierarchical']
+if not np.isnan(predicted):  # NaN without the two earlier sections' fits
+    assert abs(gain / predicted - 1) < 0.2  # C4: the closed form predicts it
 ```
 
 <!-- Placeholder (prose): what the box cannot show. The ring/tree crossover

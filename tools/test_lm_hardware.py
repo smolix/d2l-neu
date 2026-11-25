@@ -2882,6 +2882,31 @@ def synthetic_pairs(params, dropped=None, g=4, seed=0, procs=3):
     return out
 
 
+def tuner_case(procs=3):
+    """A forced-pair table in which NCCL's default is its own choice
+    (Ring/LL up to 1 MiB, then Ring/Simple, as its `used` column says) run
+    unforced, so forcing costs nothing; Ring/Simple is faster from 75 KB;
+    Ring/LL128 is the fastest pair but NCCL's tuner disables it."""
+    params = {'default': (15e-6, 3e9), 'Ring/LL': (15e-6, 3e9),
+              'Ring/LL128': (5e-6, 20e9), 'Ring/Simple': (40e-6, 9e9),
+              'Tree/LL': (18e-6, 2.5e9)}
+    pairs = synthetic_pairs(params, procs=procs)
+    own = np.where(pairs['size'] <= 2**20, 'Ring/LL', 'Ring/Simple')
+    pairs['used'] = np.where(pairs.algo == 'default', own, '')
+    procs_us = np.asarray(pairs.attrs['proc_us'])
+    for choice in ('Ring/LL', 'Ring/Simple'):  # the default runs its choice
+        to = ((pairs.algo == 'default') & (own == choice)).to_numpy()
+        src = (pairs.algo == choice).to_numpy() & np.isin(
+            pairs['size'], pairs['size'][to])
+        pairs.loc[to, 'oop_us'] = pairs.oop_us[src].to_numpy()
+        procs_us[:, to] = procs_us[:, src]
+    pairs.attrs['proc_us'] = procs_us.tolist()
+    pairs.attrs['tuner'] = {'Ring/LL': (12.6, 8.0), 'Ring/LL128': (29.0, 0.0),
+                            'Ring/Simple': (42.6, 16.0),
+                            'Tree/LL': (12.8, 2.9)}
+    return pairs
+
+
 class TestCollectives(unittest.TestCase):
     """Section 22.7: the closed forms against the simulator, NCCL's double
     binary tree, the INFO digest, the forced-pair fits, the crossover and
@@ -3021,9 +3046,11 @@ class TestCollectives(unittest.TestCase):
         exact = 25e-6 / (phi * (1 / 3e9 - 1 / 9e9))
         self.assertAlmostEqual(x['predicted'] / exact, 1, delta=0.1)
         self.assertAlmostEqual(x['measured'] / exact, 1, delta=0.15)
+        self.assertEqual(x['why'], '')
         lines, _ = lines_of(self, d2l.show_pair_fits, fits)
-        self.assertLessEqual(len(lines), 9)
-        self.assertIn('Ring/Simple overtakes Ring/LL', lines[-1])
+        self.assertLessEqual(len(lines), 10)
+        self.assertIn('Ring/Simple overtakes Ring/LL', '\n'.join(lines[-2:]))
+        self.assertIn('beta 95%', lines[0])
         self.assertAlmostEqual(d2l.pair_time(pairs, 'Ring/LL', 8),
                                15e-6, delta=1e-6)
         lines, _ = lines_of(self, d2l._show_pairs, pairs)
@@ -3037,6 +3064,113 @@ class TestCollectives(unittest.TestCase):
             'cluster-nccl', 'C-T4', 'two 8 x A100 nodes with RDMA'))
         self.assertTrue(pending.empty)
         self.assertIn('C-T4 not run yet', pending.attrs['status'])
+
+    def test_fit_pairs_no_crossover(self):
+        """LL's fitted bandwidth at or above Simple's: no crossover is
+        predicted (never a negative size), and the line says why."""
+        params = dict(self.params(), **{'Ring/LL': (15e-6, 9.5e9)})
+        fits = d2l.fit_pairs(synthetic_pairs(params))
+        x = fits.attrs['crossover']
+        self.assertTrue(np.isnan(x['predicted']))
+        self.assertIn('bandwidth is not below', x['why'])
+        lines, _ = lines_of(self, d2l.show_pair_fits, fits)
+        self.assertIn('no crossover predicted', '\n'.join(lines))
+        self.assertNotIn('-', ' '.join(lines[-2:]).split('predicted')[0][-8:])
+
+    def test_off_pairs(self):
+        """A pair NCCL's tuner disables is marked in the fits and dashed in
+        the plot."""
+        pairs = tuner_case()
+        self.assertEqual(d2l._tuner_off(pairs), {'Ring/LL128'})
+        fits = d2l.fit_pairs(pairs)
+        lines, _ = lines_of(self, d2l.show_pair_fits, fits)
+        self.assertIn('LL128 (off)', '\n'.join(lines))
+        d2l.plot_algo_crossover(pairs)
+        ax = d2l.plt.gca()
+        names = [t.get_text() for t in ax.get_legend().get_texts()]
+        styles = dict(zip(names, [l.get_linestyle() for l in ax.get_lines()]))
+        d2l.plt.close('all')
+        self.assertEqual([n for n in names if 'LL128' in n],
+                         ['Ring/LL128 (off)'])
+        self.assertEqual(styles['Ring/LL128 (off)'], '--')
+        self.assertEqual(styles['Ring/LL'], '-')
+
+    def test_protocol_order(self):
+        pairs = synthetic_pairs(self.params())
+        lines, units = lines_of(self, d2l.protocol_order, pairs)
+        self.assertLessEqual(len(lines), 4)
+        self.assertGreater(units[0], 3)  # 15 us against 40 us at 8 B
+        lines = ' '.join(lines).split('256 MiB:')
+        self.assertIn('8 B: Ring/LL', lines[0])
+        self.assertIn('Ring/LL faster', lines[0])
+        self.assertIn('Ring/Simple faster', lines[1])
+        # a 1% gap with one process (noise floor 2%) is within noise
+        close = dict(self.params(), **{'Ring/LL': (15e-6, 8.9e9)})
+        lines, units = lines_of(self, d2l.protocol_order,
+                                synthetic_pairs(close, procs=1))
+        self.assertIn('within noise', ' '.join(lines).split('256 MiB:')[1])
+        self.assertLess(abs(units[1]), 3)
+
+    def test_pair_check(self):
+        """A forced pair whose INFO run reports no choice is unverified; one
+        that reports another pair is ignored; the default's check returns
+        the tuner's table."""
+        run = d2l.HWRun(['all_reduce_perf'], 0, '', '', 0.1, None)
+        spec = d2l._HW_COLL['box']
+        cases = [('', 'unverified'),
+                 ('NCCL INFO AllReduce: 8 Bytes -> Algo RING proto SIMPLE',
+                  'ignored: ran Ring/Simple'),
+                 ('NCCL INFO AllReduce: 8 Bytes -> Algo RING proto LL', '')]
+        for text, reason in cases:
+            with mock.patch.object(d2l, '_info_run',
+                                   return_value=(run, text)), \
+                    mock.patch.object(d2l, 'parse_nccl_tests',
+                                      return_value=pd.DataFrame(
+                                          dict(oop_wrong=[0], ip_wrong=[0]))):
+                got, used, _ = d2l._pair_check((0, 1), 'Ring', 'LL', spec)
+            self.assertEqual(got, reason)
+        with mock.patch.object(d2l, '_info_run',
+                               return_value=(run, NCCL_INFO_SAMPLE)), \
+                mock.patch.object(d2l, 'parse_nccl_tests',
+                                  return_value=pd.DataFrame(
+                                      dict(oop_wrong=[0], ip_wrong=[0]))):
+            got, used, tuner = d2l._pair_check((0, 1), 'default', 'default',
+                                               spec)
+        self.assertEqual(got, '')
+        self.assertEqual(tuner[('Ring', 'Simple')], (40.3, 8.7))
+
+    def test_regen_prepare(self):
+        """A pair dropped in one process is dropped in all before the
+        processes are combined, and the combination then succeeds."""
+        a = synthetic_pairs(self.params(), procs=1)
+        b = synthetic_pairs(self.params(), {'Tree/LL': 'timed out'},
+                            seed=1, procs=1)
+        b = b[b.algo != 'Tree/LL'].copy()  # the dropped copy, as computed
+        drop = a[a.algo == 'Tree/LL'].copy()
+        drop[[c for c in drop.columns if c not in (
+            'size', 'op', 'g', 'path', 'algo', 'proto', 'env')]] = np.nan
+        drop['status'], drop['used'] = 'timed out', ''
+        b = pd.concat([b, drop]).loc[a.index]
+        b.attrs.update(a.attrs, dropped={'Tree/LL': 'timed out'})
+        a.attrs['dropped'] = {}
+        with tempfile.TemporaryDirectory() as tmp:
+            for i, t in enumerate((a, b)):
+                os.makedirs(os.path.join(tmp, f'proc{i}'))
+                d2l._hw_write(os.path.join(tmp, f'proc{i}', 'pairs.json.gz'),
+                              t, dict(config={}))
+            with self.assertRaises(ValueError):  # without the hook
+                d2l._hw_combine([d2l._hw_read(os.path.join(
+                    tmp, f'proc{i}', 'pairs.json.gz'))[0] for i in (0, 1)])
+            d2l.regen_coll_prepare(tmp, 2)
+            parts = [d2l._hw_read(os.path.join(
+                tmp, f'proc{i}', 'pairs.json.gz'))[0] for i in (0, 1)]
+        out = d2l._hw_combine(parts)
+        tree = out[out.algo == 'Tree/LL']
+        self.assertTrue(tree.oop_us.isna().all())
+        self.assertEqual(set(tree.status), {'timed out in 1 of 2 runs'})
+        self.assertEqual(out.attrs['dropped'],
+                         {'Tree/LL': 'timed out in 1 of 2 runs'})
+        self.assertNotIn('Tree/LL', d2l._kept(out))
 
     def test_pairs_live(self):
         """The forced-pair live line: compared on four cards, each pair's
@@ -3071,24 +3205,42 @@ class TestCollectives(unittest.TestCase):
         self.assertTrue(np.isnan(d2l._crossing(s, s, 2 * s)))
 
     def test_tuner_regret(self):
-        params = self.params()
-        lines, out = lines_of(self, d2l.tuner_regret, synthetic_pairs(params))
-        self.assertEqual(len(lines), 2)
-        big = out[out['size'] == 2**28].iloc[0]
-        self.assertAlmostEqual(big.excess, 0, delta=0.02)  # default = Simple
+        """Forced against forced: NCCL keeps Ring/LL up to 1 MiB, but
+        Ring/Simple is faster from 75 KB; Ring/LL128, faster still, is off
+        in the tuner and never counts."""
+        lines, out = lines_of(self, d2l.tuner_regret, tuner_case())
+        self.assertLessEqual(len(lines), 9)
+        self.assertLess(out.cost.abs().max(), 0.01)  # default = own choice
+        self.assertNotIn('Ring/LL128', set(out.best))
+        mid = out[out['size'] == 2**19].iloc[0]
+        self.assertEqual((mid.own, mid.best), ('Ring/LL', 'Ring/Simple'))
+        self.assertGreater(mid.units, 3)
         small = out[out['size'] == 8].iloc[0]
-        self.assertEqual(small.best, 'Ring/LL')
-        self.assertGreater(small.units, 3)  # 20 us against 15 us
-        self.assertIn('at 8 B', lines[0])
-        self.assertIn('units) at', lines[0])
+        self.assertLess(small.units, 0)  # Ring/LL is right at 8 B
+        text = ' '.join(line.strip() for line in lines)
+        self.assertIn('cost of forcing', lines[0])
+        self.assertIn('Ring/Simple', lines[1])
+        self.assertIn('faster than Ring/LL at 1 MiB', text)
+        self.assertIn("Ring/LL128 left out: off in NCCL's", text)
+        self.assertIn('switches Ring/LL -> Ring/Simple at 470 KiB', text)
+        # the switch of the table itself: 13 + S / 8000 = 43 + S / 16000 us
+        self.assertAlmostEqual(d2l._tuner_switch(
+            tuner_case(), 'Ring/LL', 'Ring/Simple'), 480e3, delta=1e3)
+        # without NCCL's choices there is nothing to test
+        lines, out = lines_of(self, d2l.tuner_regret,
+                              synthetic_pairs(self.params()))
+        self.assertTrue(out.empty)
+        self.assertEqual(len(lines), 1)
 
     def test_symptoms(self):
-        pairs = synthetic_pairs(self.params())
-        ab = dict(alpha=20e-6, beta=9e9)
-        lines, _ = lines_of(self, d2l.coll_symptoms, {'pairs': pairs}, ab)
+        ab = dict(alpha=20e-6, beta=2.36e9)
+        lines, _ = lines_of(self, d2l.coll_symptoms, {'pairs': tuner_case()},
+                            ab)
         self.assertEqual(len(lines), 2)
-        self.assertIn('4 KiB all-reduce on 4 GPUs', lines[0])
-        self.assertIn('best forced pair Ring/Simple', lines[1])
+        self.assertIn("on 4 GPUs: NCCL's choice Ring/LL", lines[0])
+        self.assertIn('forced Ring/Simple', lines[0])
+        self.assertIn("NCCL's model of Ring/Simple: 24 GB/s busbw", lines[1])
+        self.assertIn('measured line: 2.4 GB/s', lines[1])
         lines, _ = lines_of(self, d2l.coll_symptoms,
                             d2l._hw_pending('box-coll'), ab)
         self.assertEqual(lines, ['box-coll pending'])
@@ -3114,9 +3266,28 @@ class TestCollectives(unittest.TestCase):
         r = pd.DataFrame(rows)
         with mock.patch.object(d2l, '_hier_predict', return_value=None):
             lines, _ = lines_of(self, d2l._show_hier, r)
-        self.assertLessEqual(len(lines), 9)  # two header rows, five rows
-        self.assertIn('hierarchical 3.0x faster than flat gloo', lines[-2])
-        self.assertIn('4.0x measured from the stages', lines[-1])
+        self.assertLessEqual(len(lines), 10)  # two header rows, five rows
+        text = '\n'.join(lines)
+        self.assertIn('hierarchical 3.0x faster than flat gloo', text)
+        self.assertIn('no model', text)
+        self.assertIn('intra/inter bandwidth 4.0x measured', lines[-1])
+
+    def test_c4_gate(self):
+        """The 22.6 gate rule: the whole interval below half the
+        shared-memory beta, or with one process the point below a third."""
+        shm = dict(beta=2.36e9, alpha=30e-6)
+        gloo = lambda b, lo, hi: pd.Series(dict(beta=b, beta_lo=lo,
+                                                beta_hi=hi, alpha=2.4e-3))
+        stands, line = d2l._c4_gate(gloo(1.21e9, 0.86e9, 1.6e9), shm)
+        self.assertFalse(stands)  # the 22.6 smoke: interval straddles 1.18
+        self.assertIn('fallback', line)
+        self.assertIn('1/80 the latency', line)
+        self.assertTrue(d2l._c4_gate(gloo(0.6e9, 0.5e9, 0.7e9), shm)[0])
+        nan = float('nan')
+        self.assertFalse(d2l._c4_gate(gloo(1.0e9, nan, nan), shm)[0])
+        stands, line = d2l._c4_gate(gloo(0.7e9, nan, nan), shm)
+        self.assertTrue(stands)
+        self.assertIn('one run', line)
 
     def test_campaign_config_refused(self):
         with self.assertRaisesRegex(ValueError, 'campaign launcher'):

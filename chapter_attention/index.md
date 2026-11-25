@@ -129,9 +129,9 @@ Attention Mechanisms: Differentiable Content-Based Retrieval<br>**queries, keys 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Part 1 — Build the Layer (§§{sec_queries-keys-values}–§{num:sec_multihead-attention}):** Soft key–value lookup, Nadaraya–Watson kernel pooling, $1/\sqrt{d}$ scaled dot-product scoring, boolean mask algebra, and multi-head & grouped-query attention.
-- **Part 2 — Sequence Order (§{sec_positional-information}):** Permutation equivariance, sinusoidal rotations, **RoPE**, **ALiBi**, and zero-shot context extension.
-- **Part 3 & Part 4 — Scale & Circuits (§§{sec_attention-at-scale}–§{num:sec_what-attention-computes}):** Blockwise online softmax (**FlashAttention**), sliding windows, linear attention recurrences, and two-layer **induction heads**.
+- **Part 1: Build the Layer (§§{sec_queries-keys-values}–§{num:sec_multihead-attention}):** Soft key–value lookup, Nadaraya–Watson kernel pooling, $1/\sqrt{d}$ scaled dot-product scoring, boolean mask algebra, and multi-head & grouped-query attention.
+- **Part 2: Sequence Order (§{sec_positional-information}):** Permutation equivariance, sinusoidal rotations, **RoPE**, **ALiBi**, and zero-shot context extension.
+- **Part 3 & Part 4: Scale & Circuits (§§{sec_attention-at-scale}–§{num:sec_what-attention-computes}):** Blockwise online softmax (**FlashAttention**), sliding windows, linear attention recurrences, and two-layer **induction heads**.
 :::
 
 ::: {.col .fig .big}

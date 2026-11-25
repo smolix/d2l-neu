@@ -589,19 +589,7 @@ output at *gave* unchanged. Injecting sequence order is the subject of
 
 ## Summary
 
-* Self-attention projects each token of a sequence into a query, a key, and a
-  value, connecting all pairs of positions in $O(1)$ sequential steps and
-  $O(1)$ path length at $O(nd^2 + n^2d)$ FLOPs.
-* A single head forms only one convex mixture of values per query; on the
-  copy-both task, any single head incurs a relative squared error of at least
-  $1/2$.
-* Multi-head attention runs $H$ heads of width $d_h = d/H$ in parallel and
-  combines them via $\mathbf{W}_o$, requiring $4d^2$ parameters and
-  $8nd^2 + 4n^2d$ FLOPs independent of $H$.
-* Grouped-query and multi-query attention share $H_\textrm{kv} < H$
-  key--value heads across query groups to shrink generation caches by
-  $H/H_\textrm{kv}$, preserving capacity so long as $H_\textrm{kv} d_h$ has
-  room for the retrieved values.
+Self-attention projects each token of a sequence into a query, a key, and a value, connecting all pairs of positions in $O(1)$ sequential steps and $O(1)$ path length at $O(nd^2 + n^2d)$ FLOPs. Because a single head forms only one convex mixture of values per query, any single head incurs a relative squared error of at least $1/2$ when tasked with retrieving two independent values simultaneously. Multi-head attention overcomes this bottleneck by running $H$ subspace heads of width $d_h = d/H$ in parallel and combining their outputs through $\mathbf{W}_o$, requiring $4d^2$ parameters and $8nd^2 + 4n^2d$ FLOPs independent of $H$. Grouped-query and multi-query attention share $H_\textrm{kv} < H$ key–value heads across query groups to shrink generation caches by a factor of $H/H_\textrm{kv}$, preserving retrieval capacity whenever the shared value width $H_\textrm{kv} d_h$ can accommodate the retrieved features.
 
 ## Exercises
 
@@ -847,7 +835,7 @@ In our sentence, *gave* received an equal blend $0.29\,\mathbf{v}_{\textrm{Alice
 ::: {.cols .vc}
 ::: {.col}
 - **Optimal Bayes Estimator:** Given $\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2 \mathbf{v}_2$, the minimum MSE estimator of $\mathbf{v}_1$ is $\mathbb{E}[\mathbf{v}_1 \mid \mathbf{m}] = \frac{\alpha_1}{\alpha_1^2 + \alpha_2^2}\,\mathbf{m}$, leaving residual variance $\frac{\alpha_2^2}{\alpha_1^2 + \alpha_2^2}$.
-- **Conservation of Error:** Estimating $\mathbf{v}_2$ leaves residual variance $\frac{\alpha_1^2}{\alpha_1^2 + \alpha_2^2}$; their sum is $1$ out of target variance $2$, giving relative MSE **$1/2$** (RMS error $\sqrt{1/2} \approx 0.707$) for *every* $(\alpha_1, \alpha_2)$!
+- **Conservation of Error:** Estimating $\mathbf{v}_2$ leaves residual variance $\frac{\alpha_1^2}{\alpha_1^2 + \alpha_2^2}$; their sum is $1$ out of target variance $2$, giving relative MSE **$1/2$** (RMS error $\sqrt{1/2} \approx 0.707$) for *every* $(\alpha_1, \alpha_2)$.
 - **Two Heads Invert Exactly:** Two distinct weightings form an invertible $2 \times 2$ mixing matrix.
 :::
 
@@ -860,7 +848,7 @@ In our sentence, *gave* received an equal blend $0.29\,\mathbf{v}_{\textrm{Alice
 ::: {.slide title="Two Heads Invert the Mixture to Machine Precision"}
 [Empirical Verification]{.kicker}
 
-Two heads with distinct weightings—even soft ones like $(0.88, 0.12)$ and $(0.12, 0.88)$—supply two linearly independent mixtures $[\mathbf{m}_1; \mathbf{m}_2] \in \mathbb{R}^{2d_v}$ that a linear readout inverts to `float32` precision:
+Two heads with distinct weightings (even soft ones like $(0.88, 0.12)$ and $(0.12, 0.88)$) supply two linearly independent mixtures $[\mathbf{m}_1; \mathbf{m}_2] \in \mathbb{R}^{2d_v}$ that a linear readout inverts to `float32` precision:
 
 @!multihead-attention-one-head-must-average-1
 
@@ -893,7 +881,7 @@ Recovering $k$ independent $d_v$-dimensional values requires two resources simul
 ::: {.col}
 - **Leading Complexity (with $d_h = d / H$):**
   $$\textrm{Params} = 4d^2, \qquad \textrm{FLOPs} = 8nd^2 + 4n^2 d$$
-- **GPT-2 Small Layer ($d = 768, n = 1{,}024$):** $2.36\text{M}$ parameters, $4.83\text{ GFLOPs}$ for projections, and $3.22\text{ GFLOPs}$ for scores and value mixing—identical whether $H = 1$ or $H = 12$!
+- **GPT-2 Small Layer ($d = 768, n = 1{,}024$):** $2.36\text{M}$ parameters, $4.83\text{ GFLOPs}$ for projections, and $3.22\text{ GFLOPs}$ for scores and value mixing—identical whether $H = 1$ or $H = 12$.
 - **Why Not $H = d$ ($d_h = 1$)?** At $d_h = 1$, scalar scores $q_i k_j$ are monotone in $k_j$, so queries can only sharpen onto extremal keys.
 :::
 
@@ -961,7 +949,7 @@ The forward pass splits heads, repeats each key–value head across its query gr
 ::: {.cols .vc}
 ::: {.col}
 - **Correct (reshape, then swap axes 1 and 2):** Splits each token's $d$-vector into $H$ blocks of width $d_h$.
-- **Buggy (`X.reshape(B, H, n, d_h)`):** Because memory is row-major along the sequence axis $n$, reshaping directly packs the first $n/H$ *tokens* into "head 0"!
+- **Buggy (`X.reshape(B, H, n, d_h)`):** Because memory is row-major along the sequence axis $n$, reshaping directly packs the first $n/H$ *tokens* into "head 0".
 - **Insidious Shape Match:** Both return `(B, H, n, d_h)`, so no shape check catches the bug.
 :::
 
@@ -981,7 +969,7 @@ We train `MultiHeadAttention` ($d = 16$, values $d_v = 8$ padded to $16$, all mo
 @!multihead-attention-learned-heads-on-the-copy-both-task-2
 
 - **$H = 1$ Head:** Stalls at relative error $0.71 \approx \sqrt{1/2}$ with attention weights near $(0.50, 0.50)$, matching our theorem.
-- **$H \in \{2, 4\}$ Heads:** Specialize automatically—one head places $> 0.80$ weight on $\mathbf{v}_1$ while another places $< 0.20$ on $\mathbf{v}_1$—driving relative error down to `float32` rounding ($\sim 10^{-7}$).
+- **$H \in \{2, 4\}$ Heads:** Specialize automatically (one head places $> 0.80$ weight on $\mathbf{v}_1$ while another places $< 0.20$ on $\mathbf{v}_1$), driving relative error down to `float32` rounding ($\sim 10^{-7}$).
 :::
 
 ::: {.slide title="Grouped-Query (GQA) and Multi-Query Attention (MQA)"}
@@ -1008,7 +996,7 @@ Evaluating $(H, H_{\textrm{kv}}) \in \{(2, 1), (4, 2), (4, 1)\}$ with $d = 16$ a
 @!multihead-attention-sharing-keys-and-values
 
 - **Sufficient Value Width ($(2, 1)$ and $(4, 2)$):** Both have $H_{\textrm{kv}} d_h = 8 = d_v$ and solve the copy-both task to machine precision ($\sim 10^{-7}$) using only $768$ parameters instead of $1{,}024$.
-- **Value Bottleneck ($(4, 1)$):** Has four query heads (four distinct weightings) but only $H_{\textrm{kv}} d_h = 1 \times 4 = 4 < 8$ shared value coordinates, returning to the $0.71$ error bound!
+- **Value Bottleneck ($(4, 1)$):** Has four query heads (four distinct weightings) but only $H_{\textrm{kv}} d_h = 1 \times 4 = 4 < 8$ shared value coordinates, returning to the $0.71$ error bound.
 :::
 
 ::: {.slide title="Self-Attention vs. Cross-Attention"}
@@ -1041,7 +1029,7 @@ Test your understanding of multi-head scaling and capacity bounds:
 
 1. **$n = 2d = 8{,}192$ tokens** ($4n^2d = 8nd^2 \iff n = 2d$). Changing $H$ to $64$ leaves both leading FLOP counts and the crossover unchanged.
 2. **$1 - \operatorname{rank}(\mathbf{A}) / k$** (provided the output has room $H d_h \ge k d_v$); for $H = 1$ and $k = 2$, $\operatorname{rank}(\mathbf{A}) = 1$ gives $1 - 1/2 = 1/2$.
-3. **No!** Swapping two tokens permutes their keys and values together across every head, so the weighted sum at *gave* is identical—motivating positional encodings (§{sec_positional-information}).
+3. **No.** Swapping two tokens permutes their keys and values together across every head, so the weighted sum at *gave* is identical—motivating positional encodings (§{sec_positional-information}).
 :::
 :::
 

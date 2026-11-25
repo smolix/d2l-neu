@@ -45,7 +45,7 @@ from d2l import jax as d2l
 Let $\mathbf{X} \in \mathbb{R}^{n \times d}$ hold $n$ token vectors and let
 $f(\mathbf{X}) = \mathrm{softmax}(\mathbf{S})\,\mathbf{X}\mathbf{W}_v$ with
 $\mathbf{S} = \mathbf{X}\mathbf{W}_q(\mathbf{X}\mathbf{W}_k)^\top/\sqrt{d_h}$
-denote unmasked self-attention :eqref:`eq_self-attention` with dropout
+denote unmasked self-attention (:numref:`sec_multihead-attention`) with dropout
 disabled. Reordering the $n$ tokens corresponds to multiplying $\mathbf{X}$
 from the left by an $n \times n$ permutation matrix $\boldsymbol{\Pi}$.
 
@@ -820,17 +820,7 @@ length eliminates the remaining gap (Exercise
 
 ## Summary
 
-* Unmasked self-attention is permutation equivariant: $f(\boldsymbol{\Pi}
-  \mathbf{X}) = \boldsymbol{\Pi} f(\mathbf{X})$.
-* Additive position embeddings (learned or sinusoidal) break symmetry at the
-  input, but introduce content--position cross terms tied to absolute
-  positions and fail beyond the training length.
-* Requiring attention scores to depend solely on relative offset $j - i$
-  forces orthogonal planar rotations on queries and keys (*RoPE*), while
-  *ALiBi* subtracts a per-head linear distance penalty $-m_h(i - j)$.
-* Beyond the training window, RoPE fails only in low-frequency pairs whose
-  wavelengths exceed the training length; interpolating those slow pairs
-  while preserving high-frequency pairs restores long-context performance.
+Unmasked self-attention is permutation equivariant, satisfying $f(\boldsymbol{\Pi} \mathbf{X}) = \boldsymbol{\Pi} f(\mathbf{X})$ for every token permutation $\boldsymbol{\Pi}$. Additive position embeddings (learned or sinusoidal) break this symmetry at the input, but introduce content–position cross terms tied to absolute indices and degrade beyond the training length. Requiring attention scores to depend solely on the relative offset $j - i$ forces orthogonal planar rotations on queries and keys (*RoPE*), whereas *ALiBi* subtracts a per-head linear distance penalty $-m_h(i - j)$. Beyond the training window, RoPE degrades specifically in low-frequency coordinate pairs whose wavelengths exceed the training length, and selectively interpolating those slow pairs while leaving high-frequency pairs intact restores long-context performance.
 
 ## Exercises
 
@@ -898,9 +888,9 @@ length eliminates the remaining gap (Exercise
 
 1. **Biases that keep the symmetry.** ● Suppose that a fixed matrix
    $\mathbf{B} \in \mathbb{R}^{n \times n}$ is added to the score matrix
-   $\mathbf{S}$ of the proof before the softmax, so that the layer
-   :eqref:`eq_self-attention` computes $\mathrm{softmax}(\mathbf{S} +
-   \mathbf{B})\, \mathbf{X}\mathbf{W}_v$.
+   $\mathbf{S}$ of the proof before the softmax, so that the self-attention
+   layer (:numref:`sec_multihead-attention`) computes
+   $\mathrm{softmax}(\mathbf{S} + \mathbf{B})\, \mathbf{X}\mathbf{W}_v$.
     1. Show that the proposition still holds for every permutation matrix
        $\boldsymbol{\Pi}$ with $\boldsymbol{\Pi}^\top \mathbf{B}
        \boldsymbol{\Pi} = \mathbf{B}$.
@@ -1020,7 +1010,7 @@ Passing $8$ random token vectors through a $4$-head `MultiHeadAttention` layer b
 @positional-information-attention-ignores-order
 
 ::: {.d2l-note}
-Notice that a **causal mask** breaks permutation symmetry even without position vectors (**NoPE**), because query $i$ averages over $i + 1$ predecessors!
+Notice that a **causal mask** breaks permutation symmetry even without position vectors (**NoPE**), because query $i$ averages over $i + 1$ predecessors.
 :::
 :::
 
@@ -1032,7 +1022,7 @@ Notice that a **causal mask** breaks permutation symmetry even without position 
 - **Breaking Symmetry at the Input:** Adding a position vector $\mathbf{p}_i \in \mathbb{R}^d$ (row $i$ of $\mathbf{P}$) to each token $\mathbf{x}_i$ breaks equivariance:
   $$\boldsymbol{\Pi}\mathbf{X} + \mathbf{P} \neq \boldsymbol{\Pi}(\mathbf{X} + \mathbf{P})$$
 - **Learned Position Tables (BERT, GPT-2):** Treat $\mathbf{P} \in \mathbb{R}^{L_{\max} \times d}$ as a free parameter matrix.
-- **Zero-Gradient Extrapolation Failure:** When trained at length $L = 128$, rows $128, \ldots, L_{\max}-1$ receive zero gradient and remain random noise!
+- **Zero-Gradient Extrapolation Failure:** When trained at length $L = 128$, rows $128, \ldots, L_{\max}-1$ receive zero gradient and remain random noise.
 :::
 
 ::: {.col .fig}
@@ -1096,7 +1086,7 @@ Notice that a **causal mask** breaks permutation symmetry even without position 
 ::: {.cols .vc}
 ::: {.col}
 - **Expanding $(\mathbf{x}_i + \mathbf{p}_i)^\top \mathbf{A}\,(\mathbf{x}_j + \mathbf{p}_j)$** with $\mathbf{A} = \mathbf{W}_q \mathbf{W}_k^\top / \sqrt{d_h}$ produces four bilinear terms.
-- **Absolute Cross-Term Coupling:** The cross terms $\mathbf{x}_i^\top \mathbf{A}\,\mathbf{p}_j$ and $\mathbf{p}_i^\top \mathbf{A}\,\mathbf{x}_j$ couple token content directly with *absolute* position vectors, varying whenever $i$ and $j$ shift together!
+- **Absolute Cross-Term Coupling:** The cross terms $\mathbf{x}_i^\top \mathbf{A}\,\mathbf{p}_j$ and $\mathbf{p}_i^\top \mathbf{A}\,\mathbf{x}_j$ couple token content directly with *absolute* position vectors, varying whenever $i$ and $j$ shift together.
 - **Cross-Frequency Mixing:** Even $\mathbf{p}_i^\top \mathbf{A}\,\mathbf{p}_j$ loses shift invariance when $\mathbf{A}$ mixes different frequency pairs.
 :::
 
@@ -1114,7 +1104,7 @@ Instead of adding $\mathbf{p}_i$ to $\mathbf{x}_i$, **Rotary Position Embeddings
 $$(\mathbf{R}_i \mathbf{q})^\top (\mathbf{R}_j \mathbf{k}) = \mathbf{q}^\top (\mathbf{R}_i^\top \mathbf{R}_j)\,\mathbf{k} = \mathbf{q}^\top \mathbf{R}_{j-i}\,\mathbf{k} \qquad \forall\, i, j$$
 
 - **1. Identity at Zero ($i = j = 0$):** $\mathbf{R}_0^\top \mathbf{R}_0 = \mathbf{R}_0$; requiring full rank forces $\mathbf{R}_0 = \mathbf{I}$.
-- **2. Orthogonality ($i = j$):** $\mathbf{R}_i^\top \mathbf{R}_i = \mathbf{R}_0 = \mathbf{I}$, so every $\mathbf{R}_i$ is orthogonal and preserves query/key norms!
+- **2. Orthogonality ($i = j$):** $\mathbf{R}_i^\top \mathbf{R}_i = \mathbf{R}_0 = \mathbf{I}$, so every $\mathbf{R}_i$ is orthogonal and preserves query/key norms.
 - **3. Group Homomorphism:** $\mathbf{R}_{-i} = \mathbf{R}_i^\top$ and $\mathbf{R}_{i+j} = \mathbf{R}_i \mathbf{R}_j$, which forces $\mathbf{R}_i = \mathbf{R}_1^i$ (powers of one orthogonal generator $\mathbf{R}_1$, decomposing into $2 \times 2$ planar rotations).
 :::
 
@@ -1125,7 +1115,7 @@ $$(\mathbf{R}_i \mathbf{q})^\top (\mathbf{R}_j \mathbf{k}) = \mathbf{q}^\top (\m
 ::: {.col}
 - Partition $\mathbf{q}, \mathbf{k} \in \mathbb{R}^{d_h}$ into $d_h/2$ coordinate pairs $(2m, 2m+1)$ and rotate pair $m$ at position $i$ by angle $i\,\omega_m$ with $\omega_m = 10000^{-2m/d_h}$:
   $$R(i\omega_m) = \begin{bmatrix} \cos(i\omega_m) & -\sin(i\omega_m) \\ \sin(i\omega_m) & \cos(i\omega_m) \end{bmatrix}$$
-- **Shift Invariance:** Shifting both positions by $+3$ rotates $\mathbf{q}$ and $\mathbf{k}$ by the exact same angle $3\omega_m$, leaving the angle between them—and their dot product—unchanged!
+- **Shift Invariance:** Shifting both positions by $+3$ rotates $\mathbf{q}$ and $\mathbf{k}$ by the exact same angle $3\omega_m$, leaving the angle between them (and their dot product) unchanged.
 - **Values Stay Unrotated:** Only queries and keys are rotated, keeping value vectors shift-invariant.
 :::
 
@@ -1141,7 +1131,7 @@ $$(\mathbf{R}_i \mathbf{q})^\top (\mathbf{R}_j \mathbf{k}) = \mathbf{q}^\top (\m
 ::: {.cols .vc}
 ::: {.col}
 - `rope` splits even (`0::2`) and odd (`1::2`) coordinates, applies the $2 \times 2$ rotation using `float32` angles cast to `x.dtype`, and interleaves the pairs back.
-- Shifting all $32$ positions by $1$, $17$, or $480$ changes RoPE scores by at most `float32` round-off ($\sim 10^{-6}$), whereas additive sinusoidal scores change by $2.7$!
+- Shifting all $32$ positions by $1$, $17$, or $480$ changes RoPE scores by at most `float32` round-off ($\sim 10^{-6}$), whereas additive sinusoidal scores change by $2.7$.
 :::
 
 ::: {.col .fig}
@@ -1221,7 +1211,7 @@ ALiBi's perplexity stays completely flat at $\approx 9.9$ from $n = 128$ to $n =
 @!positional-information-alibi-without-far-keys
 
 ::: {.d2l-note .warn}
-**Diagnostic Lesson:** Hard-masking out all keys at distance $\ge 128$ (`WindowedALiBi`) leaves ALiBi's perplexity at $512$ unchanged ($9.9$)! Steep heads ($1, 2$) assign $0.000$ weight beyond $128$, while gentle heads ($3, 4$) compute a broad recency average. A flat extrapolation curve proves that a scheme *avoids breaking* on distant keys, not that it *retrieves* from them.
+**Diagnostic Note:** Hard-masking out all keys at distance $\ge 128$ (`WindowedALiBi`) leaves ALiBi's perplexity at $512$ unchanged ($9.9$). Steep heads ($1, 2$) assign $0.000$ weight beyond $128$, while gentle heads ($3, 4$) compute a broad recency average. A flat extrapolation curve shows that a scheme *avoids breaking* on distant keys, not that it *retrieves* from them.
 :::
 :::
 
@@ -1230,7 +1220,7 @@ ALiBi's perplexity stays completely flat at $\approx 9.9$ from $n = 128$ to $n =
 
 ::: {.cols .vc}
 ::: {.col}
-- **6 Fast Pairs ($m = 0 \ldots 5$, periods $\le 112 < 128$):** Complete full $2\pi$ revolutions within the $128$-byte training window; every angle at offset $400$ was already seen modulo $2\pi$!
+- **6 Fast Pairs ($m = 0 \ldots 5$, periods $\le 112 < 128$):** Complete full $2\pi$ revolutions within the $128$-byte training window; every angle at offset $400$ was already seen modulo $2\pi$.
 - **10 Slow Pairs ($m = 6 \ldots 15$, periods $199$ to $35{,}000 > 128$):** Rotate into unseen angular regions at $n = 512$, corrupting QK dot products.
 - **Selective Slow-Pair Scaling:** Keep fast pairs at scale $1.0$ (preserving local byte phases) and scale only slow pairs by $128/512 = 0.25$.
 :::
@@ -1249,7 +1239,7 @@ Leaving the $6$ fast pairs untouched (`scale = 1.0`) and multiplying *only* the 
 @!positional-information-extending-a-trained-model-s-context
 
 ::: {.d2l-note}
-Uniformly scaling all pairs (`all pairs`) without fine-tuning ruins local byte resolution across every context length ($\sim 42$ perplexity, worse than a bigram), whereas selective slow-pair scaling preserves local phases and compresses only out-of-distribution slow angles.
+Uniformly scaling all pairs (`all pairs`) without fine-tuning ruins local byte resolution across every context length ($\sim 40\text{--}41$ perplexity, worse than a bigram), whereas selective slow-pair scaling preserves local phases and compresses only out-of-distribution slow angles.
 :::
 :::
 
@@ -1260,7 +1250,7 @@ Modern open-weights language models extend RoPE contexts from $4\text{K}$/$8\tex
 
 - **NTK-Aware Base Scaling:** Replaces the RoPE base $b = 10000$ with $b' = b \cdot s^{d_h / (d_h - 2)}$ for context extension factor $s = L_{\textrm{new}} / L_{\textrm{train}}$.
   - Pair $m = 0$ keeps frequency $\omega_0 = (b')^0 = 1$ radian/token (local resolution preserved).
-  - The slowest pair $m = (d_h - 2)/2$ has its frequency divided by $(b'/b)^{(d_h-2)/d_h} = s$, fitting the $s$-fold longer context into its trained angular arc!
+  - The slowest pair $m = (d_h - 2)/2$ has its frequency divided by $(b'/b)^{(d_h-2)/d_h} = s$, fitting the $s$-fold longer context into its trained angular arc.
 - **YaRN (Yet another RoPE extensioN, Peng et al., 2024):** Keeps fast frequencies unchanged ($\text{scale} = 1$), linearly interpolates slow frequencies ($\text{scale} = 1/s$), blends intermediate frequencies with a smooth ramp, and applies a softmax temperature scale, followed by a brief fine-tune.
 :::
 

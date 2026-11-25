@@ -24,7 +24,7 @@ throughput table and the masked/unmasked runs on a tiny CPU model, and the
 `packing_comparison` load path with its configuration check).
 
 Gated (D2L_TEST_GPU=1 and CUDA, run through the GPU-lock helper): 'flex'
-vs 'sdpa' in bf16 (2e-2)."""
+vs 'sdpa' in bf16 (2e-2), logits and parameter gradients."""
 import contextlib
 import io
 import os
@@ -229,6 +229,19 @@ class PackedModelTest(unittest.TestCase):
         last, _, _ = m.forward_cached(X[:, 19:], ks, vs, 19)
         self.assertLess((last - full[:, 19]).abs().max(), 1e-5)
 
+    def test_forward_cached_learned_raises(self):
+        m = tiny_model(pos='learned')
+        ks, vs = m.init_cache(1, 8)
+        with self.assertRaises(NotImplementedError):
+            m.forward_cached(torch.zeros(1, 4, dtype=torch.long), ks, vs, 0)
+
+    def test_option_checks(self):
+        X = torch.randint(0, 64, (1, 6))
+        with self.assertRaises(ValueError):
+            tiny_model(backend='fast')(X)
+        with self.assertRaises(ValueError):
+            tiny_model(pos='alibi')(X)
+
     def test_return_hidden(self):
         m = tiny_model()
         X = torch.randint(0, 64, (1, 9))
@@ -284,8 +297,9 @@ class LossTest(unittest.TestCase):
         self.assertLess((gH - rH).abs().max(), 1e-6)
         self.assertLess((gW - rW).abs().max(), 1e-6)
         z = 1e-2
-        s3, _, nll = d2l.chunked_lm_loss(H, W, y, chunk=8, z_loss=z,
-                                         return_nll=True)
+        s3, _, nll = d2l.chunked_lm_loss_and_nll(H, W, y, chunk=8, z_loss=z)
+        s4, _ = d2l.chunked_lm_loss(H, W, y, chunk=8, z_loss=z)
+        self.assertLess(abs(s4 - s3), 1e-9)
         logits = F.linear(H, W)
         valid = y != -100
         lse = torch.logsumexp(logits, -1)
@@ -406,13 +420,24 @@ class StreamTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 s.load_state_dict(self.stream().state_dict())
         with self.assertRaises(ValueError):
-            d2l.PackedStream(self.shards, 32, 16, world=3)
+            d2l.PackedStream(self.shards, 32, 16, world=3).batch(0)
+
+    def test_skip_order_from_state(self):
+        s = self.stream()
+        s.load_state_dict(dict(self.stream().state_dict(), skip=[5, 3]))
+        self.assertEqual(s.physical_index(4), 6)
 
     def test_restart_overlap(self):
         r = d2l.reseeded_restart_overlap()
-        self.assertEqual((r.naive_match, r.stateless_match), (40, 50))
-        self.assertGreater(r.naive_repeats, 0)
-        self.assertEqual(r.stateless_repeats, 0)
+        self.assertEqual((r.steps, r.windows), (10, 640))
+        self.assertEqual((r.naive_match, r.stateless_match), (0, 10))
+        self.assertGreater(r.naive_seen, 0)
+        self.assertEqual(r.stateless_seen, 0)
+        # the windows seen before are the repeats over the whole run
+        perm = np.random.default_rng([0, 0]).permutation(10_000)
+        after = np.random.default_rng([1, 0]).permutation(10_000)
+        run = np.concatenate([perm[:40 * 64], after[40 * 64:50 * 64]])
+        self.assertEqual(r.naive_seen, len(run) - len(np.unique(run)))
 
 
 class QuietTest(unittest.TestCase):
@@ -531,6 +556,31 @@ class MeasurementDriverTest(unittest.TestCase):
             leak.leak <= leak.hi).all())
         self.assertTrue(0 < leak.uniform[0] < 1 and (leak.leak > 0).all())
 
+    def test_stale_rerun_file(self):
+        """A next-version file in the rerun folder is read only by a run
+        whose D2L_RERUN names a campaign that writes it."""
+        from unittest import mock
+        import pandas as pd
+        with tempfile.TemporaryDirectory() as tmp:
+            d2l._write_result(os.path.join(tmp, 'lm-pdp-throughput-v1.parquet'),
+                              'parquet', pd.DataFrame(dict(T=[1024])),
+                              dict(config=None, label='smoke'))
+            with mock.patch.object(d2l, '_rerun_dir', lambda: tmp):
+                with mock.patch.dict(os.environ,
+                                     {'D2L_RERUN': 'decode-rates'}):
+                    with self.assertRaises(KeyError):
+                        d2l.load_artifact('packing-throughput')
+                    out = io.StringIO()
+                    with contextlib.redirect_stdout(out):
+                        tp = d2l.packing_throughput(d2l.r2_config('t1'))
+                    self.assertTrue(tp.empty)  # pending, not the stale file
+                    self.assertEqual(out.getvalue(),
+                                     '[pdp-throughput pending]\n')
+                with mock.patch.dict(os.environ,
+                                     {'D2L_RERUN': 'pdp-throughput'}):
+                    got = d2l.load_artifact('packing-throughput')
+                    self.assertEqual(d2l._label_of(got), 'smoke')
+
     def test_comparison_round_trip(self):
         """packing_comparison loads a committed json-table result as
         PackingRuns and refuses one stored under another configuration."""
@@ -583,6 +633,34 @@ class FlexTest(unittest.TestCase):
                 blk.attention.backend = 'flex'
             y2 = m(X, ctx).float()
         self.assertLess((y1 - y2).abs().max().item(), 2e-2)
+
+    def test_flex_vs_sdpa_gradients(self):
+        """The masked training arm runs through flex forward and backward:
+        its parameter gradients match sdpa's in bf16 (2e-2 of the largest
+        gradient entry)."""
+        torch.manual_seed(0)
+        m = d2l.PackedGPT(256, 128, 4, 2, 2, head_dim=32, max_len=256,
+                          backend='sdpa').cuda()
+        X = torch.randint(1, 256, (2, 256), device='cuda')
+        X[0, [40, 100, 200]] = 0
+        X[1, [10, 128]] = 0
+        Y = torch.roll(X, -1, 1)
+        ctx = d2l.PackCtx(*d2l.doc_ids_from_eos(X))
+        grads = []
+        for backend in ('sdpa', 'flex'):
+            for blk in m.blks:
+                blk.attention.backend = backend
+            m.zero_grad(set_to_none=True)
+            with torch.autocast('cuda', torch.bfloat16):
+                H, W = m(X, ctx, return_hidden=True)
+                s, n = d2l.chunked_lm_loss(H, W, Y)
+            (s / n).backward()
+            grads.append({k: p.grad.float().clone()
+                          for k, p in m.named_parameters()})
+        for k in grads[0]:
+            scale = grads[0][k].abs().max().item()
+            gap = (grads[0][k] - grads[1][k]).abs().max().item()
+            self.assertLess(gap, 2e-2 * scale + 1e-6, k)
 
 
 if __name__ == '__main__':

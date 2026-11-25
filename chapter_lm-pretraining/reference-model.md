@@ -217,8 +217,8 @@ def pretrain_step(model, optimizer, micro_batches, cfg, n_valid):
             with torch.autocast(mb['input_ids'].device.type, torch.bfloat16,
                                 enabled=cfg.dtype == 'bf16'):
                 H, W = model(mb['input_ids'], ctx, return_hidden=True)
-                loss, _, part = d2l.chunked_lm_loss(
-                    H, W, mb['labels'], z_loss=cfg.z_loss, return_nll=True)
+                loss, _, part = d2l.chunked_lm_loss_and_nll(
+                    H, W, mb['labels'], z_loss=cfg.z_loss)
             (loss * world / n_valid).backward()  # DDP averages the ranks
         nll = nll + part.detach()
     params = [p for g in optimizer.param_groups for p in g['params']]

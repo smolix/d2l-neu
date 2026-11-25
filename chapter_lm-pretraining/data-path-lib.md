@@ -18,11 +18,17 @@ uses these symbols at import time). It holds the library code that
 - the one place that decides between computing and loading a result
   (`_pretrain_result`, `_pretrain_merged`), `load_artifact`, and `_quiet`,
   under which every fetch of the chapter runs;
+- `reference_shards` (the FineWeb-Edu shards of 20.6, fetched quietly) and
+  `chunked_lm_loss_and_nll` (the loss with the NLL that `pretrain_step`
+  logs);
 - the attention internals of `PackedAttention`/`PackedGPT`: RoPE tables from
-  per-document positions, the backend choice, the boolean and FlexAttention
-  document masks, explicit-score attention, the model's configuration and
-  the Qwen3 shape it adopts;
-- `PackedStream` internals (layout hash, permutation slice, window reads);
+  per-document positions, the backend choice (and the argument checks), the
+  boolean and FlexAttention document masks, explicit-score attention, the
+  model's configuration and the Qwen3 shape it adopts; and the methods later
+  sections use (`set_rope`, `forward_cached`, `config`, `from_arch`,
+  `adopt`), merged into the classes by `make lib`;
+- `PackedStream` internals (layout hash, skip map, permutation slice, window
+  reads, `physical_index`, `skip`);
 - the naive-restart contrast of the opening (`reseeded_restart_overlap`);
 - the DDP helpers shared with 21.2 and the small-sample t interval;
 - the drivers behind the section's two measurements, `packing_throughput`
@@ -171,6 +177,13 @@ def _regenerating():
     return d2l.lm_rerun(d2l.PRETRAIN_RERUN_NAMES)
 
 #@save
+def _regenerates(artifact):
+    """Whether D2L_RERUN names a campaign that writes artifact (a load
+    name); only such a run reads the local next-version file of it."""
+    return any(d2l._RERUN_ARTIFACT.get(name) == artifact
+               for name in _regenerating())
+
+#@save
 def _jsonable(x):
     """x as plain JSON values (tuples become lists, namedtuples dicts)."""
     if hasattr(x, '_asdict'):
@@ -190,6 +203,14 @@ def _label_of(result):
     if hasattr(result, 'attrs'):
         return result.attrs.get('label', '')
     return getattr(result, 'label', '') or ''
+
+#@save
+def _show_label(result):
+    """Print a result's label (a smoke, T1 or pending run) on its own line,
+    so that it never passes for the committed run; return the result."""
+    if _label_of(result):
+        print(f'[{_label_of(result)}]')
+    return result
 
 #@save
 def _with_label(result, label, meta=None):
@@ -321,14 +342,14 @@ def _check_config(result, config, key):
 def load_artifact(name):
     """A committed result of this chapter by its name (PRETRAIN_ARTIFACTS):
     a table or log as a DataFrame, weights as a state dict, an archive as a
-    folder, a shard set as TokenShards. A regeneration run reads the file it
-    has just written (the next version) when there is one."""
+    folder, a shard set as TokenShards. A run that regenerates it reads the
+    file it has just written (the next version) when there is one."""
     if name not in d2l.PRETRAIN_ARTIFACTS:
         raise KeyError(f'unknown result {name!r}; one of '
                        f'{sorted(d2l.PRETRAIN_ARTIFACTS)}')
     key, kind = d2l.PRETRAIN_ARTIFACTS[name]
     local = os.path.join(_rerun_dir(), _next_key(key) + _ARTIFACT_EXT[kind])
-    if _regenerating() and os.path.exists(local):
+    if _regenerates(name) and os.path.exists(local):
         return _read_result(local, kind, key)
     if key not in d2l.DATA_HUB:
         raise KeyError(f'{name} is not committed yet')
@@ -371,7 +392,8 @@ def _pretrain_result(name, compute, config, *, fallback=None):
         d2l.lm_save_rerun(os.path.basename(path), lambda p: _write_result(
             p, kind, result, meta), rerun_dir=_rerun_dir())
         return _with_label(result, meta['label'], meta)
-    if key in d2l.DATA_HUB or (rerun and os.path.exists(path)):
+    if key in d2l.DATA_HUB or (_regenerates(artifact) and
+                               os.path.exists(path)):
         result = load_artifact(artifact)
         _check_config(result, config, key)
         return result
@@ -396,8 +418,9 @@ def _pretrain_merged(name, parts, merge, config, *, fallback=None):
         result = load_artifact(artifact)
         _check_config(result, config, key)
         return result
-    if not rerun:
-        if name in d2l.PRETRAIN_PENDING or names & d2l.PRETRAIN_PENDING:
+    if not rerun & names:  # part files on disk are another run's
+        if rerun or name in d2l.PRETRAIN_PENDING or (
+                names & d2l.PRETRAIN_PENDING):
             return _pending_result(name or artifact, fallback)
         raise KeyError(f'{artifact} is not committed yet')
     results = {}
@@ -456,6 +479,30 @@ def _quiet():
     finally:
         for lg, level in zip(loggers, levels):
             lg.setLevel(level)
+
+#@save
+def reference_shards(which='100m', **kwargs):
+    """d2l.fwedu_shards(which) (the reference tokenizer's FineWeb-Edu
+    shards, :numref:`sec_lm_tokenizers`) without its download messages."""
+    with _quiet():
+        return d2l.fwedu_shards(which, **kwargs)
+```
+
+The loss of a pretraining step: `chunked_lm_loss` with the summed NLL
+alongside, which `pretrain_step` logs when the z-loss term is on.
+
+```{.python .input #data-path-lib-losses}
+%%tab pytorch
+#@save
+def chunked_lm_loss_and_nll(hidden, weight, labels, chunk=8192, z_loss=0.0,
+                            ignore_index=-100):
+    """chunked_lm_loss's (sum_loss, n_valid) and the summed NLL without the
+    z-loss term, from the same chunks."""
+    H, y = hidden.flatten(0, -2), labels.flatten()
+    nll, z = sum(torch.utils.checkpoint.checkpoint(
+        d2l.lm_loss_terms, H[i:i + chunk], weight, y[i:i + chunk],
+        ignore_index, use_reentrant=False) for i in range(0, len(y), chunk))
+    return nll + z_loss * z, (y != ignore_index).sum(), nll
 ```
 
 ## Attention Internals
@@ -493,6 +540,9 @@ def _flex_available():
 def _attn_backend(attn, X, ctx):
     """'causal' (one document per row, Qwen3Attention's path), or the
     backend that applies the document mask: 'math' for a softcap."""
+    if attn.backend not in ('auto', 'sdpa', 'flex', 'math'):
+        raise ValueError(f"backend is 'auto', 'sdpa', 'flex' or 'math', "
+                         f'not {attn.backend!r}')
     if ctx is None and attn.softcap is None and attn.backend != 'math':
         return 'causal'
     if attn.softcap is not None or attn.backend == 'math':
@@ -626,6 +676,120 @@ def _check_same_tensors(mine, theirs):
                              f'expects {tuple(mine[name].shape)}')
 ```
 
+## Scaled RoPE, Cached Decoding and Construction
+
+What later sections add to `PackedAttention` and `PackedGPT`: scaled RoPE
+frequencies and YaRN's attention scale (`set_rope`, used for long context),
+the cached decoding step that uses them (`forward_cached`), the model's
+configuration (`config`), and the two other constructors (`from_arch` for
+the presets of :numref:`sec_lm_data_path`'s next section, `adopt` for a
+loaded `d2l.Qwen3GPT`). Until `set_rope` is called a model uses base RoPE.
+
+```{.python .input #data-path-lib-packed-rope}
+%%tab pytorch
+#@save
+d2l.PackedAttention.rope_inv_freq, d2l.PackedAttention.rope_mscale = None, 1.0
+
+#@save
+d2l.PackedGPT.rope_inv_freq, d2l.PackedGPT.rope_mscale = None, 1.0
+
+#@save
+d2l.PackedGPT.rope_scheme, d2l.PackedGPT.rope_scale = 'none', 1.0
+
+#@save
+d2l.PackedGPT.trained_len = None  # max_len before the first set_rope
+
+#@save
+def _packed_rope_tables(model, pos):
+    """RoPE tables of positions pos with the model's frequencies and scale
+    (base RoPE until set_rope); pos is 'rope' here."""
+    if model.pos != 'rope':
+        raise ValueError(f"pos is 'rope' or 'learned', not {model.pos!r}")
+    return _rope_tables(pos, model.head_width, model.rope_theta,
+                        getattr(model, 'rope_inv_freq', None),
+                        getattr(model, 'rope_mscale', 1.0))
+```
+
+`make lib` merges the methods below into the class bodies.
+
+```{.python .input #data-path-lib-packed-methods}
+%%tab pytorch
+@d2l.add_to_class(d2l.PackedAttention)  #@save
+def set_rope(self, inv_freq=None, mscale=1.0):
+    """RoPE frequencies (None: base rope_theta) and YaRN's scale m."""
+    self.rope_inv_freq = (None if inv_freq is None else
+                          torch.as_tensor(inv_freq, dtype=torch.float32))
+    self.rope_mscale = mscale
+
+@d2l.add_to_class(d2l.PackedAttention)  #@save
+def qkv(self, X, offset=0, tables=None):
+    """Qwen3Attention.qkv; without tables, the RoPE angles of positions
+    offset, offset + 1, ... use this block's (possibly scaled) RoPE."""
+    if self.rope and tables is None:
+        tables = _rope_tables(
+            torch.arange(X.shape[1], device=X.device) + offset,
+            self.head_dim, self.rope_theta, self.rope_inv_freq,
+            self.rope_mscale)
+    return d2l.Qwen3Attention.qkv(self, X, offset, tables)
+
+@d2l.add_to_class(d2l.PackedGPT)  #@save
+def set_rope(self, inv_freq=None, mscale=1.0, scheme='none', scale=1.0):
+    """Use RoPE frequencies inv_freq (None: base) and YaRN's scale m in
+    every block; the model then accepts scale times its trained length."""
+    self.trained_len = self.trained_len or self.max_len
+    self.rope_inv_freq = (None if inv_freq is None else
+                          torch.as_tensor(inv_freq, dtype=torch.float32))
+    self.rope_mscale, self.rope_scheme, self.rope_scale = (mscale, scheme,
+                                                           scale)
+    self.max_len = round(scale * self.trained_len)
+    for blk in self.blks:
+        blk.attention.set_rope(inv_freq, mscale)
+
+@d2l.add_to_class(d2l.PackedGPT)  #@save
+@torch.inference_mode()
+def forward_cached(self, X, ks, vs, t, all_logits=False):
+    """Qwen3GPT.forward_cached with this model's (possibly scaled) RoPE;
+    all_logits=True returns the logits of every new position."""
+    if self.pos != 'rope':
+        raise NotImplementedError('forward_cached needs RoPE positions; '
+                                  'this model has a learned table')
+    tables = _packed_rope_tables(
+        self, torch.arange(t, t + X.shape[1], device=X.device))
+    H = self.token_emb(X)
+    for i, blk in enumerate(self.blks):
+        H = H + blk.attention.forward_step(blk.norm1(H), (ks[i], vs[i], t),
+                                           tables)
+        H = H + blk.ffn(blk.norm2(H))
+    H = self.norm(H if all_logits else H[:, -1])
+    W = self.lm_head.weight if hasattr(self, 'lm_head') else \
+        self.token_emb.weight
+    return F.linear(H, W), ks, vs
+
+@d2l.add_to_class(d2l.PackedGPT)  #@save
+def config(self):
+    """Every constructor argument and the RoPE scaling, as JSON values."""
+    return _packed_config(self)
+
+@d2l.add_to_class(d2l.PackedGPT)  #@save
+@classmethod
+def from_arch(cls, arch, **kw):
+    """A model of the shape d2l.r2_config(...).arch gives."""
+    kw = dict(dict(head_dim=arch.d_h, ffn_hidden=arch.f,
+                   qk_norm=arch.qk_norm, rope_theta=arch.rope_base,
+                   tie_embeddings=arch.tie, max_len=arch.T), **kw)
+    return cls(arch.vocab, arch.d, arch.H, arch.H_kv, arch.L, **kw)
+
+@d2l.add_to_class(d2l.PackedGPT)  #@save
+@classmethod
+def adopt(cls, model, backend='auto'):
+    """A PackedGPT holding the weights of a d2l.Qwen3GPT (no copy)."""
+    with torch.device('meta'):
+        new = cls(**_qwen3_shape(model), backend=backend)
+    _check_same_tensors(new.state_dict(), model.state_dict())
+    new.load_state_dict(model.state_dict(), assign=True)
+    return new
+```
+
 ## Stream Internals
 
 ```{.python .input #data-path-lib-stream}
@@ -640,9 +804,21 @@ def _layout_hash(shards):
     return h.hexdigest()
 
 #@save
-def _window_indices(stream, p):
-    """The global batch of physical step p: a slice of the permutation of
-    the window indices seeded by (seed, epoch)."""
+def _physical_step(skipped, step):
+    """The step of the unskipped schedule that logical step uses."""
+    for k in sorted(skipped):
+        step += k <= step
+    return step
+
+#@save
+def _window_indices(stream, step):
+    """The global batch of logical step `step`: a slice of the permutation
+    of the window indices seeded by (seed, epoch), at the physical step the
+    skip set leaves it (every rank of a stream calls this first)."""
+    if stream.global_batch % stream.world:
+        raise ValueError(f'global_batch {stream.global_batch} is not a '
+                         f'multiple of world {stream.world}')
+    p = _physical_step(stream.skipped, step)
     e = stream.epoch + p // stream.steps_per_epoch
     j = p % stream.steps_per_epoch
     cached = getattr(stream, '_perm', None)
@@ -658,31 +834,48 @@ def _windows(stream, idx):
     T = stream.seq_len
     return np.stack([stream.shards.read(int(i) * T, T + 1)
                      for i in idx]).astype(np.int64)
+```
 
+```{.python .input #data-path-lib-stream-methods}
+%%tab pytorch
+@d2l.add_to_class(d2l.PackedStream)  #@save
+def physical_index(self, step):
+    """The step of the unskipped schedule that logical step uses."""
+    return _physical_step(self.skipped, step)
+
+@d2l.add_to_class(d2l.PackedStream)  #@save
+def skip(self, step):
+    """Drop physical step `step` (a bad batch); later steps move up."""
+    self.skipped = tuple(sorted(set(self.skipped) | {step}))
+```
+
+```{.python .input #data-path-lib-restart}
+%%tab pytorch
 #@save
 RestartOverlap = collections.namedtuple(
-    'RestartOverlap', ['naive_match', 'naive_repeats', 'stateless_match',
-                       'stateless_repeats', 'steps'])
+    'RestartOverlap', ['steps', 'windows', 'naive_match', 'naive_seen',
+                       'stateless_match', 'stateless_seen'])
 
 #@save
 def reseeded_restart_overlap(n_seq=10_000, batch=64, crash_step=40,
                              steps=50, seed=0):
     """A run that crashes at crash_step and restarts with a re-seeded
-    shuffle, against a stateless cursor: batches equal to the uninterrupted
-    run's, and windows seen twice."""
+    shuffle, against a stateless cursor, over the steps after the crash:
+    their number and windows, how many batches equal the uninterrupted
+    run's, and how many windows the run had already seen before the crash."""
     perm = np.random.default_rng([seed, 0]).permutation(n_seq)
     after = np.random.default_rng([seed + 1, 0]).permutation(n_seq)
-    run = [perm[s * batch:(s + 1) * batch] for s in range(steps)]
-    naive = run[:crash_step] + [after[s * batch:(s + 1) * batch]
-                                for s in range(crash_step, steps)]
-    stateless = run[:crash_step] + [perm[s * batch:(s + 1) * batch]
-                                    for s in range(crash_step, steps)]
+    later = range(crash_step, steps)
+    planned = [perm[s * batch:(s + 1) * batch] for s in later]
+    reseeded = [after[s * batch:(s + 1) * batch] for s in later]
+    before = perm[:crash_step * batch]
 
-    def overlap(batches):  # (batches equal to the run's, windows repeated)
-        seen = np.concatenate(batches)
-        return (int(sum(np.array_equal(a, b) for a, b in zip(run, batches))),
-                int(len(seen) - len(np.unique(seen))))
-    return RestartOverlap(*overlap(naive), *overlap(stateless), steps)
+    def overlap(batches):  # (batches as planned, windows seen before)
+        return (int(sum(np.array_equal(a, b)
+                        for a, b in zip(planned, batches))),
+                int(np.isin(np.concatenate(batches), before).sum()))
+    return RestartOverlap(len(later), len(later) * batch, *overlap(reseeded),
+                          *overlap(planned))
 ```
 
 ## DDP Helpers and Small-Sample Intervals
@@ -918,7 +1111,8 @@ def packing_throughput(cfg, pipelines=PACKING_PIPELINES, seq_lens=(1024,
             raise RuntimeError('pdp-throughput measures on a GPU')
         return _throughput_table(cfg, pipelines, seq_lens, steps, warmup,
                                  d2l._train_shards(cfg), torch.device('cuda'))
-    return d2l._pretrain_result('pdp-throughput', compute, config)
+    return _show_label(d2l._pretrain_result('pdp-throughput', compute,
+                                            config))
 ```
 
 ```{.python .input #data-path-lib-mask-runs}
@@ -1053,14 +1247,14 @@ def packing_comparison(cfg, tokens=25_000_000, seeds=(0, 1, 2),
     def compute():
         if not torch.cuda.is_available():
             raise RuntimeError('pdp-mask-runs trains on a GPU')
-        with d2l._quiet():
-            val = d2l.fwedu_shards('val')
+        val = d2l.reference_shards('val')
         T = cfg.arch.T
         leak_X = torch.from_numpy(np.stack([
             val.read(i * T, T) for i in range(leak_windows)]).astype(np.int64))
         return _mask_runs(run_cfg, seeds, d2l._train_shards(run_cfg),
                           d2l._val_fn(run_cfg), leak_X, torch.device('cuda'))
-    result = d2l._pretrain_result('pdp-mask-runs', compute, config)
+    result = _show_label(d2l._pretrain_result('pdp-mask-runs', compute,
+                                              config))
     if isinstance(result, pd.DataFrame):  # the labelled pending result
         return PackingRuns(result, result, result, d2l._label_of(result))
     return PackingRuns(result.table, result.losses, result.leak,

@@ -556,8 +556,6 @@ Removing the previous state $\mathbf{h}_{t-1}$ from a recurrent layer's gates yi
        follow the ratio of combines? Explain why it might not at short
        lengths.
 
-[Discussions](https://d2l.discourse.group/)
-
 [Discussions](https://d2l.discourse.group/t/36885)
 
 <!-- slides -->
@@ -819,7 +817,7 @@ Answer these three questions on linear recurrences and parallel scans:
 **Answers:**
 
 1. $\log_2 16{,}384 = \mathbf{14\text{ rounds}}$ (vs. $16{,}383$ sequential steps); $(0.5, 1) \bullet (0.5, 2) = (0.5 \times 0.5,\; 0.5 \times 1 + 2) = \mathbf{(0.25, 2.5)}$.
-2. Composing two dense transitions requires a matrix-matrix product $\mathbf{A}_2 \mathbf{A}_1$ costing $O(d^3)$ FLOPs instead of $O(d)$ elementwise multiplies ($d^2 = 65{,}536\times$ more work per combine!).
+2. Composing two dense transitions requires a matrix-matrix product $\mathbf{A}_2 \mathbf{A}_1$ costing $O(d^3)$ FLOPs instead of $O(d)$ elementwise multiplies ($d^2 = 65{,}536\times$ more work per combine).
 3. Every step of the `GRU` waits for $\mathbf{h}_{t-1}$ and pays a fixed kernel/synchronization latency, so doubling $T$ doubles the sequential critical-path latency.
 :::
 :::

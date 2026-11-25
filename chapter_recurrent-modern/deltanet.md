@@ -159,7 +159,7 @@ def correction_cost(memories, num_keys, writes=1, orthonormal=False, rho=0,
             {name: r / trials for name, r in recall.items()})
 ```
 
-We compare four memory rules—`additive`, `delta, β = 1`, `delta, β = 0.5`, and offline `least squares` (`np.linalg.lstsq`, which minimizes $\sum_{s} \|\mathbf{S}\mathbf{k}_s - \mathbf{v}_s\|^2$ over all pairs simultaneously)—across three regimes: (1) 8 orthonormal keys written 4 times each, (2) $n \in \{32, 64, 128, 256\}$ independent random unit keys written once, and (3) 64 correlated keys ($\rho = 0.5$) written once:
+We compare four memory rules (`additive`, `delta, β = 1`, `delta, β = 0.5`, and offline `least squares`, where `np.linalg.lstsq` minimizes $\sum_{s} \|\mathbf{S}\mathbf{k}_s - \mathbf{v}_s\|^2$ over all pairs simultaneously) across three regimes: (1) 8 orthonormal keys written 4 times each, (2) $n \in \{32, 64, 128, 256\}$ independent random unit keys written once, and (3) 64 correlated keys ($\rho = 0.5$) written once:
 
 ```{.python .input #deltanet-what-correction-costs-2}
 %%tab pytorch, jax
@@ -212,7 +212,7 @@ $$
 \mathbf{S}_0\mathbf{k}_t\big).
 $$
 
-Because the right-hand side is affine in $\mathbf{S}_0$, `delta_rule_writes` solves the unit-lower-triangular $m \times m$ system $\mathbf{M} = \mathbf{I} + \textrm{diag}(\boldsymbol{\beta})\,\textrm{tril}_{-1}(\mathbf{L} \odot \mathbf{K}\mathbf{K}^\top)$ in parallel across all chunks and heads for two right-hand sides—$\mathbf{W} = \mathbf{M}^{-1}(\boldsymbol{\beta} \odot \mathbf{V})$ and $\mathbf{Z} = \mathbf{M}^{-1}((\boldsymbol{\beta} \odot \boldsymbol{\gamma}) \odot \mathbf{K})$—so that $\mathbf{U} = \mathbf{W} - \mathbf{Z}\mathbf{S}_0^\top$ once $\mathbf{S}_0$ is known.
+Because the right-hand side is affine in $\mathbf{S}_0$, `delta_rule_writes` solves the unit-lower-triangular $m \times m$ system $\mathbf{M} = \mathbf{I} + \textrm{diag}(\boldsymbol{\beta})\,\textrm{tril}_{-1}(\mathbf{L} \odot \mathbf{K}\mathbf{K}^\top)$ in parallel across all chunks and heads for two right-hand sides, $\mathbf{W} = \mathbf{M}^{-1}(\boldsymbol{\beta} \odot \mathbf{V})$ and $\mathbf{Z} = \mathbf{M}^{-1}((\boldsymbol{\beta} \odot \boldsymbol{\gamma}) \odot \mathbf{K})$, so that $\mathbf{U} = \mathbf{W} - \mathbf{Z}\mathbf{S}_0^\top$ once $\mathbf{S}_0$ is known.
 
 ```{.python .input #deltanet-chunked-computation-1}
 %%tab pytorch
@@ -381,7 +381,7 @@ The chunked algorithm matches the token-level recurrence to $\sim 10^{-7}$ relat
 
 ### The Layer
 
-`GatedDeltaNet` subclasses `d2l.GatedLinearAttention` (:numref:`sec_matrix-state`), adding only the write-strength projection `W_beta` ($\beta_{t,h} = \sigma(\mathbf{w}_{\beta,h}^\top \mathbf{x}_t + b_{\beta,h}) \in (0, 1)$ per head) and overriding `memory` to call `chunked_delta_rule`. Every other component—the width-4 causal convolution, $\ell_2$-normalized queries and keys, scalar per-head decay, RMS head normalization, and SiLU output gate—is identical.
+`GatedDeltaNet` subclasses `d2l.GatedLinearAttention` (:numref:`sec_matrix-state`), adding only the write-strength projection `W_beta` ($\beta_{t,h} = \sigma(\mathbf{w}_{\beta,h}^\top \mathbf{x}_t + b_{\beta,h}) \in (0, 1)$ per head) and overriding `memory` to call `chunked_delta_rule`. Every other component (the width-4 causal convolution, $\ell_2$-normalized queries and keys, scalar per-head decay, RMS head normalization, and SiLU output gate) is identical.
 
 ```{.python .input #deltanet-the-layer}
 %%tab pytorch
@@ -585,7 +585,7 @@ The reflection is delicate, though. A doubled sigmoid only approaches $\beta_t =
 
 ## Memory as Regression
 
-Stepping back, every matrix memory in this chapter—as well as softmax attention—can be understood as fitting a regression predictor from keys $\mathbf{K}_t \in \mathbb{R}^{t \times d_k}$ to values $\mathbf{V}_t \in \mathbb{R}^{t \times d_v}$ on the fly as a sequence is read :cite:`Wang.Shi.Fox.2025`. The exact linear least-squares minimizer of $\sum_{s \le t} \|\mathbf{S}\mathbf{k}_s - \mathbf{v}_s\|^2$ is:
+Stepping back, every matrix memory in this chapter, as well as softmax attention, can be understood as fitting a regression predictor from keys $\mathbf{K}_t \in \mathbb{R}^{t \times d_k}$ to values $\mathbf{V}_t \in \mathbb{R}^{t \times d_v}$ on the fly as a sequence is read :cite:`Wang.Shi.Fox.2025`. The exact linear least-squares minimizer of $\sum_{s \le t} \|\mathbf{S}\mathbf{k}_s - \mathbf{v}_s\|^2$ is:
 
 $$
 \mathbf{S}_t^\star = \mathbf{V}_t^\top \mathbf{K}_t\,
@@ -599,7 +599,7 @@ where $(\mathbf{K}_t^\top \mathbf{K}_t)^{-1}$ is replaced by the pseudoinverse w
 - **The delta rule** takes one online stochastic gradient step per token toward :eqref:`eq_dn-least-squares`, while **Gated DeltaNet** adds weight decay ($a_t < 1$) before each step. Replacing the explicit gradient step by the proximal implicit step $\arg\min_{\mathbf{S}} \frac{1}{2}\|\mathbf{S} - \mathbf{S}_{t-1}\|^2 + \frac{\beta_t}{2}\|\mathbf{S}\mathbf{k}_t - \mathbf{v}_t\|^2$ yields the normalized step size $\beta_t / (1 + \beta_t\|\mathbf{k}_t\|^2)$ of Longhorn :cite:`Liu.Wang.Wu.ea.2024` (Exercise :exref:`ex_dn-implicit`), while carrying $(\mathbf{K}_t^\top \mathbf{K}_t + \lambda\mathbf{I})^{-1}$ explicitly yields recursive least squares (Exercise :exref:`ex_dn-rls`).
 - **Softmax attention** performs *nonparametric* Nadaraya–Watson kernel regression (:numref:`sec_attention-pooling`) at query time over all stored pairs, avoiding parametric compression at the cost of an $O(t)$ KV cache.
 
-The exact fit can also be kept up to date one pair at a time. Each pair changes $\mathbf{K}_t^\top \mathbf{K}_t$ by the rank-one term $\mathbf{k}_t\mathbf{k}_t^\top$, so the Sherman–Morrison formula :eqref:`eq_mdl-sherman-morrison` of :numref:`subsec_mdl-block-matrices` updates the inverse without a new matrix inversion. This is recursive least squares. It carries a second state of size $d_k \times d_k$ next to the memory (Exercise :exref:`ex_dn-rls`).
+The exact fit can also be kept up to date one pair at a time. Each pair changes $\mathbf{K}_t^\top \mathbf{K}_t$ by the rank-one term $\mathbf{k}_t\mathbf{k}_t^\top$, so the Sherman–Morrison formula (:numref:`subsec_mdl-block-matrices`) updates the inverse without a new matrix inversion. This is recursive least squares. It carries a second state of size $d_k \times d_k$ next to the memory (Exercise :exref:`ex_dn-rls`).
 
 :Memories as regressions on the pairs read so far.
 :label:`tab_dn-regression`
@@ -657,8 +657,8 @@ Because additive matrix memories superpose every write to the same key, querying
    which approaches :eqref:`eq_dn-least-squares` as $\lambda \to 0$, can be
    updated one pair at a time if the memory also keeps $\mathbf{P}_t =
    (\mathbf{K}_t^\top \mathbf{K}_t + \lambda\mathbf{I})^{-1}$.
-    1. Use the Sherman–Morrison formula
-       :eqref:`eq_mdl-sherman-morrison` to derive the updates of
+    1. Use the Sherman–Morrison formula of
+       :numref:`subsec_mdl-block-matrices` to derive the updates of
        $\mathbf{P}_t$ and $\mathbf{S}_t$ after one new pair, and show that
        the update of $\mathbf{S}_t$ is a delta rule that writes along
        $\mathbf{P}_t\mathbf{k}_t$ instead of $\mathbf{k}_t$. How many
@@ -830,7 +830,7 @@ $$\mathbf{S}_t = a_t\,\mathbf{S}_{t-1}(\mathbf{I} - \beta_t \mathbf{k}_t \mathbf
 
 - **Three Operating Modes (Yang et al., 2024):**
   1. **Global Flush ($a_t \to 0$):** Wipes the entire matrix at topic boundaries.
-  2. **Surgical Key Update ($a_t \approx 1, \beta_t \to 1$):** Overwrites $\mathbf{k}_t$ while preserving $\mathbf{k}_t^\perp$.
+  2. **Targeted Key Update ($a_t \approx 1, \beta_t \to 1$):** Overwrites $\mathbf{k}_t$ while preserving $\mathbf{k}_t^\perp$.
   3. **Gentle Accumulation ($a_t \approx 1, \beta_t \approx 0.2$):** Low-erosion associative write.
 :::
 
@@ -877,7 +877,7 @@ Because `GatedLinearAttention` (§{sec_matrix-state}) isolated its state recurre
 @-deltanet-the-layer
 
 ::: {.d2l-note}
-Every other component—width-4 causal convolution, $\ell_2$-normalized queries and keys, log-uniform head decay initialization, per-head RMSNorm, and SiLU output gating—is inherited unchanged.
+Every other component (width-4 causal convolution, $\ell_2$-normalized queries and keys, log-uniform head decay initialization, per-head RMSNorm, and SiLU output gating) is inherited unchanged.
 :::
 :::
 

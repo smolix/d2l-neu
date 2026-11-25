@@ -556,8 +556,9 @@ arm's configuration and the identity of its starting point (Qwen's pinned
 revision, or the T1 preset with its checkpoint and plateau state), and a
 folder trained from anything else is refused rather than reused. A T2 arm
 keeps up to three full states of about 7 GB while it trains, so it starts
-only with `_CPT_MIN_FREE_GB` free on the data disk (enough for four arms
-at once).
+only with `_CPT_MIN_FREE_GB` free on the data disk: its own three states,
+the third state of one arm already running, and a margin (arms run at most
+two at a time on the 4090 box, whose data disk has under 100 GB free).
 
 ```{.python .input #continued-pretraining-lib-arms}
 %%tab pytorch
@@ -587,7 +588,7 @@ _CPT_MICRO = {'t1': 16, 't2': 1}  # sequences per micro-batch (D2 probe:
 _CPT_SUITE_STEP = 15  # arm A's early look at the suite
 
 #@save
-_CPT_MIN_FREE_GB = {'t1': 10, 't2': 100}  # free disk before an arm starts
+_CPT_MIN_FREE_GB = {'t1': 10, 't2': 40}  # free disk before an arm starts
 
 #@save
 def _arm_slug(arm):

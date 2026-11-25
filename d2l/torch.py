@@ -25099,7 +25099,7 @@ _CPT_MICRO = {'t1': 16, 't2': 1}  # sequences per micro-batch (D2 probe:
 
 _CPT_SUITE_STEP = 15  # arm A's early look at the suite
 
-_CPT_MIN_FREE_GB = {'t1': 10, 't2': 100}  # free disk before an arm starts
+_CPT_MIN_FREE_GB = {'t1': 10, 't2': 40}  # free disk before an arm starts
 
 def _arm_slug(arm):
     return {'A′': 'A2', 'A″': 'A3'}.get(arm, arm)

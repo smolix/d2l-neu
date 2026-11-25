@@ -1270,7 +1270,7 @@ Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Integer gather:** Pairs row and column indices, used in cross-entropy to pluck the true-class score per example.
+- **Integer gather:** Pairs row and column indices—used in cross-entropy to pluck the true-class score per example.
 - **Mask vs. `where`:** Masking collapses matches to a **1D vector**, whereas `where(mask, X, 0)` preserves the 2D shape for ReLU and attention masks.
 
 @ndarray-indexing-and-slicing-5

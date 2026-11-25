@@ -367,7 +367,7 @@ Differential Calculus: Derivatives, Gradients, Jacobians, and the Chain Rule<br>
 
 ::: {.cols .vc}
 ::: {.col}
-- The **derivative** $f'(x)$ is the instantaneous rate of change, defined as the limit of the **secant slope** between $(x, f(x))$ and $(x+h, f(x+h))$ as $h \to 0$:
+- The **derivative** $f'(x)$ is the instantaneous rate of change—the limit of the **secant slope** between $(x, f(x))$ and $(x+h, f(x+h))$ as $h \to 0$:
   $$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$$
 - On $L(w) = 3w^2 - 4w + 2$ at $w = 1$, expanding $L(1+h) = 1 + 2h + 3h^2$ gives $\frac{L(1+h)-L(1)}{h} = 2 + 3h \to 2$:
 

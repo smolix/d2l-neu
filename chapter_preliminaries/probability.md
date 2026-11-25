@@ -203,7 +203,7 @@ d2l.plot(jnp.arange(1, n + 1), [estimates, jnp.full(n, 0.5)], 'tosses',
          xscale='log', figsize=(4.5, 3))
 ```
 
-To know *how fast* $\hat{p}$ settles, and whether $56/100$ is suspicious, we now formalize random variables and their spread.
+To know *how fast* $\hat{p}$ settles—and whether $56/100$ is suspicious—we now formalize random variables and their spread.
 
 ## Events and Random Variables
 
@@ -649,10 +649,10 @@ Probability and Statistics: Reasoning Under Uncertainty in Machine Learning<br>*
 
 ::: {.cols .vc}
 ::: {.col}
-- **Data (aleatoric) uncertainty (*irreducible*):** Intrinsic randomness or ambiguity in the observation itself.
+- **Data (aleatoric) uncertainty — *irreducible*:** Intrinsic randomness or ambiguity in the observation itself.
   - Even when we know a coin is fair ($p = 0.5$), the next toss is still 50/50.
   - A blurry $28 \times 28$ Fashion-MNIST image that humans split 60/40 between *pullover* and *coat* stays ambiguous no matter how many training images we collect.
-- **Model (epistemic) uncertainty (*reducible*):** Ignorance about true parameters ($p$ or weights $\mathbf{w}$) due to finite sample size $n$.
+- **Model (epistemic) uncertainty — *reducible*:** Ignorance about true parameters ($p$ or weights $\mathbf{w}$) due to finite sample size $n$.
   - Shrinks at rate **$1/\sqrt{n}$** as we collect more data.
 :::
 

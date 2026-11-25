@@ -34,8 +34,8 @@ Mathematical Foundations and Software Pillars of Deep Learning<br>**tensors · d
 ::: {.cols .vc}
 ::: {.col}
 - **Scale breaks scalar code:** One 256-image Fashion-MNIST batch holds $200{,}704$ pixels; foundation models update $10^9\text{--}10^{12}$ weights per step.
-- **Pillar 1 (Contiguous Tensor Kernels):** Pack data into unboxed RAM/VRAM buffers and transform whole batches on SIMD/GPU lanes.
-- **Pillar 2 (Reverse-Mode Autograd):** Record the execution DAG to obtain all parameter gradients $\nabla_{\mathbf{w}} L$ in a single backward sweep.
+- **Pillar 1 — Contiguous Tensor Kernels:** Pack data into unboxed RAM/VRAM buffers and transform whole batches on SIMD/GPU lanes.
+- **Pillar 2 — Reverse-Mode Autograd:** Record the execution DAG to obtain all parameter gradients $\nabla_{\mathbf{w}} L$ in a single backward sweep.
 - **Statistical Foundation:** Bound test-set uncertainty ($\sigma/\sqrt{n}$) and update beliefs via Bayes' rule.
 :::
 

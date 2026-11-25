@@ -963,7 +963,7 @@ For $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mat
 - Since $f(a) = k \cdot a$ is piecewise linear along each execution path, its derivative equals the exact slope $k = f(a) / a$:
   - $a = 0.3 > 0$: $12$ doublings (`if` branch) $\implies k = 2^{12} = 4096$.
   - $a = -0.75 < 0$: $11$ doublings (`else` branch) $\implies k = 100 \cdot 2^{11} = 204{,}800$.
-- **Caveat:** Autograd differentiates the *executed trace*; at jump thresholds where loop iterations change, it returns the slope of the branch that ran.
+- **Caveat:** Autograd differentiates the *executed trace*—at jump thresholds where loop iterations change, it returns the slope of the branch that ran.
 :::
 
 ::: {.col .fig .big}

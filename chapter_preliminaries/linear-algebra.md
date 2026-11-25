@@ -983,7 +983,7 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why `A / A.sum(axis=1)` fails:** Dividing `(2, 3)` by `(2,)` right-aligns as `(2, 3)` vs. `(1, 2)`, so trailing dimensions $3 \neq 2$ clash.
+- **Why `A / A.sum(axis=1)` fails:** Dividing `(2, 3)` by `(2,)` right-aligns as `(2, 3)` vs. `(1, 2)`—trailing dimensions $3 \neq 2$ clash.
 - **`keepdims=True` retains length 1 (`(2, 1)`):** Now `A / sum_A` broadcasts across columns so each row sums to $1$ (**softmax**, **attention**).
 - **Centering $\mathbf{X} \in \mathbb{R}^{256 \times 784}$:** Per-pixel means (`axis=0`, `(784,)`) broadcast directly; per-image means (`axis=1`, `(256, 1)`) need `keepdims=True` (**LayerNorm**).
 :::
@@ -1023,7 +1023,7 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 ::: {.col}
 - Dividing by Euclidean lengths defines **cosine similarity** in any dimension $d$:
   $$\cos\theta = \frac{\mathbf{x}^\top \mathbf{y}}{\|\mathbf{x}\|_2 \|\mathbf{y}\|_2} \in [-1, 1]$$
-- **Scale invariance:** Rescaling brightness or embedding magnitude (`2 * x`) leaves $\cos\theta$ unchanged, making it the standard similarity score for token, image, and retrieval embeddings.
+- **Scale invariance:** Rescaling brightness or embedding magnitude (`2 * x`) leaves $\cos\theta$ unchanged—making it the workhorse similarity score for token, image, and retrieval embeddings.
 - **Cauchy–Schwarz ($|\mathbf{x}^\top\mathbf{y}| \leq \|\mathbf{x}\|_2\|\mathbf{y}\|_2$):** Follows directly from $0 \leq \|\mathbf{u} \mp \mathbf{v}\|_2^2 = 2 \mp 2\mathbf{u}^\top\mathbf{v}$ on unit vectors $\mathbf{u}, \mathbf{v}$.
 :::
 
@@ -1070,7 +1070,7 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 ::: {.col}
 - For $\mathbf{A} \in \mathbb{R}^{m \times k}$ and $\mathbf{B} \in \mathbb{R}^{k \times n}$, $\mathbf{C} = \mathbf{A}\mathbf{B} \in \mathbb{R}^{m \times n}$ (`A @ B`) computes $mn$ dot products of length $k$:
   $$c_{ij} = \mathbf{a}_i^\top \mathbf{b}_{:,j} = \sum_{l=1}^{k} a_{il}\, b_{lj}$$
-- **Shape rule:** $(m, k) \times (k, n) \to (m, n)$; inner dimensions $k$ must match and contract away.
+- **Shape rule:** $(m, k) \times (k, n) \to (m, n)$—inner dimensions $k$ must match and contract away.
 
 @linear-algebra-matrix-matrix-multiplication
 :::
@@ -1178,7 +1178,7 @@ Given flattened minibatch `X` of shape `(256, 784)` and weight matrix `W_T` stor
 ::: {.col}
 - Expanding any input $\mathbf{x} = \sum_{i=1}^n c_i \mathbf{v}_i$ in the orthonormal eigenbasis shows how repeated multiplication evolves:
   $$\mathbf{A}^k \mathbf{x} = \sum_{i=1}^n c_i \lambda_i^k \mathbf{v}_i$$
-- **Power iteration:** As $k$ grows, the term with the largest $|\lambda_i|$ dominates, aligning $\mathbf{A}^k\mathbf{x}$ with the dominant eigenvector and stretching its norm by $\max_i |\lambda_i|$ per step.
+- **Power iteration:** As $k$ grows, the term with the largest $|\lambda_i|$ dominates—aligning $\mathbf{A}^k\mathbf{x}$ with the dominant eigenvector and stretching its norm by $\max_i |\lambda_i|$ per step.
 - For symmetric $\mathbf{A}$, $\max_i |\lambda_i|$ equals the **spectral norm** $\|\mathbf{A}\|_2 = \max_{\mathbf{x}\neq\mathbf{0}} \|\mathbf{A}\mathbf{x}\|_2 / \|\mathbf{x}\|_2$ (maximum stretch factor).
 :::
 

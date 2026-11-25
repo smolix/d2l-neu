@@ -286,12 +286,12 @@ From Raw Tabular Data to Clean Tensors<br>**schema inspection · missing-data me
 
 ::: {.cols}
 ::: {.col}
-- **Heterogeneous types & gaps:** Real-world CSV logs mix numerical columns (`int64`, `float64`), free-text categorical strings (`"Slate"`, `"Tile"`), and unrecorded `NaN` entries, whereas tensor kernels require dense, homogeneous floating-point buffers.
+- **Heterogeneous types & gaps:** Real-world CSV logs mix numerical columns (`int64`, `float64`), free-text categorical strings (`"Slate"`, `"Tile"`), and unrecorded `NaN` entries—whereas tensor kernels require dense, homogeneous floating-point buffers.
 - **Incommensurate scales:** In our house-price dataset, `Area` ($\sim 10^3\text{ sq ft}$) is roughly $500\times$ larger than `NumRooms` ($\sim 10^0$), skewing distances and gradients if left unscaled.
 :::
 
 ::: {.col}
-- **Statistical judgment, not boilerplate:** Every preprocessing choice (dropping vs. imputing `NaN`s, integer vs. one-hot encoding, whole-table vs. training-split scaling) imposes an explicit statistical assumption on what the downstream model can learn.
+- **Statistical judgment, not boilerplate:** Every preprocessing choice—dropping vs. imputing `NaN`s, integer vs. one-hot encoding, whole-table vs. training-split scaling—imposes an explicit statistical assumption on what the downstream model can learn.
 :::
 :::
 :::

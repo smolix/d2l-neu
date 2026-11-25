@@ -58,8 +58,6 @@ from d2l import torch as d2l
 
 ```{.python .input #memory-tiers-extras}
 %%tab pytorch
-import json
-import re
 import pandas as pd
 ```
 
@@ -93,25 +91,9 @@ Seagate Exos datasheet; latencies of the GPU and DRAM rows from the MLSS
 never a dollar figure (prices live in 22.8's table). Rows without a vendor
 bandwidth (shared memory, L2) are measured in sec_lm_accelerator_design;
 CXL and the hard disk are table rows only. Latency Numbers Every Programmer
-Should Know as a dated contrast only. -->
-
-```{.python .input #memory-tiers-tier-table-def}
-%%tab pytorch
-def tier_table(log=None):  #@save
-    """The memory and storage tiers, one row each: datasheet bandwidth
-    (GB/s), latency (ns), capacity per node (GB), an ordinal cost rank (1 =
-    cheapest per byte), example device, source and date. Given a campaign
-    log, its measured columns are joined and shown too; while the log is
-    pending, one status line."""
-    tiers = d2l._hw_static('tiers')
-    if isinstance(log, d2l.CampaignPending):
-        print(d2l.hw_status_line(log))
-        return tiers
-    if log is not None:
-        tiers = tiers.join(log['tiers'], on='tier')
-    d2l.show_tiers(tiers)
-    return tiers
-```
+Should Know as a dated contrast only. One sentence: d2l.tier_table loads the
+sourced table and prints it (with a campaign's measured columns when one is
+given). -->
 
 ```{.python .input #memory-tiers-tier-table}
 %%tab pytorch
@@ -135,20 +117,27 @@ under-reports beta. -->
 ```{.python .input #memory-tiers-h2d-bench}
 %%tab pytorch
 def hw_h2d_bench(nbytes, pinned=True, direction='h2d', numa=None,  #@save
-                 device=None, repeats=10):
-    """Milliseconds (median and MAD over repeats) and GB/s of one copy of
+                 device=None, repeats=10, huge_pages=False):
+    """Milliseconds per copy (median and MAD over repeats) and GB/s of
     nbytes between host memory, pinned or pageable, and GPU memory: host to
-    device ('h2d') or back ('d2h'); the host buffer on NUMA node numa if
-    given. CUDA events around back-to-back copies; a pageable copy blocks
-    the host, a pinned one is queued."""
-    device = torch.device(device or 'cuda')
-    with d2l._numa_bind(numa), torch.cuda.device(device):
-        host = torch.ones(nbytes, dtype=torch.uint8, pin_memory=pinned)
-        gpu = torch.empty(nbytes, dtype=torch.uint8, device=device)
-        src, dst = (host, gpu) if direction == 'h2d' else (gpu, host)
-        ms = d2l._hw_time(lambda: dst.copy_(src, non_blocking=pinned),
-                          repeats, graph=False, target_ms=5, max_inner=50)
-    med, mad = d2l._hw_stats(ms)
+    device ('h2d') or back ('d2h'). CUDA events bracket enough back-to-back
+    copies for a few milliseconds; a pageable copy blocks the host, a
+    pinned one is queued. The host buffer lives on NUMA node numa if given,
+    in 2 MiB pages if huge_pages."""
+    host, gpu = d2l._copy_buffers(nbytes, pinned, numa, device, huge_pages)
+    src, dst = (host, gpu) if direction == 'h2d' else (gpu, host)
+    copies = d2l._copies_per_timing(nbytes)
+    start, stop = (torch.cuda.Event(enable_timing=True) for _ in range(2))
+    ms = []
+    with torch.cuda.device(gpu.device):
+        for _ in range(repeats + 1):  # the first round warms up
+            start.record()
+            for _ in range(copies):
+                dst.copy_(src, non_blocking=pinned)
+            stop.record()
+            stop.synchronize()
+            ms.append(start.elapsed_time(stop) / copies)
+    med, mad = d2l._hw_stats(ms[1:])
     return dict(ms=med, mad=mad, gbs=nbytes / med / 1e6)
 ```
 
@@ -175,53 +164,33 @@ def fit_alpha_beta(sizes, times, weights=None):  #@save
     r = t - X @ np.array([alpha, g])
     dof = max(len(t) - 2, 1)
     cov_ag = A * (w @ r**2) / dof
-    J = np.array([[1.0, 0.0], [0.0, -1 / g**2]])  # d(alpha, beta) / d(alpha, g)
+    J = np.array([[1.0, 0.0], [0.0, -1 / g**2]])  # d(alpha, beta)/d(alpha, g)
     return float(alpha), float(1 / g), J @ cov_ag @ J.T
 ```
 
-<!-- Placeholder (prose): the sweep, 4 KiB to 1 GiB in factors of 4,
-pinned and pageable, both directions (claim M1: pinned h2d within 20% of
-the per-direction ceiling, the fitted beta with its bootstrap 95% interval;
-pageable markedly slower). The link idles at Gen 1 and trains to Gen 4
-under load, which nvidia-smi shows during the sweep: a link read at rest
-looks four times slower than it is. -->
+<!-- Placeholder (prose): the sweep, 4 KiB to 1 GiB in factors of 2,
+pinned (4 KiB pages, what pin_memory gives), pinned in 2 MiB pages and
+pageable, both directions. The data are not alpha-beta shaped: pinned h2d
+sits near 19 GB/s from 1 to 64 MiB and climbs only for the largest copies,
+and pinned d2h in 4 KiB pages falls off at 1 GiB while the 2 MiB-page
+buffer holds about 26 GB/s both ways (this box's IOMMU translates every
+DMA, DMA-FQ: fewer, larger pages miss its translation cache less). So beta
+is the plateau of the copies of 256 MiB and more (median and range), alpha
+the fit of fit_alpha_beta on the copies up to 1 MiB (claim M1: pinned h2d
+against the per-direction ceiling, quoted at 2 digits; pageable markedly
+slower). The link idles at Gen 1 and trains to Gen 4 under load (sysfs read
+before the sweep, nvidia-smi during it): a link read at rest looks eight
+times slower than it is. -->
 
 ```{.python .input #memory-tiers-host-link}
 %%tab pytorch
-h2d = d2l.hw_h2d_sweep(sizes=2**np.arange(12, 31, 2), pinned=(True, False),
+h2d = d2l.hw_h2d_sweep(sizes=2**np.arange(12, 31),
+                       modes=('pinned', 'pinned-2M', 'pageable'),
                        directions=('h2d', 'd2h'))
-links = d2l.fit_h2d(h2d)  # alpha (s), beta (bytes/s) per mode and direction
-beta_pinned = links.loc[('pinned', 'h2d'), 'beta']
+links = d2l.fit_h2d(h2d, alpha_below=2**20, plateau_from=2**28)
+beta_pinned = links.loc[('pinned', 'h2d'), 'beta']  # bytes/s, the plateau
 d2l.plot_h2d(h2d, links, pcie_gen=4, lanes=16)
 assert links.loc[('pageable', 'h2d'), 'beta'] < beta_pinned  # staging costs
-```
-
-<!-- Placeholder (prose): nvbandwidth (NVIDIA's host-device benchmark)
-prints a matrix per test case; the parser reads each one, and the SUM and
-COEFFICIENT_OF_VARIATION lines. Buffers under 512 MiB under-report. -->
-
-```{.python .input #memory-tiers-parse-nvbandwidth}
-%%tab pytorch
-def parse_nvbandwidth(text):  #@save
-    """{test case: matrix of GB/s (rows: sources, columns: targets; NaN
-    where not measured), test case + '_sum': SUM line, test case + '_cv':
-    COEFFICIENT_OF_VARIATION line} from nvbandwidth's output."""
-    out, lines, case = {}, text.splitlines(), None
-    for k, line in enumerate(lines):
-        m = re.match(r'Running (\S+)\.$', line.strip())
-        if m:
-            case, rows = m.group(1), []
-            for row in lines[k + 3:]:  # after the title and the column row
-                if not row.strip():
-                    break
-                rows.append([float(v) if v not in ('N/A',) else np.nan
-                             for v in row.split()[1:]])
-            out[case] = np.array(rows)
-        m = re.match(r'(SUM|COEFFICIENT_OF_VARIATION) (\S+) (\S+)', line)
-        if m:
-            suffix = '_sum' if m.group(1) == 'SUM' else '_cv'
-            out[m.group(2) + suffix] = float(m.group(3))
-    return out
 ```
 
 <!-- Placeholder (prose): the four cards at once, asked as a question with
@@ -230,13 +199,22 @@ GB/s of DRAM, so four links at about 25 GB/s each may scale, or a shared
 resource may bind (the two host bridges of fig_pcie_topology, each shared
 by a pair of cards, or host DRAM, measured next against its 8 x 25.6 GB/s).
 The measurement needs every card, so the page shows the committed run and
-re-measures one card. On one socket in NPS1 mode the four root complexes
-look like one NUMA node; the node campaign shows a two-socket layout. -->
+re-measures one card the same way. On one socket in NPS1 mode the four
+root complexes look like one NUMA node; the node campaign shows a
+two-socket layout. NVIDIA's nvbandwidth (copy engines, 512 MiB buffers,
+each card alone; its output is read by d2l.parse_nvbandwidth) cross-checks
+the single-card figures in both directions. Host DRAM: STREAM's kernels
+(McCalpin) at 8, 16 and 32 threads, the best of each (a memory-bound
+kernel peaks below all cores), counted as STREAM counts them (bytes read plus
+bytes written, no write-allocate traffic): a summing read, a copy and the
+triad a = b + s c. The datasheet's 8 x 25.6 GB/s is a peak no kernel
+reaches; the triad is the achievable rate, and the CPU optimizer's bound
+below uses it. -->
 
 ```{.python .input #memory-tiers-four-cards}
 %%tab pytorch
 agg = d2l.hw_h2d_concurrent('box')
-dram = d2l.hw_host_mem_bench(threads=32)
+dram = d2l.hw_host_mem_bench(threads=(8, 16, 32))  # read, copy, triad
 ```
 
 ### Drives and Object Stores
@@ -246,57 +224,20 @@ dram = d2l.hw_host_mem_bench(threads=32)
 page cache, so every read uses O_DIRECT (no root needed); the file is
 written once first, so reads hit flash, not unwritten space; an NVMe drive
 is fast only for large reads at depth: queue depth (outstanding requests)
-times block size must cover the drive's internal parallelism. The parser
-reads fio's JSON (bandwidth, IOPS, mean and 99th-percentile latency, and
-the sectors each drive read: disk_util). GDS (gdsio) is absent here; its
-parser is tested on NVIDIA's documented output, and compatibility mode is
-not GPUDirect: it is a bounce buffer in disguise. -->
-
-```{.python .input #memory-tiers-parse-fio}
-%%tab pytorch
-def parse_fio(json_text):  #@save
-    """One fio run (--output-format=json, --group_reporting): read GB/s,
-    IOPS, mean and p99 latency (us), block size, pattern, queue depth,
-    jobs, and drive_bytes, the bytes each physical drive read."""
-    doc = json.loads(json_text[json_text.index('{'):])
-    job = doc['jobs'][0]
-    opt, r = job['job options'], job['read']
-    to_bytes = {'k': 2**10, 'm': 2**20, 'g': 2**30}
-    bs = opt['bs'].lower()
-    drives = {d['name']: d['read_sectors'] * 512 for d in doc.get(
-        'disk_util', []) if re.fullmatch(r'nvme\d+n\d+|sd[a-z]+', d['name'])}
-    return dict(rw=opt['rw'], bs=int(bs[:-1]) * to_bytes[bs[-1]]
-                if bs[-1] in to_bytes else int(bs),
-                qd=int(opt.get('iodepth', 1)), jobs=int(opt.get('numjobs', 1)),
-                bw_gbs=r['bw_bytes'] / 1e9, iops=r['iops'],
-                lat_mean_us=r['lat_ns']['mean'] / 1e3,
-                lat_p99_us=r['clat_ns']['percentile']['99.000000'] / 1e3,
-                drive_bytes=drives)
-```
-
-```{.python .input #memory-tiers-parse-gdsio}
-%%tab pytorch
-def parse_gdsio(text):  #@save
-    """The IoType lines of gdsio's output as a table: I/O type, transfer
-    type (GPUD: GPUDirect; CPU_GPU: through a bounce buffer; CPUONLY),
-    threads, I/O size (bytes), GiB/s and mean latency (us)."""
-    pattern = (r'IoType: (\w+) XferType: (\w+) Threads: (\d+) .*?'
-               r'IOSize: (\d+)\(KiB\) Throughput: ([\d.]+) GiB/sec, '
-               r'Avg_Latency: ([\d.]+) usecs')
-    rows = [dict(io=m[0], xfer=m[1], threads=int(m[2]),
-                 io_size=int(m[3]) * 2**10, gib_s=float(m[4]),
-                 lat_us=float(m[5]))
-            for m in re.findall(pattern, text)]
-    return pd.DataFrame(rows)
-```
+times block size must cover the drive's internal parallelism. fio's JSON
+is read by d2l.parse_fio (bandwidth, IOPS, mean and 99th-percentile
+latency, and the sectors each drive read: disk_util). GDS (gdsio) is absent
+here; d2l.parse_gdsio is tested on NVIDIA's documented output, and
+compatibility mode is not GPUDirect: it is a bounce buffer in disguise. -->
 
 <!-- Placeholder (prose): the sweep (claim M3): block sizes 4 KiB to 4 MiB,
 sequential and random reads, one outstanding read or 64 for each of four
 jobs, on a 16 GiB file, each point the median of three processes. Random
 small reads are bound by IOPS, large ones by bandwidth; the knee is at
 bs = beta / IOPS. Two drives in RAID 1 hold the same bytes, so a read can
-come from either: at depth the pair reads faster than the datasheet of one
-drive, and fio's per-drive counters show the split. The live check reads a
+come from either: at depth the pair reads faster than one drive's
+datasheet, so it is compared with two drives' (fio's per-drive counters
+show the split). The live check reads a
 2 GiB scratch file at two points (skipped without the fio binary or below
 10 GB free). -->
 
@@ -317,12 +258,16 @@ object stores keep many requests in flight. -->
 obj = d2l.hw_object_store('box')
 ```
 
-<!-- Placeholder (prose): the ladder with this machine's points (figure
-fig_lm_hw_tiers, computed; claim M8: measured within 20% of the datasheet
-where one exists; a tier below 80% is investigated before writing: link
-generation during the sweep, NUMA, RAID layout). The host DRAM fraction is
-the summing read of one process; the node's DRAM, CXL, LPDDR5X and the hard
-disk have no point here. -->
+<!-- Placeholder (prose): the ladders with this machine's points (figure
+fig_lm_hw_tiers, computed: bandwidth and latency per tier; the GPU's shared
+memory, L2 and GDDR from sec_lm_accelerator_design's committed run, the RTX
+4090's, beside the table's A100 rows). Claim M8: measured within 20% of a
+datasheet that states the same quantity: the host link (plateau), GDDR and
+the RAID 1 pair against two drives. Not compared: the four host links
+(drawn against 4 x the ceiling; M2 answers what binds) and host DRAM, whose
+8 x 25.6 GB/s is a peak no kernel reaches (its STREAM fractions are
+printed above). The node's DRAM, CXL, LPDDR5X and the hard disk have no
+point here. -->
 
 ```{.python .input #memory-tiers-tiers-measured}
 %%tab pytorch
@@ -386,50 +331,69 @@ P_eff >= N s_adam, T >= T_cpu = P_eff s_adam / 6, again independent of N.
 The update moves q bytes of host memory per parameter, counted from what
 it does: the bf16 gradient read (2) and written as fp32 (4); AdamW reads
 weight, gradient and both moments (16) and writes weight and moments (12);
-the fp32 weight read (4) and written as bf16 (2): q = 40, so s_adam >= q /
-B_host. P_eff is 22.3's calibration (the best bf16 product), beta_l the
-pinned host link just measured; the cell says which threshold binds on
-this machine. -->
+the fp32 weight read (4) and written as bf16 (2): q = 40 bytes of operands,
+counted as STREAM counts, so the bound to compare with is q / B_triad (the
+triad above, same counting). Part of each tensor's traffic stays in the 128
+MiB L3 (a 4M-parameter tensor's fp32 gradient is written and read again at
+once), so the measured s_adam can sit near or even below that bound: the
+text says "within X of the host-memory bound", not "bandwidth bound". The
+update runs on 8 threads: it is memory bound, 8 threads are within about
+15% of 32, and the offloaded run below shows what 32 cost. P_eff is 22.3's
+calibration (the best bf16 product: the rate the GPU could reach), beta_l
+the pinned host link's plateau; the cell says which threshold binds at
+that rate. -->
 
 ```{.python .input #memory-tiers-offload-threshold}
 %%tab pytorch
 calib = d2l.hw_calibrate(log=d2l.hw_box_log('box-microbench'))
-P_eff = calib['P_eff_bf16']  # FLOP/s
-s_adam = d2l.hw_cpu_adam_bench(threads=32)  # seconds per parameter
-q = 2 + 4 + 16 + 12 + 4 + 2  # bytes of host memory per parameter
+P_eff = calib['P_eff_bf16']  # FLOP/s, the GPU's best bf16 product
+s_adam = d2l.hw_cpu_adam_bench(threads=8)  # seconds per parameter
+q = 2 + 4 + 16 + 12 + 4 + 2  # bytes of operands per parameter
+B_triad = dram['triad']  # GB/s, so q / B_triad is in ns
 T_link = d2l.offload_breakeven(P_eff, beta_pinned)
 T_cpu = P_eff * s_adam / 6
-B_host = dram['gbs']  # GB/s, so q / B_host is in ns
-print(f'CPU update: {s_adam * 1e9:.2f} ns per parameter; q / B_host = '
-      f'{q} B / {B_host:.0f} GB/s = {q / B_host:.2f} ns')
-print(f'T_link = P_eff / (3 beta_l) = {T_link:,.0f} tokens per GPU')
-print(f'T_cpu = P_eff s_adam / 6 = {T_cpu:,.0f} tokens per GPU: the '
-      f'{"CPU" if T_cpu > T_link else "link"} binds')
+print(f'CPU update: {s_adam * 1e9:.2f} ns per parameter; q / B_triad = '
+      f'{q} B / {B_triad:.0f} GB/s = {q / B_triad:.2f} ns')
+print(f'at P_eff = {P_eff / 1e12:.0f} TFLOP/s: T_link = P_eff / (3 beta_l) '
+      f'= {d2l._hw_sig(T_link)} tokens per GPU')
+print(f'T_cpu = P_eff s_adam / 6 = {d2l._hw_sig(T_cpu)} tokens per GPU: '
+      f'the {"CPU" if T_cpu > T_link else "link"} binds')
 ```
 
 <!-- Placeholder (prose): the toy offloaded run (claim M5). A Qwen3-style
 model of 0.82 billion parameters (d = 2,048, 16 layers, 16 query and 8 KV
 heads, SwiGLU 5,632, vocabulary 32,768, tied), bf16 weights and gradients
 on the GPU, fp32 master weights and AdamW moments in pinned host memory (12
-bytes per parameter, about 10 GB). Each step runs micro-batches of 4,096
-tokens with gradient accumulation and chunked_lm_loss. ZeRO-Offload's
-delayed parameter update, with its one-step staleness: on the last
-micro-batch each finished gradient goes down on a side stream, the CPU
-updates that tensor as it lands, and its new weights go up on another
-stream while the GPU already runs the next step on the previous weights;
-the update must be in before the step after that. The overlap window is
-the whole step, and the step time is predicted by max(t_compute, t_link,
-t_cpu). Measured: offloaded and compute-only steps at eight token counts
-bracketing max(T_link, T_cpu), and the link and the CPU update alone. The
-measured crossover is where the stalled level meets the overlapped line.
-GPU memory: weights, two staging copies, gradients and activations, about
-14 GiB. Without the
+bytes per parameter, about 10 GB). A step of T tokens runs micro-batches
+of 4,096 (one shorter sequence below that) with gradient accumulation and
+chunked_lm_loss. ZeRO-Offload's delayed parameter update, with its
+one-step staleness: on the last micro-batch each finished gradient goes
+down on a side stream, the CPU updates that tensor as it lands, and its new
+weights go up on another stream while the GPU already runs the next step
+on the previous weights; the update must be in before the step after
+that. The overlap window is the whole step, and the step time is predicted
+by max(t_compute, t_link, t_cpu). The toy does not train at P_eff: the
+prediction uses its own rate (the compute-only arm, about half of P_eff),
+the link alone, and the CPU update's time during the offloaded steps (the
+worker times it; it runs 30-50% slower there than alone, which points to
+contention with the DMA and the thread feeding the GPU: not yet measured),
+so T_link and T_cpu of the previous cell are what the GPU could reach, not
+this run's. Measured at 1,024 to 131,072 tokens: offloaded with the
+optimizer on 8 threads and on 32, compute only, and the link and the CPU
+update alone. The measured
+crossover is the corner of a fit of max(a, b T) to the offloaded steps;
+above it the offloaded step should cost what compute alone costs (the
+excess is printed). With 32 optimizer threads the GPU's own work slows
+(the busy time printed): the threads compete for cores and memory with the
+thread that launches the GPU's kernels, so a CPU optimizer should leave
+that thread its cores. GPU memory: weights,
+two staging copies, gradients and activations, about 14 GiB. Without the
 delayed update a per-layer tail stays exposed (an exercise). -->
 
 ```{.python .input #memory-tiers-offload-run}
 %%tab pytorch
 run = d2l.hw_offload_run('box')
-d2l.plot_offload(run, T_link, T_cpu)
+d2l.plot_offload(run)  # predicted from the run's own rate and times
 ```
 
 <!-- Placeholder (prose): D2, KV load against recompute. Loading a cached
@@ -438,49 +402,52 @@ costs prefill_time(n) of 22.3's ServingModel at P_eff, whose attention term
 grows with n^2. The table gives, per tier, both times at 8,192 tokens and
 the shortest prefix from which loading is at least as fast ("any": from
 one token, since recomputing even a short prefix reads every weight once;
-"never": recompute wins up to a million tokens). Mooncake and LMCache
-build serving engines on this rule. -->
+"never": recompute wins up to the model's 40,960-token context).
+Recompute uses 22.3's measured rates (P_eff and beta_eff); each tier its
+fitted alpha and beta from the shard rule, the drives as one reader at
+queue depth 1 (2.6 GB/s, not the 7.5 GB/s of many requests at depth).
+Mooncake and LMCache build serving engines on this rule. -->
 
 ```{.python .input #memory-tiers-kv-def}
 %%tab pytorch
 def kv_load_vs_recompute(cfg, n, link_bw, p_eff, chip=None,  #@save
-                         alpha=0.0, n_max=2**20):
+                         alpha=0.0, n_max=None, beta_eff=None):
     """Seconds to load the KV cache of prefixes of n tokens over a link
-    (alpha + n k_KV / link_bw) and to recompute it (ServingModel's
-    prefill_time at p_eff; chip None: FLOPs alone), and the crossover: the
-    shortest prefix from which loading is at least as fast up to n_max
-    (inf if none)."""
-    if chip is None:  # a chip whose memory never binds
-        chip = pd.Series(dict(p16_tflops=p_eff / 1e12, p8_tflops=np.nan,
-                              mem_bw_tbs=np.inf, mem_gb=np.inf))
+    (alpha + n k_KV / link_bw) and to recompute them (ServingModel's
+    prefill_time at p_eff and the memory rate beta_eff, by default the
+    chip's datasheet; chip None: FLOPs alone), and the crossover: the
+    shortest prefix up to n_max (the model's context) from which loading
+    is at least as fast (inf if none)."""
+    chip = d2l._flops_only_chip(p_eff) if chip is None else chip
     m = d2l.ServingModel(cfg, chip, calib=dict(
-        P_eff_bf16=p_eff, beta_eff=chip.mem_bw_tbs * 1e12))
-    k = m.kv_bytes_per_token()
+        P_eff_bf16=p_eff, beta_eff=beta_eff or chip.mem_bw_tbs * 1e12))
+    k = m.kv_bytes_per_token()  # bytes of K and V per token, all layers
+    n_max = n_max or cfg.max_position_embeddings
 
     def times(x):
         return alpha + x * k / link_bw, np.array([m.prefill_time(int(v))
                                                   for v in x])
-    n = np.asarray(n)
     grid = np.unique(np.geomspace(1, n_max, 400).astype(int))
     load, recompute = times(grid)
-    loses = np.flatnonzero(load > recompute)
+    loses = np.flatnonzero(load > recompute)  # the last prefix it loses at
     first = 0 if len(loses) == 0 else loses[-1] + 1
-    load_n, recompute_n = times(n)
-    return dict(n=n, load_s=load_n, recompute_s=recompute_n, k_kv=k,
+    load_n, recompute_n = times(np.asarray(n))
+    return dict(n=np.asarray(n), load_s=load_n, recompute_s=recompute_n,
+                k_kv=k, n_max=n_max,
                 crossover=grid[first] if first < len(grid) else np.inf)
 ```
 
 ```{.python .input #memory-tiers-kv-recompute}
 %%tab pytorch
-n = 2**np.arange(8, 18)  # prefixes of 256 to 131,072 tokens
-kv = {tier: d2l.kv_load_vs_recompute(cfg_8b, n, r.beta, P_eff, chip,
-                                     alpha=r.alpha)
-      for tier, r in rule.iterrows()}  # the fitted alpha and beta per tier
-at = list(n).index(8192)
+prefix = 8192  # tokens of a cached prompt
+kv = {tier: d2l.kv_load_vs_recompute(cfg_8b, [prefix], r.beta, P_eff, chip,
+                                     alpha=r.alpha,
+                                     beta_eff=calib['beta_eff'])
+      for tier, r in rule.iterrows()}  # fitted alpha, beta; NVMe: one reader
 d2l.show_table(pd.DataFrame({
-    'load 8K (ms)': [x['load_s'][at] * 1e3 for x in kv.values()],
-    'recompute 8K (ms)': [x['recompute_s'][at] * 1e3 for x in kv.values()],
-    'load wins from': [d2l.prefix_words(x['crossover'])
+    'load 8K (ms)': [x['load_s'][0] * 1e3 for x in kv.values()],
+    'recompute 8K (ms)': [x['recompute_s'][0] * 1e3 for x in kv.values()],
+    'load wins from': [d2l.prefix_words(x['crossover'], x['n_max'])
                        for x in kv.values()]}, index=kv))
 ```
 
@@ -501,9 +468,10 @@ stores. -->
 %%tab pytorch
 shards = d2l.fwedu_shards('100m')
 read = d2l.hw_shard_read(shards, tokens=2**26)
-need = 1e6 * shards.dtype.itemsize  # bytes/s at a million tokens per second
+tokens_per_s = 1e6  # a node training at a million tokens per second
+need = tokens_per_s * shards.dtype.itemsize  # bytes/s of text
 print(f'needed at 1M tokens/s: {need / 1e6:.0f} MB/s, '
-      f'{read["drive_bps"] / need:,.0f}x below the drive')
+      f'{d2l._hw_sig(read["drive_bps"] / need)}x below the drive')
 assert read['drive_bps'] > 1000 * need  # three orders of magnitude
 ```
 

@@ -20,16 +20,22 @@ Transformers' SDPA on the same static cache (BF16 logits), the static cache
 refill (every replay attends over L + 1 positions), the CUDA-graph kernel
 count, and the decode, prefill and training benches on a two-layer
 Qwen3-0.6B (finite times, peak memory reported), and the MoE router hooks
-on a two-layer random Qwen3-30B-A3B.
+on a two-layer random Qwen3-30B-A3B; for 22.4 (memory-tiers): the host-link
+bench's accounting (GB/s x ms equals the bytes), the 2 MiB-page buffer
+(registered, so pinned; mapped in huge pages where the kernel allows), and
+the offloader's delayed update with a slow CPU worker against the same
+schedule run one step at a time (no buffer overwritten while it is read).
 """
 import contextlib
 import io
 import os
+import time
 import unittest
 
 import pandas as pd
 import torch
 import torch.nn.functional as F
+from torch import nn
 
 from d2l import torch as d2l
 
@@ -301,6 +307,54 @@ class TestWorkloadHardwareGPU(unittest.TestCase):
         with torch.no_grad():
             top = F.linear(x, gate.weight).float().topk(8, dim=-1).indices
         self.assertEqual(sorted(top[0].tolist()), routes[-1, 0].tolist())
+
+
+@unittest.skipUnless(GPU, 'D2L_TEST_GPU=1 and a CUDA GPU')
+class TestMemoryTiersGPU(unittest.TestCase):
+    def test_h2d_bench_bytes(self):
+        for pinned, huge, d in ((True, False, 'h2d'), (False, False, 'd2h'),
+                                (True, True, 'd2h')):
+            r = d2l.hw_h2d_bench(2**24, pinned, d, repeats=3,
+                                 huge_pages=huge)
+            self.assertAlmostEqual(r['gbs'] * r['ms'] * 1e6 / 2**24, 1)
+            self.assertGreater(r['gbs'], 1)
+
+    def test_huge_pinned(self):
+        host = d2l._huge_pinned(2**23)
+        self.assertTrue(host.is_pinned())
+        self.assertEqual(host.data_ptr() % 2**21, 0)
+        with open('/sys/kernel/mm/transparent_hugepage/enabled') as f:
+            if '[never]' not in f.read():
+                self.assertGreater(d2l._huge_fraction(host), 0.5)
+
+    def test_offloader_slow_update_matches_sequential(self):
+        def run(slow):
+            torch.manual_seed(0)
+            model = nn.Sequential(nn.Linear(64, 64), nn.GELU(),
+                                  nn.Linear(64, 8)).cuda().bfloat16()
+            x = torch.randn(16, 64, device='cuda', dtype=torch.bfloat16)
+            off = d2l._Offloader(model, threads=2)
+            off.adam.opts = [torch.optim.AdamW([m], lr=1e-2, fused=True)
+                             for m in off.adam.master]
+            update = off.adam.update
+            if slow:  # the worker lags a whole step behind
+                def update_slowly(i, slot=0):
+                    time.sleep(0.02)
+                    update(i, slot)
+                off.adam.update = update_slowly
+            for step in range(6):
+                off.apply()
+                off.begin()
+                model(x * (step + 1)).float().square().mean().backward()
+                off.end()
+                model.zero_grad(set_to_none=True)
+                if not slow:  # one step at a time, the same schedule
+                    off.pending[-1][0].wait()
+                    torch.cuda.synchronize()
+            off.close()
+            return [p.detach().float().cpu() for p in model.parameters()]
+        for a, b in zip(run(slow=True), run(slow=False)):
+            torch.testing.assert_close(a, b)
 
 
 if __name__ == '__main__':

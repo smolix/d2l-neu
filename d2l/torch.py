@@ -21601,7 +21601,11 @@ def _pretrain_merged(name, parts, merge, config, *, fallback=None):
     each written to its own file when D2L_RERUN names it. The merge
     (merge({part: result})) runs in a regeneration run once every part's
     file exists, and only when D2L_RERUN names the merge step name (if not
-    None). Loading, configuration check and pending as _pretrain_result.
+    None). A run computes its own parts before it looks for the others'
+    files, so of parts run side by side the last to finish merges; with
+    D2L_PRETRAIN_MERGE=1 (tools/lm_regen.py --merge) a named part whose
+    file exists is read, not computed. Loading, configuration check and
+    pending as _pretrain_result.
 
     Defined in :numref:`sec_lm_data_path`"""
     artifact = d2l._RERUN_ARTIFACT[next(iter(parts))]
@@ -21619,21 +21623,23 @@ def _pretrain_merged(name, parts, merge, config, *, fallback=None):
                 names & d2l.PRETRAIN_PENDING):
             return _pending_result(name or artifact, fallback)
         raise KeyError(f'{artifact} is not committed yet')
-    results = {}
+    results, merge_only = {}, os.environ.get('D2L_PRETRAIN_MERGE') == '1'
+    path = {part: os.path.join(_rerun_dir(), f'{nxt}.{part}{ext}')
+            for part in parts}
     for part, (compute, part_config) in parts.items():
-        path = os.path.join(_rerun_dir(), f'{nxt}.{part}{ext}')
-        meta = dict(config=_jsonable(part_config), label='')
-        if part in rerun:
+        if part in rerun and not (merge_only and os.path.exists(path[part])):
             result = compute()
-            meta['label'] = _label_of(result)
-            d2l.lm_save_rerun(os.path.basename(path), lambda p: _write_result(
-                p, kind, result, meta), rerun_dir=_rerun_dir())
-        elif os.path.exists(path):
-            result = _read_result(path, kind)
-            _check_config(result, part_config, f'{nxt}.{part}')
-        else:
-            result = None
-        results[part] = result
+            meta = dict(config=_jsonable(part_config),
+                        label=_label_of(result))
+            d2l.lm_save_rerun(os.path.basename(path[part]), lambda p:
+                              _write_result(p, kind, result, meta),
+                              rerun_dir=_rerun_dir())
+            results[part] = result
+    for part, (_, part_config) in parts.items():  # the others, after
+        if part not in results and os.path.exists(path[part]):
+            results[part] = _read_result(path[part], kind)
+            _check_config(results[part], part_config, f'{nxt}.{part}')
+    results = {part: results.get(part) for part in parts}
     if any(r is None for r in results.values()) or (name and
                                                     name not in rerun):
         return _pending_result(name or artifact, fallback)
@@ -22372,6 +22378,9 @@ d2l.DATA_HUB['lm-r2t1-s1526-v1'] = (
 d2l.DATA_HUB['lm-r2t1-s1297-state-v1'] = (
     d2l.LM_DATA_URL + 'lm-r2t1-s1297-state-v1.pt',
     '9e635a58da51f219333f35c2a1417a06124488ba')
+d2l.DATA_HUB['lm-r2t1-evals-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2t1-evals-v1.json.gz',
+    '72c3ecec0b84a0a9bd899e6dd8ba1128ce559e42')
 
 d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')
@@ -24700,9 +24709,11 @@ d2l.DATA_HUB['lm-pes2o-val-v1'] = (
 d2l.DATA_HUB['lm-fwedu-replay-12m-v1'] = (
     d2l.LM_DATA_URL + 'lm-fwedu-replay-12m-v1.tar',
     '46232cacbe8b9eb30ca7ce6a2d3f7e14ac765c24')
+d2l.DATA_HUB['lm-smollm3-trajectory-v1'] = (
+    d2l.LM_DATA_URL + 'lm-smollm3-trajectory-v1.json.gz',
+    '03aa35aca040cab3b127e3870b45c11b147b94b7')
 
-_CPT_PENDING = {'cpt-t1', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1',
-                'smollm3-2', 'smollm3-3', 'smollm3-4', 'smollm3-5'}
+_CPT_PENDING = {'cpt-t1', 'cpt-qwen-evals'}
 d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _CPT_PENDING
 
 d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'] = (

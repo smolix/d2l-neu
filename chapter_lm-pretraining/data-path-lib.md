@@ -398,7 +398,11 @@ def _pretrain_merged(name, parts, merge, config, *, fallback=None):
     each written to its own file when D2L_RERUN names it. The merge
     (merge({part: result})) runs in a regeneration run once every part's
     file exists, and only when D2L_RERUN names the merge step name (if not
-    None). Loading, configuration check and pending as _pretrain_result."""
+    None). A run computes its own parts before it looks for the others'
+    files, so of parts run side by side the last to finish merges; with
+    D2L_PRETRAIN_MERGE=1 (tools/lm_regen.py --merge) a named part whose
+    file exists is read, not computed. Loading, configuration check and
+    pending as _pretrain_result."""
     artifact = d2l._RERUN_ARTIFACT[next(iter(parts))]
     key, kind = d2l.PRETRAIN_ARTIFACTS[artifact]
     names = set(parts) | ({name} if name else set())
@@ -414,21 +418,23 @@ def _pretrain_merged(name, parts, merge, config, *, fallback=None):
                 names & d2l.PRETRAIN_PENDING):
             return _pending_result(name or artifact, fallback)
         raise KeyError(f'{artifact} is not committed yet')
-    results = {}
+    results, merge_only = {}, os.environ.get('D2L_PRETRAIN_MERGE') == '1'
+    path = {part: os.path.join(_rerun_dir(), f'{nxt}.{part}{ext}')
+            for part in parts}
     for part, (compute, part_config) in parts.items():
-        path = os.path.join(_rerun_dir(), f'{nxt}.{part}{ext}')
-        meta = dict(config=_jsonable(part_config), label='')
-        if part in rerun:
+        if part in rerun and not (merge_only and os.path.exists(path[part])):
             result = compute()
-            meta['label'] = _label_of(result)
-            d2l.lm_save_rerun(os.path.basename(path), lambda p: _write_result(
-                p, kind, result, meta), rerun_dir=_rerun_dir())
-        elif os.path.exists(path):
-            result = _read_result(path, kind)
-            _check_config(result, part_config, f'{nxt}.{part}')
-        else:
-            result = None
-        results[part] = result
+            meta = dict(config=_jsonable(part_config),
+                        label=_label_of(result))
+            d2l.lm_save_rerun(os.path.basename(path[part]), lambda p:
+                              _write_result(p, kind, result, meta),
+                              rerun_dir=_rerun_dir())
+            results[part] = result
+    for part, (_, part_config) in parts.items():  # the others, after
+        if part not in results and os.path.exists(path[part]):
+            results[part] = _read_result(path[part], kind)
+            _check_config(results[part], part_config, f'{nxt}.{part}')
+    results = {part: results.get(part) for part in parts}
     if any(r is None for r in results.values()) or (name and
                                                     name not in rerun):
         return _pending_result(name or artifact, fallback)

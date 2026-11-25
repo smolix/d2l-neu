@@ -54,6 +54,9 @@ d2l.DATA_HUB['lm-pes2o-val-v1'] = (
 d2l.DATA_HUB['lm-fwedu-replay-12m-v1'] = (
     d2l.LM_DATA_URL + 'lm-fwedu-replay-12m-v1.tar',
     '46232cacbe8b9eb30ca7ce6a2d3f7e14ac765c24')
+d2l.DATA_HUB['lm-smollm3-trajectory-v1'] = (
+    d2l.LM_DATA_URL + 'lm-smollm3-trajectory-v1.json.gz',
+    '03aa35aca040cab3b127e3870b45c11b147b94b7')
 ```
 
 The section's results and the campaigns not yet run: until a campaign's
@@ -63,8 +66,7 @@ the stand-in for the Qwen arms) instead of failing.
 ```{.python .input #continued-pretraining-lib-artifacts}
 %%tab pytorch
 #@save
-_CPT_PENDING = {'cpt-t1', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1',
-                'smollm3-2', 'smollm3-3', 'smollm3-4', 'smollm3-5'}
+_CPT_PENDING = {'cpt-t1', 'cpt-qwen-evals'}
 d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _CPT_PENDING
 
 #@save

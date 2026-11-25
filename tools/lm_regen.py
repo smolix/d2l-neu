@@ -13,7 +13,9 @@ time; the result lands in `../data/lm/rerun/` under the next version of its
 key, and the next normal run checks the page's configuration against it.
 `--only RUN` limits a multi-run job to one run (a preset or a job folder
 name such as `ladder-54m-s0`), so groups can run on disjoint GPUs; the
-merge happens in the call that finds every run's files. `--resume` is the
+merge happens in the call that finds every run's files. `--merge` computes
+nothing: it reads the parts' files (each written by a `--only` run or a
+part job) and writes the merged result. `--resume` is the
 default behaviour of the drivers (job folders resume from their last
 state) and is accepted for the launcher's command line.
 
@@ -59,6 +61,7 @@ def main():
     p.add_argument('name', nargs='?')
     p.add_argument('--resume', action='store_true')
     p.add_argument('--only')
+    p.add_argument('--merge', action='store_true')
     p.add_argument('--prefetch', action='store_true')
     a = p.parse_args()
     os.chdir(CHAPTER)
@@ -70,6 +73,8 @@ def main():
     os.environ['D2L_RERUN'] = a.name
     if a.only:
         os.environ['D2L_PRETRAIN_ONLY'] = a.only
+    if a.merge:
+        os.environ['D2L_PRETRAIN_MERGE'] = '1'
     from d2l import torch as d2l
     if a.name not in d2l.PRETRAIN_JOBS:
         raise SystemExit(f'{a.name} is not a job; one of '

@@ -878,6 +878,41 @@ class ResultTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             call()
 
+    def test_merged_last_part_merges(self):
+        """Parts run side by side: the one that finishes last merges, even
+        when the others' files appear while it computes (run A: smollm3-5
+        started before smollm3-4 finished and left the merge pending)."""
+        names = [f'smollm3-{i}' for i in range(3)]
+        d2l.DATA_HUB.pop('lm-smollm3-trajectory-v1', None)  # a copy
+
+        def call(compute):
+            parts = {n: (compute, dict(name=n)) for n in names}
+            with contextlib.redirect_stdout(io.StringIO()):
+                return d2l._pretrain_merged(
+                    None, parts, lambda r: pd.concat(r.values(),
+                                                     ignore_index=True),
+                    dict(names=names))
+        os.environ['D2L_RERUN'] = 'smollm3-0'
+        self.assertTrue(call(self.compute).attrs['label'].endswith('pending'))
+
+        def late():  # smollm3-1 finishes while smollm3-2 runs
+            os.environ['D2L_RERUN'] = 'smollm3-1'
+            call(self.compute)
+            os.environ['D2L_RERUN'] = 'smollm3-2'
+            return self.compute()
+        os.environ['D2L_RERUN'] = 'smollm3-2'
+        self.assertEqual(len(call(late)), 6)
+        merged = '../data/lm/rerun/lm-smollm3-trajectory-v1.json.gz'
+        self.assertTrue(os.path.exists(merged))
+        os.remove(merged)
+        # --merge: the named part's file exists, so nothing is computed
+        calls = self.calls
+        with mock.patch.dict(os.environ, {'D2L_PRETRAIN_MERGE': '1',
+                                          'D2L_RERUN': 'smollm3-0'}):
+            self.assertEqual(len(call(self.compute)), 6)
+        self.assertEqual(self.calls, calls)
+        self.assertTrue(os.path.exists(merged))
+
 
 class LibraryStructureTest(unittest.TestCase):
     """The chapter's #@save blocks against two freshness hazards (lib

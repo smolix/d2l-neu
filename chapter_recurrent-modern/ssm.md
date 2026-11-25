@@ -57,7 +57,7 @@ An SSM layer processes a $d$-dimensional input sequence by running one such $N$-
 ### Discretization
 :label:`subsec_zoh`
 
-To apply :eqref:`eq_ssm_cont` to a discrete token sequence, we sample the system at intervals of step size $\Delta$, so step $t$ corresponds to continuous time $t\Delta$. Holding the input constant at $x_t$ over the interval $((t-1)\Delta, t\Delta]$—the *zero-order hold* (ZOH) assumption—allows us to integrate :eqref:`eq_ssm_scalar` exactly. Since $\frac{\textrm{d}}{\textrm{d}t}(h + x_t/\lambda) = \lambda(h + x_t/\lambda)$, the shifted state $h + x_t/\lambda$ decays by $e^{\Delta\lambda}$ over one step: $h_t + x_t/\lambda = e^{\Delta\lambda}(h_{t-1} + x_t/\lambda)$. Rearranging yields the exact discrete linear recurrence:
+To apply :eqref:`eq_ssm_cont` to a discrete token sequence, we sample the system at intervals of step size $\Delta$, so step $t$ corresponds to continuous time $t\Delta$. Holding the input constant at $x_t$ over the interval $((t-1)\Delta, t\Delta]$ (the *zero-order hold*, or ZOH, assumption) allows us to integrate :eqref:`eq_ssm_scalar` exactly. Since $\frac{\textrm{d}}{\textrm{d}t}(h + x_t/\lambda) = \lambda(h + x_t/\lambda)$, the shifted state $h + x_t/\lambda$ decays by $e^{\Delta\lambda}$ over one step: $h_t + x_t/\lambda = e^{\Delta\lambda}(h_{t-1} + x_t/\lambda)$. Rearranging yields the exact discrete linear recurrence:
 
 $$
 \begin{aligned}
@@ -68,7 +68,7 @@ h_t &= \bar{a}\, h_{t-1} + \bar{b}\, x_t, \\
 $$
 :eqlabel:`eq_zoh`
 
-When $\lambda = -1$, we have $\bar{b} = 1 - \bar{a}$, so :eqref:`eq_zoh` becomes the convex combination $h_t = \bar{a}\, h_{t-1} + (1 - \bar{a})\, x_t$—identical to the GRU update :eqref:`eq_mingru` with $\bar{a} = e^{-\Delta}$ acting as the update gate. The step size $\Delta$ directly controls memory length: at $\lambda = -1$, $\Delta = 0.01$ gives $\bar{a} = 0.990$ (half-life 69 steps), $\Delta = 0.1$ gives $\bar{a} = 0.905$ (half-life 7 steps), and $\Delta = 1$ gives $\bar{a} = 0.37$.
+When $\lambda = -1$, we have $\bar{b} = 1 - \bar{a}$, so :eqref:`eq_zoh` becomes the convex combination $h_t = \bar{a}\, h_{t-1} + (1 - \bar{a})\, x_t$, identical to the minimal GRU update (:numref:`subsec_mingru`) with $\bar{a} = e^{-\Delta}$ acting as the update gate. The step size $\Delta$ directly controls memory length: at $\lambda = -1$, $\Delta = 0.01$ gives $\bar{a} = 0.990$ (half-life 69 steps), $\Delta = 0.1$ gives $\bar{a} = 0.905$ (half-life 7 steps), and $\Delta = 1$ gives $\bar{a} = 0.37$.
 
 Parameterizing $\lambda = -e^\theta < 0$ and $\Delta > 0$ guarantees $\bar{a} = e^{\Delta\lambda} \in (0, 1)$, just like a sigmoid gate. What is new is the factored structure of the half-life $\ln 2 / (\Delta|\lambda|)$ (:numref:`fig_ssm_discretization`): the $N$ rates $\lambda_1, \ldots, \lambda_N$ spread the states of a channel across distinct relative timescales, while the single channel step size $\Delta$ dilates or compresses all $N$ timescales together.
 
@@ -385,7 +385,7 @@ Yet time-invariant dynamics have a fundamental blind spot: every token at lag $k
 
 ## Summary
 
-Discretizing a continuous-time diagonal state space model $\mathbf{h}'(t) = \mathbf{A}\mathbf{h}(t) + \mathbf{B}x(t)$ with rates $\lambda_n < 0$ under zero-order hold at step size $\Delta$ yields a linear recurrence with decays $\bar{a}_n = e^{\Delta\lambda_n}$ and half-lives $\ln 2 / (\Delta|\lambda_n|)$. Initializing $\lambda_n = -n$ and drawing $\Delta$ log-uniformly across $[0.001, 0.1]$ equips each channel of `S4D` with $N$ exponentially decaying states spanning half-lives from under 1 step to nearly 700 steps. Because its parameters are time-invariant, `S4D` can be evaluated equivalently as an $O(1)$-state recurrence at inference time or as a causal convolution via the FFT during training. On 1,000-step delayed recall, starting with long-timescale decays—whether in `S4D` or transferred to `minGRU` gate biases—is the decisive factor that enables learning, though fixed dynamics still cannot selectively ignore irrelevant inputs.
+Discretizing a continuous-time diagonal state space model $\mathbf{h}'(t) = \mathbf{A}\mathbf{h}(t) + \mathbf{B}x(t)$ with rates $\lambda_n < 0$ under zero-order hold at step size $\Delta$ yields a linear recurrence with decays $\bar{a}_n = e^{\Delta\lambda_n}$ and half-lives $\ln 2 / (\Delta|\lambda_n|)$. Initializing $\lambda_n = -n$ and drawing $\Delta$ log-uniformly across $[0.001, 0.1]$ equips each channel of `S4D` with $N$ exponentially decaying states spanning half-lives from under 1 step to nearly 700 steps. Because its parameters are time-invariant, `S4D` can be evaluated equivalently as an $O(1)$-state recurrence at inference time or as a causal convolution via the FFT during training. On 1,000-step delayed recall, starting with long-timescale decays (whether in `S4D` or transferred to `minGRU` gate biases) is the decisive factor that enables learning, though fixed dynamics still cannot selectively ignore irrelevant inputs.
 
 ## Exercises
 
@@ -588,7 +588,7 @@ $$y_t = \sum_{k=0}^{t-1} K_k\, x_{t-k} + D\, x_t, \qquad K_k = \sum_{n=1}^{N} c_
 | **3. Causal Convolution** | $y = \mathbf{K} * x + D x$ | Fast $O(Td\log T)$ parallel LTI training via zero-padded length-$2T$ FFT |
 :::
 
-::: {.slide title="What N Real Exponentials Can—and Cannot—Approximate"}
+::: {.slide title="What N Real Exponentials Can and Cannot Approximate"}
 [Kernel Expressivity & Conditioning]{.kicker}
 
 Can a sum of $N$ monotone real exponentials $K_k = \sum_{n=1}^N c_n \bar{a}_n^k \bar{b}_n$ ($\lambda_n = -n, \Delta = 0.05$) peak at lag $k = 20$ to read a past token? We fit $\mathbf{c} \in \mathbb{R}^N$ by least squares to a sharp lag-20 **spike** and a smooth lag-20 **Gaussian bump**:
@@ -596,7 +596,7 @@ Can a sum of $N$ monotone real exponentials $K_k = \sum_{n=1}^N c_n \bar{a}_n^k 
 @!ssm-what-the-continuous-time-view-adds
 
 ::: {.d2l-note .warn}
-**Look at `bump |c|` ($\mathbf{6 \times 10^{10}}$):** While $N = 16$ real exponentials fit the lag-20 bump in least squares ($0.03$ error), doing so requires readout weights of magnitude $\sim 10^{11}$ with alternating signs that cancel to $10$ decimal places!
+**Look at `bump |c|` ($\mathbf{8 \times 10^{10}}$):** While $N = 16$ real exponentials fit the lag-20 bump in least squares ($0.03$ error), doing so requires readout weights of magnitude $\sim 10^{11}$ with alternating signs that cancel to $10$ decimal places.
 :::
 :::
 
@@ -660,7 +660,7 @@ Test accuracy (chance $= 0.125$) and post-training slowest half-life ($\ln 2 / \
 @!ssm-long-range-recall-2
 
 ::: {.d2l-note .rule}
-**The controls swap places:** At $T = 1{,}000$, `minGRU` initialized with S4D's timescales achieves **$1.00$ accuracy**, whereas `S4D` initialized with short timescales ($\le 7$ steps) collapses to **$0.12$ (chance)**!
+**The controls swap places:** At $T = 1{,}000$, `minGRU` initialized with S4D's timescales achieves **$1.00$ accuracy**, whereas `S4D` initialized with short timescales ($\le 7$ steps) collapses to **$0.12$ (chance)**.
 :::
 :::
 
@@ -669,7 +669,7 @@ Test accuracy (chance $= 0.125$) and post-training slowest half-life ($\ln 2 / \
 
 Look closely at the bottom rows of the output table (`slowest half-life after training`):
 
-- **At $T = 100$ (`S4D, short timescales` succeeds):** With slowest initial rate $\Delta|\lambda_1| = 0.1$, the initial signal attenuation over $99$ filler steps is $e^{-0.1 \times 99} = e^{-9.9} \approx \mathbf{5 \times 10^{-5}}$. Because $5 \times 10^{-5}$ is well above `float32` precision ($\sim 10^{-7}$), Adam receives a nonzero gradient and stretches the slowest half-life from **$7$ steps to $107$–$170$ steps**!
+- **At $T = 100$ (`S4D, short timescales` succeeds):** With slowest initial rate $\Delta|\lambda_1| = 0.1$, the initial signal attenuation over $99$ filler steps is $e^{-0.1 \times 99} = e^{-9.9} \approx \mathbf{5 \times 10^{-5}}$. Because $5 \times 10^{-5}$ is well above `float32` precision ($\sim 10^{-7}$), Adam receives a nonzero gradient and stretches the slowest half-life from **$7$ steps to $107$–$170$ steps**.
 - **At $T = 1{,}000$ (`S4D, short timescales` freezes):** Over $999$ steps, initial attenuation is $e^{-0.1 \times 999} \approx \mathbf{4 \times 10^{-44}}$—underflowing `float32` gradient accumulation completely, so the slowest half-life stays frozen at **$7$ steps**.
 :::
 
@@ -699,7 +699,7 @@ Test your grasp of continuous-time state space models with these three questions
 **Answers:**
 
 1. $\tau_{1/2} = \ln 2 / (\Delta|\lambda|) = 500 \implies \Delta = \ln 2 / (2 \times 500) \approx \mathbf{0.000693}$.
-2. Multiplication in the DFT frequency domain computes **circular convolution** of period $N_{\text{FFT}}$; without zero-padding to at least $2T - 1$ (rounded to $2T$), late tokens at $t \approx T$ wrap around and corrupt early outputs at $t \approx 0$ (violating causality!).
+2. Multiplication in the DFT frequency domain computes **circular convolution** of period $N_{\text{FFT}}$; without zero-padding to at least $2T - 1$ (rounded to $2T$), late tokens at $t \approx T$ wrap around and corrupt early outputs at $t \approx 0$ (violating causality).
 3. Solve $\sigma(b) = 1/(1 + e^{-b}) = e^{-\Delta} \implies e^{-b} = e^\Delta - 1 \implies \mathbf{b = -\log(e^\Delta - 1)}$ (computed via `-log(expm1(dt))`).
 :::
 :::

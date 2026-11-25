@@ -3,7 +3,7 @@
 
 The language models of the previous chapters continue a single sequence: they read text and predict the next token. Many tasks map one sequence to another of a different length, where positions do not align one-to-one: a translator reads an English sentence and writes a French one, or a speech recognizer transcribes an audio clip into words. Translation was the benchmark on which neural networks first rivaled statistical phrase-based systems in 2014 :cite:`Sutskever.Vinyals.Le.2014,Cho.Van-Merrienboer.Gulcehre.ea.2014`. Their architecture was simple: one recurrent network reads the source, a second writes the target, and a single fixed-width state vector passes between them.
 
-You have already met the successors of this design—cross-attention (:numref:`chap_attention`) and the Transformer encoder--decoder (:numref:`sec_transformer`)—which were invented to bypass its single-vector bottleneck. Why revisit the 2014 design here? Because that bottleneck is the central subject of this chapter: every recurrent model in the sections that follow compresses its past into a state of fixed size. Here we set up the encoder--decoder abstraction and the standard lexical translation metrics (`chrF` and `BLEU`), and then measure directly on a string-reversal benchmark how much information a single fixed state vector can carry as the input grows.
+You have already met the successors of this design, cross-attention (:numref:`chap_attention`) and the Transformer encoder--decoder (:numref:`sec_transformer`), which were invented to bypass its single-vector bottleneck. Why revisit the 2014 design here? Because that bottleneck is the central subject of this chapter: every recurrent model in the sections that follow compresses its past into a state of fixed size. Here we set up the encoder--decoder abstraction and the standard lexical translation metrics (`chrF` and `BLEU`), and then measure directly on a string-reversal benchmark how much information a single fixed state vector can carry as the input grows.
 
 ```{.python .input #seq2seq-imports}
 %%tab pytorch
@@ -442,7 +442,7 @@ Comparing `chrF` and sentence-level `BLEU` ($k = 4$) on a 6-word reference `'we 
 @!seq2seq-scoring-translations-1
 
 - **Near miss (`'visits'` at word 3):** In a 6-word sentence, there are only three word 4-grams (`1..4`, `2..5`, `3..6`) and *every single one* contains word 3—so $p_4 = 0$ collapses BLEU to **$0.00$**, while `chrF` gracefully scores **$0.91$**.
-- **Semantic paraphrase (`'are going to see'`):** Scores **$0.00$** on BLEU and **$0.67$** on `chrF`—lower than the ungrammatical near miss!
+- **Semantic paraphrase (`'are going to see'`):** Scores **$0.00$** on BLEU and **$0.67$** on `chrF`—lower than the ungrammatical near miss.
 
 ::: {.d2l-note}
 Pair character-level `chrF` (or corpus `sacreBLEU`) with learned semantic evaluators such as COMET or LLM judges.
@@ -503,8 +503,8 @@ Per-letter teacher-forced accuracy on $1{,}000$ fresh strings after $1{,}000$ Ad
 
 Three quantitative findings stand out from the reversal capacity table:
 
-- **Sharp decay past 0.5 bits/float:** At width $d = 64$, accuracy drops from **$0.99$** at $T = 8$ ($0.5\text{ bits/float}$) to **$0.72$** at $T = 16$ ($1\text{ bit/float}$) and **$0.26$** at $T = 64$ ($4\text{ bits/float}$).
-- **Wider state shifts the curve right:** Quadrupling state width to $d = 256$ sustains **$0.99$** accuracy at $T = 16$ and recovers roughly half the letters ($0.49$–$0.50$) at $T = 64$.
+- **Sharp decay past 0.5 bits/float:** At width $d = 64$, accuracy drops from **$0.99$** at $T = 8$ ($0.5\text{ bits/float}$) to **$0.72\text{--}0.74$** at $T = 16$ ($1\text{ bit/float}$) and **$0.26\text{--}0.27$** at $T = 64$ ($4\text{ bits/float}$).
+- **Wider state shifts the curve right:** Quadrupling state width to $d = 256$ sustains **$0.99$** accuracy at $T = 16$ and recovers roughly half the letters ($0.50$–$0.51$) at $T = 64$.
 - **Proportional width scaling still loses ground:** Holding letters per state float constant ($T/d = 1/8$), $T = 8$ at $d = 64$ achieves $0.99$, whereas $T = 32$ at $d = 256$ drops to $\sim 0.80$ because early characters must survive $4\times$ as many nonlinear GRU transitions.
 :::
 

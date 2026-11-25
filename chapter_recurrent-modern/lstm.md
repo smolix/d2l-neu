@@ -1,9 +1,9 @@
 # Gated Recurrent Networks
 :label:`sec_lstm`
 
-The plain recurrent network of :numref:`sec_rnn-scratch` generates recognizable words and punctuation, yet its grammar unravels over more than a few words. Consider predicting the verb after *"the keys to the cabinet in the hall"*: choosing *"are"* rather than *"is"* requires remembering that *"keys"*—30 characters back—is plural. Because a plain RNN overwrites its entire state at every step through the same recurrent matrix and $\tanh$ nonlinearity, both the forward signal and the backward gradient decay rapidly over tens of steps. How can a recurrent network hold what it has read across hundreds of steps?
+The plain recurrent network of :numref:`sec_rnn-scratch` generates recognizable words and punctuation, yet its grammar unravels over more than a few words. Consider predicting the verb after *"the keys to the cabinet in the hall"*: choosing *"are"* rather than *"is"* requires remembering that *"keys"*, 30 characters back, is plural. Because a plain RNN overwrites its entire state at every step through the same recurrent matrix and $\tanh$ nonlinearity, both the forward signal and the backward gradient decay rapidly over tens of steps. How can a recurrent network hold what it has read across hundreds of steps?
 
-The solution introduced in the late 1990s is to let the network decide, unit by unit and step by step, what fraction of its state to keep via a *gate*—a vector of values in $(0, 1)$ computed from the current input and previous state. A unit whose gate stays near $1$ passes both its stored content and the backward gradient across the step essentially unchanged. Below we build the two classic gated architectures—the long short-term memory (LSTM) and the gated recurrent unit (GRU)—and evaluate them on synthetic delayed recall and on the byte-level WikiText-103 benchmark of :numref:`chap_transformers`. While gates solve long-range retention, their dependence on the previous state still forces sequential step-by-step training; :numref:`sec_linear-recurrence` removes that bottleneck.
+The solution introduced in the late 1990s is to let the network decide, unit by unit and step by step, what fraction of its state to keep via a *gate*: a vector of values in $(0, 1)$ computed from the current input and previous state. A unit whose gate stays near $1$ passes both its stored content and the backward gradient across the step essentially unchanged. Below we build the two classic gated architectures, the long short-term memory (LSTM) and the gated recurrent unit (GRU), and evaluate them on synthetic delayed recall and on the byte-level WikiText-103 benchmark of :numref:`chap_transformers`. While gates solve long-range retention, their dependence on the previous state still forces sequential step-by-step training; :numref:`sec_linear-recurrence` removes that bottleneck.
 
 Throughout this chapter we write equations for a single sequence using column vectors, while the code processes minibatches of sequences with row vectors.
 
@@ -70,9 +70,9 @@ $$
 $$
 :eqlabel:`eq_gate`
 
-Unlike a plain RNN—which multiplies the entire state by a dense matrix $\mathbf{W}_\textrm{hh}$ and applies $\tanh$ at every step—the gated memory updates each coordinate by elementwise multiplication with its own learned factor $f_{t,j} \in (0, 1)$. Because $f_{t,j} \le 1$, gradients along the direct memory path cannot explode, and holding $f_{t,j}$ near $1$ prevents them from vanishing.
+Unlike a plain RNN, which multiplies the entire state by a dense matrix $\mathbf{W}_\textrm{hh}$ and applies $\tanh$ at every step, the gated memory updates each coordinate by elementwise multiplication with its own learned factor $f_{t,j} \in (0, 1)$. Because $f_{t,j} \le 1$, gradients along the direct memory path cannot explode, and holding $f_{t,j}$ near $1$ prevents them from vanishing.
 
-Two practical details remain. First, while $f_t \approx 1$, repeated writes can still cause the stored value $c_t$ to grow, so the LSTM applies a $\tanh$ when reading $\mathbf{c}_t$ out to $\mathbf{h}_t$. Second, under zero bias initialization, sigmoid gates start near $\sigma(0) = 1/2$—a half-life of a single step—so a gated network can represent long memories but does not start with them by default.
+Two practical details remain. First, while $f_t \approx 1$, repeated writes can still cause the stored value $c_t$ to grow, so the LSTM applies a $\tanh$ when reading $\mathbf{c}_t$ out to $\mathbf{h}_t$. Second, under zero bias initialization, sigmoid gates start near $\sigma(0) = 1/2$ (a half-life of a single step), so a gated network can represent long memories but does not start with them by default.
 
 ## Long Short-Term Memory
 
@@ -80,7 +80,7 @@ Two practical details remain. First, while $f_t \approx 1$, repeated writes can 
 
 The *long short-term memory* (LSTM) of :citet:`Hochreiter.Schmidhuber.1997`, augmented with the forget gate of :citet:`Gers.Schmidhuber.Cummins.2000`, builds a recurrent layer around :eqref:`eq_lstm-gated-sum`. It maintains two vectors of width $d$: an internal *memory cell* $\mathbf{c}_t$ evolved purely by elementwise gating and addition, and an exposed *hidden state* $\mathbf{h}_t$ that provides a gated, squashed view of $\mathbf{c}_t$ to subsequent layers and to the next step's gates.
 
-Three sigmoid gates—the *input gate* $\mathbf{i}_t$, *forget gate* $\mathbf{f}_t$, and *output gate* $\mathbf{o}_t$—control access to the cell:
+Three sigmoid gates, the *input gate* $\mathbf{i}_t$, *forget gate* $\mathbf{f}_t$, and *output gate* $\mathbf{o}_t$, control access to the cell:
 
 $$
 \begin{aligned}
@@ -206,7 +206,7 @@ The outputs agree to float32 rounding error ($\sim 10^{-7}$), so we use the fast
 ## Gated Recurrent Units
 :label:`sec_gru`
 
-Does a gated layer really need two state vectors and three gates? The *gated recurrent unit* (GRU) of :citet:`Cho.Van-Merrienboer.Gulcehre.ea.2014` merges the cell and hidden state into a single vector $\mathbf{h}_t$ controlled by just two gates—a *reset gate* $\mathbf{r}_t$ and an *update gate* $\mathbf{z}_t$—while matching the LSTM on many sequence tasks :cite:`Chung.Gulcehre.Cho.ea.2014`:
+Does a gated layer really need two state vectors and three gates? The *gated recurrent unit* (GRU) of :citet:`Cho.Van-Merrienboer.Gulcehre.ea.2014` merges the cell and hidden state into a single vector $\mathbf{h}_t$ controlled by just two gates (a *reset gate* $\mathbf{r}_t$ and an *update gate* $\mathbf{z}_t$) while matching the LSTM on many sequence tasks :cite:`Chung.Gulcehre.Cho.ea.2014`:
 
 $$
 \mathbf{r}_t = \sigma(\mathbf{W}_\textrm{xr} \mathbf{x}_t +
@@ -262,7 +262,7 @@ X, Y = delayed_recall(np.random.default_rng(0), 2, 6)
 print(X, Y)
 ```
 
-Our testbed model (`RecallModel`) embeds tokens into 32 dimensions, runs a single recurrent layer of width 64, and applies a linear classifier at the final step. Throughout this chapter, we initialize all linear, convolutional, and recurrent weight matrices with LeCun normal initialization (variance $1 / n_\textrm{in}$) and zero biases (:numref:`sec_numerical_stability`).
+Our evaluation model (`RecallModel`) embeds tokens into 32 dimensions, runs a single recurrent layer of width 64, and applies a linear classifier at the final step. Throughout this chapter, we initialize all linear, convolutional, and recurrent weight matrices with LeCun normal initialization (variance $1 / n_\textrm{in}$) and zero biases (:numref:`sec_numerical_stability`).
 
 :begin_tab:`pytorch`
 `init_lecun` applies LeCun normal weights and zero biases across linear, convolutional, and recurrent modules, and `Recurrent` wraps PyTorch recurrent modules to return only the output sequence tensor.
@@ -514,7 +514,7 @@ The results confirm the analysis for the GRU and for every delay $T \ge 50$, and
 ### Gated Networks on Text
 :label:`subsec_deep-rnn`
 
-In :numref:`subsec_gpt-rnn-baseline`, a single wide plain RNN fell behind a multi-block GPT after the first 16 bytes of context. To compare sequence mixers on equal footing—without confounding recurrence against residual depth and positionwise MLPs—we place every mixer in this chapter inside the same pre-norm residual backbone (`SeqLM`), matching :numref:`sec_transformer-block`: token embedding, a stack of blocks each applying `H = H + mixer(norm(H))` followed by a two-layer GELU MLP `H = H + mlp(H)`, and a final layer norm and linear output head (:numref:`fig_seqlm_backbone`).
+In :numref:`subsec_gpt-rnn-baseline`, a single wide plain RNN fell behind a multi-block GPT after the first 16 bytes of context. To compare sequence mixers on equal footing, without confounding recurrence against residual depth and positionwise MLPs, we place every mixer in this chapter inside the same pre-norm residual backbone (`SeqLM`), matching :numref:`sec_transformer-block`: token embedding, a stack of blocks each applying `H = H + mixer(norm(H))` followed by a two-layer GELU MLP `H = H + mlp(H)`, and a final layer norm and linear output head (:numref:`fig_seqlm_backbone`).
 
 ![The shared backbone `SeqLM`. A block adds the output of a mixer, and then of an MLP, to the residual stream, each after its own layer normalization. Only the mixer changes from one model of this chapter to the next; the language models stack $L = 4$ blocks.](../img/mdl-modernrnn-seqlm-backbone.svg)
 :label:`fig_seqlm_backbone`
@@ -707,7 +707,7 @@ We now benchmark our recurrent and attention mixers on byte-level WikiText-103 (
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 ```
 
-Each `text_model` stacks 4 residual blocks at width $d = 256$—comparing a plain `RNN`, an `LSTM`, a `GRU`, and 8-head causal `attention`—plus a parameter-matched plain RNN widened to $d = 302$ ($3.81\textrm{M}$ parameters, matching the GRU stack):
+Each `text_model` stacks 4 residual blocks at width $d = 256$, comparing a plain `RNN`, an `LSTM`, a `GRU`, and 8-head causal `attention`, plus a parameter-matched plain RNN widened to $d = 302$ ($3.81\textrm{M}$ parameters, matching the GRU stack):
 
 ```{.python .input #lstm-gated-networks-on-text-5}
 %%tab pytorch
@@ -1117,7 +1117,7 @@ Before training, we also compare two initializations of a $64 \times 64$ plain R
 
 @!lstm-delayed-recall-8
 
-- **LeCun normal ($\mathcal{N}(0, 1/64)$):**By the circular law of random matrix theory, eigenvalues fill the unit disk ($\rho \approx 1.02$) even though the largest singular value is $\approx 2.0$. Small states along leading eigenmodes neither vanish nor explode.
+- **LeCun normal ($\mathcal{N}(0, 1/64)$):** By the circular law of random matrix theory, eigenvalues fill the unit disk ($\rho \approx 1.02$) even though the largest singular value is $\approx 2.0$. Small states along leading eigenmodes neither vanish nor explode.
 - **Default uniform ($\mathcal{U}[-1/8, 1/8]$):** Has $1/3$ the variance of LeCun normal, giving spectral radius $\rho \approx 0.62$ and contracting every signal by $\sim 0.6^k$.
 :::
 
@@ -1206,9 +1206,9 @@ Work out the following three design questions:
 | Architecture / Setup | Direct Memory Path | Recurrent Params ($d_\textrm{in}=d$) | $T=200$ Recall Accuracy | WikiText-103 (nats/byte) | Training Depth |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **Plain RNN (uniform scale)** | $\tanh(\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1} + \cdots)$, $\rho \approx 0.62$ | $2d^2$ | $0.12$ (chance) | — | $T$ sequential steps |
-| **Plain RNN (LeCun normal)** | $\tanh(\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1} + \cdots)$, $\rho \approx 1.02$ | $2d^2$ | $0.13$–$0.76$ (unstable) | $1.351$ ($1.334$ at $d=302$) | $T$ sequential steps |
-| **LSTM (zero gate bias)** | $\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t$, $f_0 = 0.5$ | $8d^2$ | $0.12$ (chance at $T \ge 50$) | **$1.295$–$1.298$** | $T$ sequential steps |
-| **GRU (zero gate bias)** | $\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1-\mathbf{z}_t)\odot \tilde{\mathbf{h}}_t$ | $6d^2$ | $0.12$ (chance at $T \ge 50$) | **$1.300$–$1.302$** | $T$ sequential steps |
+| **Plain RNN (LeCun normal)** | $\tanh(\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1} + \cdots)$, $\rho \approx 1.02$ | $2d^2$ | $0.12$–$0.24$ (up to $1.00$ at $T=100$) | $1.346$–$1.349$ ($1.332$–$1.337$ at $d=302$) | $T$ sequential steps |
+| **LSTM (zero gate bias)** | $\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t$, $f_0 = 0.5$ | $8d^2$ | $0.12$ (chance at $T \ge 50$) | **$1.292$–$1.296$** | $T$ sequential steps |
+| **GRU (zero gate bias)** | $\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1-\mathbf{z}_t)\odot \tilde{\mathbf{h}}_t$ | $6d^2$ | $0.12$–$0.13$ (chance at $T \ge 50$) | **$1.297$–$1.300$** | $T$ sequential steps |
 | **LSTM / GRU (keep gate $+5$)** | Initial gate $\sigma(5) = 0.993$ ($\tau_{1/2} \approx 103$) | $8d^2$ / $6d^2$ | **$1.00$** (all seeds) | — | $T$ sequential steps |
 :::
 

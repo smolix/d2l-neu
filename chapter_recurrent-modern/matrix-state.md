@@ -147,7 +147,7 @@ At a constant decay $a$, a pair written $\ell$ steps ago carries weight $a^\ell$
 
 ### Selective State Space Models as Matrix Memories
 
-Stacking the $H$ channel states $\mathbf{h}_t^{(c)} \in \mathbb{R}^N$ of Mamba's selective SSM (:eqref:`eq_selective_ssm` in :numref:`sec_mamba`, omitting the skip connection $D_c x_{t,c}$) as rows of a matrix $\mathbf{S}_t \in \mathbb{R}^{H \times N}$ reveals that Mamba is already a decayed matrix-state recurrence:
+Stacking the $H$ channel states $\mathbf{h}_t^{(c)} \in \mathbb{R}^N$ of Mamba's selective SSM (:numref:`sec_mamba`, omitting the skip connection $D_c x_{t,c}$) as rows of a matrix $\mathbf{S}_t \in \mathbb{R}^{H \times N}$ reveals that Mamba is already a decayed matrix-state recurrence:
 
 $$
 \begin{aligned}
@@ -819,7 +819,7 @@ Measured squared error and nearest-neighbor recall (256-vector codebook) vs. the
 ::: {.slide title="Why Nearest-Neighbor Recall Scales with Entries dk dv"}
 [Isotropic Error Projection]{.kicker}
 
-Look at the $d_k = d_v = 64$ row of the table: at $n = 64$ pairs, the squared error is $(64-1)/64 \approx 1.0$ (as large as the unit signal $\|\mathbf{v}_j\|^2 = 1$), yet nearest-neighbor recall is **$1.00$** ($0.96$ at $n = 128$)! Why?
+Look at the $d_k = d_v = 64$ row of the table: at $n = 64$ pairs, the squared error is $(64-1)/64 \approx 1.0$ (as large as the unit signal $\|\mathbf{v}_j\|^2 = 1$), yet nearest-neighbor recall is **$1.00$** ($0.96$ at $n = 128$). Why?
 
 - **Isotropic spread across $d_v$ value dimensions:** The total interference vector has squared norm $\approx n / d_k$, but it points in a random direction in $\mathbb{R}^{d_v}$.
 - **1D projection onto any wrong codebook vector $\mathbf{c} \in \mathbb{R}^{d_v}$:** Only the component along $\mathbf{c}$ competes with the true value $\mathbf{v}_j$, and that 1D projection has variance:
@@ -962,7 +962,7 @@ We fix a 2-block `SeqLM` at width $d = 32$ (about $37{,}000$ parameters) and par
 
 The multi-query recall curves confirm the theoretical scaling law and expose one remaining flaw:
 
-- **Capacity scales with state entries $h \cdot d_h^2$:** At $4$ pairs, all three head configurations achieve $\ge 98\%$ accuracy. At $64$ pairs, doubling state entries from $128$ ($8 \times 4^2$) to $256$ ($4 \times 8^2$) lifts recall from $\sim 0.50$ to $\sim 0.75$—roughly doubling the number of pairs recalled at a fixed accuracy level without adding a single trainable parameter!
+- **Capacity scales with state entries $h \cdot d_h^2$:** At $4$ pairs, all three head configurations achieve $\ge 98\%$ accuracy. At $64$ pairs, doubling state entries from $128$ ($8 \times 4^2$) to $256$ ($4 \times 8^2$) lifts recall from $\sim 0.50$ to $\sim 0.75$—roughly doubling the number of pairs recalled at a fixed accuracy level without adding a single trainable parameter.
 - **The additive overwrite flaw:** Because $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ only *adds* outer products, binding an existing key $\mathbf{k}$ to a new value $\mathbf{v}^{\text{new}}$ returns a superposition of old and new values. Teaching the matrix state to **read before writing** is the goal of §{sec_deltanet}.
 :::
 
@@ -978,7 +978,7 @@ Work out the following three questions:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. $8$ heads of $32 \times 32$ hold $8 \times 1{,}024 = \mathbf{8{,}192\text{ entries}}$; $4$ heads of $64 \times 64$ hold $4 \times 4{,}096 = \mathbf{16{,}384\text{ entries}}$—**twice as many state entries and $\sim 2\times$ the pair capacity** at the exact same $W_{qkv}$ parameter count!
+1. $8$ heads of $32 \times 32$ hold $8 \times 1{,}024 = \mathbf{8{,}192\text{ entries}}$; $4$ heads of $64 \times 64$ hold $4 \times 4{,}096 = \mathbf{16{,}384\text{ entries}}$—**twice as many state entries and $\sim 2\times$ the pair capacity** at the exact same $W_{qkv}$ parameter count.
 2. Full dual matrix: $4{,}096^2 \times 4\text{ B} = \mathbf{64\text{ MB}}$; chunked ($64$ chunks of $64 \times 64$ masks + $64$ chunk states of $64 \times 64$): $2 \times 64 \times 64^2 \times 4\text{ B} = \mathbf{2\text{ MB}}$ ($32\times$ smaller, scaling linearly with $T$).
 3. Effective window: $1/(1 - 0.95) = \mathbf{20\text{ pairs}}$; steady-state interference bound: $1 / ((1 - 0.95^2) \times 64) \approx 1 / (0.0975 \times 64) \approx \mathbf{0.16}$.
 :::

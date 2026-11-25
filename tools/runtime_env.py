@@ -450,6 +450,9 @@ HEAVY_GPU_NOTEBOOKS = {
     # in the extension runs) takes a whole card: run it on a card masked for
     # it alone.
     ("pytorch", "chapter_lm-data/tokenizers.ipynb"): 2,
+    # 21.5 runs the reference model at 16K tokens (32 books, 50 recall items
+    # through the cached scorer: about 8 GiB).
+    ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): 2,
 }
 
 
@@ -554,6 +557,13 @@ NOTEBOOK_ENV = {
     },
     ("pytorch", "chapter_lm-encoders/rag-failures.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    # 21.5: Transformers' warning about 16K-token prompts against the
+    # reference tokenizer's nominal 4,096, and the Hub's X-HF-Warning.
+    ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+        "TRANSFORMERS_VERBOSITY": "error",
+        "OMP_NUM_THREADS": "8",
     },
 }
 

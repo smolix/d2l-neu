@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Build the token shards of sec_lm_continued_pretraining (21.4).
+"""Build the token shards of sec_lm_continued_pretraining (21.4) and
+sec_lm_long_context (21.5).
 
 Sources (pinned; peS2o and FineWeb-Edu are ODC-By, attribution in every
 manifest):
@@ -34,6 +35,20 @@ Stages:
                    train and evaluation documents (peS2o ids; FineWeb-Edu
                    text hashes against the general validation texts).
 
+  --stage lc-long  21.5's long half (R2-tokenized, uint16, hosted): PG-19
+                   train books (emozilla/pg19 @d2f3c93e, the parquet
+                   conversion of deepmind/pg19; public-domain books) in file
+                   order up to 50M tokens, then peS2o v2 full-text papers
+                   (validation file 1 of 2, which is all s2orc/valid) of at
+                   least 8,192 tokens in file order up to 10M tokens, in
+                   shards of at least 8M tokens (the first shard is the T1
+                   prefix): data/lm/lc-long-v1/ and the upload tar
+                   data/lm/rerun/lm-lc-long-60m-v1.tar.
+  --stage pg19-test 21.5's test books: the first 64 PG-19 test books (file
+                   order) of at least 16,385 R2 tokens, each cut to its first
+                   16,385 tokens (one evaluation window of 16,384 targets):
+                   data/lm/pg19-test-v1/ and data/lm/rerun/lm-pg19-test-v1.tar.
+
 Deterministic: the same inputs give the same bytes (no timestamps, files read
 in order, one shard per stream). Run from the repository root:
 
@@ -41,7 +56,8 @@ in order, one shard per stream). Run from the repository root:
         tools/build_pretraining_data.py --stage cpt-t1 [--check]
 
 Expected time: cpt-t1 about 2 minutes, cpt-qwen about 8 minutes (CPU,
-tokenization of about 110M tokens); a few GB of RAM.
+tokenization of about 110M tokens), lc-long about 5 minutes, pg19-test
+under a minute; a few GB of RAM.
 """
 import argparse
 import gzip
@@ -65,6 +81,16 @@ TARGETS = {
                  'val_domain': 2_200_000, 'val_general': None}}
 UPLOADS = {'pes2o': 'lm-pes2o-12m-v1', 'val_domain': 'lm-pes2o-val-v1',
            'replay': 'lm-fwedu-replay-12m-v1'}
+LC = {  # 21.5: the long half's two parts, their token targets, the windows
+    'pg19': 50_000_000, 'pes2o': 10_000_000, 'min_paper': 8_192,
+    'shard': 8_000_000, 'test_books': 64, 'test_tokens': 16_385}
+PES2O_LONG = 'data/v2/validation-00001-of-00002.json.gz'  # all s2orc/valid
+LC_ATTRIBUTION = (
+    'PG-19 (deepmind/pg19, Apache-2.0; public-domain books from Project '
+    'Gutenberg, read from the parquet conversion emozilla/pg19) and peS2o '
+    '(allenai/peS2o, ODC-By 1.0; full-text papers derived from S2ORC, Allen '
+    'Institute for AI). Token shards derived for Dive into Deep Learning, '
+    'section "Long-Context Training".')
 ATTRIBUTION = (
     'peS2o (allenai/peS2o, ODC-By 1.0; derived from S2ORC/S2AG, Allen '
     'Institute for AI) and FineWeb-Edu (HuggingFaceFW/fineweb-edu, ODC-By '
@@ -172,6 +198,150 @@ def deterministic_tar(folder, path):
         return hashlib.sha1(f.read()).hexdigest(), os.path.getsize(path)
 
 
+def pg19_books(d2l, split):
+    """(index, title, text) of the PG-19 books of one split, file order."""
+    import pyarrow.parquet as pq
+    from huggingface_hub import HfApi, hf_hub_download
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES['pg19']
+    files = sorted(f for f in HfApi().list_repo_files(
+        repo, repo_type='dataset', revision=rev)
+        if f.startswith(f'data/{split}-'))
+    k = 0
+    for name in files:
+        local = hf_hub_download(repo, name, repo_type='dataset', revision=rev)
+        for batch in pq.ParquetFile(local).iter_batches(
+                batch_size=64, columns=['short_book_title', 'text']):
+            for title, text in zip(batch.column(0).to_pylist(),
+                                   batch.column(1).to_pylist()):
+                yield k, title, text
+                k += 1
+
+
+def lc_long_docs(d2l, tok):
+    """The long half's documents in order, each with its part: PG-19 train
+    books up to LC['pg19'] tokens, then peS2o papers of at least
+    LC['min_paper'] tokens up to LC['pes2o'] tokens."""
+    n = 0
+    for k, title, text in pg19_books(d2l, 'train'):
+        if n >= LC['pg19']:
+            break
+        n += len(tok(text, add_special_tokens=False)['input_ids'])
+        yield f'pg19-train:{k}', text, {'part': 'pg19', 'title': title}
+    n = 0
+    for doc_id, text in pes2o_docs(d2l, PES2O_LONG):
+        if n >= LC['pes2o']:
+            break
+        m = len(tok(text, add_special_tokens=False)['input_ids'])
+        if m >= LC['min_paper']:
+            n += m
+            yield doc_id, text, {'part': 'pes2o', 'title': ''}
+
+
+class PreTokenized:
+    """A tiktoken-like encoding whose 'texts' are keys of precomputed ids
+    (write_shards then stores exactly those ids)."""
+    special_tokens_set = {'<|endoftext|>'}
+
+    def __init__(self, ids, n_vocab):
+        self.ids, self.n_vocab = ids, n_vocab
+
+    def encode_single_token(self, s):
+        return 0
+
+    def encode_ordinary(self, key):
+        return self.ids[key]
+
+    def encode_ordinary_batch(self, keys):
+        return [self.ids[k] for k in keys]
+
+
+def pg19_test_docs(d2l, tok):
+    """The first LC['test_books'] test books of at least LC['test_tokens']
+    tokens, cut to that many: (doc_id, key, meta) and the ids by key."""
+    docs, ids = [], {}
+    for k, title, text in pg19_books(d2l, 'test'):
+        x = tok(text, add_special_tokens=False)['input_ids']
+        if len(x) >= LC['test_tokens']:
+            key = f'pg19-test:{k}'
+            ids[key] = x[:LC['test_tokens']]
+            docs.append((key, key, {'part': 'test', 'title': title}))
+        if len(docs) == LC['test_books']:
+            break
+    return docs, ids
+
+
+def lc_dirs(stage):
+    root = os.path.join(ROOT, 'data', 'lm')
+    return {'lc-long': (os.path.join(root, 'lc-long-v1'),
+                        'lm-lc-long-60m-v1'),
+            'pg19-test': (os.path.join(root, 'pg19-test-v1'),
+                          'lm-pg19-test-v1')}[stage]
+
+
+def build_lc(stage):
+    """21.5's two shard sets (R2 tokenizer, uint16) and their upload tars."""
+    import shutil
+    d2l = d2l_module()
+    os.chdir(CHAPTER)
+    tok = d2l.r2_tokenizer()
+    out, name = lc_dirs(stage)
+    tmp = out + '.tmp'
+    shutil.rmtree(tmp, ignore_errors=True)
+    meta = lambda doc_id, text, m: m
+    if stage == 'lc-long':
+        d2l.write_shards(lc_long_docs(d2l, tok), tok, tmp, 'train',
+                         shard_tokens=LC['shard'], meta_fn=meta)
+    else:
+        docs, ids = pg19_test_docs(d2l, tok)
+        d2l.write_shards(docs, PreTokenized(ids, len(tok)), tmp, 'train',
+                         shard_tokens=10 ** 12, eos_id=0, meta_fn=meta)
+    with open(os.path.join(tmp, 'manifest.json')) as f:
+        m = json.load(f)
+    m['attribution'] = LC_ATTRIBUTION
+    m['sources'] = {'pg19': list(d2l.PRETRAIN_SOURCES['pg19'][1:3]),
+                    'pes2o': list(d2l.PRETRAIN_SOURCES['pes2o'][1:3]) + [
+                        PES2O_LONG]}
+    m['tokenizer'] = dict(m.get('tokenizer') or {}, name='lm-r2-tokenizer-v1')
+    with open(os.path.join(tmp, 'manifest.json'), 'w') as f:
+        json.dump(m, f, indent=1, sort_keys=True)
+    shutil.rmtree(out, ignore_errors=True)
+    os.replace(tmp, out)
+    shards = d2l.TokenShards(out, 'train')
+    rerun = os.path.abspath(d2l._rerun_dir())
+    os.makedirs(rerun, exist_ok=True)
+    sha1, size = deterministic_tar(out, os.path.join(rerun, name + '.tar'))
+    print(f'{stage}: {shards.n_docs:,} documents, {shards.n_tokens:,} '
+          f'tokens in {shards.n_shards} shards')
+    print(f"DATA_HUB['{name}'] = ('{name}.tar', '{sha1}')  "
+          f'# {size / 2**20:.1f} MB')
+
+
+def check_lc(stage):
+    import pandas as pd
+    d2l = d2l_module()
+    os.chdir(CHAPTER)
+    out, _ = lc_dirs(stage)
+    s = d2l.TokenShards(out, 'train')
+    s.verify()
+    meta = pd.concat([s.meta(k) for k in range(s.n_shards)])
+    tokens = meta.groupby('part')['n_tokens'].sum()
+    ok = True
+    if stage == 'lc-long':
+        ok &= bool(tokens['pg19'] >= LC['pg19'] and tokens['pes2o'] >=
+                   LC['pes2o'])
+        ok &= bool(meta.loc[meta.part == 'pes2o', 'n_tokens'].min() >
+                   LC['min_paper'])
+        ok &= bool(s.shards[0]['n_tokens'] >= LC['shard'])
+        ok &= bool((meta['part'].iloc[:(meta.part == 'pg19').sum()] ==
+                    'pg19').all())  # PG-19 first: the T1 prefix
+    else:
+        ok &= len(meta) == LC['test_books'] and bool(
+            (meta['n_tokens'] == LC['test_tokens'] + 1).all())
+    print(f'{stage}: verified; tokens by part {tokens.to_dict()}')
+    print('check passed' if ok else 'CHECK FAILED')
+    return ok
+
+
 def build(stage):
     d2l = d2l_module()
     tok = tokenizer(d2l, stage)
@@ -242,13 +412,16 @@ def check(stage):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    p.add_argument('--stage', choices=sorted(TARGETS), required=True)
+    p.add_argument('--stage', choices=sorted(TARGETS) + ['lc-long',
+                                                         'pg19-test'],
+                   required=True)
     p.add_argument('--check', action='store_true',
                    help='verify the built shards (after building, or alone '
                         'with --check-only)')
     p.add_argument('--check-only', action='store_true')
     a = p.parse_args()
+    lc = a.stage in ('lc-long', 'pg19-test')
     if not a.check_only:
-        build(a.stage)
+        (build_lc if lc else build)(a.stage)
     if a.check or a.check_only:
-        sys.exit(0 if check(a.stage) else 1)
+        sys.exit(0 if (check_lc if lc else check)(a.stage) else 1)

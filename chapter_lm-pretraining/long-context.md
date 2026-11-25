@@ -36,3 +36,423 @@ when the section is written.
 - Code and documentation: [HELMET code](https://github.com/princeton-nlp/HELMET) (task construction for the next evaluation tier); [FlexAttention API](https://docs.pytorch.org/docs/stable/nn.attention.flex_attention.html) (document masks at 16K).
 - Courses, tutorials and blogs: [SmolLM3 blog](https://huggingface.co/blog/smollm3) (a documented long-context extension stage with its data mixture).
 -->
+
+<!-- Placeholder (prose): opening. The reader has the reference model, trained at 4K, and the RoPE extension schemes of subsec_pos-context-extension. Scaled by interpolation, the model accepts 16K tokens; the cell shows the control (recall of a value stored 2K back inside the trained window), then the loss by position bucket at 16K and recall of a value stored 12K back. Opening question: extended from 4K to 16K with interpolation and with YaRN on long-dependency data, which scheme keeps more of the 4K accuracy, and does perplexity or recall say so first? -->
+
+```{.python .input #long-context-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #long-context-imports-extra}
+%%tab pytorch
+import pandas as pd
+```
+
+```{.python .input #long-context-opening}
+%%tab pytorch
+model = d2l.lc_reference_model()  # trained at L = model.max_len tokens
+tok, L, s, depth = d2l.r2_tokenizer(), model.max_len, 4, 0.25
+control = d2l.make_recall_task(tok, L, depth=0.5, n_items=50)
+k = d2l.score_recall(model, tok, control).sum()
+print(f'control, trained window ({L // 1024}K, {L // 2048}K back): {k} / 50')
+model.set_rope(d2l.rope_inv_freq(64, scheme='pi', s=s, L=L), scheme='pi',
+               scale=s)  # model.max_len is now s * L
+books = d2l.test_books(32, s * L)
+pos = d2l.nll_by_position(model, books, range(0, s * L + 1, L))
+print('loss by position (nats): ' + ', '.join(
+    f'{b} {v:.2f}' for b, v in zip(pos['bucket'], pos['nll'])))
+far = d2l.make_recall_task(tok, s * L, depth=depth, n_items=50)
+k = d2l.score_recall(model, tok, far).sum()
+print(f'recall {(1 - depth) * s * L / 1024:.0f}K back: {k} / 50 '
+      '(chance 1/8)')
+rising = (pos['lo'].iloc[1:] > pos['hi'].iloc[0]).any()
+above = d2l.wilson_ci(k, 50)[0] > 1 / 8
+print(f'reading: loss {"rising" if rising else "flat"} beyond {L // 1024}K,'
+      f' recall {"above" if above else "at"} chance')
+```
+
+<!-- Placeholder (prose): reading of the opening: the model accepts the long window and its loss beyond 4K stays flat (or rises; the cell decides from the bucket intervals), yet the value stored 12K back is recalled at chance while the control inside the trained window is recalled. Perplexity at a length is not use of that length. Roadmap of the section: the schemes without training, what training needs (schedule, data), three measurements, the trained arms. -->
+
+## Extension without Training
+
+<!-- Placeholder (prose): restate in one sentence subsec_pos-context-extension (only the slow pairs meet new angles beyond the trained length; PI compresses all frequencies, NTK-aware scaling raises the base, YaRN compresses only the slow pairs and adds a temperature on queries and keys). The function below computes the four sets of frequencies; YaRN's ramp runs over the pair index between the pair that turns beta = 32 times within L and the pair that turns alpha = 1 time. -->
+
+```{.python .input #long-context-rope-inv-freq}
+%%tab pytorch
+#@save
+def rope_inv_freq(d_head, base=10000.0, scheme='none', s=1.0, L=4096,
+                  alpha=1.0, beta=32.0):
+    """RoPE frequencies of the d_head / 2 pairs for a window s times the
+    trained length L: 'none' (the base frequencies), 'pi' (all divided by
+    s), 'ntk' (the base raised by s^(d / (d - 2))), or 'yarn' (pairs that
+    turn more than beta times within L kept, less than alpha times divided
+    by s, a linear ramp over the pair index between)."""
+    if scheme not in ('none', 'pi', 'ntk', 'yarn'):
+        raise ValueError(f'unknown scheme {scheme!r}')
+    if scheme == 'ntk':
+        base = base * s ** (d_head / (d_head - 2))
+    theta = 1.0 / base ** (torch.arange(0, d_head, 2, dtype=torch.float32,
+                                        device='cpu') / d_head)
+    if scheme == 'pi':
+        return theta / s
+    if scheme == 'yarn':  # the pair index m at which a pair turns r times
+        m = lambda r: d_head * math.log(L / (2 * math.pi * r)) / (
+            2 * math.log(base))
+        ramp = ((torch.arange(d_head // 2) - m(beta))
+                / (m(alpha) - m(beta))).clamp(0, 1)
+        return theta * (ramp / s + 1 - ramp)
+    return theta
+
+#@save
+def yarn_mscale(s):
+    """YaRN's scale of queries and keys, 0.1 ln s + 1 (1 for s <= 1): the
+    attention logits grow by its square, the softmax scale stays."""
+    return 0.1 * math.log(s) + 1.0 if s > 1 else 1.0
+```
+
+<!-- Placeholder (prose): the checks below: scale 1 gives the base frequencies for every scheme; interpolation is division by s; the YaRN pair counts for the reference model's 32 pairs at L = 4,096 (derived in the text); the temperature; and agreement with Transformers' YaRN initialization (whose default truncate=True rounds the ramp edges to whole pairs). The plot shows each scheme's frequency ratio per pair. -->
+
+```{.python .input #long-context-scheme-checks}
+%%tab pytorch
+d_head, L_r2 = 64, 4096  # the reference model's head width and length
+theta = d2l.rope_inv_freq(d_head)
+same = max((d2l.rope_inv_freq(d_head, scheme=k, s=1) - theta).abs().max()
+           for k in ('pi', 'ntk', 'yarn'))
+print(f's = 1: max |Δ| {same:.1e}')
+pi = d2l.rope_inv_freq(d_head, scheme='pi', s=4)
+print(f'PI equals θ/s: {torch.equal(pi, theta / 4)}')
+yarn = d2l.rope_inv_freq(d_head, scheme='yarn', s=4, L=L_r2)
+ratio = yarn / theta
+print(f'YaRN pairs: {(ratio == 1 / 4).sum()} interpolated, '
+      f'{((ratio > 1 / 4) & (ratio < 1)).sum()} blended, '
+      f'{(ratio == 1).sum()} untouched')
+print(f'yarn_mscale(4) = {d2l.yarn_mscale(4):.4f}')
+hf, _ = d2l.transformers_yarn(d_head, s=4, L=L_r2, truncate=False)
+rounded, _ = d2l.transformers_yarn(d_head, s=4, L=L_r2, truncate=True)
+print(f'vs Transformers (truncate=False): {(yarn - hf).abs().max():.1e}; '
+      f'truncate=True differs by {(yarn - rounded).abs().max():.1e}')
+ntk = d2l.rope_inv_freq(d_head, scheme='ntk', s=4)
+d2l.plot(torch.arange(d_head // 2), [pi / theta, ntk / theta, ratio],
+         'pair index m', 'θ′ / θ', legend=['PI', 'NTK', 'YaRN'],
+         yscale='log', figsize=(4, 2.5))
+```
+
+<!-- Placeholder (prose): zero-shot, the schemes only change which angles the model sees; whether a model uses 16K tokens is decided by training and measured below. -->
+
+## What the Training Needs
+
+### The Cost of Length
+
+<!-- Placeholder (prose): the attention share a(T) of F(T) = 6 N_mm + 12 L H d_h T for the reference model; a progressive schedule (a stage at 8K before 16K) saves compute as well as easing optimization; the learning-rate recipe for extension (a low constant rate, fresh optimizer moments, a short final decay). -->
+
+```{.python .input #long-context-attention-share}
+%%tab pytorch
+arch = d2l.r2_config('r2').arch
+cost = {T: d2l.flops_per_token(arch, T) for T in (4096, 8192, 16_384)}
+share = {T: 1 - d2l.flops_per_token(arch) / c for T, c in cost.items()}
+print('F: ' + ' / '.join(f'{c / 1e9:.2f}' for c in cost.values())
+      + ' GFLOP per token at 4K / 8K / 16K (attention share '
+      + ' / '.join(f'{a:.2f}' for a in share.values()) + ')')
+stage, total = 40e6, 100e6  # tokens at 8K, all tokens of the arm
+saving = stage * (cost[8192] - cost[16_384]) / (total * cost[16_384])
+print(f'{stage / 1e6:.0f}M of {total / 1e6:.0f}M tokens at 8K: '
+      f"{saving:+.0%} of the arm's compute")
+ratio = d2l.flop_counter_per_token(arch, 16_384) / cost[16_384]
+print(f'FlopCounterMode at 16K: ratio {ratio:.3f}')
+print(f'a 16K window of unrelated documents: ×{cost[16_384] / cost[4096]:.2f}'
+      ' the FLOPs of 4K windows')
+```
+
+### Data with Long-Range Dependencies
+
+<!-- Placeholder (prose): books and long papers have dependencies across thousands of tokens; concatenated unrelated documents cost 2.35 times the FLOPs per token and teach no long-range dependence (ProLong's finding, cited, not measured here). The arms mix half long data and half short replay under document masks, so the short-context skills keep being trained; fig_lm_length_schedule shows the two stages, the learning rate and the mixture. -->
+
+<!-- Figure (generator): fig_lm_length_schedule, img/mdl-lm-pretraining-length-schedule.svg (tools/gen_mdl_lm_pretraining_figures.py): the context-length staircase (8K at scale 2, then 16K at scale 4) against tokens, the learning rate beneath, and each stage's long/short mixture as a stacked bar. -->
+
+## Three Ways to Measure Context
+
+### Recall over Length and Depth
+
+<!-- Placeholder (prose): a synthetic recall task in RULER's design: a haystack of key-value lines, one queried key whose line sits at a chosen depth, eight candidate values from the haystack. A model that uses its window recalls at every depth; one that only accepts it recalls near the end and at chance elsewhere. The task must have exactly one correct answer (keys and values are distinct). -->
+
+```{.python .input #long-context-recall-task}
+%%tab pytorch
+#@save
+def make_recall_task(tokenizer, length, depth, n_pairs=None, n_candidates=8,
+                     n_items=200, seed=0):
+    """Key-value recall items of at most length tokens for score_choices:
+    lines 'The value of <key> is <value>.' with distinct two-word keys and
+    five-digit values, the queried line at fraction depth of the prompt,
+    then the query 'The value of <key> is'; the choices are n_candidates
+    distinct values of the haystack, the gold value among them once."""
+    g = torch.Generator().manual_seed(
+        seed * 1_000_003 + length * 1009 + round(1000 * depth))
+    out = dict(prompts=[], choices=[], gold=[], depth_actual=[])
+    for _ in range(n_items):
+        keys, values, lines, start = d2l._recall_haystack(
+            tokenizer, length, g, n_pairs, min_lines=n_candidates)
+        q = round(depth * (len(lines) - 1))  # the queried line
+        others = values[:q] + values[q + 1:]
+        picks = torch.randperm(len(others), generator=g)[:n_candidates - 1]
+        choices = [f' {values[q]}'] + [f' {others[i]}' for i in picks]
+        order = torch.randperm(n_candidates, generator=g).tolist()
+        out['prompts'].append(d2l._RECALL_HEAD + ''.join(lines)
+                              + f'The value of {keys[q]} is')
+        out['choices'].append([choices[j] for j in order])
+        out['gold'].append(order.index(0))
+        out['depth_actual'].append(start[q] / start[-1])
+    return out
+```
+
+<!-- Placeholder (prose): before measuring a model, check the task: one item's size, and an oracle that copies the value stored under the queried key must score 100% at every length. -->
+
+```{.python .input #long-context-task-checks}
+%%tab pytorch
+N = 20  # items per length
+task = d2l.make_recall_task(tok, 16_384, depth=0.5, n_items=N)
+prompt, choices = task['prompts'][0], task['choices'][0]
+print(f'item: {len(tok(prompt)["input_ids"]):,} tokens, '
+      f'{prompt.count(" is "):,} pairs, query depth '
+      f'{task["depth_actual"][0]:.2f}, {len(choices)} candidates')
+
+def copier(prompt, choices):  # the value stored under the queried key
+    key = prompt.rsplit('The value of ', 1)[1].removesuffix(' is')
+    value = prompt.split(f'The value of {key} is ', 1)[1].split('.', 1)[0]
+    return choices.index(' ' + value)
+
+hits = {}
+for length in (4096, 8192, 16_384):
+    t = d2l.make_recall_task(tok, length, depth=0.5, n_items=N)
+    hits[length] = sum(copier(p, c) == g for p, c, g in
+                       zip(t['prompts'], t['choices'], t['gold'])) / N
+print('oracle copier: ' + ', '.join(f'{h:.0%}' for h in hits.values())
+      + ' at 4K, 8K, 16K')
+```
+
+### Loss by Position and the Long-Context Gain
+
+<!-- Placeholder (prose): two measurements on natural text. The loss by position bucket averages the next-token loss over positions 0-4K, 4-8K, ...; intervals resample whole windows (books), since positions within a book are not independent. The long-context gain isolates use of distant context: on rare tokens that occurred earlier in the window at a gap beyond the short context, the loss with the whole window minus the loss with only the last short_len / 2 to short_len tokens (a sliding window). -->
+
+```{.python .input #long-context-measures}
+%%tab pytorch
+#@save
+def nll_by_position(model, windows, edges, ctx=None):
+    """Mean next-token loss (nats) of windows (n, T + 1) in each position
+    bucket [edges[k], edges[k + 1]), with a 95% interval from resampling
+    whole windows: DataFrame(bucket, nll, lo, hi)."""
+    nll = d2l.window_nlls(model, windows, ctx).double()  # (n, T)
+    rows = []
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        part = nll[:, lo:hi]
+        rows.append((d2l.bucket_name(lo, hi), *d2l.window_ci(
+            part.sum(1), torch.full((len(part),), float(hi - lo)))))
+    return pd.DataFrame(rows, columns=['bucket', 'nll', 'lo', 'hi'])
+
+#@save
+def long_context_gain(model, windows, short_len, long_len, min_gap,
+                      rare_ids, edges):
+    """Loss drop (nats) from seeing the whole window of long_len tokens
+    instead of the last short_len / 2 to short_len tokens, on rare tokens
+    whose previous occurrence lies at least min_gap back, per gap bucket
+    (edges[k], edges[k + 1]]: DataFrame(bucket, gain, lo, hi, n)."""
+    windows = torch.as_tensor(windows)[:, :long_len + 1]
+    gain = (d2l.sliding_nlls(model, windows, short_len)
+            - d2l.window_nlls(model, windows))
+    gap = d2l.repeat_gaps(windows, rare_ids)  # 0: no earlier occurrence
+    pairs = list(zip(edges[:-1], edges[1:]))
+    sums, counts = d2l.gain_sums(gain, gap, pairs, min_gap)
+    rows = [(d2l.bucket_name(lo, hi), *d2l.window_ci(sums[:, k],
+                                                     counts[:, k]),
+             int(counts[:, k].sum())) for k, (lo, hi) in enumerate(pairs)]
+    return pd.DataFrame(rows, columns=['bucket', 'gain', 'lo', 'hi', 'n'])
+```
+
+<!-- Placeholder (prose): two checks: the bucket means (equal widths) average to the loss over the whole window; on a synthetic repeat (distinct random tokens, then the same tokens again), an induction head as a model gains about ln V nats from the long window, and a model that ignores its context gains nothing. -->
+
+```{.python .input #long-context-measure-checks}
+%%tab pytorch
+edges = range(0, s * L + 1, L)
+parts = d2l.nll_by_position(model, books[:4], edges)
+whole = d2l.nll_by_position(model, books[:4], [0, s * L])
+print('bucket means average to the total: |Δ| '
+      f'{abs(parts["nll"].mean() - whole["nll"][0]):.1e}')
+V, T, short = 2048, 2048, 256  # vocabulary, window, short context
+torch.manual_seed(0)
+x = torch.stack([torch.randperm(V)[:T // 2] for _ in range(8)])
+repeat = torch.cat([x, x, x[:, :1]], 1)  # every token again T / 2 later
+gain = {name: d2l.long_context_gain(
+            m, repeat, short_len=short, long_len=T, min_gap=short,
+            rare_ids=torch.arange(V), edges=[short, T])['gain'][0]
+        for name, m in (('oracle', d2l.CopyOracle(V)),
+                        ('unigram', d2l.UnigramModel(V)))}
+print(f'long-context gain: oracle {gain["oracle"]:+.2f} nats, '
+      f'unigram {gain["unigram"]:.3f}')
+```
+
+### The Test Data and the Zero-Shot Baseline
+
+<!-- Placeholder (prose): the long half (PG-19 books in file order, then peS2o papers of at least 8,192 tokens; licences), the short replay (a FineWeb-Edu shard the reference run never read) and the 64 held-out PG-19 test books cut to 16,385 tokens. -->
+
+```{.python .input #long-context-data}
+%%tab pytorch
+long = d2l.long_data('t2')
+print(long.table.to_string(index=False))
+```
+
+<!-- Placeholder (prose): every scheme at scale 4 without training: loss per position bucket on 64 test books and recall at 4K, 8K and 16K (five depths, 100 items each). The none row's recall at 4K is the control: the task is solved inside the trained window before recall at 16K measures anything. The mscale = 1 row: YaRN's alpha and beta were tuned for head dimension 128, the reference model has 32 pairs. -->
+
+```{.python .input #long-context-zeroshot}
+%%tab pytorch
+SCHEMES = {'none': dict(scheme='none', s=4), 'PI': dict(scheme='pi', s=4),
+           'NTK': dict(scheme='ntk', s=4), 'YaRN': dict(scheme='yarn', s=4),
+           'YaRN, mscale 1': dict(scheme='yarn', s=4, mscale=1.0)}
+zs = d2l.lc_zeroshot('r2', schemes=SCHEMES, lengths=(4096, 8192, 16_384))
+print(zs.table.round(2).to_string(index=False))
+```
+
+## The Trained Arms
+
+### The Length Schedule
+
+<!-- Placeholder (prose): three arms of 100M tokens each from the reference model's final checkpoint: interpolation and YaRN one-shot at 16K, and YaRN progressive (40M tokens at 8K with scale 2, then 60M at 16K with scale 4). Peak rate 1e-4, warmup 20 steps, constant, linear decay over the final 15%; fresh AdamW moments; half long data, half replay. -->
+
+```{.python .input #long-context-schedule}
+%%tab pytorch
+ARMS = {  # stages: (window T, RoPE scale s, share of the tokens)
+    'PI': dict(scheme='pi', stages=((16_384, 4, 1.0),)),
+    'YaRN': dict(scheme='yarn', stages=((16_384, 4, 1.0),)),
+    'YaRN-prog': dict(scheme='yarn', stages=((8_192, 2, 0.4),
+                                             (16_384, 4, 0.6)))}
+TOKENS = 100_000_000
+print(f'{"arm":<10} {"stage 1":<20} {"stage 2":<20} tokens')
+for arm, a in ARMS.items():
+    stages = [f'{T // 1024}K × {share * TOKENS / 1e6:.0f}M, s = {sc}'
+              for T, sc, share in a['stages']] + ['-']
+    print(f'{arm:<10} {stages[0]:<20} {stages[1]:<20} '
+          f'{TOKENS / 1e6:.0f}M')
+```
+
+### Three Arms at 16K
+
+<!-- Placeholder (prose): the result table: val loss at 4K (and its change from the base), loss in the last position bucket, recall at 16K with its Wilson interval (one run per arm: a single run), and the effective context. The plot shows the training loss; the dotted line marks the progressive arm's switch to 16K. -->
+
+```{.python .input #long-context-arms}
+%%tab pytorch
+lc = d2l.lc_arms(ARMS, base='r2', tokens=TOKENS, seq_len=16_384,
+                 batch_tokens=262_144, peak_lr=1e-4, warmup=20,
+                 decay_frac=0.15, long_share=0.5)
+print(lc.table.round(3).to_string(index=False))
+d2l.plot_lc_train(lc.logs)
+```
+
+<!-- Placeholder (prose): loss by position bucket, the zero-shot PI and YaRN models against the three trained arms. -->
+
+```{.python .input #long-context-position}
+%%tab pytorch
+d2l.plot_lc_position(lc.position)
+```
+
+<!-- Placeholder (prose): recall over the length-by-depth grid (100 items per cell); the effective context is the largest length whose recall, pooled over depths, has a lower 95% bound of at least 0.5 and whose long-context gain at gaps (L/2, L] is positive. Both thresholds are protocol parameters, not another model's. -->
+
+```{.python .input #long-context-recall-grid}
+%%tab pytorch
+THRESHOLD = 0.5  # lower 95% bound of recall (the effective-context rule)
+eff = d2l.effective_context(lc.recall, lc.gain, threshold=THRESHOLD)
+grid = lc.recall.groupby(['model', 'length', 'depth'])['correct'].mean()
+longest = lc.recall['length'].max()
+for model, length in eff.items():
+    worst = grid[model, longest]
+    reach = f'{length // 1024}K' if length else 'below the trained window'
+    print(f'{model:<10} effective context {reach:<8} worst depth at '
+          f'{longest // 1024}K: {worst.idxmin():.1f} ({worst.min():.0%})')
+d2l.plot_recall_grid(lc.recall, models=('PI', 'YaRN'), threshold=THRESHOLD)
+```
+
+<!-- Placeholder (prose): the long-context gain per gap bucket: how much the distant occurrence of a rare token lowers its loss. -->
+
+```{.python .input #long-context-gain}
+%%tab pytorch
+gain = lc.gain[~lc.gain['rule'].astype(bool)]
+ci = lambda r: f'{r.gain:.2f} [{r.lo:.2f}, {r.hi:.2f}]'
+print(f'{"gap":<10}' + ''.join(f'{b:>20}' for b in
+                               dict.fromkeys(gain['bucket'])))
+for model, rows in gain.groupby('model', sort=False):
+    print(f'{model:<10}' + ''.join(f'{ci(r):>20}' for r in rows.itertuples()))
+d2l.plot_lc_gain(lc.gain)
+```
+
+### Which Measure Moves First
+
+<!-- Placeholder (prose): from the arms' periodic evaluations (every 64 steps, 16 books, 250 recall items at 16K): the first step at which the loss in the last bucket comes within MARGIN of the base's loss on its trained window, recall at 16K clears the rule, and the gain at the longest gaps is positive. State the order per arm as measured; 'perplexity first' only if it holds in every arm. -->
+
+```{.python .input #long-context-first-steps}
+%%tab pytorch
+MARGIN = 0.05  # nats above the base's loss on its trained window
+base = lc.position[lc.position['model'] == 'base']['nll']
+reached = lambda ok, steps: str(steps[ok].min()) if ok.any() else \
+    'not reached'
+print(f'{"arm":<10} {"perplexity":>12} {"recall":>12} {"gain":>12}')
+for arm, t in lc.timeline[lc.timeline['seed'] == 0].groupby('arm',
+                                                            sort=False):
+    steps = [reached(ok, t['step']) for ok in (
+        t['nll_last'] <= base.iloc[0] + MARGIN,
+        t['recall_lo'] >= THRESHOLD, t['gain_lo'] > 0)]
+    print(f'{arm:<10}' + ''.join(f'{x:>13}' for x in steps))
+```
+
+### The Cost at Short Context
+
+<!-- Placeholder (prose): what the extension costs at short context: the val loss at 4K and the suite mean (five tasks, 2,000 items each) minus the base's, with intervals paired by window and by item. -->
+
+```{.python .input #long-context-short-cost}
+%%tab pytorch
+print(lc.short.round(3).to_string(index=False))
+```
+
+### Seeds at Small Scale
+
+<!-- Placeholder (prose): one run per arm cannot separate a scheme difference from run-to-run noise; the T1 configuration repeats the comparison on the t1 checkpoint (trained at 1K) extended to 4K with three seeds of the data order (16M tokens per arm). The base row's recall at 1K is the control. -->
+
+```{.python .input #long-context-t1}
+%%tab pytorch
+ARMS_T1 = {  # the t1 checkpoint (trained at 1K) to 4K; seeds: data order
+    'PI': dict(scheme='pi', stages=((4096, 4, 1.0),), seeds=(0, 1, 2)),
+    'YaRN': dict(scheme='yarn', stages=((4096, 4, 1.0),), seeds=(0, 1, 2)),
+    'YaRN-prog': dict(scheme='yarn', stages=((2048, 2, 0.4),
+                                             (4096, 4, 0.6)), seeds=(0,))}
+t1 = d2l.lc_arms(ARMS_T1, base='t1', tokens=16_000_000, seq_len=4096,
+                 batch_tokens=65_536)
+print(t1.table.round(3).to_string(index=False))
+```
+
+<!-- Placeholder (prose): the scheme difference YaRN minus PI with intervals: at T1 a t interval over the three seeds, at T2 a paired resampling of items and books within the single run (labelled so). A direction is claimed only where the T1 interval excludes zero; the T2 single run is never the only evidence. -->
+
+```{.python .input #long-context-scheme-difference}
+%%tab pytorch
+for tier, runs in (('T1', t1), ('T2', lc)):
+    if 'pending' in runs.label:
+        print(f'{tier}: pending')
+        continue
+    d = d2l.scheme_difference(runs, 'YaRN', 'PI')
+    print(f'{tier}, {d["method"]}: YaRN - PI recall {d["recall"]:+.2f} '
+          f'[{d["recall_lo"]:+.2f}, {d["recall_hi"]:+.2f}], last-bucket NLL '
+          f'{d["nll"]:+.3f} [{d["nll_lo"]:+.3f}, {d["nll_hi"]:+.3f}]')
+```
+
+## Toward a Million Tokens
+
+<!-- Placeholder (prose): one paragraph, forward references only: sparse and linear mixing (chap_lm_architectures), context parallelism (chap_lm_parallelism), KV tiers (chap_lm_hardware, chap_lm_serving); HELMET as the next evaluation tier; no experiment. -->
+
+## Summary
+
+<!-- Placeholder (prose): summary bullets. -->
+
+## Exercises
+
+<!-- Placeholder (prose): 5 to 7 exercises: the attention-entropy change under the YaRN temperature; the pairs that complete a rotation within 4K (23 of 32) and the NTK overhang of the slowest pair; recall against needle depth at each length (the committed grid, re-plotted); the long-data share at {0, 25, 50, 75, 100}% (T1, about 25 minutes); the NTK-aware arm trained (T1); RULER single-needle on Qwen/Qwen3-1.7B at 4K to 16K; open: 32K with scale 8 from the 16K checkpoint. -->

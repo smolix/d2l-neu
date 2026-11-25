@@ -471,7 +471,7 @@ the mixture of the previous section,
 $p = \tfrac12 \mathcal{N}(-2, 0.5^2) + \tfrac12 \mathcal{N}(2, 0.5^2)$,
 noised at $\sigma = 0.5$. Noising adds $\sigma^2$ to each component's
 variance, so $p_\sigma$ is again a mixture, with component variance
-$0.25 + 0.25 = 0.5$. By :eqref:`eq_mdl-dyn-tanh-score`, a symmetric mixture
+$0.25 + 0.25 = 0.5$. As derived in :numref:`sec_mdl-score-function`, a symmetric mixture
 with means $\pm\mu$ and common component variance $v$ has the score
 $(\mu \tanh(\mu x/v) - x)/v$. With $\mu = 2$ and $v = 0.5$ the target curve is
 
@@ -764,7 +764,7 @@ DSM needs the conditional law of the noised point given the clean one, and it
 needs that law to be Gaussian so that the target is explicit. Every SDE
 whose drift is linear in $\mathbf{x}$ and whose noise amplitude does not
 depend on $\mathbf{x}$ has Gaussian transition kernels, as
-:eqref:`eq_mdl-sde-ou-kernel` showed for the OU process. The two standard
+:numref:`sec_mdl-ornstein-uhlenbeck` showed for the OU process. The two standard
 forward processes of :numref:`sec_mdl-sdes` are of this kind, and their
 kernels can be written once for both as
 
@@ -845,8 +845,8 @@ Generation needs nothing new. The two samplers run with the learned field in
 place of the exact score. For a forward SDE
 $d\mathbf{X} = \mathbf{f}(\mathbf{X}, t)\, dt + g(t)\, d\mathbf{W}$ on
 $[0, T]$, we start from the Gaussian that approximates $p_T$ and integrate
-either the reverse-time SDE :eqref:`eq_mdl-dyn-reverse-sde` or the
-probability-flow ODE :eqref:`eq_mdl-dyn-pf-ode` from $t = T$ down to $0$:
+either the reverse-time SDE (:numref:`sec_mdl-time-reversal`) or the
+probability-flow ODE (:numref:`sec_mdl-probability-flow-ode`) from $t = T$ down to $0$:
 
 $$
 d\mathbf{X} = \big[\mathbf{f} - g^2\, \mathbf{s}_{\boldsymbol{\theta}}(\mathbf{X}, t)\big]\, dt + g\, d\bar{\mathbf{W}},
@@ -1198,7 +1198,7 @@ strides reduce both numbers to about $0.02$.
 Panel (a) answers the literal reading of the update. The sample travels
 along the probability-flow trajectory through its noise end, not along the
 forward curve that produced it. DDIM is the deterministic end of the family
-of reverse processes :eqref:`eq_mdl-dyn-reverse-family`, whose members
+of reverse processes (:numref:`sec_mdl-time-reversal`), whose members
 reinject a chosen amount of noise and share the single-time marginals of the
 forward process, so one trained network serves them all.
 :numref:`sec_diffusion-samplers` chooses among them.
@@ -1663,12 +1663,12 @@ Denoising Score Matching and Score-Based Diffusion Models<br>**Hyvärinen & Vinc
 ::: {.slide title="How Can We Learn a Score Field We Cannot Evaluate?"}
 [Motivation]{.kicker}
 
-Both generative reverse processes—Anderson's reverse-time SDE and the probability-flow ODE—require only one unknown quantity: the score $\nabla_{\mathbf{x}}\log p_t(\mathbf{x})$ of the noised data distribution.
+Both generative reverse processes, Anderson's reverse-time SDE and the probability-flow ODE, require only one unknown quantity: the score $\nabla_{\mathbf{x}}\log p_t(\mathbf{x})$ of the noised data distribution.
 
 - **Why Maximum Likelihood Stalls on Energy-Based Models:** Parameterizing a flexible density $p_{\boldsymbol{\theta}}(\mathbf{x}) = \frac{e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}}{Z_{\boldsymbol{\theta}}}$ requires the normalizing constant $Z_{\boldsymbol{\theta}} = \int_{\mathbb{R}^d} e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}\,d\mathbf{x}$, which is intractable in high dimensions.
 - **Scores Eliminate the Normalizer:** Differentiating $\log p_{\boldsymbol{\theta}}(\mathbf{x})$ with respect to the **state $\mathbf{x}$** makes $\log Z_{\boldsymbol{\theta}}$ vanish:
   $$\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}) = \nabla_{\mathbf{x}}\log p_{\boldsymbol{\theta}}(\mathbf{x}) = -\nabla_{\mathbf{x}}E_{\boldsymbol{\theta}}(\mathbf{x})$$
-- **The Training Paradox:** We want to minimize the **Explicit Score Matching (ESM)** objective $J_{\text{ESM}}(\boldsymbol{\theta}) = \frac{1}{2}\mathbb{E}_{\mathbf{x}\sim p}\big[\|\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}) - \nabla\log p(\mathbf{x})\|^2\big]$, but we only have $n = 4{,}096$ data samples $\mathbf{x}_i \sim p$ and cannot evaluate $\nabla\log p(\mathbf{x}_i)$ at even a single point!
+- **The Training Paradox:** We want to minimize the **Explicit Score Matching (ESM)** objective $J_{\text{ESM}}(\boldsymbol{\theta}) = \frac{1}{2}\mathbb{E}_{\mathbf{x}\sim p}\big[\|\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}) - \nabla\log p(\mathbf{x})\|^2\big]$, but we only have $n = 4{,}096$ data samples $\mathbf{x}_i \sim p$ and cannot evaluate $\nabla\log p(\mathbf{x}_i)$ at even a single point.
 :::
 
 ::: {.slide title="Implicit Score Matching: Integration by Parts"}
@@ -1699,7 +1699,7 @@ For any pair $(X, Y)$ with conditional expectation $\mathbf{m}(X) = \mathbb{E}[Y
 
 $$\mathbb{E}\!\left[\|\mathbf{v}(X) - Y\|^2\right] = \mathbb{E}\!\left[\|\mathbf{v}(X) - \mathbf{m}(X)\|^2\right] + \mathbb{E}\!\left[\|Y - \mathbf{m}(X)\|^2\right]$$
 
-- **Trace-free consequence:** Regressing $\mathbf{v}(X)$ onto a noisy per-sample target $Y$ has the **exact same gradients and minimizer** as regressing onto the intractable conditional mean $\mathbf{m}(X) = \mathbb{E}[Y \mid X]$!
+- **Trace-free consequence:** Regressing $\mathbf{v}(X)$ onto a noisy per-sample target $Y$ has the **exact same gradients and minimizer** as regressing onto the intractable conditional mean $\mathbf{m}(X) = \mathbb{E}[Y \mid X]$.
 :::
 
 ::: {.col .fig}
@@ -1752,7 +1752,7 @@ For Gaussian data $x \sim \mathcal{N}(0, v)$ with $v = 1$ and noise $\sigma = 0.
 ::: {.d2l-note .rule}
 **Curvature Bound of Any Noised Density:** Differentiating Tweedie's formula once more with respect to $\tilde{\mathbf{x}}$ proves:
 $$\nabla^2\log p_\sigma(\tilde{\mathbf{x}}) = -\frac{\mathbf{I}}{\sigma^2} + \frac{1}{\sigma^4}\operatorname{Cov}[\mathbf{x} \mid \tilde{\mathbf{x}}] \quad \Longrightarrow \quad -\nabla^2\log p_\sigma(\tilde{\mathbf{x}}) \preceq \frac{1}{\sigma^2}\mathbf{I}$$
-No peak of a $\sigma$-blurred density can ever curve more sharply than the Gaussian kernel $\mathcal{N}(\mathbf{0}, \sigma^2\mathbf{I})$ that blurred it!
+No peak of a $\sigma$-blurred density can ever curve more sharply than the Gaussian kernel $\mathcal{N}(\mathbf{0}, \sigma^2\mathbf{I})$ that blurred it.
 :::
 :::
 
@@ -1803,7 +1803,7 @@ What happens when we run $10{,}000$ Langevin chains for $2{,}000$ steps ($h = 0.
 @!score-matching-diffusion-flow-langevin
 
 - **Exponential Valley Trapping:** Crossing the low-density valley around $x = 0$ against the restoring pull requires an exponentially rare sequence of noise kicks ($0.5\%$ transition rate out of the heavy mode, $2.5\%$ out of the light mode; mixing relaxation takes $\sim 67{,}000$ steps).
-- **Wrong Mode Proportions ($0.48$ vs. $0.20$):** Chains started from symmetric $\mathcal{N}(0, 3^2)$ simply slide into the nearest mode and stay trapped, preserving the $50/50$ proportions of the initialization instead of the $80/20$ data weights!
+- **Wrong Mode Proportions ($0.48$ vs. $0.20$):** Chains started from symmetric $\mathcal{N}(0, 3^2)$ simply slide into the nearest mode and stay trapped, preserving the $50/50$ proportions of the initialization instead of the $80/20$ data weights.
 :::
 
 ::: {.slide title="How Multi-Scale Noise Solves All Three Failures"}
@@ -1935,7 +1935,7 @@ By Bayes' rule, $\nabla\log p_t(y \mid \mathbf{x}) = \mathbf{s}_y - \mathbf{s}_\
 
 $$\tilde{\mathbf{s}}_{\boldsymbol{\theta}}(\mathbf{x}, t, y) = \mathbf{s}_\varnothing + \gamma\big(\mathbf{s}_y - \mathbf{s}_\varnothing\big) = (1 - \gamma)\mathbf{s}_\varnothing + \gamma\mathbf{s}_y$$
 
-- **Broken curvature bound ($\gamma > 1$):** Once $\gamma$ is large, $-\nabla^2\log\tilde{p}_t$ exceeds the universal $1/\sigma_t^2$ bound of any true noised density, sharpening and shifting the terminal mode outward!
+- **Broken curvature bound ($\gamma > 1$):** Once $\gamma$ is large, $-\nabla^2\log\tilde{p}_t$ exceeds the universal $1/\sigma_t^2$ bound of any true noised density, sharpening and shifting the terminal mode outward.
 :::
 
 ::: {.col .fig}
@@ -1968,7 +1968,7 @@ Test your understanding of score matching and diffusion samplers:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **No!** By the Regression Lemma, the irreducible Bayes-risk floor is $\frac{d}{\sigma^2} - \mathbb{E}\|\nabla\log p_\sigma\|^2 = \frac{100}{0.01} - \mathbb{E}\|\nabla\log p_\sigma\|^2 = 10{,}000 - \mathbb{E}\|\nabla\log p_\sigma\|^2$. A loss of $9{,}800$ can be a globally optimal fit!
+1. **No.** By the Regression Lemma, the irreducible Bayes-risk floor is $\frac{d}{\sigma^2} - \mathbb{E}\|\nabla\log p_\sigma\|^2 = \frac{100}{0.01} - \mathbb{E}\|\nabla\log p_\sigma\|^2 = 10{,}000 - \mathbb{E}\|\nabla\log p_\sigma\|^2$. A loss of $9{,}800$ can be a globally optimal fit.
 2. By Tweedie's formula, $\hat{\mathbf{x}}_0 = \tilde{\mathbf{x}} + \sigma^2 \mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}}) = \tilde{\mathbf{x}} + 0.25\,(4, -2) = \tilde{\mathbf{x}} + (1, -0.5)$.
 3. $\tilde{\mathbf{s}} = (1 - \gamma)\mathbf{s}_\varnothing + \gamma\mathbf{s}_y = -6.5\,\mathbf{s}_\varnothing + 7.5\,\mathbf{s}_y$ (a linear extrapolation beyond $\mathbf{s}_y$ away from $\mathbf{s}_\varnothing$).
 :::

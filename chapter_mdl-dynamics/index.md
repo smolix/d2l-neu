@@ -1,57 +1,13 @@
 # Dynamics: Differential Equations and Generative Flows
 :label:`chap_mdl-dynamics`
 
-A residual network adds a small update to its input at every layer, and
-gradient descent moves the weights a short step downhill. Both solve, step
-by step, a differential equation: a rule that says for every state how fast
-it changes. A diffusion model turns noise into an image the same way. Each
-call to a network returns a direction, and the sample moves a short step
-along it. How few steps can such a model take, and where does the direction
-come from when all we have are example images?
+A residual network adds a small update to its input at every layer, gradient descent nudges weights downhill step by step, and a diffusion model turns noise into an image along a learned vector field. All three discretize differential equations—rules specifying how fast a state changes. Two practical questions follow immediately: how few steps can a sampler take, and how can we learn the velocity or score direction from example images alone?
 
-The second question is answered from the wrong end. Add noise to the
-training images little by little, and they wander like particles in a fluid.
-A cloud of noisy particles is unpredictable one particle at a time, yet its
-density changes deterministically, and running that change backward turns
-noise into data. The tools of the Basics part stop short of this.
-Backpropagation differentiates a fixed computation, not the solution of an
-equation. Probability describes a random variable at one time, not a density
-that moves. And noise whose size grows like the square root of time breaks
-the ordinary chain rule.
+Adding noise gradually to training images answers the second question from the reverse end. Although each noisy particle wanders unpredictably, the density of the whole cloud evolves deterministically, and reversing that evolution turns Gaussian noise back into data. Earlier chapters stop short of this machinery: backpropagation differentiates a fixed computation graph rather than an ODE solution, static probability does not track moving densities, and Brownian increments of order $\sqrt{\Delta t}$ break the ordinary chain rule.
 
-The chapter has three stages, each with a result to keep. First a given rule
-moves one state, exactly and then in steps: the fastest rate in the rule caps
-the step of gradient descent and of every solver that computes its next
-state by a formula (:numref:`sec_mdl-euler-runge-kutta`). That is half the
-answer to the first question; the other half is a straighter path from noise
-to data (:numref:`sec_mdl-rectified-flow`). Then noise moves a
-whole cloud, whose density can be run backward once we know, at every point,
-the direction in which the cloud grows denser, its *score*
-(:numref:`sec_mdl-fokker-planck-probability-flow`). Last, that direction is
-learned: it turns out that least squares on noisy samples learns the score,
-or the velocity of the particles in its place, although no sample comes
-labeled with either (:numref:`sec_mdl-score-matching-diffusion-flow`,
-:numref:`sec_mdl-flow-matching-transport`).
+The chapter unfolds in three stages. First, deterministic ODEs move single states exactly and numerically: the fastest decaying mode caps the step size of gradient descent and every explicit Runge–Kutta solver (:numref:`sec_mdl-euler-runge-kutta`), while straighter transport paths enable few-step generation (:numref:`sec_mdl-rectified-flow`). Along the way, driven linear ODEs yield the recurrence of state space models (:numref:`subsec_mdl-ode-driven-linear`, :numref:`sec_ssm`), and deep residual networks (:numref:`sec_resnet`) pass to neural ODEs and continuous normalizing flows (:numref:`sec_mdl-neural-odes-cnf`). Second, stochastic calculus repairs the chain rule (:numref:`sec_mdl-sdes`) and tracks cloud densities through the Fokker–Planck equation, showing that time reversal requires only the *score* $\nabla \log p_t$ (:numref:`sec_mdl-fokker-planck-probability-flow`). Third, least-squares regression on noisy or interpolated pairs learns the score or marginal velocity directly without ground-truth field labels (:numref:`sec_mdl-score-matching-diffusion-flow`, :numref:`sec_mdl-flow-matching-transport`).
 
-On the way, a linear equation with an input yields the recurrence of a
-state space model (:numref:`subsec_mdl-ode-driven-linear`,
-:numref:`sec_ssm`), and a residual network (:numref:`sec_resnet`) with more
-layers and smaller updates becomes a differential equation
-(:numref:`sec_mdl-neural-odes-cnf`). The hardest section is
-:numref:`sec_mdl-sdes`, which repairs the chain rule. Readers headed for
-diffusion models can skip the adjoint method
-(:numref:`sec_mdl-adjoint-method`) and optimal transport
-(:numref:`sec_mdl-ot-connection`).
-
-:numref:`chap_diffusion` trains networks and judges their images. It
-repeats our short results, leaves the long derivations here, and can be read
-without them. Most experiments here run on fields known in closed form, so a
-sampler that misses has only itself to blame.
-
-We assume eigendecompositions (:numref:`sec_mdl-eigendecompositions`),
-Jacobians (:numref:`subsec_mdl-jacobian`), Gaussians and conditional
-expectation, and no measure theory. Where a proof would need it, we give a
-plausible argument and cite the proof.
+Readers headed straight for :numref:`chap_diffusion` may skip the continuous adjoint method (:numref:`sec_mdl-adjoint-method`) and optimal transport (:numref:`sec_mdl-ot-connection`) on a first pass. Most experiments here test samplers on closed-form vector fields so discretization errors can be isolated cleanly. We assume eigendecompositions (:numref:`sec_mdl-eigendecompositions`), Jacobians (:numref:`subsec_mdl-jacobian`), and Gaussian conditioning, without measure theory.
 
 ```toc
 :maxdepth: 2
@@ -148,9 +104,9 @@ Dynamics: Differential Equations, Stochastic Flows, and Transport<br>**ODEs & so
 
 ::: {.cols .vc}
 ::: {.col}
-- **Stage 1 — Deterministic ODEs & Flows (§§{sec_mdl-odes-solvers}–§{num:sec_mdl-neural-odes-cnf}):** Picard–Lindelöf uniqueness, matrix exponential $e^{\mathbf{A}t}$, Runge–Kutta stability $R(h\lambda)$, continuous adjoint ODE, and Liouville's trace rule $\frac{d}{dt}\log p_t = -\operatorname{tr}\mathbf{J}$.
-- **Stage 2 — Stochastic Calculus & Density Flow (§§{sec_mdl-sdes}–§{num:sec_mdl-fokker-planck-probability-flow}):** Quadratic variation $(dW)^2 = dt$, Itô's lemma, OU Gaussian kernels, Fokker–Planck PDE, Anderson's reverse SDE, and the probability-flow ODE.
-- **Stage 3 — Learning Generative Fields (§§{sec_mdl-score-matching-diffusion-flow}–§{num:sec_mdl-flow-matching-transport}):** Vincent's denoising score matching, Tweedie's formula, DDPM/DDIM, Conditional Flow Matching, and Reflow.
+- **Stage 1: Deterministic ODEs & Flows (§§{sec_mdl-odes-solvers}–§{num:sec_mdl-neural-odes-cnf}):** Picard–Lindelöf uniqueness, matrix exponential $e^{\mathbf{A}t}$, Runge–Kutta stability $R(h\lambda)$, continuous adjoint ODE, and Liouville's trace rule $\frac{d}{dt}\log p_t = -\operatorname{tr}\mathbf{J}$.
+- **Stage 2: Stochastic Calculus & Density Flow (§§{sec_mdl-sdes}–§{num:sec_mdl-fokker-planck-probability-flow}):** Quadratic variation $(dW)^2 = dt$, Itô's lemma, OU Gaussian kernels, Fokker–Planck PDE, Anderson's reverse SDE, and the probability-flow ODE.
+- **Stage 3: Learning Generative Fields (§§{sec_mdl-score-matching-diffusion-flow}–§{num:sec_mdl-flow-matching-transport}):** Vincent's denoising score matching, Tweedie's formula, DDPM/DDIM, Conditional Flow Matching, and Reflow.
 :::
 
 ::: {.col .fig .big}
@@ -182,7 +138,7 @@ Dynamics: Differential Equations, Stochastic Flows, and Transport<br>**ODEs & so
 ::: {.col}
 - **Forward & reverse SDEs:** $d\mathbf{X} = \mathbf{f}\,dt + g\,d\mathbf{W}$ reverses via $d\mathbf{X} = [\mathbf{f} - g^2\nabla\log p_t]\,dt + g\,d\bar{\mathbf{W}}$.
 - **Deterministic probability-flow ODE:** $\dot{\mathbf{x}} = \mathbf{u}_t(\mathbf{x}) = \mathbf{f}(\mathbf{x}, t) - \tfrac12 g(t)^2\nabla\log p_t(\mathbf{x})$ shares all marginals $p_t(\mathbf{x})$.
-- **Key identity:** Rewriting $\tfrac12 g^2\Delta p_t = \nabla\cdot(p_t \cdot \tfrac12 g^2\nabla\log p_t)$ turns Laplacian diffusion into deterministic transport along the score field!
+- **Key identity:** Rewriting $\tfrac12 g^2\Delta p_t = \nabla\cdot(p_t \cdot \tfrac12 g^2\nabla\log p_t)$ turns Laplacian diffusion into deterministic transport along the score field.
 :::
 
 ::: {.col .fig .big}

@@ -204,7 +204,7 @@ the flow.
 
 The target of :eqref:`eq_mdl-fm-loss` is the posterior mean
 :eqref:`eq_mdl-marginal-velocity` of a quantity we can compute for every
-sample. By the regression lemma :eqref:`eq_mdl-regression-lemma`, least
+sample. By the regression lemma (:numref:`sec_mdl-denoising-score-matching`), least
 squares against a per-sample target fits its conditional mean. We may
 therefore regress on the per-sample quantity, which is what the
 **conditional flow matching** (CFM) loss does:
@@ -363,8 +363,8 @@ $\alpha_t = \exp\big(-\tfrac12 \int_0^t \beta(s)\, ds\big)$, so
 $\dot{\alpha}_t/\alpha_t = -\tfrac12 \beta(t)$ and the velocity is
 $-\tfrac12 \beta(t) \big(\mathbf{x} + \nabla \log p_t(\mathbf{x})\big)$.
 This is the probability-flow velocity
-$\mathbf{f} - \tfrac12 g^2 \nabla \log p_t$ of
-:eqref:`eq_mdl-dyn-pf-velocity` with $\mathbf{f} = -\tfrac12 \beta\, \mathbf{x}$
+$\mathbf{f} - \tfrac12 g^2 \nabla \log p_t$ (:numref:`sec_mdl-continuity-equation`)
+with $\mathbf{f} = -\tfrac12 \beta\, \mathbf{x}$
 and $g^2 = \beta$. On this path the flow-matching velocity and the
 probability-flow ODE are the same field on the same clock. The cosine path
 of the Gaussian example is variance-preserving too, so we can check the
@@ -1820,7 +1820,7 @@ Flow Matching, Rectified Flows, and Optimal Transport<br>**probability paths · 
 ::: {.cols .vc}
 ::: {.col}
 - **Curved diffusion paths:** Probability-flow ODE trajectories inherited from OU / VP-SDE noising curve across time. On this section's mixture they cover more than $90\%$ of their length below $t = 0.5$, and a solver needs 20–50 steps to follow them.
-- **Straight constant-speed ideal:** If particles travel along $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\mathbf{x}_1$ without crossings ($\dot{\mathbf{x}}_t = \mathbf{x}_1 - \mathbf{x}_0$), a **single** Euler step ($h = 1$) is $100\%$ exact!
+- **Straight constant-speed ideal:** If particles travel along $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\mathbf{x}_1$ without crossings ($\dot{\mathbf{x}}_t = \mathbf{x}_1 - \mathbf{x}_0$), a **single** Euler step ($h = 1$) is $100\%$ exact.
 - **Flow Matching paradigm:** Prescribe $p_t$ directly and regress $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ onto per-sample velocities by least squares.
 :::
 
@@ -1861,7 +1861,7 @@ Because the marginal velocity is the posterior mean $\mathbf{u}_t(\mathbf{x}) = 
 
 $$\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathbb{E}_{t, \mathbf{z}, \mathbf{x}}\!\left[\left\|\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})\right\|^2\right] = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$$
 
-- **Crossing variance floor $C$:** $C = \mathbb{E}[\operatorname{Var}(\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \mid \mathbf{x}_t)]$ vanishes ($C = 0$) if and only if distinct sample paths never cross!
+- **Crossing variance floor $C$:** $C = \mathbb{E}[\operatorname{Var}(\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \mid \mathbf{x}_t)]$ vanishes ($C = 0$) if and only if distinct sample paths never cross.
 :::
 
 ::: {.col .fig}
@@ -1924,7 +1924,7 @@ $$\mathcal{L}_{\text{RF}}(\boldsymbol{\theta}) = \mathbb{E}_{t,\, \mathbf{x}_0,\
 ::: {.cols .vc}
 ::: {.col}
 - **Crossing Segments vs. Non-Crossing ODE Flows:** When two straight segments $(\mathbf{x}_0, \boldsymbol{\epsilon})$ and $(\mathbf{x}_0', \boldsymbol{\epsilon}')$ cross at $(\mathbf{x}, t)$, they demand two different velocities.
-- **Averaging Causes Curvature:** The marginal field $\mathbf{u}_t(\mathbf{x})$ averages the crossing velocities. Because a Lipschitz ODE has a unique trajectory through every point, the integrated paths cannot cross—they **bend away from each other** and swap endpoints!
+- **Averaging Causes Curvature:** The marginal field $\mathbf{u}_t(\mathbf{x})$ averages the crossing velocities. Because a Lipschitz ODE has a unique trajectory through every point, the integrated paths cannot cross—they **bend away from each other** and swap endpoints.
 :::
 
 ::: {.col .fig}
@@ -2013,7 +2013,7 @@ Generating $8{,}192$ coupled pairs $(\hat{\mathbf{x}}_0(\boldsymbol{\epsilon}), 
 
 @!mdl-score-matching-diffusion-flow-one-reflow-round-measured
 
-- **Crossing Floor Vanishes:** Because trajectories of the deterministic ODE flow never cross, the straight chords joining $\boldsymbol{\epsilon}$ to $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ almost never cross in space-time, collapsing the training loss floor from $1.37$ down to below $0.001$!
+- **Crossing Floor Vanishes:** Because trajectories of the deterministic ODE flow never cross, the straight chords joining $\boldsymbol{\epsilon}$ to $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ almost never cross in space-time, collapsing the training loss floor from $1.37$ down to below $0.001$.
 :::
 
 ::: {.slide title="After One Reflow Round, 1 Step Matches 32 Steps"}
@@ -2046,7 +2046,7 @@ $$W_2^2(p_0, p_1) = \min_{\pi \in \Pi(p_0, p_1)} \mathbb{E}_{(\mathbf{x}_0, \mat
 ![](../img/mdl-dyn-couplings-energy.svg)
 
 - **1D Monotone Sorting vs. 2D Quarter-Turn Carousel:** In 1D, non-crossing order-preservation is sufficient for optimality ($W_2^2(\mathcal{N}(0, 1), \mathcal{N}(m, s^2)) = m^2 + (s - 1)^2 = 1$ for $m=0, s=2$, vs. $5$ for independent pairs).
-- **Why Crossing-Free Is Not Enough in $\mathbb{R}^d$ ($d \ge 2$):** Pairing $\mathbf{x}_0 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ with its $90^\circ$ rotation $\mathbf{R}\mathbf{x}_0$ produces straight segments $((1-t)\mathbf{I} + t\mathbf{R})\mathbf{x}_0$ that **never cross** ($C = 0$, a fixed point of Reflow!), yet cost $\mathbb{E}\|\mathbf{R}\mathbf{x}_0 - \mathbf{x}_0\|^2 = 4$ when $W_2^2 = 0$. By **Brenier's theorem**, an optimal map must be the gradient of a convex function $\nabla\psi$ (symmetric Jacobian), whereas $\mathbf{R} \ne \mathbf{R}^\top$ has curl.
+- **Why Crossing-Free Is Not Enough in $\mathbb{R}^d$ ($d \ge 2$):** Pairing $\mathbf{x}_0 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ with its $90^\circ$ rotation $\mathbf{R}\mathbf{x}_0$ produces straight segments $((1-t)\mathbf{I} + t\mathbf{R})\mathbf{x}_0$ that **never cross** ($C = 0$, a fixed point of Reflow), yet cost $\mathbb{E}\|\mathbf{R}\mathbf{x}_0 - \mathbf{x}_0\|^2 = 4$ when $W_2^2 = 0$. By **Brenier's theorem**, an optimal map must be the gradient of a convex function $\nabla\psi$ (symmetric Jacobian), whereas $\mathbf{R} \ne \mathbf{R}^\top$ has curl.
 :::
 
 ::: {.slide title="Theorem: Dynamic Optimal Transport (Benamou–Brenier)"}
@@ -2072,7 +2072,7 @@ When sampling from a curved probability-flow ODE on a tight budget of $10$ to $8
 ::: {.col}
 @!score-matching-diffusion-flow-euler-vs-heun[out=1]
 
-- **Grid Sensitivity:** On a **uniform grid**, Euler beats Heun at 10 and 20 NFE! On a **squared grid** $t_k = (1 - k/K)^2$ crowded near the data end $t = 0$, Heun wins at every budget and cuts the 10-NFE error to $0.030$.
+- **Grid Sensitivity:** On a **uniform grid**, Euler beats Heun at 10 and 20 NFE. On a **squared grid** $t_k = (1 - k/K)^2$ crowded near the data end $t = 0$, Heun wins at every budget and cuts the 10-NFE error to $0.030$.
 :::
 
 ::: {.col .fig}
@@ -2084,7 +2084,7 @@ When sampling from a curved probability-flow ODE on a tight budget of $10$ to $8
 ::: {.slide title="Why Euler Leads on Uniform Grids: Error Cancellation" layout="tall-output"}
 [Diagnosing Step Errors]{.kicker}
 
-Decomposing the terminal error into individual signed step contributions $c_k$ carried to $t = 0$ reveals why grid placement interacts strongly with solver order:
+Decomposing terminal error into signed step contributions $c_k$ carried to $t = 0$ shows how grid placement interacts with solver order:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -2092,8 +2092,8 @@ Decomposing the terminal error into individual signed step contributions $c_k$ c
 :::
 
 ::: {.col}
-- **Most of the Motion Comes Late:** On this mixture the paths cover more than $90\%$ of their length below $t = 0.5$. The noised law near $t = 1$ is almost $\mathcal{N}(0, 1)$, where the score cancels the drift, so uniform steps spend half the NFE budget above $t = 0.5$, where trajectories cover less than a tenth of their length.
-- **Accidental Sign Cancellation:** Before summation, Euler's absolute step errors $\sum_k |c_k|$ are more than $2\times$ larger than Heun's on both grids—but on the uniform grid, opposite signs cancel $88\%$ of Euler's errors (surviving share $0.12$). Crowding the grid near $t = 0$ removes this cancellation and lets Heun's true $O(h^2)$ local accuracy dominate.
+- **Most motion comes late:** Paths cover $>90\%$ of their length below $t = 0.5$; near $t = 1$ the law is almost $\mathcal{N}(0, 1)$, so uniform steps spend half the NFE budget above $t = 0.5$ on $<10\%$ of the travel.
+- **Accidental sign cancellation:** Euler's absolute step errors $\sum_k |c_k|$ are $>2\times$ Heun's on both grids, yet opposite signs cancel $88\%$ on the uniform grid (surviving share $0.12$). Crowding steps near $t = 0$ lets Heun's $O(h^2)$ accuracy dominate.
 :::
 :::
 :::

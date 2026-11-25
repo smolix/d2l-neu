@@ -765,8 +765,8 @@ $$
 :eqlabel:`eq_mdl-sde-ou-kernel`
 
 **Proof.** The integrating factor $e^{\theta t}$ solved the decay equation
-with an input in :numref:`subsec_mdl-ode-driven-linear` (the variation of
-constants formula :eqref:`eq_mdl-ode-variation-of-constants`), and it works
+with an input in :numref:`subsec_mdl-ode-driven-linear` (by the variation of
+constants formula), and it works
 when the input is noise. Apply Itô's lemma :eqref:`eq_mdl-sde-ito-lemma` to
 $\phi(x, t) = e^{\theta t} x$, for which
 $\phi_t = \theta e^{\theta t} x$, $\phi_x = e^{\theta t}$, and
@@ -1493,7 +1493,7 @@ Start 10,000 copies at $x_0 = 2$ and iterate $x_{k+1} = 0.99\,x_k + \sqrt{0.02}\
 @!sdes-ou-cloud
 
 ::: {.d2l-note .warn}
-**Why $\sqrt{h}$ Instead of $h$?** Over step $h = 0.01$, the deterministic decay $0.99 = 1 - h$ changes $x$ by $O(h)$, but the noise kick $\sqrt{2h} = \sqrt{0.02} \approx 0.141$ has size $O(\sqrt{h})$. Its **square** is $O(h)$, breaking the ordinary chain rule!
+**Why $\sqrt{h}$ Instead of $h$?** Over step $h = 0.01$, the deterministic decay $0.99 = 1 - h$ changes $x$ by $O(h)$, but the noise kick $\sqrt{2h} = \sqrt{0.02} \approx 0.141$ has size $O(\sqrt{h})$. Its **square** is $O(h)$, breaking the ordinary chain rule.
 :::
 :::
 
@@ -1638,7 +1638,7 @@ $$dX = f(X, t)\,dt + g(X, t)\,dW \quad \Longleftrightarrow \quad X_t = X_0 + \in
 ::: {.slide title="Why the Ordinary Chain Rule Fails: Jensen's Gap"}
 [Geometric Intuition for Itô's Lemma]{.kicker}
 
-The ordinary chain rule predicts $d(W_t^2) = 2W_t\,dW_t$, which integrates to $\int_0^t 2W_s\,dW_s = W_t^2 - t$—missing the $+t$ term! One step of a coin-flip walk shows why any curved function $\phi(x)$ experiences a deterministic drift from symmetric noise:
+The ordinary chain rule predicts $d(W_t^2) = 2W_t\,dW_t$, which integrates to $\int_0^t 2W_s\,dW_s = W_t^2 - t$, missing the $+t$ term. One step of a coin-flip walk shows why any curved function $\phi(x)$ experiences a deterministic drift from symmetric noise:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -1818,7 +1818,7 @@ Because every omitted stochastic term has **mean zero**, the one-step distributi
 @!sdes-em-weak-order
 
 ::: {.d2l-note .warn}
-**Itô vs. Stratonovich Pitfall:** Naive higher-order ODE solvers cannot be plugged directly into multiplicative SDEs—applying Heun's predictor-corrector to $g(X)$ averages the left and right endpoints, converging to the **Stratonovich** solution $X_0 e^{\mu T + \nu W_T}$ instead of the Itô solution $X_0 e^{(\mu - \nu^2/2)T + \nu W_T}$!
+**Itô vs. Stratonovich Pitfall:** Naive higher-order ODE solvers cannot be plugged directly into multiplicative SDEs—applying Heun's predictor-corrector to $g(X)$ averages the left and right endpoints, converging to the **Stratonovich** solution $X_0 e^{\mu T + \nu W_T}$ instead of the Itô solution $X_0 e^{(\mu - \nu^2/2)T + \nu W_T}$.
 :::
 :::
 

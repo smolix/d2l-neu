@@ -9,7 +9,7 @@ Qwen3-0.6B-Base config (6 N_mm = 3,575,906,304, F(T=2,048) =
 4,985,192,448), `causal_half`, `T=None`; `mfu` arithmetic; `r2_config`
 overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
 `_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
-chapter's 34 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
+chapter's 35 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
 vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
 (losses 1e-6) and a branch from a saved state; `attn_logit_stats` against
 the explicit softmax input; the `qk_clip_` contract; `softcap`;
@@ -47,7 +47,8 @@ torch.set_num_threads(min(8, torch.get_num_threads()))
 RERUN_NAMES = (
     'pdp-throughput', 'pdp-mask-runs', 't1-runs', 'inst-t1-none',
     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'spike-replay',
-    'reference-run', 'ladder', 'inst-t2', 'reference-evals', 'ladder-evals',
+    'reference-run', 'ladder', 'inst-t2', 'reference-evals', 't1-evals',
+    'ladder-evals',
     'gemm-sweep', 'lowp-runs', 'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B',
     'cpt-qwen-C', 'cpt-qwen-A2', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1',
     'smollm3-2', 'smollm3-3', 'smollm3-4', 'smollm3-5', 'lc-t1',
@@ -158,6 +159,28 @@ class ConfigTest(unittest.TestCase):
                           r2.accum(4)), (6000, 128, 8, 4))
         self.assertEqual(r2.branches, ((2550, 450), (1275, 225)))
         self.assertIn(5100, r2.state_steps)
+        self.assertEqual(r2.stats_every, 10)
+        self.assertEqual(r2.ckpt_steps, d2l.REFERENCE_STEPS)
+        t1 = d2l.r2_config('t1')
+        self.assertEqual(t1.stats_every, 50)
+        # the t1 checkpoints sit at the reference run's fractions
+        self.assertEqual(t1.ckpt_steps, d2l.T1_STEPS)
+        for a, b in zip(d2l.REFERENCE_STEPS, d2l.T1_STEPS):
+            self.assertLessEqual(abs(a / r2.steps - b / t1.steps),
+                                 0.5 / t1.steps + 1e-12)  # rounded
+        self.assertIn(t1.steps - t1.decay, t1.state_steps)
+        self.assertEqual(d2l._reference_key('t1', 1297), 'lm-r2t1-s1297-v1')
+        with self.assertRaises(ValueError):
+            d2l._reference_key('t1', 1300)
+
+    def test_job_checkpoint_only_for_evals(self):
+        for rerun, want in (('spike-replay', None), ('reference-evals', 'r2'),
+                            ('t1-evals', 't1')):
+            with mock.patch.dict(os.environ, {'D2L_RERUN': rerun}):
+                for preset in ('r2', 't1'):
+                    path = d2l._job_checkpoint(preset, None)
+                    self.assertEqual(path is not None, preset == want,
+                                     (rerun, preset))
 
     def test_names(self):
         self.assertEqual(d2l.PRETRAIN_RERUN_NAMES, RERUN_NAMES)
@@ -254,6 +277,32 @@ class PretrainTest(unittest.TestCase):
                                             's30.safetensors'),
                                dtype=torch.float32)
             self.assertEqual(m.config()['num_blks'], 2)
+
+    def test_resume_after_crash_in_branch(self):
+        class Crash(Exception):
+            pass
+
+        def crash(step, model, opt, batch, row):
+            if row['run'] == 'b26' and row['step'] == 23:
+                raise Crash
+        with tempfile.TemporaryDirectory() as out:
+            ref = self.run_toy(toy_config(
+                steps=30, decay=6, state_steps=(20,), ckpt_steps=(30,),
+                branches=((20, 6),), out_dir=os.path.join(out, 'ref')))
+            cfg = toy_config(steps=30, decay=6, state_steps=(20,),
+                             ckpt_steps=(30,), branches=((20, 6),),
+                             out_dir=os.path.join(out, 'job'))
+            with self.assertRaises(Crash), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                d2l.pretrain(toy_model(), self.stream(), cfg, hooks=[crash])
+            log = self.run_toy(cfg, resume='auto', seed=5)
+        b = log[log['run'] == 'b26']
+        self.assertEqual(b['step'].tolist(), list(range(21, 27)))
+        self.assertEqual(log[log['run'] == 'toy']['step'].tolist(),
+                         list(range(1, 31)))
+        r = ref[ref['run'] == 'b26']
+        self.assertLess(np.abs(b['loss'].values - r['loss'].values).max(),
+                        1e-6)
 
     @staticmethod
     def stop_at(n):
@@ -484,6 +533,10 @@ class MeasurementTest(unittest.TestCase):
         r = d2l._as_tuple(d2l.SpikeReplay, pending, ('table', 'traces'))
         self.assertEqual(r.label, 'spike-replay pending')
         self.assertTrue(r.table.empty and r.floor is None)
+        r = d2l._as_tuple(d2l.SpikeReplay, pending, dict(
+            table=['run', 'max_dloss'], traces=[]), dict(floor=math.nan))
+        self.assertEqual(list(r.table.columns), ['run', 'max_dloss'])
+        self.assertTrue(math.isnan(r.floor))
         R = collections.namedtuple('Tables', 'table traces floor label')
         r = d2l._as_tuple(d2l.SpikeReplay, R(pd.DataFrame({'a': [1]}),
                                              pd.DataFrame(), 0.5, 'x'),
@@ -582,6 +635,103 @@ class MeasurementTest(unittest.TestCase):
                        '/r/r2-s0/ckpt/b3000-s3000.safetensors'), pts)
         self.assertIn(('ladder-25m-s0', 'ladder-25m', 816, False,
                        '/r/ladder-25m-s0/state/s816.pt'), pts)
+
+    def test_gradient_event(self):
+        log = toy_log(1000)
+        log.loc[log['step'] == 600, 'grad_norm'] = 20.0  # a 18x event
+        ev = d2l.gradient_event(log)
+        self.assertEqual((ev.step, ev.at, ev.mild), (600, 600, False))
+        self.assertEqual(ev.source, 'toy run')
+        self.assertGreater(ev.ratio, 15)
+        self.assertAlmostEqual(ev.hour, (1200 - 2) / 3600)
+        self.assertEqual(ev.layer, 2)  # layer 1 (0-based) is the larger
+        self.assertAlmostEqual(ev.max_logit, 11 + 600 / 50)
+        loss = log.set_index('step')['loss']
+        self.assertAlmostEqual(ev.dloss, loss.loc[601:800].mean()
+                               - loss.loc[401:600].mean())
+        self.assertIsNone(ev.nonfinite)
+        # mild: the 10x arm's first step above the baseline + delta
+        base, arm = toy_log(500), toy_log(500)
+        arm.loc[arm['step'] >= 300, 'loss'] += 0.5
+        arm.loc[arm['step'] >= 350, 'loss'] = np.nan
+        traces = pd.concat([d2l._arm_trace(base, 'baseline', 6e-4, 0),
+                            d2l._arm_trace(arm, 'none', 6e-3, 0)])
+        arms = d2l.InstabilityRuns(pd.DataFrame(), traces, 30, '')
+        with mock.patch.object(d2l, 'instability_arms',
+                               lambda *a, **k: arms):
+            ev = d2l.gradient_event(toy_log(1000))
+        self.assertTrue(ev.mild)
+        self.assertEqual((ev.at, ev.nonfinite), (300, 350))
+        self.assertEqual(ev.source, 'unclipped arm at lr 0.006')
+        empty = d2l.InstabilityRuns(pd.DataFrame(), pd.DataFrame(
+            columns=d2l._INST_TABLES['traces']), None, 'inst-t2 pending')
+        with mock.patch.object(d2l, 'instability_arms',
+                               lambda *a, **k: empty), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            ev = d2l.gradient_event(toy_log(1000))
+        self.assertTrue(ev.mild and ev.at is None)
+        self.assertEqual(out.getvalue(), '[inst-t2 pending]\n')
+
+    def test_reference_evals_stand_in(self):
+        tab = pd.DataFrame(dict(step=d2l.T1_STEPS, val_loss=1.0, bpb=1.0,
+                                piqa=0.5))
+        Tables = collections.namedtuple('Tables', 'table items domains '
+                                                  'chance label')
+        stored = Tables(tab, tab[['step']].assign(task='piqa', item_id=0,
+                                                  score=1),
+                        pd.DataFrame(), {'piqa': 0.5}, 'T2 run pending; '
+                        'showing the T1 configuration')
+        with mock.patch.object(d2l, '_pretrain_result',
+                               lambda *a, **k: stored), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            ev = d2l.reference_evals(d2l.REFERENCE_STEPS, ('piqa',))
+        self.assertEqual(ev.table['step'].tolist(), list(d2l.REFERENCE_STEPS))
+        self.assertEqual(ev.items['step'].iloc[-1], 6000)
+        self.assertEqual(ev.label, d2l.T1_STAND_IN)
+        self.assertIn(d2l.T1_STAND_IN, out.getvalue())
+        pending = pd.DataFrame()
+        pending.attrs['label'] = 'reference-evals pending'
+        with mock.patch.object(d2l, '_pretrain_result',
+                               lambda *a, **k: pending), \
+                contextlib.redirect_stdout(io.StringIO()):
+            ev = d2l.reference_evals(d2l.REFERENCE_STEPS, ('piqa',))
+        self.assertEqual(list(ev.table.columns), ['step', 'val_loss', 'bpb',
+                                                  'piqa'])
+        self.assertTrue(math.isnan(ev.chance['piqa']))
+
+    def test_load_reference_models_stand_in(self):
+        calls = []
+
+        def load(step, dtype, device, preset='r2'):
+            calls.append((step, preset))
+            return preset
+        with mock.patch.object(d2l, 'load_reference_model', load), \
+                mock.patch.object(d2l, 'PRETRAIN_PENDING',
+                                  frozenset({'reference-run'})), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            models = d2l.load_reference_models((5100, 6000))
+        self.assertEqual(calls, [(1297, 't1'), (1526, 't1')])
+        self.assertEqual(set(models), {5100, 6000})
+        self.assertIn('T2 run pending', out.getvalue())
+
+    def test_plot_traces_and_ladder(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        traces = pd.concat([d2l._arm_trace(toy_log(100), v, 1e-3, 0)
+                            for v in ('none', 'qk_clip')])
+        d2l.plot_traces(traces, ['max_logit', 'loss'], by=['lr', 'variant'],
+                        logy=['max_logit'], steps=(10, 90))
+        fig = d2l.plt.gcf()
+        self.assertEqual(len(fig.axes), 2)
+        labels = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
+        self.assertEqual(labels, ['0.001 none', '0.001 qk_clip'])
+        d2l.plt.close('all')
+        log = toy_log(200).assign(job='ladder-25m-s0')
+        log.loc[log['step'] > 150, 'run'] = 'b150'
+        empty = pd.DataFrame()
+        d2l.plot_ladder(empty, log)
+        self.assertEqual(len(d2l.plt.gca().get_lines()), 2)
+        d2l.plt.close('all')
 
     def test_plot_run_log(self):
         import matplotlib

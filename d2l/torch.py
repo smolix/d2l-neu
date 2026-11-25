@@ -11604,10 +11604,10 @@ class PackedStream:
         Defined in :numref:`sec_lm_data_path`"""
         self.skipped = tuple(sorted(set(self.skipped) | {step}))
 
+import dataclasses
+
 Arch = collections.namedtuple('Arch',
                               'L d H H_kv d_h f vocab T rope_base qk_norm tie')
-
-import dataclasses
 
 @dataclasses.dataclass
 class PretrainConfig:
@@ -11632,7 +11632,6 @@ class PretrainConfig:
     dtype: str = 'bf16'
     compile: bool = True
     ddp: bool = False
-    log_every: int = 1
     probe_every: int = 50       # update RMS per module
     stats_every: int = 50       # largest attention logit per layer
     val_every: int = 250
@@ -20926,7 +20925,7 @@ PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'pdp-throughput', 'pdp-mask-runs',
     't1-runs', 'inst-t1-none', 'inst-t1-qkclip', 'inst-t1-qknorm',
     'inst-t1-softcap', 'spike-replay', 'reference-run', 'ladder', 'inst-t2',
-    'reference-evals', 'ladder-evals',
+    'reference-evals', 't1-evals', 'ladder-evals',
     'gemm-sweep', 'lowp-runs',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
     'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2', 'smollm3-3',
@@ -20943,7 +20942,7 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     'inst-t1-softcap': 'instability-t1', 'spike-replay': 'spike-replay',
     'reference-run': 'reference-run-log', 'ladder': 'ladder-logs',
     'inst-t2': 'instability-t2', 'reference-evals': 'reference-evals',
-    'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
+    't1-evals': 't1-evals', 'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
     'lowp-runs': 'lowp-runs', 'cpt-t1': 'cpt-t1', 'cpt-qwen-A': 'cpt-runs',
     'cpt-qwen-B': 'cpt-runs', 'cpt-qwen-C': 'cpt-runs',
     'cpt-qwen-A2': 'cpt-runs', 'cpt-qwen-evals': 'cpt-runs',
@@ -21965,6 +21964,7 @@ d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')
 d2l.PRETRAIN_ARTIFACTS['reference-evals'] = (
     'lm-r2-evals-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['t1-evals'] = ('lm-r2t1-evals-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['ladder-logs'] = ('lm-ladder-logs-v1', 'jsonl')
 d2l.PRETRAIN_ARTIFACTS['ladder-evals'] = (
     'lm-ladder-evals-v1', 'json-table')
@@ -21985,8 +21985,12 @@ d2l.PRETRAIN_JOBS['ladder'] = ('launch_pretrain', lambda: dict(
     cfgs=[d2l.r2_config(p) for p in ('ladder-25m', 'ladder-54m',
                                      'ladder-88m')], n_gpus=4))
 d2l.PRETRAIN_JOBS['reference-evals'] = ('reference_evals', lambda: dict(
-    steps=(500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700, 6000),
+    steps=d2l.REFERENCE_STEPS,
     tasks=('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande')))
+d2l.PRETRAIN_JOBS['t1-evals'] = ('reference_evals', lambda: dict(
+    steps=d2l.T1_STEPS,
+    tasks=('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande'),
+    preset='t1'))
 d2l.PRETRAIN_JOBS['ladder-evals'] = ('ladder_evals', lambda: dict(
     ladder=d2l._job_log('ladder'), log=d2l._job_log('reference-run'),
     tasks=('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande')))
@@ -22008,27 +22012,35 @@ d2l.PRETRAIN_JOBS['spike-replay'] = ('spike_replay', lambda: dict(
              ('from 50, same batches', 50, (), None),
              ('clip 1.0', 0, (), 1.0))))
 
+REFERENCE_STEPS = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700,
+                   6000)
+
+T1_STEPS = (127, 254, 509, 763, 1017, 1144, 1221, 1297, 1373, 1450,
+            1526)  # the same fractions of the t1 run's 1,526 steps
+
 def _preset_saves(preset):
     """What a preset's run saves: bf16 checkpoints, pinned full states
     (branch points and the end of the stable phase), rolling states, and
-    the branches (from_step, decay_steps) that finish 10N and 5N budgets.
+    the branches (from_step, decay_steps) that finish 10N and 5N budgets;
+    for r2 also its logit-statistics interval (10 steps, so that the
+    change points of 'Who Moves First' resolve to 10 steps).
 
     Defined in :numref:`sec_lm_reference_model`"""
-    r2_ckpts = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700,
-                6000)
     ladder = {'ladder-25m': ((816, 144), (408, 72)),
               'ladder-54m': ((1760, 310), (880, 155)),
               'ladder-88m': ((2857, 504), (1428, 252))}
     _, steps, _, decay, _, _ = d2l.R2_SCHEDULES[preset]
     if preset == 'r2':
-        return dict(ckpt_steps=r2_ckpts, state_steps=(1275, 2550, 5100),
-                    state_every=500, branches=((2550, 450), (1275, 225)))
+        return dict(ckpt_steps=REFERENCE_STEPS, state_steps=(1275, 2550,
+                                                             5100),
+                    state_every=500, branches=((2550, 450), (1275, 225)),
+                    stats_every=10)
     if preset in ladder:
         b = ladder[preset]
         return dict(ckpt_steps=(steps,), state_steps=tuple(sorted(
             f for f, _ in b)), state_every=500, branches=b)
-    if preset == 't1':
-        return dict(ckpt_steps=(steps,), state_steps=(steps - decay,))
+    if preset == 't1':  # checkpoints for the stand-in while r2 is pending
+        return dict(ckpt_steps=T1_STEPS, state_steps=(steps - decay,))
     return dict(ckpt_steps=(steps,), state_every=500 if steps > 1500 else 0)
 
 def _arch_fields(arch):
@@ -22122,7 +22134,6 @@ class _PretrainRun:
         path = self._resume_path(resume)
         if path is not None:
             self.start = self._load_state(path)
-            self._expect = self.start + 1
         self.log_path = self._log_file(cfg.preset)
         if self.log_path and self.rank == 0:
             d2l._truncate_log(self.log_path, self.start)
@@ -22131,6 +22142,7 @@ class _PretrainRun:
     def segments(self):
         cfg = self.cfg
         if self.start < cfg.steps:
+            self._expect = self.start + 1  # checked by the segment's 1st row
             yield _Segment(cfg.preset, self.start, cfg.steps, cfg.decay)
         for frm, dec in cfg.branches:
             name = f'b{frm + dec}'
@@ -22140,6 +22152,7 @@ class _PretrainRun:
             self.log_path = self._log_file(name)
             if self.log_path and self.rank == 0:
                 d2l._truncate_log(self.log_path, frm)
+            self._expect = frm + 1
             yield _Segment(name, frm, frm + dec, dec)
 
     def batch(self, step):
@@ -22178,7 +22191,7 @@ class _PretrainRun:
         row['run'], row['seed'] = seg.name, cfg.seed
         row['world'], row['gpu'], row['job_start'] = (self.world, self.gpu,
                                                       self.start)
-        if self._expect is not None:  # the scheduler did not restart at 0
+        if self._expect is not None:  # the segment starts where it should
             assert done == self._expect, (done, self._expect)
             self._expect = None
         hist = sorted(self.grad_hist)
@@ -22496,7 +22509,8 @@ def launch_pretrain(cfgs, n_gpus=4):
     sizes) as one DataFrame with columns run and seed: the committed result
     of this call's configuration, or, under D2L_RERUN, its runs launched
     with torchrun on n_gpus GPUs (tools/lm_pretrain.py, one job folder per
-    run, resumable).
+    run, resumable). While the reference run is pending its log is the t1
+    run's seed 0; a pending result prints its label.
 
     Defined in :numref:`sec_lm_reference_model`"""
     cfgs = [cfgs] if dataclasses.is_dataclass(cfgs) else list(cfgs)
@@ -22507,12 +22521,19 @@ def launch_pretrain(cfgs, n_gpus=4):
     config = dict(n_gpus=n_gpus, runs=[_cfg_json(c) for c in cfgs])
     log = d2l._pretrain_result(
         name, lambda: _launch_jobs(cfgs, n_gpus), config,
-        fallback=None if name == 't1-runs' else 't1-runs')
+        fallback='t1-runs' if name == 'reference-run' else None)
     if log.attrs.get('label', '').startswith('T2 run pending'):
         label = log.attrs['label']
         log = log[log['seed'] == 0].reset_index(drop=True)
         log.attrs['label'] = label
-    return log
+    return d2l._show_label(log)
+
+def reference_run_log():
+    """The reference run's log: launch_pretrain(r2_config('r2'),
+    n_gpus=4).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return launch_pretrain(d2l.r2_config('r2'), n_gpus=4)
 
 def _job_root():
     return os.path.abspath(os.path.join('..', 'data', 'lm', 'rerun', 'ch21'))
@@ -22670,9 +22691,6 @@ def _probe_io(cfg, tmp, device):
     return dict(preset=cfg.preset, io=True, val_s=t_val, val_loss=val_loss,
                 ckpt_bf16_s=t_bf16, state_s=t_state)
 
-REFERENCE_STEPS = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700,
-                   6000)
-
 def _reference_key(preset, step):
     if preset == 'r2':
         step = 6000 if step is None else step
@@ -22680,20 +22698,23 @@ def _reference_key(preset, step):
             raise ValueError(f'step is one of {REFERENCE_STEPS}')
         return f'lm-r2-s{step}-v1'
     if preset == 't1':
-        if step not in (None, 1526):
-            raise ValueError('the t1 checkpoint is step 1526')
-        return 'lm-r2t1-s1526-v1'
+        step = 1526 if step is None else step
+        if step not in T1_STEPS:
+            raise ValueError(f'step is one of {T1_STEPS}')
+        return f'lm-r2t1-s{step}-v1'
     if preset in ('r2-16k-pi', 'r2-16k-yarn'):
         return f'lm-{preset}-v1'
     raise ValueError(f'unknown preset {preset!r}')
 
 def _job_checkpoint(preset, step):
     """The bf16 checkpoint a campaign job folder holds for a committed
-    key (read by regenerations that follow the run before its upload).
+    key, read only by the checkpoint evaluations that follow the run before
+    its upload (E1: reference-evals, t1-evals); None otherwise.
 
     Defined in :numref:`sec_lm_reference_model`"""
     folders = {'r2': ('r2-s0', 6000), 't1': ('t1-s0', 1526)}
-    if preset not in folders:
+    evals = {'r2': 'reference-evals', 't1': 't1-evals'}
+    if preset not in folders or not d2l._regenerates(evals[preset]):
         return None
     job, last = folders[preset]
     return os.path.join(_job_root(), job, 'ckpt',
@@ -22702,9 +22723,9 @@ def _job_checkpoint(preset, step):
 def load_reference_model(step=None, dtype=torch.bfloat16, device='cpu',
                          preset='r2'):
     """A committed checkpoint of the reference run (preset 'r2', steps
-    REFERENCE_STEPS, default 6000), of the t1 run ('t1'), or of a 16K arm
-    ('r2-16k-pi', 'r2-16k-yarn'), as a PackedGPT in eval mode. Its
-    tokenizer is d2l.r2_tokenizer().
+    REFERENCE_STEPS, default 6000), of the t1 run ('t1', steps T1_STEPS,
+    default 1526), or of a 16K arm ('r2-16k-pi', 'r2-16k-yarn'), as a
+    PackedGPT in eval mode. Its tokenizer is d2l.r2_tokenizer().
 
     Defined in :numref:`sec_lm_reference_model`"""
     key = _reference_key(preset, step)
@@ -22713,14 +22734,40 @@ def load_reference_model(step=None, dtype=torch.bfloat16, device='cpu',
     job = _job_checkpoint(preset, step)
     if d2l._regenerating() and os.path.exists(local):
         path = local
-    elif d2l._regenerating() and job and os.path.exists(job):
-        path = job  # a regeneration right after the run (E1)
+    elif job and os.path.exists(job):
+        path = job  # the evaluations right after the run (E1)
     elif key in d2l.DATA_HUB:
         with d2l._quiet():
             path = d2l.download_keyed(key)
     else:
         raise KeyError('reference checkpoints not committed yet')
     return _load_bf16(path, dtype, device)
+
+def _reference_pending():
+    """Whether the reference run's results are pending: a regeneration
+    run, or the campaign declared pending.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return bool(d2l._regenerating()) or (
+        'reference-run' in d2l.PRETRAIN_PENDING)
+
+T1_STAND_IN = ('T2 run pending; T1 checkpoints at the same fractions of '
+               'training')
+
+def load_reference_models(steps, dtype=torch.bfloat16, device='cpu'):
+    """{step: model} of the reference run's checkpoints at steps (of
+    REFERENCE_STEPS), each as load_reference_model gives it; while the run
+    is pending, the t1 run's checkpoints at the same fractions of training
+    (T1_STEPS), under a printed label.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if _reference_key('r2', steps[0]) in d2l.DATA_HUB or not (
+            _reference_pending()):
+        return {s: load_reference_model(s, dtype, device) for s in steps}
+    print(f'[{T1_STAND_IN}]')
+    t1 = dict(zip(REFERENCE_STEPS, T1_STEPS))
+    return {s: load_reference_model(t1[s], dtype, device, preset='t1')
+            for s in steps}
 
 def packed_to_hf(model):
     """A Transformers LlamaForCausalLM with the weights of a PackedGPT
@@ -22814,18 +22861,24 @@ def _job_log(name):
         raise FileNotFoundError(f'{name} has not run yet (no {path})')
     return d2l._read_result(path, kind)
 
-def _as_tuple(cls, result, tables):
+def _as_tuple(cls, result, tables, defaults=None):
     """A computed, stored or pending result as the namedtuple cls; a pending
-    result (an empty table) gives empty tables and None values.
+    result (an empty table) gives empty tables (with the columns tables
+    names, a dict, so that the page's code runs on them) and the defaults
+    (else None) for the other fields.
 
     Defined in :numref:`sec_lm_reference_model`"""
     label = d2l._label_of(result)
     if isinstance(result, pd.DataFrame):
         result = None
     fields = {f: getattr(result, f, None) for f in cls._fields if f != 'label'}
+    for f, v in (defaults or {}).items():
+        if fields[f] is None:
+            fields[f] = v
     for f in tables:
         if fields[f] is None:
-            fields[f] = pd.DataFrame()
+            cols = tables[f] if isinstance(tables, dict) else []
+            fields[f] = pd.DataFrame(columns=cols)
     return cls(**fields, label=label)
 
 _PANEL_LABELS = {'loss': 'train loss', 'grad_norm': 'grad norm\n(pre-clip)',
@@ -22856,12 +22909,134 @@ def plot_run_log(log, cols, marks=(), figsize=(6, 7)):
             ax.plot(main['step'][ok], y[ok], lw=0.6)
         if col == 'grad_norm':
             ax.set_yscale('log')
-            ax.yaxis.set_minor_formatter(d2l.plt.NullFormatter())
+            d2l.set_log_ticks(ax.yaxis)
         for m in marks:
             ax.axvline(m, ls='--', color='black', lw=0.8)
         ax.set_ylabel(_PANEL_LABELS.get(col, col), fontsize=8)
     np.atleast_1d(axes)[-1].set_xlabel('step')
+    if d2l._label_of(log):  # a stand-in says so
+        fig.suptitle(f'[{d2l._label_of(log)}]', fontsize=8)
     fig.align_ylabels()
+
+def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
+    """Stacked panels of per-step traces against step, one line per group
+    of the columns by (named by their values): cols as in plot_run_log
+    ('loss', 'grad_norm', 'max_logit') or any column; logy: the columns on
+    a log scale; steps: the (first, last) step shown.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    d2l.use_svg_display()
+    fig, axes = d2l.plt.subplots(len(cols), 1, sharex=True, figsize=figsize,
+                                 squeeze=False)
+    axes = axes[:, 0]
+    for key, g in traces.groupby(list(np.atleast_1d(by)), sort=False):
+        if steps is not None:
+            g = g[g['step'].between(*steps)]
+        name = ' '.join(f'{k:g}' if isinstance(k, float) else str(k)
+                        for k in np.atleast_1d(key))
+        for ax, col in zip(axes, cols):
+            ok = g[col].notna()
+            ax.plot(g['step'][ok], g[col][ok], lw=0.8, label=name)
+    for ax, col in zip(axes, cols):
+        ax.set_ylabel(_PANEL_LABELS.get(col, col), fontsize=8)
+        if col in logy:
+            ax.set_yscale('log')
+            d2l.set_log_ticks(ax.yaxis)
+    if len(traces):
+        axes[0].legend(fontsize=7)
+    axes[-1].set_xlabel('step')
+    fig.align_ylabels()
+
+def plot_ladder(*logs, figsize=(5, 3)):
+    """Validation loss against tokens of every job in the logs (column
+    job): the main run as a line, the ends of its branches as dots in the
+    same colour.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    d2l.use_svg_display()
+    d2l.set_figsize(figsize)
+    ax = d2l.plt.gca()
+    jobs = [g for log in logs if 'job' in log for _, g in log.groupby('job')]
+    for i, g in enumerate(jobs):
+        first = g['run'].iloc[0]  # the main run's rows come first
+        main = g[g['run'] == first].dropna(subset=['val_loss'])
+        ends = g[g['run'] != first].groupby('run').last()
+        ax.plot(main['tokens'], main['val_loss'], color=f'C{i}',
+                label=g['job'].iloc[0].rsplit('-s', 1)[0])
+        ax.plot(ends['tokens'], ends['val_loss'], 'o', color=f'C{i}')
+    ax.set_xscale('log')
+    d2l.set_log_ticks(ax.xaxis)
+    ax.set_xlabel('tokens')
+    ax.set_ylabel('validation loss')
+    if jobs:
+        ax.legend(fontsize=7)
+
+GradientEvent = collections.namedtuple('GradientEvent', [
+    'step', 'hour', 'ratio', 'mild', 'source', 'at', 'max_logit', 'layer',
+    'dloss', 'nonfinite', 'label'])
+
+def gradient_event(log, mild=3, delta=0.3, window=100, after=200):
+    """The largest gradient event of a run's log: the step whose pre-clip
+    norm is largest against the median of the window steps before it, its
+    hour into the run and that ratio. Read there (source: the run), or, if
+    the ratio is below mild, at the pre-registered fallback (source: the
+    unclipped arm of instability_arms at ten times the peak rate, at its
+    first step more than delta above the baseline's loss): the largest
+    attention logit and its layer at the nearest probe, and the loss change
+    over the next `after` steps against the `after` before it (nonfinite:
+    the first non-finite step, if any).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    run = log[log['run'] == log['run'].iloc[0]].set_index('step')
+    g = run['grad_norm']
+    ratio = g / g.rolling(window).median().shift()
+    step = int(ratio.idxmax())
+    head = dict(step=step, hour=(run['time'].loc[step] - run['time'].iloc[0])
+                / 3600, ratio=float(ratio[step]),
+                mild=bool(ratio[step] < mild), label=d2l._label_of(log))
+    if not head['mild']:
+        return GradientEvent(**head, source=f'{log["run"].iloc[0]} run',
+                             at=step, **_read_event(run, step, after))
+    import contextlib
+    import io
+    with contextlib.redirect_stdout(io.StringIO()):  # its label, once
+        arms = d2l.instability_arms(  # the page's ten-x call
+            d2l.r2_config('r2'), lrs=(6e-3,), variants=('none', 'qk_clip'),
+            steps=500, tau=d2l.tau_rule(log, 300, 500))
+    if arms.label and arms.label != head['label']:
+        print(f'[{arms.label}]')
+    t = arms.traces.set_index('step')
+    arm = t[t['variant'] == 'none']
+    if arm.empty:
+        return GradientEvent(**head, source='unclipped arm (pending)',
+                             at=None, max_logit=math.nan, layer=None,
+                             dloss=math.nan, nonfinite=None)
+    gap = arm['loss'] - t.loc[t['variant'] == 'baseline', 'loss']
+    over = gap.index[~(gap <= delta)]  # non-finite, or above the margin
+    at = int(over[0] if len(over) else gap.idxmax())
+    source = f'unclipped arm at lr {arm["lr"].iloc[0]:g}'
+    return GradientEvent(**head, source=source, at=at,
+                         **_read_event(arm, at, after))
+
+def _read_event(run, at, after):
+    """max_logit, layer, dloss and nonfinite of gradient_event at step at
+    of run (indexed by step).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    logits = run.filter(like='max_logit_').dropna(how='all')
+    out = dict(max_logit=math.nan, layer=None, nonfinite=None)
+    if len(logits):
+        top = logits.loc[logits.index[np.abs(logits.index - at).argmin()]]
+        top = top.astype(float)
+        out.update(max_logit=float(top.max()),
+                   layer=int(top.idxmax().rsplit('_', 1)[1]) + 1)
+    loss = run['loss'].astype(float)
+    bad = loss.index[(loss.index >= at) & ~np.isfinite(loss.to_numpy())]
+    if len(bad):
+        out['nonfinite'] = int(bad[0])
+    out['dloss'] = float(loss.loc[at + 1:at + after].mean()
+                         - loss.loc[at - after + 1:at].mean())
+    return out
 
 CheckpointEvals = collections.namedtuple(
     'CheckpointEvals', ['table', 'items', 'domains', 'chance', 'label'])
@@ -22914,12 +23089,12 @@ def _eval_setup(tasks):
         return d2l.r2_tokenizer(), d2l.EvalSuite(list(tasks), name='r2',
                                                  batch_size=32)
 
-def _reference_evals(steps, tasks):
+def _reference_evals(steps, tasks, preset='r2'):
     tok, suite = _eval_setup(tasks)
-    cfg, texts = d2l.r2_config('r2'), domain_texts()
+    cfg, texts = d2l.r2_config(preset), domain_texts()
     rows, items, doms = [], [], []
     for s in steps:
-        model = load_reference_model(step=s, device='cuda')
+        model = load_reference_model(step=s, device='cuda', preset=preset)
         row, it, dm = _score_point(model, suite, tok, cfg, cfg.val_tokens,
                                    texts)
         rows.append(dict(step=s, **row))
@@ -22930,17 +23105,34 @@ def _reference_evals(steps, tasks):
     return CheckpointEvals(pd.DataFrame(rows), pd.concat(items, ignore_index=
                            True), pd.DataFrame(doms), _suite_chance(suite), '')
 
-def reference_evals(steps, tasks):
-    """The reference run's checkpoints at steps, scored on validation loss
-    and bits per byte (2^21 tokens), on the suite tasks (full item sets,
-    per-item scores kept) and per domain: CheckpointEvals(table, items,
-    domains, chance, label); table has one row per step.
+def reference_evals(steps, tasks, preset='r2'):
+    """The reference run's checkpoints at steps (or the t1 run's, preset
+    't1'), scored on validation loss and bits per byte (2^21 tokens), on the
+    suite tasks (full item sets, per-item scores kept) and per domain:
+    CheckpointEvals(table, items, domains, chance, label); table has one
+    row per step. While the reference run is pending: the t1 run's
+    checkpoints at the same fractions of training, its steps written as the
+    reference run's, under a printed label.
 
     Defined in :numref:`sec_lm_reference_model`"""
     config = dict(steps=list(steps), tasks=list(tasks))
-    res = d2l._pretrain_result('reference-evals', lambda: _reference_evals(
-        steps, tasks), config)
-    return _as_tuple(CheckpointEvals, res, ('table', 'items', 'domains'))
+    name = 'reference-evals' if preset == 'r2' else f'{preset}-evals'
+    res = d2l._pretrain_result(name, lambda: _reference_evals(
+        steps, tasks, preset), config,
+        fallback='t1-evals' if preset == 'r2' else None)
+    tables = dict(table=['step', 'val_loss', 'bpb', *tasks],
+                  items=['task', 'item_id', 'score', 'step'],
+                  domains=['step', 'domain', 'bpb'])
+    res = _as_tuple(CheckpointEvals, res, tables, dict(
+        chance=dict.fromkeys(tasks, math.nan)))
+    if res.label.startswith('T2 run pending'):  # t1 steps -> r2 steps
+        r2_step = dict(zip(T1_STEPS, REFERENCE_STEPS))
+        renamed = {f: getattr(res, f) for f in tables}
+        for f, df in renamed.items():
+            if 'step' in df:
+                renamed[f] = df.assign(step=df['step'].map(r2_step))
+        res = res._replace(label=T1_STAND_IN, **renamed)
+    return d2l._show_label(res)
 
 def _ladder_points(logs):
     """(job, run, step, finished, source) of every point ladder_evals
@@ -22998,7 +23190,10 @@ def ladder_evals(ladder, log, tasks):
                   tasks=list(tasks))
     res = d2l._pretrain_result('ladder-evals', lambda: _ladder_evals(
         logs, tasks), config)
-    return _as_tuple(LadderEvals, res, ('points', 'items'))
+    return d2l._show_label(_as_tuple(LadderEvals, res, dict(
+        points=['size', 'P', 'run', 'step', 'tokens', 'tokens_per_param',
+                'finished', 'val_loss', 'bpb', *tasks],
+        items=['task', 'item_id', 'score', 'size', 'run', 'step'])))
 
 InstabilityRuns = collections.namedtuple(
     'InstabilityRuns', ['table', 'traces', 'tau', 'label'])
@@ -23007,6 +23202,12 @@ _INST_PARTS = {'none': 'inst-t1-none', 'qk_clip': 'inst-t1-qkclip',
                'qk_norm': 'inst-t1-qknorm', 'softcap': 'inst-t1-softcap'}
 
 INST_SOFTCAP = 50.0  # Gemma 2's attention-logit cap
+
+_INST_TABLES = dict(  # the columns of an InstabilityRuns' tables
+    table=['variant', 'lr', 'seed', 'final_loss', 'max_logit',
+           'first_nonfinite', 'val_loss', 'steps'],
+    traces=['step', 'loss', 'grad_norm', 'max_logit', 'variant', 'lr',
+            'seed'])
 
 def _qk_clip_hook(tau):
     """A pretrain hook: QK-clip at tau after every optimizer step.
@@ -23059,7 +23260,7 @@ def _inst_run(cfg, variant, lr, seed, steps, tau, shards, val_fn, device):
     """One T1 arm in this process.
 
     Defined in :numref:`sec_lm_reference_model`"""
-    arch = cfg.arch._replace(qk_norm=True) if variant == 'qk_norm' else cfg.arch
+    arch = cfg.arch._replace(qk_norm=variant == 'qk_norm' or cfg.arch.qk_norm)
     extra = (dict(softcap=INST_SOFTCAP, backend='math')
              if variant == 'softcap' else {})
     c = _inst_config(cfg, lr, seed, steps, arch=arch)
@@ -23169,13 +23370,13 @@ def instability_arms(cfg, lrs, variants, seeds=(0,), steps=400, tau=None):
             cfg, lrs, v, seeds, steps, tau), dict(config, variants=[v]))
             for v in variants}
         res = d2l._pretrain_merged(None, parts, _merge_arms, config)
-        return _as_tuple(InstabilityRuns, res, ('table', 'traces'))
+        return d2l._show_label(_as_tuple(InstabilityRuns, res, _INST_TABLES))
     res = d2l._pretrain_result('inst-t2', lambda: _inst_t2(
         cfg, lrs, variants, steps, tau), config, fallback='instability-t1')
-    res = _as_tuple(InstabilityRuns, res, ('table', 'traces'))
+    res = _as_tuple(InstabilityRuns, res, _INST_TABLES)
     if res.label.startswith('T2 run pending') and len(res.table):
-        return _t1_stand_in(res)
-    return res
+        res = _t1_stand_in(res)
+    return d2l._show_label(res)
 
 SpikeReplay = collections.namedtuple('SpikeReplay',
                                      ['table', 'traces', 'floor', 'label'])
@@ -23265,7 +23466,9 @@ def spike_replay(cfg, bad_step=300, kind='random', replays=()):
                   replays=d2l._jsonable(replays))
     res = d2l._pretrain_result('spike-replay', lambda: _spike(
         cfg, bad_step, kind, replays), config)
-    return _as_tuple(SpikeReplay, res, ('table', 'traces'))
+    return d2l._show_label(_as_tuple(SpikeReplay, res, dict(
+        table=['run', 'loss_at_bad', 'peak_grad_norm', 'max_dloss'],
+        traces=['step', 'loss', 'grad_norm', 'run']), dict(floor=math.nan)))
 
 def _inst_t1_job():
     """The page's T1 grid call (cell 25) for tools/lm_regen.py, with tau

@@ -56,11 +56,11 @@ from d2l import torch as d2l
 ```{.python .input #reference-model-the-reference-pretraining-run-1}
 %%tab pytorch
 import collections
-import dataclasses
+import dataclasses  #@save
+import pandas as pd
 import tempfile
 import time
 import warnings
-import pandas as pd
 from torch.utils.flop_counter import FlopCounterMode
 ```
 
@@ -69,31 +69,16 @@ from torch.utils.flop_counter import FlopCounterMode
 ```{.python .input #reference-model-opening}
 %%tab pytorch
 MILD, DELTA = 3, 0.3  # a mild event; the stability margin (see below)
-log = d2l.load_artifact('reference-run-log')
-main = log[log['run'] == 'r2'].set_index('step')
-g = main['grad_norm']
-ratio = g / g.rolling(100).median().shift()  # against the 100 steps before
-event = int(ratio.idxmax())
-hours = (main['time'].loc[event] - main['time'].iloc[0]) / 3600
-print(f'largest gradient event: step {event} (hour {hours:.1f}), norm '
-      f'{ratio[event]:.1f}x its running median'
-      + (' (mild)' if ratio[event] < MILD else ''))
-label = ''
-if ratio[event] < MILD:  # pre-registered: the 10x arm's failure instead
-    t2_arms = d2l.load_artifact('instability-t2').traces.set_index('step')
-    main = t2_arms[t2_arms['variant'] == 'none']
-    gap = main['loss'] - t2_arms.loc[t2_arms['variant'] == 'baseline', 'loss']
-    over = gap.index[~(gap <= DELTA)]  # non-finite, or above the margin
-    event = int(over[0] if len(over) else gap.idxmax())
-    label = '10x learning rate, 500-step arm: '
-logits = main.filter(like='max_logit_').dropna(how='all')
-near = logits.index[abs(logits.index - event).argmin()]
-top = logits.loc[near].astype(float)
-layer = int(top.idxmax().rsplit('_', 1)[1]) + 1
-dloss = main['loss'].loc[event + 1:event + 200].mean() - main['loss'].loc[
-    event - 199:event].mean()
-print(f'{label}largest attention logit then: {top.max():.0f} (layer {layer})')
-print(f'{label}loss change over the next 200 steps: {dloss:+.3f}')
+log = d2l.reference_run_log()
+event = d2l.gradient_event(log, mild=MILD, delta=DELTA)
+print(f'largest gradient event: step {event.step} (hour {event.hour:.1f}), '
+      f'norm {event.ratio:.1f}× its running median'
+      + (' (mild)' if event.mild else ''))
+print(f'{event.source}, step {event.at}: largest attention logit '
+      f'{event.max_logit:.0f} (layer {event.layer})')
+change = (f'loss non-finite at step {event.nonfinite}' if event.nonfinite
+          else f'loss change over the next 200 steps: {event.dloss:+.3f}')
+print(f'{event.source}: {change}')
 ```
 
 ## The Reference Model and What It Costs
@@ -108,9 +93,7 @@ print(f'{label}loss change over the next 200 steps: {dloss:+.3f}')
 Arch = collections.namedtuple('Arch',
                               'L d H H_kv d_h f vocab T rope_base qk_norm tie')
 
-import dataclasses  #@save
-
-@dataclasses.dataclass
+@dataclasses.dataclass  #@save
 class PretrainConfig:
     """One pretraining run: the architecture, the batch (in sequences of
     arch.T tokens), the WSD schedule, AdamW, and what the run saves."""
@@ -131,7 +114,6 @@ class PretrainConfig:
     dtype: str = 'bf16'
     compile: bool = True
     ddp: bool = False
-    log_every: int = 1
     probe_every: int = 50       # update RMS per module
     stats_every: int = 50       # largest attention logit per layer
     val_every: int = 250
@@ -151,7 +133,12 @@ class PretrainConfig:
             raise ValueError(f'{self.global_batch} sequences do not split '
                              f'into {world} x {self.micro_batch}')
         return self.global_batch // (self.micro_batch * world)
+```
 
+<!-- Placeholder (prose): the presets as two tables (shapes; schedules) and r2_config, which builds a preset's PretrainConfig. -->
+
+```{.python .input #reference-model-preset-tables}
+%%tab pytorch
 #@save
 R2_ARCHS = {  # L, d, H, H_kv, f, qk_norm, T (head width 64, V = 32,768)
     'r2': (18, 768, 12, 4, 2048, False, 4096),
@@ -246,13 +233,14 @@ def mfu(tokens_per_s, arch, peak_flops, n_gpus=1, *, T=None,
     return tokens_per_s * F_tok / (peak_flops * n_gpus)
 ```
 
-<!-- Placeholder (prose): the formula against PyTorch's FLOP counter on one forward and backward pass; what the counter counts differently (norms and softmax are not matrix products). -->
+<!-- Placeholder (prose): the formula against PyTorch's FLOP counter on one forward and backward pass. On the meta device the counter counts only matrix products, and it counts attention as the full square score matrix (the PaLM convention), so the two agree by construction (ratio 1.000): the check catches a wrong term in the formula, not a cost the formula leaves out; norms, softmax and the elementwise work are not counted by either. -->
 
 ```{.python .input #reference-model-flops-check}
 %%tab pytorch
-T = cfg.arch.T  # shapes only: the count runs on the meta device
-model = d2l.PackedGPT.from_arch(cfg.arch).to('meta')
-X = torch.randint(V, (1, T), device='meta')
+T = cfg.arch.T
+with torch.device('meta'):  # shapes only: no memory, no arithmetic
+    model = d2l.PackedGPT.from_arch(cfg.arch)
+    X = torch.randint(V, (1, T))
 with FlopCounterMode(display=False) as counter:
     logits = model(X)
     F.cross_entropy(logits.flatten(0, 1).float(), X.flatten()).backward()
@@ -447,7 +435,6 @@ print(f'resume at step 20: batches {"identical" if same else "differ"}, '
 t1 = d2l.launch_pretrain([r2_config('t1', seed=s) for s in (0, 1, 2)],
                          n_gpus=1)
 t1_cfg = r2_config('t1')
-d2l._show_label(t1)
 print(f'{"seed":>4} {"val loss":>8} {"val bits per byte":>17} '
       f'{"tokens/s":>8} {"MFU":>5}')
 finals = []
@@ -455,7 +442,8 @@ for seed, g in t1[t1['run'] == 't1'].groupby('seed'):
     stable = g[g['step'].between(t1_cfg.warmup + 1,
                                  t1_cfg.steps - t1_cfg.decay)]
     finals.append(g['val_loss'].dropna().iloc[-1])
-    print(f'{seed:>4} {finals[-1]:8.3f} {d2l.val_bpb(finals[-1], t1_cfg):17.3f}'
+    bpb = d2l.val_bpb(finals[-1], t1_cfg)
+    print(f'{seed:>4} {finals[-1]:8.3f} {bpb:17.3f}'
           f' {stable["tok_s"].median() / 1e3:7.0f}k '
           f'{stable["mfu"].median():5.2f}')
 t1_spread = max(finals) - min(finals)
@@ -469,7 +457,6 @@ print(f'spread (max − min): {t1_spread:.3f}')
 ```{.python .input #reference-model-reference-run}
 %%tab pytorch
 log = d2l.launch_pretrain(r2_config('r2'), n_gpus=4)
-d2l._show_label(log)
 main = log[log['run'] == log['run'].iloc[0]]
 run_cfg = r2_config(main['run'].iloc[0])  # t1 while the run is pending
 stable = main[main['step'].between(run_cfg.warmup + 1,
@@ -503,51 +490,72 @@ d2l.plot_run_log(log, ['loss', 'grad_norm', 'rms', 'max_logit', 'mfu'],
 
 ### Update Size by Module
 
-<!-- Placeholder (prose): Adam's update in units of the learning rate has RMS sqrt((1 - beta_1)/(1 + beta_1)) = 0.229 when the gradient is noise; near 1 when it is signal. Stable phase against decay phase, per module type. -->
+<!-- Placeholder (prose): Adam's update in units of the learning rate has RMS sqrt((1 - beta_1)/(1 + beta_1)) = 0.229 when the gradient is noise; near 1 when it is signal. Stable phase (from a sixth of the run, step 1,000 of r2, past warmup's transient) against decay phase, per module type. One sentence on token_emb: its RMS averages over every row, including the rows of tokens absent from the step's batch (no gradient, an update from the moments alone), so its ratio to 0.229 is not the noise-floor reading the matrices give. -->
 
 ```{.python .input #reference-model-update-rms}
 %%tab pytorch
 beta1 = run_cfg.betas[0]
 noise_floor = math.sqrt((1 - beta1) / (1 + beta1))
+STABLE_FROM = run_cfg.steps // 6  # r2: step 1,000, past warmup's transient
+MODULES = ('W_q', 'W_k', 'W_v', 'W_o', 'W_g', 'W_1', 'W_2', 'token_emb',
+           'norm')
 rms = main.set_index('step').filter(like='rms_').dropna(how='all')
 decay_from = run_cfg.steps - run_cfg.decay
-phases = {'stable': rms.loc[run_cfg.steps // 6:decay_from],  # after warmup
+phases = {'stable': rms.loc[STABLE_FROM:decay_from],
           'decay': rms.loc[decay_from + 1:]}
+assert all(len(p) for p in phases.values()), 'a phase has no probe steps'
 med = {k: v.median() for k, v in phases.items()}
+print(f'update RMS in units of the learning rate ({run_cfg.preset} run)')
 print(f'{"module":>9} {"stable":>7} {"decay":>7} '
       f'{f"ratio to {noise_floor:.3f}":>15}')
-for col in rms:
-    print(f'{col[4:]:>9} {med["stable"][col]:7.3f} {med["decay"][col]:7.3f} '
-          f'{med["stable"][col] / noise_floor:15.2f}')
+for m in MODULES:
+    stable, decay = med['stable'][f'rms_{m}'], med['decay'][f'rms_{m}']
+    print(f'{m:>9} {stable:7.3f} {decay:7.3f} {stable / noise_floor:15.2f}')
 ```
 
 ### Who Moves First
 
-<!-- Placeholder (prose): a change point per series: the first step after an event where the 50-step rolling median leaves the median ± 3 MAD of the 200 steps before it. Read at the end of warmup, at the start of the decay and at the opening's gradient event. -->
+<!-- Placeholder (prose): a change point per series: the first step within 200 steps after an event where the 20-step rolling median leaves ± 3 MAD around the line fitted to the 200 steps before it (detrended, so that a curve that keeps falling at the same rate does not count as moving). Read at the end of warmup, at the start of the decay and at the opening's gradient event (labelled mild when it was); the last row is the null: how often each series "moves" at 20 random stable-phase steps where nothing happens. Resolution: the rolling window (about 10-20 steps); the largest logit is sampled every 10 steps in r2 (every 50 in the t1 stand-in). -->
 
 ```{.python .input #reference-model-lead-lag}
 %%tab pytorch
-def moved(series, at, before=200, window=50, k=3):
-    """Steps after `at` until the rolling median of series over `window`
-    steps leaves the median ± k MAD of the `before` steps before `at`."""
-    x = series.dropna()
+def moved(x, at, before=200, window=20, horizon=200, k=3):
+    """Steps after `at` until the rolling median of x over `window` steps
+    leaves k MAD around the line fitted to the `before` steps before `at`;
+    None if it stays inside for `horizon` steps."""
+    x = x.dropna()
     ref = x[(x.index >= at - before) & (x.index < at)]
-    center, mad = ref.median(), (ref - ref.median()).abs().median()
+    resid = x - np.polyval(np.polyfit(ref.index, ref.to_numpy(), 1), x.index)
+    center = resid[ref.index].median()
+    mad = (resid[ref.index] - center).abs().median()
     width = max(1, round(window / np.median(np.diff(x.index))))  # samples
-    roll = x[x.index >= at].rolling(width, min_periods=width).median()
+    after = resid[(resid.index >= at) & (resid.index < at + horizon)]
+    roll = after.rolling(width, min_periods=width).median()
     out = roll[(roll - center).abs() > k * mad]
-    return f'+{int(out.index[0] - at)}' if len(out) else '—'
+    return int(out.index[0] - at) if len(out) else None
+```
 
-series = {'grad norm': main.set_index('step')['grad_norm'],
-          'largest logit': main.set_index('step').filter(
-              like='max_logit_').max(axis=1),
-          'loss': main.set_index('step')['loss']}
+```{.python .input #reference-model-lead-lag-table}
+%%tab pytorch
+run = main.set_index('step')
+series = {'grad norm': run['grad_norm'], 'loss': run['loss'],
+          'largest logit': run.filter(like='max_logit_').max(axis=1)}
 events = {'end of warmup': run_cfg.warmup, 'start of decay': decay_from,
-          'gradient event': event}
-print(f'{"event":>15} ' + ' '.join(f'{k:>13}' for k in series))
+          'gradient event' + (' (mild)' if event.mild else ''): event.step}
+null = np.random.default_rng(0).integers(  # stable phase, full windows
+    run_cfg.warmup + 200, decay_from - 200, size=20)
+print(f'steps until each series moves ({run_cfg.preset} run)')
+print(f'{"event":>23} ' + ' '.join(f'{k:>13}' for k in series))
 for name, at in events.items():
-    print(f'{name:>15} ' + ' '.join(f'{moved(x, at):>13}'
-                                   for x in series.values()))
+    lags = ['—' if m is None else f'+{m}'
+            for m in (moved(x, at) for x in series.values())]
+    print(f'{name:>23} ' + ' '.join(f'{m:>13}' for m in lags))
+cells = []
+for x in series.values():  # how often, and how late, each fires at random
+    lags = [m for m in (moved(x, t) for t in null) if m is not None]
+    cells.append(f'{len(lags)}/20'
+                 + (f', +{np.median(lags):.0f}' if lags else ''))
+print(f'{"20 random steps (null)":>23} ' + ' '.join(f'{c:>13}' for c in cells))
 ```
 
 ## Reading Checkpoints and the Ladder
@@ -561,9 +569,8 @@ for name, at in events.items():
 STEPS = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700, 6000)
 SUITE = ('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande')
 ev = d2l.reference_evals(STEPS, tasks=SUITE)
-d2l._show_label(ev)
 d2l.plot(ev.table['bpb'], ev.table[list(SUITE)].mean(axis=1),
-         'validation bits per byte', 'suite mean accuracy', fmts=('o-',))
+         'validation bits per byte', 'suite mean accuracy', fmts=('o',))
 print(f'{"step":>6} {"val loss":>8} {"BPB":>6} '
       + ' '.join(f'{t:>10}' for t in SUITE))
 for _, r in ev.table.iterrows():
@@ -592,8 +599,9 @@ print(f'{"pair":>12} {"Δ accuracy":>10} {"95% CI":>16} {"resolved?":>13}')
 for a, b in ((5100, 6000), (5700, 6000), (4000, 5100)):
     r = d2l.paired_bootstrap(suite_scores(b), suite_scores(a))
     lo, hi = r.ci
+    resolved = 'yes' if lo > 0 or hi < 0 else 'not resolved'
     print(f'{f"{a} → {b}":>12} {100 * r.mean:+9.1f}p {100 * lo:+7.1f} to '
-          f'{100 * hi:+.1f} {"yes" if lo > 0 or hi < 0 else "not resolved":>13}')
+          f'{100 * hi:+.1f} {resolved:>13}')
 ```
 
 ### Per-Domain Bits per Byte
@@ -603,8 +611,8 @@ for a, b in ((5100, 6000), (5700, 6000), (4000, 5100)):
 ```{.python .input #reference-model-domains}
 %%tab pytorch
 domains = ev.domains.pivot(index='step', columns='domain', values='bpb')
-d2l.plot(domains.index.to_numpy(), [domains[c].to_numpy() for c in domains],
-         'step', 'bits per byte', legend=list(domains), figsize=(5, 3))
+d2l.plot(domains.index.to_numpy(), domains.to_numpy().T, 'step',
+         'bits per byte', legend=list(domains), figsize=(5, 3))
 ```
 
 ### The Branch Point, Averaging and Selection Bias
@@ -614,14 +622,13 @@ d2l.plot(domains.index.to_numpy(), [domains[c].to_numpy() for c in domains],
 ```{.python .input #reference-model-averaging}
 %%tab pytorch
 AVERAGED, VAL_TOKENS = (4000, 4500, 4800, 5100), 2 ** 20
-states = [d2l.load_reference_model(step=t, dtype=torch.float32).state_dict()
-          for t in AVERAGED]
-average = d2l.load_reference_model(step=AVERAGED[-1], dtype=torch.float32)
+models = d2l.load_reference_models(AVERAGED + (6000,), dtype=torch.float32)
+states = [models[t].state_dict() for t in AVERAGED]
+average = models[AVERAGED[0]]  # its weights become the average
 average.load_state_dict({k: sum(st[k] for st in states) / len(states)
                          for k in states[0]})
-loss = {'average': d2l.val_loss(average, cfg, VAL_TOKENS)}
-for t in (5100, 6000):
-    loss[t] = d2l.val_loss(d2l.load_reference_model(step=t), cfg, VAL_TOKENS)
+loss = {t: d2l.val_loss(m, run_cfg, VAL_TOKENS) for t, m in (
+    ('average', average), (5100, models[5100]), (6000, models[6000]))}
 print(f'average of four stable checkpoints: {loss["average"]:.3f} '
       f'(s5100: {loss[5100]:.3f}; s6000 after decay: {loss[6000]:.3f})')
 ```
@@ -633,13 +640,13 @@ print(f'average of four stable checkpoints: {loss["average"]:.3f} '
 scores = items.pivot_table(index=['task', 'item_id'], columns='step',
                            values='score')
 task = scores.index.get_level_values('task')
-rng, gains = np.random.default_rng(0), []
+rng, gains, last = np.random.default_rng(0), [], STEPS[-1]
 for _ in range(200):  # choose on one half of the items, re-score the other
     half = rng.random(len(scores)) < 0.5
     pick = scores[half].groupby(task[half]).mean().mean()
     other = scores[~half].groupby(task[~half]).mean().mean()
     best = pick.idxmax()
-    gains.append((pick[best] - pick[STEPS[-1]], other[best] - other[STEPS[-1]]))
+    gains.append((pick[best] - pick[last], other[best] - other[last]))
 chosen, held = 100 * np.array(gains).T
 print(f'best-of-11 on half the items: {chosen.mean():+.1f} points; on the '
       f'other half: {held.mean():+.1f} (bias {(chosen - held).mean():.1f} '
@@ -655,25 +662,19 @@ print(f'best-of-11 on half the items: {chosen.mean():+.1f} points; on the '
 LADDER = ('ladder-25m', 'ladder-54m', 'ladder-88m')
 ladder = d2l.launch_pretrain([r2_config(p) for p in LADDER], n_gpus=4)
 pts = d2l.ladder_evals(ladder, log, tasks=SUITE)
-d2l._show_label(pts)
+d2l.plot_ladder(ladder, log)
+```
+
+<!-- Placeholder (prose): the finished points as a table: validation loss at about 5, 10 and 20 tokens per parameter (r2's points are 5.7N, 11.4N and 22.7N). -->
+
+```{.python .input #reference-model-ladder-table}
+%%tab pytorch
 done = pts.points[pts.points['finished'].astype(bool)]
-d2l.set_figsize((5, 3))
-for i, df in enumerate([ladder, log]):
-    for j, (job, g) in enumerate(df.groupby('job')):
-        main_run = g[g['run'] == g['run'].iloc[0]].dropna(subset=['val_loss'])
-        ends = g[g['run'] != g['run'].iloc[0]].groupby('run').last()
-        color = f'C{3 * i + j}'
-        d2l.plt.plot(main_run['tokens'], main_run['val_loss'], color=color,
-                     label=job.rsplit('-s', 1)[0])
-        d2l.plt.plot(ends['tokens'], ends['val_loss'], 'o', color=color)
-d2l.plt.xscale('log')
-d2l.plt.xlabel('tokens')
-d2l.plt.ylabel('validation loss')
-d2l.plt.legend(fontsize=7)
-print(f'{"size":>11} {"P":>11} {"5N":>6} {"10N":>6} {"20N":>6}')
+print(f'{"size":>11} {"P":>11}   val loss (tokens per parameter)')
 for size, g in done.sort_values(['P', 'tokens']).groupby('size', sort=False):
-    print(f'{size:>11} {int(g["P"].iloc[0]):>11,} '
-          + ' '.join(f'{v:6.3f}' for v in g['val_loss']))
+    print(f'{size:>11} {int(g["P"].iloc[0]):>11,} ' + ' '.join(
+        f'{v:6.3f} ({n:4.1f})' for v, n in zip(g['val_loss'],
+                                               g['tokens_per_param'])))
 ```
 
 ## Instabilities
@@ -864,7 +865,7 @@ print(f'under QK-norm: no layer clipped, {len(caught)} warning')
 
 ### The Stable Learning-Rate Range
 
-<!-- Placeholder (prose): the T1 grid (six learning rates, two seeds, 400 steps, clipping off because it hides the growth that precedes a spike, z-loss and weight decay as in t1); tau fixed beforehand by the rule below; the stability criterion: finite and final loss at most l_ref + delta, l_ref the best final loss of the baseline over the grid, delta = 0.3 checked against three times the two-seed difference; the learning-rate sensitivity of Wortsman et al. -->
+<!-- Placeholder (prose): the T1 grid (six learning rates, two seeds, 400 steps, clipping off because it hides the growth that precedes a spike, z-loss and weight decay as in t1); tau fixed beforehand by the rule below; the stability criterion: finite and final loss at most l_ref + delta, l_ref the best final loss of the baseline over the grid, delta = 0.3 checked against three times the two-seed difference. What a variant changes is the upper edge: the largest rate above its best rate before the first unstable one. Rates below the best that miss l_ref + delta are slower (400 steps at a small constant rate leave them under-trained), not unstable, and are listed apart. The learning-rate sensitivity of Wortsman et al. -->
 
 ```{.python .input #reference-model-stable-lr}
 %%tab pytorch
@@ -884,27 +885,41 @@ TAU_T1 = tau_rule(t1[t1['seed'] == 0], t1_cfg.warmup, 400)
 inst = d2l.instability_arms(r2_config('t1', clip=None), lrs=LRS,
                             variants=VARIANTS, seeds=(0, 1), steps=400,
                             tau=TAU_T1)
-d2l._show_label(inst)
 arms = inst.table
 ell_ref = arms.loc[arms['variant'] == 'none', 'final_loss'].min()
-arms = arms.assign(stable=arms['final_loss'] <= ell_ref + DELTA)  # inf fails
 pair = arms[(arms['variant'] == 'none') & (arms['lr'] == LRS[0])]
+seed_gap = 3 * pair['final_loss'].diff().abs().iloc[-1]
 print(f'τ (t1) = {TAU_T1}')
-print(f'δ = {DELTA}; 3 × two-seed difference at {LRS[0]:g}: '
-      f'{3 * pair["final_loss"].diff().abs().iloc[-1]:.3f}')
+print(f'δ = {DELTA} above 3 × two-seed difference at lr {LRS[0]:g} '
+      f'({seed_gap:.3f}): {"yes" if DELTA > seed_gap else "no"}')
+```
+
+```{.python .input #reference-model-stable-lr-edge}
+%%tab pytorch
+def stable_range(g):
+    """A variant's best rate, the largest rate above it before the first
+    unstable one (None if the best is unstable), and the slower rates
+    below it: finite, but above ell_ref + DELTA."""
+    final = g.groupby('lr')['final_loss']
+    stable = final.max() <= ell_ref + DELTA  # both seeds; inf fails
+    best, edge = final.mean().idxmin(), None
+    for lr in stable.index[stable.index >= best]:  # upward from the best
+        if not stable[lr]:
+            break
+        edge = lr
+    slower = [lr for lr in stable.index[stable.index < best]
+              if not stable[lr] and np.isfinite(final.max()[lr])]
+    return best, edge, slower
+
+print(f'{"variant":>8} {"best lr":>8} {"stable up to":>12} '
+      f'{"slower":>19} {"lr sensitivity":>14}')
 for v in VARIANTS:
     g = arms[arms['variant'] == v]
-    ok, agree = (g.groupby('lr')['stable'].all(),
-                 g.groupby('lr')['stable'].nunique() == 1)
-    good = [lr for lr in LRS if ok[lr]]
+    best, edge, slower = stable_range(g)
     sens = lr_sensitivity(g.groupby('lr')['final_loss'].mean().to_numpy(),
                           math.log(V))
-    note = '' if agree.all() else (
-        '; seeds disagree at ' + ', '.join(f'{lr:g}' for lr in agree.index[
-            ~agree]))
-    print(f'{v}: ' + (f'stable at lr {good[0]:g} to {good[-1]:g}' if good
-                      else 'no rate stable')
-          + f'; lr sensitivity {sens:.2f}{note}')
+    print(f'{v:>8} {best:8g} {"—" if edge is None else f"{edge:g}":>12} '
+          f'{", ".join(f"{lr:g}" for lr in slower) or "—":>19} {sens:14.2f}')
 ```
 
 <!-- Placeholder (prose): final loss against the learning rate per variant (mean of the two seeds; a diverged run drawn at ln V), the band l_ref to l_ref + delta shaded. -->
@@ -928,18 +943,13 @@ d2l.plt.show()
 TAU = tau_rule(log, 300, 500)
 t2 = d2l.instability_arms(r2_config('r2'), lrs=(6e-3,),
                           variants=('none', 'qk_clip'), steps=500, tau=TAU)
-d2l._show_label(t2)
+d2l.plot_traces(t2.traces, ['max_logit', 'loss'], by=['lr', 'variant'],
+                logy=['max_logit'])
+```
+
+```{.python .input #reference-model-ten-x-table}
+%%tab pytorch
 names = {'baseline': 'baseline', 'none': 'no cure', 'qk_clip': '+ QK-clip'}
-fig, axes = d2l.plt.subplots(2, 1, sharex=True, figsize=(5, 4))
-for (v, lr), g in t2.traces.groupby(['variant', 'lr'], sort=False):
-    probe = g.dropna(subset=['max_logit'])
-    axes[0].plot(probe['step'], probe['max_logit'], label=f'{lr:g} {names[v]}')
-    axes[1].plot(g['step'], g['loss'], lw=0.8)
-axes[0].set_yscale('log')
-axes[0].set_ylabel('largest logit')
-axes[0].legend(fontsize=7)
-axes[1].set_ylabel('train loss')
-axes[1].set_xlabel('step')
 print(f'τ = {t2.tau}')  # TAU, or the T1 grid's τ while the arms are pending
 print(f'{"arm":>18} {"final loss":>10} {"largest logit":>13} '
       f'{"first non-finite step":>21}')
@@ -962,16 +972,12 @@ REPLAYS = (('from 250, same batches', 250, (), None),  # (label, from step,
            ('clip 1.0', 0, (), 1.0))
 spike = d2l.spike_replay(r2_config('t1', clip=None), bad_step=300,
                          kind='random', replays=REPLAYS)
-d2l._show_label(spike)
-fig, axes = d2l.plt.subplots(2, 1, sharex=True, figsize=(5, 4))
-for name, g in spike.traces.groupby('run', sort=False):
-    g = g[g['step'] >= 250]
-    axes[0].plot(g['step'], g['loss'], lw=0.8, label=name)
-    axes[1].plot(g['step'], g['grad_norm'], lw=0.8)
-axes[0].set_ylabel('train loss')
-axes[0].legend(fontsize=7)
-axes[1].set_ylabel('grad norm (pre-clip)')
-axes[1].set_xlabel('step')
+d2l.plot_traces(spike.traces, ['loss', 'grad_norm'], by='run',
+                logy=['grad_norm'], steps=(250, 400))
+```
+
+```{.python .input #reference-model-spike-table}
+%%tab pytorch
 print(f'{"run":>22} {"loss at 300":>11} {"peak norm, 295-305":>18} '
       f'{"max |Δ loss|, 301-400":>21}')
 for _, r in spike.table.iterrows():

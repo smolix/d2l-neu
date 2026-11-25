@@ -25,8 +25,8 @@ Colab or Kaggle. If you need more hardware than your laptop offers, see
 
 ## The Notebook Execution Model
 
-A plain Python script re-runs from the top every time, so a slow step — say,
-loading and preprocessing a dataset — repeats on every experiment. A notebook
+A plain Python script re-runs from the top every time, so a slow step, such as
+loading and preprocessing a dataset, repeats on every experiment. A notebook
 keeps a live Python process (the *kernel*) between executions: load the data
 once, then iterate on the model as often as you like while the data stays in
 memory. Inline plots and interleaved explanations make this execution model useful
@@ -39,21 +39,21 @@ know where this *state* lives and how long it lasts.
 ### The Document and the Kernel
 
 A notebook has two parts. The *document* stores cells and saved
-outputs — it is what you read, share, and commit. The *kernel* holds the live
+outputs: it is what you read, share, and commit. The *kernel* holds the live
 state: imported modules, variables, random-number generators, open files,
 compiled programs, and accelerator memory. The document orders cells top to
 bottom; the kernel only knows the order in which you *executed* them.
 Confusing these two orders causes many notebook bugs.
 
-![The document orders cells top to bottom; the kernel accumulates state in execution order. Restart and run all replays document order — the only order a reader can reproduce — and exposes the mismatch.](../img/tools-kernel-state.svg)
+![The document orders cells top to bottom; the kernel accumulates state in execution order. Restart and run all replays document order (the only order a reader can reproduce) and exposes the mismatch.](../img/tools-kernel-state.svg)
 :label:`fig_tools_kernel_state`
 
 :numref:`fig_tools_kernel_state` shows the classic failure. During an
 editing session you executed a data-loading cell first, then wrote a
 model-definition cell *above* it, and everything worked because the kernel
 already held `data`. The document now tells a story that never happened. A
-reader who runs the cells in the order shown — or you, tomorrow, after a
-restart — hits a `NameError`.
+reader who runs the cells in the order shown, or you tomorrow after a
+restart, hits a `NameError`.
 
 The execution counters (`In [3]`, `In [1]`, …) number the cell executions
 since the kernel started; they are historical clues, not a dependency
@@ -92,7 +92,7 @@ runs.
 
 Numerical results and even APIs change between package versions, so the
 book pins its environments. The notebook archive for each framework, described
-in :ref:`chap_installation`, contains the notebooks, the `d2l` package, and
+in :numref:`chap_installation`, contains the notebooks, the `d2l` package, and
 `uv` lock files for a CPU and a GPU environment. From the extracted directory,
 create the environment once and launch JupyterLab in it:
 
@@ -149,7 +149,7 @@ running kernels. The essentials are stable even as the interface evolves:
 * Interrupt a long computation before restarting. Restarting releases Python
   state and, normally, the accelerator memory owned by that process.
 * Use **Restart Kernel and Run All Cells** before saving a result for others.
-* Inspect the **Running** panel and stop kernels you no longer use — closing
+* Inspect the **Running** panel and stop kernels you no longer use: closing
   a browser tab does not stop its kernel, and an orphaned kernel
   can hold gigabytes of GPU memory.
 
@@ -165,8 +165,8 @@ When a notebook grows into a project, VS Code can navigate definitions, run
 tests, format code, and review Git diffs. Keep testable logic in `.py` modules
 and use the notebook for explanation and experiment records. This
 repository also includes a VS Code extension for the book's
-authoring workflow — switching framework views, previewing slides, syncing
-edits back to the source — described in :numref:`sec_developers_guide`.
+authoring workflow (switching framework views, previewing slides, and syncing
+edits back to the source), described in :numref:`sec_developers_guide`.
 
 ### Debugging and Timing
 
@@ -218,7 +218,7 @@ and access control; Jupyter's token remains a useful second boundary.
 VS Code's Remote SSH installs a small server-side
 component so the editor UI runs locally while terminals, extensions, files,
 and kernels all live on the remote machine. Confirm the status bar shows
-**SSH** before selecting the Python environment — a local kernel cannot use
+**SSH** before selecting the Python environment, since a local kernel cannot use
 the remote GPU. In either setup, treat remote compute as disposable: commit code and copy
 checkpoints to durable storage before
 it is rebooted, preempted, or deleted (:numref:`sec_cloud_instances`).
@@ -232,18 +232,7 @@ note the environment and hardware needed to interpret any measurement.
 
 ## Summary
 
-* Notebooks interleave prose, code, and results, and retain expensive state
-  between experiments. Run and edit them rather than treating them as static
-  documents.
-* The document and the kernel hold different state in different orders;
-  restart and run all is the test that they agree.
-* Launch JupyterLab in the environment built from the book's `uv` lock
-  files, and verify the kernel with `sys.executable` before trusting any
-  result.
-* JupyterLab integrates notebooks, terminals, and kernels; VS Code adds
-  modules, tests, diffs, and remote development over SSH.
-* Use SSH tunneling or VS Code Remote SSH instead of exposing a notebook
-  server to the network.
+Notebooks interleave prose, code, and results while keeping expensive state in memory across experiments, so they reward active editing rather than passive reading. Because the saved document and the live kernel record state in different orders, restarting the kernel and running all cells from the top is the essential check that they agree. To keep local runs reproducible, launch JupyterLab inside the environment synchronized from the book's `uv` lock files and verify the active kernel via `sys.executable`. JupyterLab brings notebooks, terminals, and kernel management into one browser workspace, while VS Code adds module navigation, testing, diffs, and remote development as a project grows. When working on a remote accelerator, connect through an SSH tunnel or VS Code Remote SSH rather than exposing an unauthenticated notebook server to the network.
 
 ## Exercises
 
@@ -476,7 +465,7 @@ Cross-cell state is benign when dependencies flow strictly downward in reading o
 ::: {.col}
 - **Exact lock sync (`uv pip sync pylock.*.toml`):** Installs pinned dependencies and removes stray packages that could shadow imports.
 - **Locked launch (`uv run --no-sync jupyter lab`):** Starts JupyterLab without re-resolving or altering the locked `.venv`.
-- **Server vs. kernel:** Always verify the notebook's selected kernel actually points to `.venv/bin/python`!
+- **Server vs. kernel:** Always verify the notebook's selected kernel actually points to `.venv/bin/python`.
 :::
 
 ::: {.col .fig .big}
@@ -663,7 +652,7 @@ Work through these three diagnostic questions:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. Gaps (`3, 8, 9`) show cells were re-run or deleted, which *warns* of possible hidden state but doesn't prove outputs are wrong; conversely, `1, 2, 3` **still does not guarantee reproducibility** if a cell was edited *after* it ran! Only a fresh **Restart and Run All** verifies agreement.
+1. Gaps (`3, 8, 9`) show cells were re-run or deleted, which *warns* of possible hidden state but doesn't prove outputs are wrong; conversely, `1, 2, 3` **still does not guarantee reproducibility** if a cell was edited *after* it ran. Only a fresh **Restart and Run All** verifies agreement.
 2. An $8192^3$ matmul requires $2 \times 8192^3 \approx 1.1 \times 10^{12}\text{ FLOPs}$. At $25\,\mu\text{s}$, that would imply $44{,}000\text{ TFLOP/s}$ ($\sim 130\times$ the 4090's datasheet peak)—you measured **host-side CUDA kernel launch overhead**, not GPU execution.
 3. (i) Restart & run all; (ii) no personal paths/unrecorded downloads; (iii) scrub secrets/tokens from outputs; (iv) trim noisy progress logs; (v) record environment and hardware specs.
 :::

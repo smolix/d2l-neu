@@ -1984,7 +1984,7 @@ Every `d2l.Module`, `d2l.DataModule`, and `d2l.Trainer` inherits from `d2l.Hyper
 $$\text{bucket}(n) = 2^{\max(6, \lceil \log_2 n \rceil)}$$
 
 - **Zero-recompilation NumPy inference (`forward_np`):** Splits `nnx.Module` into `(graph, tree)` once and reads live `get_raw_value()` leaves on each step.
-- **Power-of-two batch bucketing (`_bucket`, `padded`):** Zero-pads variable episode batches to $\{64, 128, 256, 512, 1024\}$ with a binary float32 `mask`, so **at most 5 XLA kernels** serve all batch lengths $1\dots 1{,}024$!
+- **Power-of-two batch bucketing (`_bucket`, `padded`):** Zero-pads variable episode batches to $\{64, 128, 256, 512, 1024\}$ with a binary float32 `mask`, so **at most 5 XLA kernels** serve all batch lengths $1\dots 1{,}024$.
 :::
 
 ::: {.col .fig}
@@ -2057,7 +2057,7 @@ Test your understanding of the systems and numerical tricks inside `d2l`:
 **Answers:**
 
 1. During interactive notebook runs, `show(final=False)` updates the live SVG figure after every few minibatches. During the automated book build (`D2L_NB_CAPTURE=1`), skipping intermediate redraws avoids running matplotlib hundreds of times per epoch and ensures the saved notebook output stores only **one clean final figure per board**.
-2. **Only 1 shape (`size = 64`)!** Because `_bucket(n) = 1 << max(6, (n - 1).bit_length())` rounds every $n \in [1, 64]$ to $64$, XLA compiles the update step **only once**. The binary `mask` (1 for real rows $0 \dots n-1$, 0 for padded rows $n \dots 63$) ensures the zero-padded dummy rows do not corrupt the batch mean or TD loss!
+2. **Only 1 shape (`size = 64`).** Because `_bucket(n) = 1 << max(6, (n - 1).bit_length())` rounds every $n \in [1, 64]$ to $64$, XLA compiles the update step **only once**. The binary `mask` (1 for real rows $0 \dots n-1$, 0 for padded rows $n \dots 63$) ensures the zero-padded dummy rows do not corrupt the batch mean or TD loss.
 3. Materializing a one-hot tensor $\mathbf{O}$ of shape `(B, T, V)` costs $O(BTV)$ memory and $O(BTVd)$ FLOPs: cheap at $V = 256\text{--}1024$ (where atomic contention is worst), but prohibitive at $V = 32{,}000\text{--}128{,}000$ (where token frequencies are also more dispersed across rows).
 :::
 :::

@@ -216,21 +216,7 @@ it.
 
 ## Summary
 
-* Prefill is bound by compute and sets the TTFT; decode is bound by memory
-  bandwidth and sets the TPOT. Pick tools by workload: Ollama, LM Studio, or
-  MLX locally, vLLM or SGLang for services, TensorRT-LLM and Dynamo for
-  NVIDIA fleets.
-* Quantization, in GGUF formats locally and AWQ, FP8, or NVFP4 on servers,
-  converts bytes saved into tokens per second, up to a limit at the lowest
-  bit widths.
-* Continuous batching, paged caches, prefix caching, and speculative
-  decoding are four recurring optimizations, and the client controls the
-  prefix structure of its prompts.
-* The OpenAI-compatible API is the portable client contract; verify
-  compatibility with your own conformance tests.
-* Capacity is the weights plus the cache of every user; production also
-  needs admission control, cancellation, percentile latencies, and pinned
-  versions.
+Serving latency splits into compute-bound prefill, which sets the time to first token (TTFT), and bandwidth-bound decode, which sets the time per output token (TPOT); choose engines to match the workload, from Ollama, LM Studio, or MLX locally to vLLM or SGLang for shared services and TensorRT-LLM with Dynamo across large NVIDIA fleets. Quantization in GGUF formats locally and AWQ, FP8, or NVFP4 on servers turns saved weight bytes directly into faster token generation until quality degrades at the lowest bit widths. Modern engines combine continuous batching, paged KV caches, prefix caching, and speculative decoding, while client prompt ordering determines how much prefix state can be reused. Although the OpenAI-compatible chat-completions API keeps client code portable across local and cloud servers, subtle behavioral differences still warrant a small conformance test before switching engines. Finally, memory capacity must hold the model weights alongside every concurrent user's KV cache, and production deployments require admission control, client cancellation propagation, tail-latency monitoring, and co-pinned model and engine versions.
 
 ## Exercises
 
@@ -449,7 +435,7 @@ Model Serving: Prefill vs. Decode, Continuous Batching, PagedAttention, and SLOs
 ::: {.cols .vc}
 ::: {.col}
 - **Why serial serving collapses:** Running 100 two-second requests one after another makes the 100th user wait **over 3 minutes** while streaming weights 100 separate times ($98\%$ ALU idle).
-- **Why dynamic batching transforms decode:** Advancing $b$ concurrent users together reads the $16.4\text{ GB}$ model weights **once per step** for all $b$ users, multiplying throughput $30\text{--}50\times$!
+- **Why dynamic batching transforms decode:** Advancing $b$ concurrent users together reads the $16.4\text{ GB}$ model weights **once per step** for all $b$ users, multiplying throughput $30\text{--}50\times$.
 :::
 
 ::: {.col .fig .big}
@@ -485,7 +471,7 @@ Every generative request executes two physically distinct computational regimes 
 ::: {.cols .vc}
 ::: {.col}
 - **Service Level Objectives (SLOs):** Bound both Time to First Token (e.g., $\text{TTFT} \le 1.0\text{ s}$) and Time per Output Token ($\text{TPOT} \le 50\text{ ms}$, or $\ge 20\text{ tok/s}$ per user).
-- **Goodput vs. Raw Throughput:** Under overload, queue depth explodes so **goodput (SLO-compliant req/s) collapses toward zero** even while raw token/s stays pinned near $100\%$ peak!
+- **Goodput vs. Raw Throughput:** Under overload, queue depth explodes so **goodput (SLO-compliant req/s) collapses toward zero** even while raw token/s stays pinned near $100\%$ peak.
 :::
 
 ::: {.col .fig .big}
@@ -531,7 +517,7 @@ Every generative request executes two physically distinct computational regimes 
 ::: {.col}
 $$\text{TPOT}(b) \approx \frac{B_w + b \, n \, B_{\text{kv}}}{\beta}, \qquad \text{Throughput}(b) = \frac{b}{\text{TPOT}(b)}$$
 
-- **Qwen3-8B (BF16) on H100 ($\beta = 3.35\text{ TB/s}$, $n = 2{,}048$):** Scaling $b$ from $1 \to 64$ raises TPOT by only $2.1\times$ ($5.0 \to 10.7\text{ ms}$) while multiplying throughput **$30\times$** ($201 \to 6{,}000\text{ tok/s}$)!
+- **Qwen3-8B (BF16) on H100 ($\beta = 3.35\text{ TB/s}$, $n = 2{,}048$):** Scaling $b$ from $1 \to 64$ raises TPOT by only $2.1\times$ ($5.0 \to 10.7\text{ ms}$) while multiplying throughput **$30\times$** ($201 \to 6{,}000\text{ tok/s}$).
 - **SLO & KV ceiling:** A $20\text{ ms}$ TPOT SLO caps batch size at $b_{\max} = 167$ ($8{,}350\text{ tok/s}$), approaching the KV-cache ceiling $\beta/(n B_{\text{kv}}) \approx 11{,}090\text{ tok/s}$.
 :::
 
@@ -582,7 +568,7 @@ resp = client.chat.completions.create(
 - **Why identical API schemas still diverge in behavior:**
   - Different chat-template Jinja whitespace/BOS tokens shift `usage.prompt_tokens` and consume context budgets differently.
   - Streaming usage chunks (`stream_options`), `stop` string truncation, and structured-output grammar engines vary by server.
-  - **Batch-size non-determinism:** Even at `temperature=0`, a busy vLLM server groups requests into varying batch shapes, changing floating-point reduction order enough to flip close argmax ties!
+  - **Batch-size non-determinism:** Even at `temperature=0`, a busy vLLM server groups requests into varying batch shapes, changing floating-point reduction order enough to flip close argmax ties.
 :::
 :::
 :::
@@ -629,7 +615,7 @@ Ten lines of Python capture the core state machine of an iteration-level continu
 
 ::: {.cols .vc}
 ::: {.col}
-- **Contiguous reservation waste (`max_len=32,768`):** Reserves $4.83\text{ GB/seq}$ out of $55.6\text{ GB}$ free H100 VRAM, fitting only **$b = 11$ sequences** while leaving $93.7\%$ of reserved KV memory empty at $n = 2{,}048$!
+- **Contiguous reservation waste (`max_len=32,768`):** Reserves $4.83\text{ GB/seq}$ out of $55.6\text{ GB}$ free H100 VRAM, fitting only **$b = 11$ sequences** while leaving $93.7\%$ of reserved KV memory empty at $n = 2{,}048$.
 - **PagedAttention (16-token virtual blocks):** Allocates $2.36\text{ MB}$ blocks on demand ($< 0.7\%$ internal waste), expanding concurrent capacity **$16.7\times$ to $b = 184$ sequences** so the $20\text{ ms}$ TPOT SLO ($b = 167$) binds first.
 :::
 
@@ -649,8 +635,8 @@ When requests share an identical leading token sequence (system instructions, fe
 - **Chained block hashing:** Each 16-token block is keyed by $\text{hash}(\text{parent\_block\_key}, \text{token\_ids})$ because causal self-attention makes token representations depend on every preceding token.
 - **30-turn coding agent ($20\text{K}$ base context + $1\text{K}$ appended/turn):**
   - Uncached prefill computes $\sum_{k=0}^{29} (20 + k)\text{K} = \mathbf{1{,}035{,}000\text{ tokens}}$.
-  - Prefix caching computes only $20\text{K} + 29 \times 1\text{K} = \mathbf{49{,}000\text{ tokens}}$ (**$21\times$ less prefill work**)!
-- **Prompt design rule:** Never put a per-second timestamp on line 1 of a system prompt—doing so invalidates the hash chain from block 0! Put volatile metadata at the *end* of the prompt.
+  - Prefix caching computes only $20\text{K} + 29 \times 1\text{K} = \mathbf{49{,}000\text{ tokens}}$ (**$21\times$ less prefill work**).
+- **Prompt design rule:** Never put a per-second timestamp on line 1 of a system prompt—doing so invalidates the hash chain from block 0. Put volatile metadata at the *end* of the prompt.
 :::
 
 ::: {.col .narrow}
@@ -667,7 +653,7 @@ When requests share an identical leading token sequence (system instructions, fe
 $$\mathbb{E}[\text{tokens/round}] = \frac{1 - \alpha^{\gamma + 1}}{1 - \alpha}$$
 
 - **Draft & parallel verify:** A small draft model $q$ (cost $c \ll 1$) proposes $\gamma$ tokens; one target pass $p$ verifies all $\gamma+1$ tokens in parallel, preserving the exact target distribution ($2.80\times$ speedup at $\alpha=0.8, \gamma=4, c=0.05$).
-- **Busy-server caveat:** Parallel verification is free only while memory-bound; on H100 ($I^* \approx 295$), any batch $b > 295/(\gamma+1) = 59$ becomes compute-bound!
+- **Busy-server caveat:** Parallel verification is free only while memory-bound; on H100 ($I^* \approx 295$), any batch $b > 295/(\gamma+1) = 59$ becomes compute-bound.
 :::
 
 ::: {.col .fig}
@@ -702,7 +688,7 @@ Test your serving systems arithmetic on these three scenarios:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. Request 2 reuses **only the 2,000-token system prompt**! Because `Doc B` sits at position 2001 instead of `Doc A`, every block hash from token 2001 onward changes. Ordering retrieved documents in a **canonical ID order** (`[Doc A, Doc B, Doc C]`) allows full prefix reuse whenever subsets share leading documents, trading off relevance-order positional bias.
+1. Request 2 reuses **only the 2,000-token system prompt**. Because `Doc B` sits at position 2001 instead of `Doc A`, every block hash from token 2001 onward changes. Ordering retrieved documents in a **canonical ID order** (`[Doc A, Doc B, Doc C]`) allows full prefix reuse whenever subsets share leading documents, trading off relevance-order positional bias.
 2. Under **contiguous reservation**, **memory capacity binds first** ($11 \ll 167$, leaving the GPU starved). Under **PagedAttention**, memory holds $184$ sequences, so the **$20\text{ ms}$ TPOT latency SLO binds first** at $b = 167$.
 :::
 :::

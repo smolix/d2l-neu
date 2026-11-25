@@ -270,19 +270,7 @@ control.
 
 ## Summary
 
-* Colab and Kaggle lend free, temporary notebook runtimes with limited
-  access to accelerators. Availability is not guaranteed, so inspect the
-  assigned runtime before relying on it.
-* The book's launch buttons differ: Colab opens a live pointer to the
-  notebook on GitHub and does not save edits back, while Kaggle imports a
-  snapshot into your own account.
-* Colab's limits change with demand and are not published; paid compute
-  units add access, and pinned runtime versions hold the software image
-  fixed. Kaggle publishes a weekly quota and stores every Save & Run All as a
-  reproducible version.
-* A hosted runtime is replaceable. Idempotent setup cells, explicit saving of
-  artifacts, and secrets kept in the secret manager make a notebook portable
-  across providers and over time.
+Colab and Kaggle lend free, temporary notebook runtimes with bounded access to GPUs and TPUs, though hardware availability is never guaranteed and should always be verified in code. The book's two launch buttons store your work differently: Colab opens a live pointer to GitHub without saving edits back unless you copy the notebook to Drive, whereas Kaggle imports an independent snapshot into your account. Colab's free limits vary with demand, with paid compute units for priority access and optional pinned runtime versions to freeze the container image, while Kaggle publishes a weekly quota and records every Save & Run All execution as an immutable version. Because any hosted machine can disappear at an idle timeout or session limit, idempotent setup cells, explicit checkpointing to durable storage, and keeping credentials in the provider's secret manager make a notebook portable across providers and over time.
 
 ## Exercises
 
@@ -580,7 +568,7 @@ Because a notebook menu shows the accelerator you *requested* rather than what t
 ::: {.col}
 $$C \approx 6 N D \approx 2.8 \times 10^{19}\text{ FLOPs (BERT-base)}$$
 
-- **Why full pretraining outgrows free tiers:** At $30\%$ of a T4's $65\text{ TFLOP/s}$ peak ($19.5\text{ TFLOP/s}$), BERT-base takes $\sim 400\text{ T4 hours}$—over **33 twelve-hour sessions** or 13+ weeks of Kaggle's 30 h/week quota!
+- **Why full pretraining outgrows free tiers:** At $30\%$ of a T4's $65\text{ TFLOP/s}$ peak ($19.5\text{ TFLOP/s}$), BERT-base takes $\sim 400\text{ T4 hours}$—over **33 twelve-hour sessions** or 13+ weeks of Kaggle's 30 h/week quota.
 - **What fits in one 12-hour T4 session ($8.4 \times 10^{17}\text{ FLOPs}$):** All D2L chapter notebooks, 7B–8B LoRA fine-tuning, or training an $\sim 85\text{M}$ model.
 :::
 
@@ -614,7 +602,7 @@ Because a hosted VM is replaceable, the notebook must carry its own setup withou
 ::: {.col}
 - **Check before installing:** Use `importlib.util.find_spec` (or `importlib.metadata.version`) to install only what is missing at a **pinned version**.
 - **Never run unconditional `pip install --upgrade`:** It overwrites tested provider wheels, slows startup, and causes Friday's run to resolve different dependencies than Monday's.
-- **Restart after upgrading an imported package:** If a module is already in `sys.modules`, `pip install` updates disk metadata (`importlib.metadata.version`) while the live kernel keeps running the old code in RAM (`module.__version__`) until a kernel restart!
+- **Restart after upgrading an imported package:** If a module is already in `sys.modules`, `pip install` updates disk metadata (`importlib.metadata.version`) while the live kernel keeps running the old code in RAM (`module.__version__`) until a kernel restart.
 :::
 
 ::: {.col .fig}
@@ -671,8 +659,8 @@ Test your intuition on three practical hosted-notebook scenarios:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **Nowhere—they are lost!** Colab opens a read-only pointer to GitHub. To keep edits, you must explicitly run **File $\to$ Save a copy in Drive** or download the `.ipynb` before the session expires.
-2. **None!** `/content` is ephemeral VM scratch disk that is deleted with the container. On Colab, a checkpoint writer should verify `/content/drive` is mounted (or sync to external storage) before starting a long run.
+1. **Nowhere—they are lost.** Colab opens a read-only pointer to GitHub. To keep edits, you must explicitly run **File $\to$ Save a copy in Drive** or download the `.ipynb` before the session expires.
+2. **None.** `/content` is ephemeral VM scratch disk that is deleted with the container. On Colab, a checkpoint writer should verify `/content/drive` is mounted (or sync to external storage) before starting a long run.
 3. Python caches imported modules in `sys.modules`; modifying files in `site-packages` on disk does not reload objects already resident in kernel RAM. The kernel must be restarted after package changes.
 :::
 :::

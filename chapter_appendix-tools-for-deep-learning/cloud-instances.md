@@ -191,18 +191,7 @@ of the year eventually costs more to rent than to buy, and
 
 ## Summary
 
-* Most of the book's notebooks need less than 8 GB of GPU memory and a 24 GB
-  card runs every single-GPU notebook; LLM-scale work is what raises cost.
-* The market has three tiers, hyperscalers, GPU specialists and
-  marketplaces, with a several-fold price spread for the same GPU and
-  different levels of integration, reliability, and operational trust.
-* Compare cost per completed result, not per hour: include setup, idle
-  time, storage, egress, and your own time.
-* Spot capacity reduces the cost of checkpointed, restartable jobs but is
-  unsuitable for interactive or uncheckpointed work; egress fees make
-  repeated transfers of large artifacts expensive.
-* Treat instances as disposable: provider image, SSH tunnel, `tmux`,
-  checkpoints to durable storage, then delete every billable resource.
+Most of the book's notebooks require less than 8 GB of GPU memory and every single-GPU notebook fits on a 24 GB card, so substantial rental bills arise primarily at language-model scale. The cloud GPU market spans hyperscalers, GPU specialists, and marketplaces, offering a several-fold price spread for identical silicon alongside very different levels of managed integration, reliability, and operational trust. Always compare machines by the total cost per completed result rather than the hourly sticker price, accounting for setup, debugging rounds, persistent storage, data egress, and engineering time. Spot capacity cuts compute invoices for checkpointed, restartable jobs while remaining unsuitable for interactive or uncheckpointed work, and cross-cloud egress fees quickly penalize repeated transfers of large checkpoints. Treat every rented instance as disposable: boot from a prebuilt image, connect over an SSH tunnel under `tmux`, stream checkpoints to durable storage, and delete every billable resource as soon as the run finishes.
 
 ## Exercises
 
@@ -282,8 +271,8 @@ of the year eventually costs more to rent than to buy, and
    per GPU-hour. One node connects the GPUs with NVLink, the other only over
    PCIe 5.0. A data-parallel job trains a transformer with $N$ parameters
    and BF16 gradients, so that $S = 2N$ bytes enter the communication time
-   of :eqref:`eq_dp_cost`. Each GPU processes $b$ tokens per step, which
-   costs $6Nb$ FLOPs by :eqref:`eq_six_nd`. Take the bus bandwidth
+   (:numref:`sec_multi_gpu`). Each GPU processes $b$ tokens per step, which
+   costs $6Nb$ FLOPs (:numref:`sec_scaling-laws`). Take the bus bandwidth
    $1/\beta_\textrm{link}$ as the nominal per-direction rate, 450 GB/s for
    NVLink and 64 GB/s for PCIe, and let both nodes sustain 40% of the
    H100's 989 TFLOPS of dense BF16 compute. Assume that communication does
@@ -410,7 +399,7 @@ GPU rental providers differ less in the silicon itself than in the surrounding m
 
 ::: {.cols .vc}
 ::: {.col}
-$$b_{\text{balance}} = \frac{2(W-1)}{W} \cdot \frac{F \cdot \beta_{\text{link}}}{3} \quad (N\text{ cancels!})$$
+$$b_{\text{balance}} = \frac{2(W-1)}{W} \cdot \frac{F \cdot \beta_{\text{link}}}{3} \quad (N\text{ cancels})$$
 
 - **NVLink ($450\text{ GB/s}$) vs. PCIe 5.0 ($64\text{ GB/s}$) on $8\times\text{H100}$:** At $395.6\text{ TFLOP/s}$ sustained, communication equals compute at $b_{\text{balance}} \approx 513$ tok/GPU on NVLink vs. $3{,}606$ tok/GPU on PCIe ($W = 8$).
 - **Impact at $b = 4{,}096$ tok/GPU:** NVLink adds only $\sim 13\%$ overhead, whereas PCIe adds **$88\%$ overhead** unless amortized by gradient accumulation.
@@ -429,7 +418,7 @@ $$b_{\text{balance}} = \frac{2(W-1)}{W} \cdot \frac{F \cdot \beta_{\text{link}}}
 ::: {.col}
 $$\text{Cost} = (T_{\text{wall}} + T_{\text{setup}})p_{\text{gpu}} + C_{\text{store}} + C_{\text{egress}} + (T_{\text{setup}} + f T_{\text{wall}})p_{\text{eng}}$$
 
-- **Direct cloud invoice:** Includes execution wall time $T_{\text{wall}}$, setup hours $T_{\text{setup}}$, persistent storage $C_{\text{store}}$ (billed even while stopped!), and outbound egress $C_{\text{egress}}$.
+- **Direct cloud invoice:** Includes execution wall time $T_{\text{wall}}$, setup hours $T_{\text{setup}}$, persistent storage $C_{\text{store}}$ (billed even while stopped), and outbound egress $C_{\text{egress}}$.
 - **Engineer time ($p_{\text{eng}}$):** Setup/debugging rounds plus fractional waiting attention $f \cdot T_{\text{wall}}$ often outweigh the raw GPU invoice.
 :::
 
@@ -469,7 +458,7 @@ Compare a marketplace RTX 4090 ($\$0.40/\text{hr}$), A100 80 GB ($\$1.20/\text{h
 ::: {.cols .vc}
 ::: {.col}
 - **1. One extra 30-min debug round ($\$30+$):** Pushes an 8-hour RTX 4090 run from $\$35.40$ above $\$65$, making the 2.67-hour H100 ($\$39.92$) far cheaper.
-- **2. The 7-minute attention threshold ($f \approx 1.4\%$):** Because the H100 saves $5.33\text{ hours}$ of wall time for only $\$4.52$ more on the invoice, if waiting on the 8-hour run consumes even **$6.8\text{ minutes}$** of engineer attention at $\$60/\text{hr}$, the H100 wins!
+- **2. The 7-minute attention threshold ($f \approx 1.4\%$):** Because the H100 saves $5.33\text{ hours}$ of wall time for only $\$4.52$ more on the invoice, if waiting on the 8-hour run consumes even **$6.8\text{ minutes}$** of engineer attention at $\$60/\text{hr}$, the H100 wins.
 :::
 
 ::: {.col .fig .big}
@@ -485,7 +474,7 @@ Compare a marketplace RTX 4090 ($\$0.40/\text{hr}$), A100 80 GB ($\$1.20/\text{h
 ::: {.col}
 $$\mathbb{E}[T_{\text{wall}}] = \left(e^{T/M} - 1\right)(M + R)$$
 
-- **Exponential blowup without checkpoints:** If an $8\text{ h}$ run restarts from scratch after Poisson interruptions ($M = 4\text{ h}$, $R = 0.25\text{ h}$), expected wall time reaches $27.2\text{ h}$—costing **$1.70\times$ more** than on-demand even at a $50\%$ spot discount!
+- **Exponential blowup without checkpoints:** If an $8\text{ h}$ run restarts from scratch after Poisson interruptions ($M = 4\text{ h}$, $R = 0.25\text{ h}$), expected wall time reaches $27.2\text{ h}$—costing **$1.70\times$ more** than on-demand even at a $50\%$ spot discount.
 - **Never run uncheckpointed jobs or live interactive sessions on spot VMs.**
 :::
 
@@ -519,7 +508,7 @@ When a training script saves a durable checkpoint of duration $\delta$ every $\t
 
 ::: {.cols .vc}
 ::: {.col}
-- **The egress fee shock ($\sim\$0.09/\text{GB}$):** Downloading a $140\text{ GB}$ checkpoint once a day for 30 days ($4.2\text{ TB}$) costs **$\approx\$370$ in egress fees**—more than renting a marketplace RTX 4090 24/7 for the entire month!
+- **The egress fee shock ($\sim\$0.09/\text{GB}$):** Downloading a $140\text{ GB}$ checkpoint once a day for 30 days ($4.2\text{ TB}$) costs **$\approx\$370$ in egress fees**—more than renting a marketplace RTX 4090 24/7 for the entire month.
 - **Three defensive rules:** Co-locate compute and object storage in the same cloud region, use zero-egress storage (e.g., R2 / RunPod) for cross-cloud workflows, and delete unattached NVMe volumes immediately.
 :::
 
@@ -535,7 +524,7 @@ When a training script saves a durable checkpoint of duration $\delta$ every $\t
 ::: {.cols .vc}
 ::: {.col}
 - **Boot & shell check:** Start inside `tmux new -s train`, run `nvidia-smi` and `df -h`, and verify framework CUDA visibility before starting long jobs.
-- **60-second automated smoke test:** Verify (1) free GPU VRAM, (2) writable checkpoint mount (catches read-only disks before hour 1!), (3) 1 forward/backward step + bitwise checkpoint round-trip, and (4) data loader batch/s $>$ GPU step/s.
+- **60-second automated smoke test:** Verify (1) free GPU VRAM, (2) writable checkpoint mount (catches read-only disks before hour 1), (3) 1 forward/backward step + bitwise checkpoint round-trip, and (4) data loader batch/s $>$ GPU step/s.
 :::
 
 ::: {.col .fig .big}
@@ -579,7 +568,7 @@ Test your cloud systems reasoning on these three problems:
 **Answers:**
 
 1. The **$1.8\text{ GiB}$ intercept** is the batch-independent memory (parameters, gradients, optimizer states, and CUDA context). The **allocator reserved/peak allocated memory against physical VRAM** decides OOMs.
-2. The read-only directory crashes **1 hour into the run** at the first save (wasting an hour of compute). The slow data loader **never raises an error**—it silently starves the GPU at $20\%$ utilization for $5\times$ the cost!
+2. The read-only directory crashes **1 hour into the run** at the first save (wasting an hour of compute). The slow data loader **never raises an error**—it silently starves the GPU at $20\%$ utilization for $5\times$ the cost.
 3. Matching the 4090's $\$5.40$ invoice ($\$3.40$ of GPU compute after $\$2.00$ storage/egress) requires $(8.0 / s + 0.5) \times 2.50 = 3.40$ $\implies$ $8.0 / s = 0.86$ $\implies$ **`relative_speed` $\approx 9.3\times$**.
 :::
 :::

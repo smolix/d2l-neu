@@ -25641,7 +25641,7 @@ HW_WORKLOAD_CONFIGS = {
                  ('Qwen/Qwen3-0.6B', _HW_PROMPTS)),
         train=(('Qwen/Qwen3-8B', (1, 2, 3), ((1, 2048), (2, 2048))),
                ('Qwen/Qwen3-0.6B', (None,), _HW_SMALL_STEPS)),
-        eager=(('Qwen/Qwen3-8B', (1, 8), 2048),
+        eager=(('Qwen/Qwen3-8B', (1, 4), 2048),
                ('Qwen/Qwen3-0.6B', (1, 8), 2048)),
         control=('Qwen/Qwen3-8B', 1, 2048), moe=_HW_MOE),
     't1': dict(

@@ -75,7 +75,9 @@ layers' activations about 6 GB more (13 GiB at the peak, with the loss
 chunk), so 4,096 tokens would pass 20 GiB. The MoE series: Qwen3-30B-A3B's
 router on `n_prose` FineWeb-Edu validation documents and `n_code` windows of
 the held-out code text, `n_tokens` each, coverage by `draws` resamples per
-batch.
+batch. The eager Qwen3-8B series stops at b = 4: at b = 8 its one-pass prefill
+of 16,384 tokens and the copy of the cache each repeat starts from peak at
+22 GiB.
 
 ```{.python .input #workload-hardware-lib-configs}
 %%tab pytorch
@@ -103,7 +105,7 @@ HW_WORKLOAD_CONFIGS = {
                  ('Qwen/Qwen3-0.6B', _HW_PROMPTS)),
         train=(('Qwen/Qwen3-8B', (1, 2, 3), ((1, 2048), (2, 2048))),
                ('Qwen/Qwen3-0.6B', (None,), _HW_SMALL_STEPS)),
-        eager=(('Qwen/Qwen3-8B', (1, 8), 2048),
+        eager=(('Qwen/Qwen3-8B', (1, 4), 2048),
                ('Qwen/Qwen3-0.6B', (1, 8), 2048)),
         control=('Qwen/Qwen3-8B', 1, 2048), moe=_HW_MOE),
     't1': dict(

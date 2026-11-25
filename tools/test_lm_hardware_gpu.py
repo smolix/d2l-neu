@@ -8,12 +8,22 @@ small working set), `_hw_steady` (a clock and a power sampled), `hw_matmul_bench
 accounting (FlopCounterMode on the CUDA product equals 2 m n k, and
 TFLOP/s x ms equals it), the FP8 product against the bf16 product of the
 dequantized operands, the Triton L1 kernel's sum against torch, and the
-pointer-chase array (one cycle through every line).
+pointer-chase array (one cycle through every line); for 22.2 (kernels):
+the Triton RMSNorm against `F.rms_norm` (FP32, 1e-5), the Triton attention
+against the FP32 reference (GQA, both page shapes at 1,024 tokens, a
+sequence that is not a multiple of the tiles, non-causal), the chunked
+attention against SDPA's flash kernel (BF16, 2e-2), `sdpa_causal` refusing
+FP32 (no math fallback), `_time_arms` accounting (TFLOP/s x ms = FLOPs),
+the register metadata `triton_spills` reads, and the Inductor kernel list.
 """
+import contextlib
+import io
 import os
 import unittest
 
+import pandas as pd
 import torch
+import torch.nn.functional as F
 
 from d2l import torch as d2l
 
@@ -98,6 +108,108 @@ class TestAcceleratorDesignGPU(unittest.TestCase):
         self.assertEqual(j, 0)
         r = d2l._chase_ns(nbytes, steps=1024, repeats=2)
         self.assertGreater(r['ns_per_load'], 1)
+
+
+@unittest.skipUnless(GPU, 'D2L_TEST_GPU=1 and a CUDA GPU')
+class TestKernelsGPU(unittest.TestCase):
+    def shapes(self):
+        R = d2l.r2_config('r2').arch
+        qwen = d2l.HWShape(num_hidden_layers=1, hidden_size=4096,
+                           num_attention_heads=32, num_key_value_heads=8,
+                           head_dim=128, intermediate_size=1, vocab_size=1,
+                           tie_word_embeddings=False)
+        return {'reference': (R, 2), 'Qwen3-8B': (qwen, 1)}
+
+    def test_rmsnorm(self):
+        x = torch.randn(300, 4096, device='cuda')
+        w = torch.randn(4096, device='cuda')
+        ref = F.rms_norm(x, (4096,), w, eps=1e-6)
+        torch.testing.assert_close(d2l.triton_rmsnorm(x, w), ref, atol=1e-5,
+                                   rtol=0)
+        torch.testing.assert_close(d2l.rms_norm_formula(x, w), ref,
+                                   atol=1e-5, rtol=0)
+        y = d2l.triton_rmsnorm(x[:, :1000].bfloat16(), w[:1000])  # d not 2^k
+        torch.testing.assert_close(y.float(), F.rms_norm(
+            x[:, :1000], (1000,), w[:1000], eps=1e-6), atol=3e-2, rtol=2e-2)
+
+    def test_flash_against_fp32(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            for name, shape in self.shapes().items():
+                d2l.attention_error(d2l.flash_attention_triton, shape, 1024,
+                                    name=name)
+                d2l.attention_error(d2l.chunked_causal_attention, shape, 1024,
+                                    name=name)
+        q, k, v = d2l.attention_inputs(self.shapes()['reference'][0], 1, 1000)
+        G = q.shape[1] // k.shape[1]
+        K, V = k.repeat_interleave(G, 1).float(), v.repeat_interleave(
+            G, 1).float()
+        for causal in (True, False):
+            for bq, bk in ((64, 128), (128, 32)):
+                out = d2l.flash_attention_triton(q, k, v, causal=causal,
+                                                 block_q=bq, block_k=bk)
+                ref = F.scaled_dot_product_attention(q.float(), K, V,
+                                                     is_causal=causal)
+                self.assertLess(float((out.float() - ref).abs().max()
+                                      / ref.abs().max()), 2e-2)
+
+    def test_chunked_against_sdpa(self):
+        for cfg, batch in self.shapes().values():
+            q, k, v = d2l.attention_inputs(cfg, batch, 1024)
+            ref = d2l.sdpa_causal(q, k, v).float()
+            out = d2l.chunked_causal_attention(q, k, v).float()
+            self.assertLess(float((out - ref).abs().max() / ref.abs().max()),
+                            2e-2)
+
+    def test_tile_matmul(self):
+        g = torch.Generator(device='cuda').manual_seed(0)
+        for m, n, k in ((300, 1000, 200), (4096, 1088, 4096)):
+            a = torch.randn(m, k, device='cuda', dtype=torch.bfloat16,
+                            generator=g)
+            b = torch.randn(k, n, device='cuda', dtype=torch.bfloat16,
+                            generator=g)
+            ref = a.float() @ b.float()
+            out = d2l.tile_matmul(a, b).float()
+            self.assertLess(float((out - ref).abs().max()
+                                  / ref.abs().max()), 1e-2)
+        r = d2l._wave_bench('Triton 128 x 128', 1024, 1024, 1024, 3)
+        self.assertAlmostEqual(r['tflops'] * r['ms'] * 1e9 / 2**31, 1, 9)
+
+    def test_sdpa_refuses_math(self):
+        q, k, v = d2l.attention_inputs(self.shapes()['reference'][0], 1, 128,
+                                       dtype=torch.float32)
+        with self.assertRaises(RuntimeError), d2l._quiet():
+            d2l.sdpa_causal(q, k, v)
+
+    def test_time_arms(self):
+        q, k, v = d2l.attention_inputs(self.shapes()['reference'][0], 1, 1024)
+        flops = d2l._attn_flops(q)
+        r = d2l._time_arms({'Triton': d2l.flash_attention_triton}, (q, k, v),
+                           flops=flops, repeats=3, warm_s=0.1)
+        self.assertAlmostEqual(r.tflops[0] * r.ms[0] * 1e9 / flops, 1, 9)
+        self.assertEqual(d2l._arm_launches(
+            {'Triton': d2l.flash_attention_triton}, (q, k, v)),
+            {'Triton': (1, '_flash_fwd_kernel')})
+
+    def test_spills_and_inductor(self):
+        flash = pd.DataFrame([dict(shape='reference', arm='64 x 64, 4 warps',
+                                   H=12, H_kv=4, d_h=64, block_q=64,
+                                   block_k=64, num_warps=4, tflops=100.0)])
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            d2l.triton_spills(d2l.flash_attention_triton, flash)
+        line = buf.getvalue().splitlines()[1].split()
+        self.assertEqual(line[:2], ['64x64', 'w4'])
+        self.assertGreater(int(line[3].replace(',', '')), 32)  # registers
+        q, k, v = d2l.attention_inputs(self.shapes()['reference'][0], 1, 1024)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            d2l.inductor_kernels(torch.compile(d2l.chunked_causal_attention,
+                                               dynamic=False), q, k, v)
+        text = buf.getvalue()
+        self.assertIn('x Inductor', text)
+        self.assertIn('x library', text)
+        for line in text.splitlines():
+            self.assertLessEqual(len(line), 79)
 
 
 if __name__ == '__main__':

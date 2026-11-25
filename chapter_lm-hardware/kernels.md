@@ -33,3 +33,473 @@ when the section is written.
 - Code and documentation: [Triton fused attention tutorial](https://triton-lang.org/main/getting-started/tutorials/06-fused-attention.html) (test oracle); [flash-attention repository](https://github.com/Dao-AILab/flash-attention) (the library kernel); [Liger-Kernel repository](https://github.com/linkedin/Liger-Kernel) (training kernels in Triton); [CUTLASS](https://github.com/NVIDIA/cutlass) (tile hierarchy vocabulary); NVIDIA, [Matrix multiplication performance guide](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html) (tile and wave quantization) and [CUDA C programming guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html) (thread blocks, shared memory); [Nsight Compute](https://docs.nvidia.com/nsight-compute/) (optional byte counting).
 - Courses, tutorials and blogs: [CS336 assignment 2](https://github.com/stanford-cs336/assignment2-systems) (the Triton FlashAttention-2 assignment); [GPU MODE lectures](https://github.com/gpu-mode/lectures) (Triton and profiling lectures); [CMU 11-868 LLM Systems](https://llmsystem.github.io/llmsystem2026spring/) (GPU programming and FlashAttention lectures); [Modal GPU Glossary](https://modal.com/gpu-glossary).
 -->
+
+<!-- Placeholder (prose): opening. The reference model's attention at
+sequence 4,096 on this GPU, three ways: the chunked PyTorch attention of
+sec_attention-at-scale, the same function under torch.compile, and the fused
+(flash) kernel behind SDPA. They differ by about two orders of magnitude.
+The open question: what it takes to write the fast one by hand, and what
+stops it short of the roofline. -->
+
+```{.python .input #kernels-imports}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
+
+```{.python .input #kernels-extras}
+%%tab pytorch
+import pandas as pd
+import triton
+import triton.language as tl
+```
+
+<!-- Placeholder (prose): the two attention shapes of the section: the
+reference model (12 query heads sharing 4 key-value heads, head dimension
+64, batch 8) and Qwen3-8B (32 query and 8 key-value heads, head dimension
+128, batch 1), both at 4,096 tokens. A fused kernel re-reads one head's keys
+and values for every query tile, so it matters whether they fit in L2: the
+table counts their bytes against this GPU's L2. -->
+
+```{.python .input #kernels-shapes}
+%%tab pytorch
+specs = d2l.chip_specs()
+R = d2l.r2_config('r2').arch  # the reference model's architecture
+cfg_8b = d2l.hw_config('Qwen/Qwen3-8B')
+shapes = {'reference': (R, 8), 'Qwen3-8B': (cfg_8b, 1)}  # (config, batch)
+seq = 4096  # tokens per sequence
+d2l.attention_shapes(shapes, seq,
+                     l2_bytes=torch.cuda.get_device_properties(0).L2_cache_size)
+```
+
+<!-- Placeholder (prose): chunked_attention of sec_attention-at-scale, in
+batched form: query heads of shape (B, H, N, d), keys and values with fewer
+heads (GQA). The query heads that share a key-value head are stacked as rows
+against it, so nothing is copied. Scores and running statistics in FP32,
+products in BF16. -->
+
+```{.python .input #kernels-chunked-attention}
+%%tab pytorch
+def chunked_causal_attention(q, k, v, chunk=512):  #@save
+    """Exact causal attention of q (B, H, N, d) against k and v
+    (B, H_kv, N, d), one chunk of keys at a time with the online softmax;
+    the H // H_kv query heads sharing a key-value head are stacked as rows
+    against it (GQA without copying k and v)."""
+    B, H, N, d = q.shape
+    H_kv = k.shape[1]
+    Q = q.reshape(B, H_kv, H // H_kv * N, d)  # a group's queries as rows
+    pos_q = torch.arange(N, device=q.device).repeat(H // H_kv)[:, None]
+    lowest = torch.finfo(torch.float32).min
+    m = torch.full((B, H_kv, Q.shape[2], 1), lowest, device=q.device)
+    s = torch.zeros_like(m)
+    O = torch.zeros(Q.shape, device=q.device)
+    for start in range(0, N, chunk):
+        Kc, Vc = k[:, :, start:start + chunk], v[:, :, start:start + chunk]
+        pos_k = torch.arange(start, start + Kc.shape[2], device=q.device)
+        a = (Q @ Kc.transpose(-2, -1)).float() / math.sqrt(d)
+        a.masked_fill_(pos_k > pos_q, lowest)
+        m_new = torch.maximum(m, a.amax(-1, keepdim=True))
+        scale = torch.exp(m - m_new)  # rescale the past
+        P = torch.exp(a - m_new)
+        s = s * scale + P.sum(-1, keepdim=True)
+        O = O * scale + (P.to(Vc.dtype) @ Vc).float()
+        m = m_new
+    return (O / s).to(q.dtype).view(B, H, N, d)
+```
+
+<!-- Placeholder (prose): the three arms on the reference shape. SDPA runs
+only its flash backend here (d2l.sdpa_causal refuses a fallback to the math
+kernel). TFLOP/s count the useful FLOPs of causal attention, 2 B H N^2 d_h
+(half of the two products 4 B H N^2 d_h); the kernels column counts the
+launches per call. -->
+
+```{.python .input #kernels-three-ways}
+%%tab pytorch
+q, k, v = d2l.attention_inputs(R, batch=8, seq=seq)
+ways = d2l.time_attention({
+    'chunked': d2l.chunked_causal_attention,
+    'compiled': torch.compile(d2l.chunked_causal_attention),
+    'SDPA': d2l.sdpa_causal}, q, k, v)
+```
+
+<!-- Placeholder (prose): the open question, and the plan of the section:
+the tile as the unit of reuse, a first Triton kernel, the attention kernel,
+and where the compiler stops. -->
+
+## Tiles and Reuse
+:label:`subsec_lm_hw_tiles`
+
+<!-- Placeholder (prose): one-sentence restatement of subsec_hw-gpu (SMs,
+tensor cores, shared memory). A thread block owns an output tile; its
+operands pass through shared memory and registers, and the tile is the unit
+of reuse. Occupancy (one paragraph): blocks per SM limited by registers and
+shared memory. Waves (one paragraph): tiles are dealt to SMs in rounds; a
+last, partial round leaves SMs idle. Launch cost (one paragraph): a few
+microseconds per kernel, which a fused kernel pays once. -->
+
+### The Roof Condition for a Tile
+:label:`subsec_lm_hw_tile_roof`
+
+<!-- Placeholder (prose): derivation D1. A T_m x T_n output tile with a
+K-slab of depth T_k loads b T_k (T_m + T_n) bytes for 2 T_m T_n T_k FLOPs:
+I(T_m, T_n) = 2 T_m T_n / (b (T_m + T_n)) (eq_lm_hw_tile_roof). A square
+tile reaches the ridge R = P / beta only if T >= b R, and its FP32
+accumulators then take 4 T^2 = 4 b^2 R^2 bytes. Figure fig_lm_hw_tile_reuse
+(generator tile-reuse): one output tile, two operand slabs, bytes against
+FLOPs. -->
+
+```{.python .input #kernels-tile-roof-def}
+%%tab pytorch
+def tile_intensity(Tm, Tn, b=2):  #@save
+    """FLOPs per byte loaded of a Tm x Tn output tile: each K-slab of depth
+    T_k brings b T_k (Tm + Tn) bytes for 2 Tm Tn T_k FLOPs."""
+    return 2 * Tm * Tn / (b * (Tm + Tn))
+
+def tile_roof(rows, b=2, rf_kib=256):  #@save
+    """For each chip (a chip_specs row): the ridge R = P / beta (FLOP per
+    byte, dense 16-bit), the smallest square tile T = ceil(b R) that
+    reaches it from DRAM, its FP32 accumulators 4 T^2 (KiB), and the
+    register file of one SM (KiB)."""
+    R = rows.p16_tflops / rows.mem_bw_tbs  # TFLOP/s over TB/s
+    T = np.ceil(b * R).astype(int)
+    return pd.DataFrame({'ridge': R, 'T': T, 'acc_kib': 4 * T**2 / 2**10,
+                         'rf_kib': rf_kib})
+```
+
+<!-- Placeholder (prose): the square tile's intensity is T / b; the two
+chips need tiles whose accumulators exceed an SM's register file, so a
+kernel reaches the roof only with reuse across tiles in L2. -->
+
+```{.python .input #kernels-tile-roof}
+%%tab pytorch
+for T in (64, 128, 256, 512):
+    print(f'{T} x {T} tile: {d2l.tile_intensity(T, T):.0f} FLOP per byte')
+d2l.show_table(d2l.tile_roof(specs.loc[['RTX 4090', 'A100 PCIe 40 GB']]),
+               digits={'ridge': 0}, headers={
+                   'ridge': 'ridge FLOP/B', 'T': 'T >= bR',
+                   'acc_kib': 'accumulator KiB',
+                   'rf_kib': 'register KiB/SM'})
+```
+
+### The Shapes a Transformer Multiplies
+:label:`subsec_lm_hw_gemm_shapes`
+
+<!-- Placeholder (prose): the weight products of one decoder layer (QKV,
+the attention output, gate-up, down) and the head, each an (M x K) @ (K x N)
+product with M the number of tokens; training and prefill run them at
+M = thousands of tokens, decode at M = the batch. -->
+
+```{.python .input #kernels-gemm-shapes-def}
+%%tab pytorch
+def gemm_shapes(cfg, tokens):  #@save
+    """The weight products of one forward pass over `tokens` tokens of a
+    decoder (an Arch or a Transformers config): per product, the shape
+    M x N x K of one layer's matmul and the GFLOP over all layers (the head
+    once). The attention scores are not weight products."""
+    L, d, H, H_kv, d_h, f, V, tie = d2l._arch_fields(cfg)
+    products = [('QKV', (H + 2 * H_kv) * d_h, d, L), ('out', d, H * d_h, L),
+                ('gate-up', 2 * f, d, L), ('down', d, f, L), ('head', V, d, 1)]
+    return pd.DataFrame([
+        dict(name=name, M=tokens, N=n, K=k, gflop=2 * tokens * n * k * c / 1e9)
+        for name, n, k, c in products])
+```
+
+<!-- Placeholder (prose): the same products at M = 1 (decode at batch 1)
+and M = 4,096 (prefill of one sequence): the intensity 2MNK / (b (MK + KN +
+MN)) is about 1 FLOP per byte at M = 1 and above the ridge at 4,096. -->
+
+```{.python .input #kernels-gemm-shapes}
+%%tab pytorch
+b = 2  # bytes per bf16 element
+table = pd.concat({name: d2l.gemm_shapes(cfg, seq).set_index('name')
+                   for name, (cfg, _) in shapes.items()})
+for M in (1, seq):
+    table[M] = 2 * M * table.N * table.K / (
+        b * (M * table.K + table.K * table.N + M * table.N))
+d2l.show_table(table[['N', 'K', 'gflop', 1, seq]], digits={1: 1, seq: 0},
+               headers={'gflop': 'GFLOP*', 1: 'FLOP/B, M=1',
+                        seq: f'FLOP/B, M={seq:,}'})
+print(f'* per product at M = {seq:,} tokens')
+```
+
+<!-- Placeholder (prose): the shape sweep: achieved BF16 TFLOP/s of each of
+Qwen3-8B's weight products for M from 512 to 16,384 (hw_matmul_bench of
+sec_lm_accelerator_design, each point after a short warm-up), against the
+datasheet peak; the A100 twin's series joins it when campaign C-T2 has run. -->
+
+```{.python .input #kernels-shape-sweep}
+%%tab pytorch
+sweep = d2l.hw_shape_sweep(cfg_8b, M=2**np.arange(9, 15))
+d2l.plot_shape_sweep(sweep, specs,
+                     reference=d2l.hw_campaign_log('a100-microbench'))
+```
+
+<!-- Placeholder (prose): wave quantization. With M = K = 4,096 and N in
+steps of 64, the tile count ceil(M / T_m) ceil(N / T_n) crosses a multiple
+of the 128 SMs every n_SM T_n T_m / M columns; just past each crossing a new,
+nearly empty wave starts and TFLOP/s drops. Two arms: cuBLAS, which picks a
+kernel (tile, split) per shape and so stays nearly flat, and a matmul with one
+fixed 128 x 128 tile (d2l.tile_matmul, a dozen lines of Triton in the library;
+the reader meets Triton in the next section), whose saw-tooth has the
+predicted period of 512 columns, deep at two to three waves (~110 against
+~160 TFLOP/s at N = 1,088 on the 4090) and shallow at sixteen. The lines
+below give each arm's range, the measured period against
+n_SM T_m T_n / M, and the tiles the cuBLAS kernels encode (three on the
+4090). Lesson: wave quantization is real; libraries hide it by choosing a
+tile per shape, a hand-written kernel must handle it (Exercise). -->
+
+```{.python .input #kernels-sawtooth}
+%%tab pytorch
+wave = d2l.hw_wave_sweep(M=4096, K=4096, N=range(1024, 8193, 64))
+d2l.plot_wave(wave)
+```
+
+## Writing Kernels in Triton
+:label:`subsec_lm_hw_triton`
+
+<!-- Placeholder (prose): Triton's model. A kernel is written for one
+program (a thread block); tl.program_id names its tile; tl.load and
+tl.store move whole blocks between memory and registers (pointer arithmetic
+or block pointers, tl.make_block_ptr); tl.dot multiplies blocks on the
+tensor cores; num_warps sets the threads per program and num_stages the
+software pipelining of loads; triton.autotune picks among configurations.
+The first kernel: RMSNorm, one program per row, one read and one write of
+the row. -->
+
+```{.python .input #kernels-rmsnorm-kernel}
+%%tab pytorch
+@triton.jit  #@save
+def _rmsnorm_kernel(X, W, Y, d, eps, BLOCK: tl.constexpr):
+    row = tl.program_id(0)  # one program per row
+    cols = tl.arange(0, BLOCK)
+    mask = cols < d
+    x = tl.load(X + row * d + cols, mask=mask, other=0.0).to(tl.float32)
+    w = tl.load(W + cols, mask=mask, other=0.0).to(tl.float32)
+    r = tl.rsqrt(tl.sum(x * x, axis=0) / d + eps)
+    tl.store(Y + row * d + cols, (x * r * w).to(Y.dtype.element_ty),
+             mask=mask)
+
+def triton_rmsnorm(x, weight, eps=1e-6):  #@save
+    """RMSNorm over the last dimension of x in one Triton kernel (one
+    program per row, FP32 accumulation)."""
+    X = x.reshape(-1, x.shape[-1]).contiguous()
+    Y = torch.empty_like(X)
+    _rmsnorm_kernel[(X.shape[0],)](X, weight, Y, X.shape[1], eps,
+                                   BLOCK=triton.next_power_of_2(X.shape[1]))
+    return Y.view_as(x)
+```
+
+<!-- Placeholder (prose): checked against PyTorch's RMSNorm in FP32, then
+timed against the formula written out in PyTorch (one kernel per operation),
+the same formula under torch.compile, and torch's own fused kernel
+(F.rms_norm); one read and one write of x, so GB/s is 2 |x| / t, compared
+with the DRAM read rate measured in sec_lm_accelerator_design. -->
+
+```{.python .input #kernels-rmsnorm-check}
+%%tab pytorch
+def rms_norm_formula(x, weight, eps=1e-6):  #@save
+    """RMSNorm as written: x / sqrt(mean(x^2) + eps) * weight."""
+    return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + eps) * weight
+
+d = 4096
+x = torch.randn(8 * 4096, d, device='cuda')  # 8 sequences of 4,096 tokens
+w = torch.randn(d, device='cuda')
+d2l.check_close(d2l.triton_rmsnorm(x, w), F.rms_norm(x, (d,), w, eps=1e-6),
+                atol=1e-5)
+norms = d2l.time_fns({
+    'Triton': d2l.triton_rmsnorm, 'formula': d2l.rms_norm_formula,
+    'formula, compiled': torch.compile(d2l.rms_norm_formula),
+    'F.rms_norm': lambda x, w: F.rms_norm(x, (d,), w, eps=1e-6)},
+    x, w, nbytes=2 * x.nbytes)
+```
+
+### A Fused Attention Kernel
+:label:`subsec_lm_hw_flash_kernel`
+
+<!-- Placeholder (prose): the FlashAttention-2 forward in Triton. One
+program per query tile of one head; a loop over key-value tiles carries the
+running maximum m, sum s and accumulator of eq_online-softmax (restated in
+one sentence); exp2 with the scale folded in log2 e; tiles entirely below the
+diagonal need no mask, the diagonal tiles do, tiles above it are skipped
+(the causal skip); the final normalization divides by s once. GQA: query
+head h reads key-value head h // (H / H_kv). This is the one cell of the
+chapter over thirty lines: the kernel is read as a whole (as the decode
+kernel of sec_lm_decode_kernels). The bytes it moves: each query tile reads
+all earlier keys and values once, an HBM intensity of 2 B_q / b = 128 FLOP
+per byte at B_q = 128, below the 4090's ridge of 164; it runs near the roof
+only because a head's keys and values (1 MiB at the reference shape, 2 MiB
+for Qwen3-8B, cell above) stay in the 72 MiB L2. Figure
+fig_lm_hw_flash_tiles (generator flash-tiles). -->
+
+```{.python .input #kernels-flash-kernel}
+%%tab pytorch
+@triton.jit  #@save
+def _attend(q, K_tile, V_tile, m, s, acc, start, rows, N, scale,
+            MASK: tl.constexpr, CAUSAL: tl.constexpr, BLOCK_K: tl.constexpr):
+    """One key-value tile of the online softmax of a query tile."""
+    k = tl.load(K_tile, boundary_check=(0,))
+    a = tl.dot(q, tl.trans(k)) * scale  # scores in log2 units
+    if MASK:  # a tile on the diagonal, or past the last key
+        cols = start + tl.arange(0, BLOCK_K)
+        keep = cols[None, :] < N
+        if CAUSAL:
+            keep = keep & (rows[:, None] >= cols[None, :])
+        a = tl.where(keep, a, float('-inf'))
+    m_new = tl.maximum(m, tl.max(a, axis=1))
+    alpha = tl.exp2(m - m_new)  # rescale the past
+    p = tl.exp2(a - m_new[:, None])
+    v = tl.load(V_tile, boundary_check=(0,))
+    acc = acc * alpha[:, None] + tl.dot(p.to(v.dtype), v)
+    return m_new, s * alpha + tl.sum(p, axis=1), acc
+
+@triton.jit  #@save
+def _flash_fwd_kernel(Q, K, V, O, sm_scale, N, H, GROUP: tl.constexpr,
+                      D: tl.constexpr, BLOCK_Q: tl.constexpr,
+                      BLOCK_K: tl.constexpr, CAUSAL: tl.constexpr):
+    i, bh = tl.program_id(0), tl.program_id(1)  # query tile, (batch, head)
+    b, h = bh // H, bh % H
+    q_base = bh * N * D
+    kv_base = (b * (H // GROUP) + h // GROUP) * N * D  # the shared KV head
+    Q_tile = tl.make_block_ptr(Q + q_base, (N, D), (D, 1), (i * BLOCK_Q, 0),
+                               (BLOCK_Q, D), (1, 0))
+    K_tile = tl.make_block_ptr(K + kv_base, (N, D), (D, 1), (0, 0),
+                               (BLOCK_K, D), (1, 0))
+    V_tile = tl.make_block_ptr(V + kv_base, (N, D), (D, 1), (0, 0),
+                               (BLOCK_K, D), (1, 0))
+    q = tl.load(Q_tile, boundary_check=(0,))
+    m = tl.full([BLOCK_Q], float('-inf'), tl.float32)
+    s = tl.zeros([BLOCK_Q], tl.float32)
+    acc = tl.zeros([BLOCK_Q, D], tl.float32)
+    scale = sm_scale * 1.4426950408889634  # e^x = 2^(x log2 e)
+    rows = i * BLOCK_Q + tl.arange(0, BLOCK_Q)
+    if CAUSAL:  # full tiles below the diagonal, then the diagonal tiles
+        lo = i * BLOCK_Q // BLOCK_K * BLOCK_K
+        hi = tl.minimum((i + 1) * BLOCK_Q, N)  # later keys: skipped
+    else:
+        lo, hi = N // BLOCK_K * BLOCK_K, N
+    for start in range(0, lo, BLOCK_K):
+        m, s, acc = _attend(q, K_tile, V_tile, m, s, acc, start, rows, N,
+                            scale, False, CAUSAL, BLOCK_K)
+        K_tile = tl.advance(K_tile, (BLOCK_K, 0))
+        V_tile = tl.advance(V_tile, (BLOCK_K, 0))
+    for start in range(lo, hi, BLOCK_K):
+        m, s, acc = _attend(q, K_tile, V_tile, m, s, acc, start, rows, N,
+                            scale, True, CAUSAL, BLOCK_K)
+        K_tile = tl.advance(K_tile, (BLOCK_K, 0))
+        V_tile = tl.advance(V_tile, (BLOCK_K, 0))
+    O_tile = tl.make_block_ptr(O + q_base, (N, D), (D, 1), (i * BLOCK_Q, 0),
+                               (BLOCK_Q, D), (1, 0))
+    tl.store(O_tile, (acc / s[:, None]).to(O.dtype.element_ty),
+             boundary_check=(0,))
+
+def flash_attention_triton(q, k, v, causal=True, block_q=128,  #@save
+                           block_k=64, num_warps=4, num_stages=2):
+    """Attention forward of q (B, H, N, d) against k and v (B, H_kv, N, d)
+    in one Triton kernel: one program per query tile and head, the online
+    softmax over key-value tiles; no dropout, no backward."""
+    q, k, v = q.contiguous(), k.contiguous(), v.contiguous()
+    B, H, N, D = q.shape
+    o = torch.empty_like(q)
+    grid = (triton.cdiv(N, block_q), B * H)
+    _flash_fwd_kernel[grid](q, k, v, o, 1 / math.sqrt(D), N, H,
+                            GROUP=H // k.shape[1], D=D, BLOCK_Q=block_q,
+                            BLOCK_K=block_k, CAUSAL=causal,
+                            num_warps=num_warps, num_stages=num_stages)
+    return o
+```
+
+<!-- Placeholder (prose): correctness against an FP32 reference (computed in
+query chunks of 1,024), not bitwise against SDPA: the kernel sums in a
+different order for every tile size. The band: the largest error at most
+2e-2 of the largest output magnitude, in BF16. -->
+
+```{.python .input #kernels-flash-check}
+%%tab pytorch
+for name, shape in shapes.items():
+    d2l.attention_error(d2l.flash_attention_triton, shape, seq, name=name)
+```
+
+### Tile Size, Warps and the Library Kernel
+:label:`subsec_lm_hw_kernel_sweep`
+
+<!-- Placeholder (prose): the sweep: block_q in {64, 128}, block_k in {32,
+64, 128}, num_warps in {4, 8} (num_stages 2) at both shapes, against SDPA's
+flash kernel and the compiled chunked attention; the table keeps the three
+best and the worst configuration per shape. Claims K1 (within 2x of SDPA)
+and K2 (at least 10x the eager chunked version of the opening). A
+configuration that needs more shared memory than an SM offers (99 KiB per
+block on Ada) does not compile; the line under the table names it. -->
+
+```{.python .input #kernels-flash-sweep}
+%%tab pytorch
+flash = d2l.flash_sweep(shapes, seq, block_q=(64, 128), block_k=(32, 64, 128),
+                        num_warps=(4, 8))
+```
+
+<!-- Placeholder (prose): registers. Triton reports, per compiled
+configuration, the registers per thread (at most 255) and the bytes spilled
+to local memory when a tile's accumulators and operands do not fit; claim
+K3: the spill point as measured, read against the throughput of each
+configuration. -->
+
+```{.python .input #kernels-spill}
+%%tab pytorch
+d2l.triton_spills(d2l.flash_attention_triton, flash)
+```
+
+## Where the Compiler Stops
+:label:`subsec_lm_hw_compiler_limits`
+
+<!-- Placeholder (prose): Inductor fuses elementwise and reduction chains
+and emits Triton for them; max-autotune picks the tiles of a single matmul;
+nothing re-tiles a chain of matmuls across a softmax. The list below is what
+torch.compile made of the chunked attention (claim K4): library matmuls for
+the two products of every chunk, and Triton kernels for the softmax
+arithmetic between them; the scores of every chunk still go through
+memory. -->
+
+```{.python .input #kernels-inductor-kernels}
+%%tab pytorch
+d2l.inductor_kernels(torch.compile(d2l.chunked_causal_attention), q, k, v)
+```
+
+<!-- Placeholder (prose): FlashAttention-2's partition (one paragraph: query
+tiles across programs, no inter-program reduction in the forward pass);
+FlashAttention-3 on Hopper (one paragraph, prose only: TMA, warp
+specialization, asynchrony, FP8; the A100 and the 4090 have no TMA);
+fused training kernels beyond attention (one paragraph: chunked
+cross-entropy that never materializes the logits, fused RMSNorm and RoPE;
+Liger Kernel). -->
+
+<!-- Placeholder (prose): the A100 twin (campaign C-T2) runs the same
+sweeps on an A100 PCIe 40 GB (108 SMs, 40 MB L2); claim K6 (the same ratios
+on the A100) is pending: part of the A100 campaign. -->
+<!-- campaign: lm-hw-a100-microbench-v1 -->
+
+```{.python .input #kernels-a100-twin}
+%%tab pytorch
+d2l.flash_sweep_table(d2l.hw_campaign_log('a100-microbench'))
+```
+
+<!-- Placeholder (prose): close: forward to sec_lm_workload_hardware (which
+workloads sit on which side of the ridge) and to sec_lm_decode_kernels (the
+split-KV decode kernel reuses this vocabulary). -->
+
+## Summary
+
+<!-- Placeholder (prose): 3-6 sentences. -->
+
+## Exercises
+
+<!-- Placeholder (prose): 7-9 exercises per S/spec/22.2.md part 8: K and V
+re-reads and the L2 condition for Qwen3-8B at 32,768 tokens (derive); INT8
+tile intensity and register bytes (derive); the saw-tooth at M = 128 x 128
+against 129 x 128 on this GPU's 128 SMs, or 108 on an A100 (measure); the
+backward kernel of the Triton tutorial and the backward/forward ratio
+(measure); max-autotune on the chunked attention does not reach the fused
+kernel, read the generated Triton (check); open: fuse RMSNorm into the QKV
+prologue. -->

@@ -25,6 +25,7 @@ import contextlib
 import glob
 import io
 import json
+import math
 import os
 import re
 import tempfile
@@ -34,6 +35,7 @@ from unittest import mock
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn.functional as F
 
 from d2l import torch as d2l
 
@@ -827,6 +829,227 @@ class TestBenchLog(unittest.TestCase):
                 d2l.regen_microbench('t2')
 
 
+# ---- 22.2 (kernels): tiles, GEMM shapes, chunked attention, displays ----
+
+def kernels_frame(rows, **attrs):
+    df = pd.DataFrame(rows)
+    df.attrs.update(gpu='RTX 4090', mem_bytes=24 * 2**30, n_sm=128, **attrs)
+    return df
+
+
+class TestTiles(unittest.TestCase):
+    def test_tile_intensity_counts_bytes(self):
+        """The formula equals a count of the bytes a tile loads slab by
+        slab and the FLOPs it does (200 random shapes, seed 0)."""
+        rng = np.random.default_rng(0)
+        for _ in range(200):
+            Tm, Tn, Tk = (int(x) for x in rng.integers(1, 9, 3) * 16)
+            K, b = Tk * int(rng.integers(1, 20)), int(rng.choice([1, 2, 4]))
+            loaded = flops = 0
+            for _ in range(0, K, Tk):  # one K-slab at a time
+                loaded += b * Tk * (Tm + Tn)
+                flops += 2 * Tm * Tn * Tk
+            self.assertAlmostEqual(d2l.tile_intensity(Tm, Tn, b),
+                                   flops / loaded, 9)
+        self.assertEqual(d2l.tile_intensity(128, 128), 64)
+
+    def test_tile_roof(self):
+        t = d2l.tile_roof(committed_specs().loc[['RTX 4090',
+                                                 'A100 PCIe 40 GB']])
+        self.assertEqual(t.loc['RTX 4090', 'T'], 328)
+        self.assertEqual(t.loc['A100 PCIe 40 GB', 'T'], 402)
+        self.assertAlmostEqual(t.loc['RTX 4090', 'acc_kib'],
+                               4 * 328**2 / 1024, 9)
+        self.assertAlmostEqual(t.loc['A100 PCIe 40 GB', 'ridge'], 200.6, 1)
+        self.assertTrue((t.acc_kib > t.rf_kib).all())
+
+
+class TestGemmShapes(unittest.TestCase):
+    def test_flop_counter(self):
+        """Exact against FlopCounterMode's matmul FLOPs of a 2-layer Qwen3
+        forward pass on the CPU (the attention scores counted apart)."""
+        from torch.utils.flop_counter import FlopCounterMode
+        from transformers import Qwen3Config, Qwen3ForCausalLM
+        cfg = Qwen3Config(hidden_size=64, intermediate_size=96,
+                          num_hidden_layers=2, num_attention_heads=4,
+                          num_key_value_heads=2, head_dim=16, vocab_size=500,
+                          tie_word_embeddings=True, attn_implementation='sdpa')
+        torch.manual_seed(0)
+        model = Qwen3ForCausalLM(cfg).eval()
+        T = 24
+        with torch.no_grad(), FlopCounterMode(display=False) as c:
+            model(torch.randint(0, 500, (1, T)))
+        mm = sum(n for op, n in c.get_flop_counts()['Global'].items()
+                 if str(op) in ('aten.mm', 'aten.addmm', 'aten.bmm'))
+        g = d2l.gemm_shapes(cfg, T)
+        self.assertEqual(round(g.gflop.sum() * 1e9), mm)
+        self.assertEqual(list(g.name), ['QKV', 'out', 'gate-up', 'down',
+                                        'head'])
+        self.assertTrue((g.M == T).all())
+
+    def test_flops_per_token(self):
+        """Tied: sum(GFLOP) / tokens = flops_per_token / 3. Untied: chapter
+        21's convention also counts the embedding table (V d) as a matrix,
+        which no product of the forward pass multiplies."""
+        R = d2l.r2_config('r2').arch
+        g = d2l.gemm_shapes(R, 4096)
+        self.assertAlmostEqual(g.gflop.sum() * 1e9 / 4096,
+                               d2l.flops_per_token(R) / 3, 3)
+        cfg = d2l.HW_SHAPES['dense-70b']
+        g = d2l.gemm_shapes(cfg, 1)
+        V, d = cfg.vocab_size, cfg.hidden_size
+        self.assertAlmostEqual(g.gflop.sum() * 1e9,
+                               d2l.flops_per_token(cfg) / 3 - 2 * V * d, 0)
+
+
+class TestChunkedAttention(unittest.TestCase):
+    def test_against_math_attention(self):
+        """GQA, a sequence that is not a multiple of the chunk, FP32 on the
+        CPU: equal to the math attention to 1e-5."""
+        from torch.nn.attention import SDPBackend, sdpa_kernel
+        g = torch.Generator().manual_seed(0)
+        B, H, H_kv, N, d = 2, 6, 2, 300, 16
+        q = torch.randn(B, H, N, d, generator=g)
+        k, v = (torch.randn(B, H_kv, N, d, generator=g) for _ in range(2))
+        out = d2l.chunked_causal_attention(q, k, v, chunk=128)
+        with sdpa_kernel(SDPBackend.MATH):
+            ref = F.scaled_dot_product_attention(
+                q, k.repeat_interleave(3, 1), v.repeat_interleave(3, 1),
+                is_causal=True)
+        torch.testing.assert_close(out, ref, atol=1e-5, rtol=0)
+        K, V = k[1].repeat_interleave(3, 0), v[1].repeat_interleave(3, 0)
+        torch.testing.assert_close(d2l._attention_fp32(q[1], K, V, 100, 64),
+                                   ref[1, :, 100:164], atol=1e-5, rtol=0)
+
+    def test_flops(self):
+        q = torch.zeros(8, 12, 4096, 64)
+        self.assertEqual(d2l._attn_flops(q), 4 * 8 * 12 * 4096**2 * 64 // 2)
+
+
+class TestKernelDisplays(unittest.TestCase):
+    def out(self, fn, *args, **kwargs):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            fn(*args, **kwargs)
+        lines = buf.getvalue().splitlines()
+        for line in lines:
+            self.assertLessEqual(len(line), 79, line)
+        return lines
+
+    def test_check_close(self):
+        a = torch.zeros(3)
+        self.assertIn('max abs error 1.0e-06',
+                      self.out(d2l.check_close, a, a + 1e-6, atol=1e-5)[0])
+        with quiet(), self.assertRaises(AssertionError):
+            d2l.check_close(a, a + 1e-3, atol=1e-5)
+
+    def test_attention_shapes(self):
+        R = d2l.r2_config('r2').arch
+        lines = self.out(d2l.attention_shapes, {
+            'reference': (R, 8), 'dense 70B': (d2l.HW_SHAPES['dense-70b'], 1)},
+            4096, l2_bytes=72 * 2**20)
+        self.assertEqual(lines[0], 'L2 of this GPU: 72 MiB')
+        self.assertRegex(lines[2], r'reference\s+8\s+12\s+4\s+64\s+1\s+1\.4%')
+        self.assertRegex(lines[3], r'2\s+2\.8%$')
+
+    def test_sawtooth_period(self):
+        N = np.arange(1024, 8193, 64)
+        rng = np.random.default_rng(0)
+        for p in (256, 512, 1024):
+            y = 150 + 0.002 * N + 10 * ((N - 1024) % p) / p
+            self.assertEqual(d2l._sawtooth_period(
+                N, y + rng.normal(0, 2, len(N))), p)
+        self.assertIsNone(d2l._sawtooth_period(N, rng.normal(0, 1, len(N))))
+
+    def test_short_kernel(self):
+        self.assertEqual(d2l._short_kernel(
+            'void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<64,'
+            ' 128>, true>(Flash_fwd_params)'), 'flash_fwd_kernel')
+        self.assertEqual(d2l._short_kernel(
+            'void cutlass::Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_'
+            'bf16_64x64_32x6_nn_align8>(Params)'),
+            'cutlass_80_tensorop_bf16_s16816gemm_relu_bf16_64x64_32x6_...')
+        self.assertEqual(d2l._short_kernel('ampere_bf16_s16816gemm_bf16_'
+                                           '128x128_ldg8_f2f_tn'),
+                         'ampere_bf16_s16816gemm_bf16_128x128_ldg8_f2f_tn')
+
+    def flash(self):
+        rows = []
+        for shape, sdpa in (('reference', 140.0), ('Qwen3-8B', 130.0)):
+            for i, (bq, bk) in enumerate(((64, 32), (64, 64), (128, 64),
+                                          (128, 128))):
+                err = 'shared memory 128 KiB > 99 KiB' if bk == 128 else ''
+                tf = math.nan if err else 100.0 + 10 * i
+                rows.append(dict(shape=shape, arm=f'{bq} x {bk}, 4 warps',
+                                 block_q=bq, block_k=bk, num_warps=4,
+                                 tflops=tf, ms=1.0, error=err))
+            rows.append(dict(shape=shape, arm='SDPA', block_q=0, block_k=0,
+                             num_warps=0, tflops=sdpa, ms=1.0, error=''))
+            rows.append(dict(shape=shape, arm='compiled', block_q=0,
+                             block_k=0, num_warps=0, tflops=11.0, ms=1.0,
+                             error=''))
+        return kernels_frame(rows)
+
+    def test_show_flash(self):
+        lines = self.out(d2l._show_flash, self.flash())
+        self.assertRegex(lines[1], r'reference\s+128 x 64, 4 warps\s+120\s+86%')
+        self.assertTrue(any('SDPA' in l and '100%' in l for l in lines))
+        self.assertEqual(' '.join(l.strip() for l in lines[-2:]),
+                         'did not compile: reference 128 x 128, 4 warps, '
+                         'Qwen3-8B 128 x 128, 4 warps (shared memory 128 KiB '
+                         '> 99 KiB)')
+        s = d2l._flash_summary(self.flash())
+        self.assertEqual(len(s), 10)  # 3 best (one worst among them), 2 more
+
+    def test_campaign_status(self):
+        pending = d2l.CampaignPending('a100-microbench', 'C-T2',
+                                      'A100 PCIe 40 GB')
+        self.assertEqual(self.out(d2l.flash_sweep_table, pending),
+                         ['A100 PCIe 40 GB: campaign C-T2 not run yet'])
+        lines = self.out(d2l.flash_sweep_table, {'flash-sweep': self.flash()})
+        self.assertIn('of SDPA', lines[0])
+
+    def test_show_attention_and_fns(self):
+        r = kernels_frame([
+            dict(arm='chunked', ms=105.0, mad=0.1, tflops=2.0),
+            dict(arm='SDPA', ms=1.5, mad=0.01, tflops=136.0)])
+        lines = self.out(d2l._show_attention, r)
+        self.assertEqual(len(lines), 4)  # no launch counts without a GPU
+        lines = self.out(d2l._show_attention, r, {
+            'chunked': (75, 'triton_poi'), 'SDPA': (1, 'flash_fwd_kernel')})
+        self.assertRegex(lines[1], r'chunked\s+105\s+2\.0+\s+75')
+        self.assertEqual(lines[-1], 'SDPA ran flash_fwd_kernel (the '
+                         'FLASH_ATTENTION backend)')
+        fns = kernels_frame([dict(arm='Triton', ms=1.2, mad=0.0, gbs=894.0)])
+        with mock.patch.object(d2l, '_dram_read_gbs', lambda: 950.0):
+            lines = self.out(d2l._show_fns, fns, {'Triton': (1, 'k')})
+        self.assertRegex(lines[1], r'Triton\s+1,200\s+894\s+94%\s+1')
+
+    def test_show_wave(self):
+        N = np.arange(1024, 8193, 64)
+        saw = 160 * (N / 512) / np.ceil(N / 512)  # one wave per 512 columns
+        wave = kernels_frame(pd.concat([
+            pd.DataFrame(dict(arm='cuBLAS', N=N, tflops=158 + (N % 128 > 0))),
+            pd.DataFrame(dict(arm='Triton 128 x 128', N=N, tflops=saw))]),
+            M=4096, K=4096)
+        lines = self.out(d2l._show_wave, wave)
+        self.assertEqual(lines[0], 'cuBLAS: 158-159 TFLOP/s')
+        self.assertEqual(lines[1], 'Triton 128 x 128: 113-160 TFLOP/s, '
+                         'saw-tooth period 512 columns (measured)')
+        self.assertEqual(lines[2], 'one wave: n_SM T_m T_n / M = 128 x 128 '
+                         'x 128 / 4,096 = 512 columns')
+        self.assertEqual(len(lines), 3)
+        lines = self.out(d2l._show_wave, wave,
+                         {1024: '128 x 128', 2048: '128 x 64'})
+        self.assertEqual(lines[3], 'cuBLAS tiles by kernel name: 128 x 128, '
+                         '128 x 64')
+
+    def test_launches_skipped_in_regeneration(self):
+        with mock.patch.dict(os.environ, {'D2L_RERUN': 'box-microbench'}):
+            self.assertIsNone(d2l._arm_launches({'f': print}, ()))
+            self.assertIsNone(d2l._wave_tiles(64, 64, [64]))
+
+
 class TestCommittedClaims(unittest.TestCase):
     """Claims C1 and C2 on the committed box result: the DRAM read within
     15% of the datasheet, the L2 read at least twice the DRAM read."""
@@ -840,6 +1063,36 @@ class TestCommittedClaims(unittest.TestCase):
         self.assertGreaterEqual(t.loc['L2 read (GB/s)', 'measured'],
                                 2 * t.loc['DRAM read (GB/s)', 'measured'])
 
+
+    def test_k1_k2(self):
+        """K1: the best Triton configuration within 2x of SDPA's flash
+        kernel at both shapes; K2: at least 10x the eager chunked
+        attention (reference shape)."""
+        if not d2l.hw_registered('box-microbench'):
+            self.skipTest('box-microbench is not registered yet')
+        flash = d2l.hw_box_log('box-microbench', 'flash-sweep')
+        ways = d2l.hw_box_log('box-microbench', 'three-ways').set_index('arm')
+        for shape, part in flash.groupby('shape'):
+            best = part[part.block_q > 0].tflops.max()
+            sdpa = float(part[part.arm == 'SDPA'].tflops.iloc[0])
+            self.assertGreaterEqual(best / sdpa, 0.5, shape)
+            if shape == 'reference':
+                self.assertGreaterEqual(best / ways.loc['chunked', 'tflops'],
+                                        10)
+
+
+    def test_k5_sawtooth(self):
+        """K5: the fixed-tile arm's saw-tooth period is one wave of tiles,
+        n_SM T_m T_n / M columns, within one step of N."""
+        if not d2l.hw_registered('box-microbench'):
+            self.skipTest('box-microbench is not registered yet')
+        wave = d2l.hw_box_log('box-microbench', 'wave')
+        r = wave[wave.arm != 'cuBLAS']
+        tm, tn = d2l._WAVE_TILE
+        wave_cols = wave.attrs['n_sm'] * tm * tn / wave.attrs['M']
+        period = d2l._sawtooth_period(r.N, r.tflops)
+        self.assertIsNotNone(period)
+        self.assertLessEqual(abs(period - wave_cols), r.N.diff().iloc[1])
 
 if __name__ == '__main__':
     unittest.main()

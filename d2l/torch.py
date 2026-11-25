@@ -79,6 +79,767 @@ def _triton_modules():
 triton = _triton_modules()[0]
 tl = _triton_modules()[1]
 
+def _attn_dims(cfg):
+    """(H, H_kv, d_h) of an Arch or a Transformers config.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    L, d, H, H_kv, d_h, f, V, tie = d2l._arch_fields(cfg)
+    return H, H_kv, d_h
+
+def attention_inputs(cfg, batch, seq, dtype=torch.bfloat16, seed=0,
+                     device='cuda'):
+    """Random q (batch, H, seq, d_h) and k, v (batch, H_kv, seq, d_h) of a
+    configuration, seeded.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    H, H_kv, d_h = _attn_dims(cfg)
+    g = torch.Generator(device=device).manual_seed(seed)
+    make = lambda h: torch.randn(batch, h, seq, d_h, dtype=dtype,
+                                 device=device, generator=g)
+    return make(H), make(H_kv), make(H_kv)
+
+def sdpa_causal(q, k, v):
+    """Causal attention through SDPA's FLASH_ATTENTION backend only (GQA
+    when k and v have fewer heads than q); a shape that backend refuses
+    raises, never a silent fallback to the math kernel.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    from torch.nn.attention import SDPBackend, sdpa_kernel
+    with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
+        return F.scaled_dot_product_attention(
+            q, k, v, is_causal=True, enable_gqa=q.shape[1] != k.shape[1])
+
+def attention_shapes(shapes, seq, l2_bytes, b=2):
+    """Print each attention shape at seq tokens: batch, query and key-value
+    heads, head dimension, and the K and V bytes of one key-value head (the
+    bytes every query tile of a fused kernel re-reads) against an L2 of
+    l2_bytes.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    rows = {}
+    for name, (cfg, batch) in shapes.items():
+        H, H_kv, d_h = _attn_dims(cfg)
+        kv = 2 * seq * d_h * b  # K and V of one head
+        rows[name] = dict(B=batch, H=H, H_kv=H_kv, d_h=d_h,
+                          kv_mib=kv / 2**20, l2=f'{kv / l2_bytes:.1%}')
+    print(f'L2 of this GPU: {l2_bytes / 2**20:g} MiB')
+    show_table(pd.DataFrame.from_dict(rows, orient='index'),
+               digits={'kv_mib': 0}, headers={
+                   'kv_mib': 'K+V per head (MiB)', 'l2': 'of L2'})
+
+def check_close(actual, expected, atol):
+    """Print the largest absolute difference and raise beyond atol.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    err = float((actual.float() - expected.float()).abs().max())
+    print(f'max abs error {err:.1e} (tolerance {atol:g})')
+    if not err <= atol:
+        raise AssertionError(f'max abs error {err:.3g} > {atol:g}')
+
+def _attention_fp32(q, k, v, start, chunk):
+    """FP32 causal attention of the queries start:start + chunk of one
+    batch element (q (H, N, d), k and v (H, N, d) with GQA already
+    expanded).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    Q = q[:, start:start + chunk].float()
+    a = Q @ k.float().transpose(-2, -1) / math.sqrt(q.shape[-1])
+    rows = torch.arange(start, start + Q.shape[1], device=q.device)[:, None]
+    cols = torch.arange(k.shape[1], device=q.device)
+    a.masked_fill_(cols > rows, float('-inf'))
+    return torch.softmax(a, dim=-1) @ v.float()
+
+def attention_error(fn, shape, seq, name='', band=2e-2, chunk=1024,
+                    seed=0):
+    """Largest |fn(q, k, v) - FP32 reference| over the largest |reference|
+    for one attention shape (config, batch) at seq tokens; the reference
+    runs in query chunks (an FP32 score matrix of 32 heads x 4,096^2 is
+    2.1 GB). Prints one line and raises beyond band.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    cfg, batch = shape
+    q, k, v = attention_inputs(cfg, batch, seq, seed=seed)
+    with d2l._quiet():  # a first Triton launch compiles
+        out = fn(q, k, v)
+    G = q.shape[1] // k.shape[1]
+    err = peak = 0.0
+    for i in range(batch):
+        K, V = k[i].repeat_interleave(G, 0), v[i].repeat_interleave(G, 0)
+        for start in range(0, seq, chunk):
+            ref = _attention_fp32(q[i], K, V, start, chunk)
+            got = out[i, :, start:start + chunk].float()
+            err = max(err, float((got - ref).abs().max()))
+            peak = max(peak, float(ref.abs().max()))
+    print(f'{name}: max |error| / max |output| = {err / peak:.1e} '
+          f'(band {band:g})')
+    if not err / peak <= band:
+        raise AssertionError(f'{name}: relative error {err / peak:.3g}')
+
+def _short_kernel(name, width=60):
+    """A CUDA kernel's name without return type, namespaces, template and
+    arguments (a CUTLASS kernel by its template argument), at most width
+    characters.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    m = re.match(r'(?:void )?cutlass::Kernel\d*<(\w+)', name)
+    s = m.group(1) if m else re.split(r'[<(]', re.sub(r'^void ', '', name))[0]
+    s = s.split('::')[-1]
+    return s if len(s) <= width else s[:width - 3] + '...'
+
+def _kernel_launches(fn):
+    """{CUDA kernel name: (launches, device ms)} of one call of fn, after a
+    warm-up call.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    fn()
+    torch.cuda.synchronize()
+    cuda = torch.profiler.ProfilerActivity.CUDA
+    with d2l._quiet(), torch.profiler.profile(activities=[cuda],
+                                             acc_events=True) as prof:
+        fn()
+        torch.cuda.synchronize()
+    return {e.key: (e.count, e.device_time_total / 1e3)
+            for e in prof.key_averages()
+            if e.device_type == torch.autograd.DeviceType.CUDA}
+
+def _arm_bench(fn, args, repeats):
+    """ms per call of fn(*args) (median of repeats, CUDA events, no graph)
+    and its MAD.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    ms, mad = _hw_stats(_hw_time(lambda: fn(*args), repeats, graph=False))
+    return dict(ms=ms, mad=mad)
+
+def _time_arms(arms, args, flops=None, nbytes=None, repeats=10, warm_s=0.5):
+    """One row per arm ({name: fn}) called on args: ms, MAD, TFLOP/s for
+    flops and GB/s for nbytes per call, the SM clock and power while it ran
+    (_hw_steady).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    rows = []
+    for name, fn in arms.items():
+        with d2l._quiet():
+            fn(*args)  # compile (torch.compile, Triton) outside the timing
+        r = _hw_steady(lambda: _arm_bench(fn, args, repeats), warm_s)
+        row = dict(arm=name, **r)
+        if flops:
+            row['tflops'] = flops / r['ms'] / 1e9
+        if nbytes:
+            row['gbs'] = nbytes / r['ms'] / 1e6
+        rows.append(row)
+        torch.cuda.empty_cache()
+    return _hw_frame(rows)
+
+def _arm_launches(arms, args):
+    """{arm: (kernel launches per call, its longest kernel's name)}, read
+    with the profiler on this GPU (deterministic for the pinned software,
+    so never committed); None without a GPU or while box-microbench is
+    regenerated (in a long timing process the profiler has been seen to
+    stop recording CUDA kernels, torch 2.11).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    if not torch.cuda.is_available() or 'box-microbench' in _hw_regenerating():
+        return None
+    out = {}
+    for name, fn in arms.items():
+        with d2l._quiet():
+            launches = _kernel_launches(lambda: fn(*args))
+        top = max(launches, key=lambda n: launches[n][1]) if launches else ''
+        out[name] = (sum(c for c, _ in launches.values()), _short_kernel(top))
+    return out
+
+def _arms_live(r, same, arms, args, names, col, unit):
+    """Live line of a timed-arms table: the arms in names re-timed once,
+    their col scaled by committed ms / live ms.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    pts = []
+    for i, name in enumerate(r.arm):
+        if name in names and name in arms:
+            live = _time_arms({name: arms[name]}, args, warm_s=0.25)
+            pts.append((name, r[col].iloc[i],
+                        r[col].iloc[i] * r.ms.iloc[i] / live.ms.iloc[0],
+                        _hw_noise(r, i, 'ms')))
+    return _hw_agreement(pts, same, unit)
+
+def _attn_flops(q):
+    """Useful FLOPs of causal attention of q (B, H, N, d): half of the two
+    products' 4 B H N^2 d.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    B, H, N, d = q.shape
+    return 2 * B * H * N * N * d
+
+def _show_attention(r, launches=None):
+    """The timed arms; with launches ({arm: (count, kernel)}, read live),
+    the kernel launches per call and the kernel SDPA ran.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    if r.empty:
+        return
+    t = r.set_index('arm')[['ms', 'tflops']]
+    if launches:
+        t['kernels'] = [launches[a][0] for a in t.index]
+    show_table(t, headers={'tflops': 'TFLOP/s*',
+                           'kernels': 'kernels per call'})
+    print('* useful causal FLOPs per call: 2 B H N^2 d_h')
+    if launches and 'SDPA' in launches:
+        print(f"SDPA ran {launches['SDPA'][1]} (the FLASH_ATTENTION backend)")
+
+def time_attention(arms, q, k, v, repeats=10, live=('compiled', 'SDPA')):
+    """Milliseconds, TFLOP/s (useful causal FLOPs) and kernel launches per
+    call of each causal attention arm ({name: fn(q, k, v)}), each after a
+    warm-up, with the SM clock and power while it ran; the live check
+    re-times the arms named in live.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    config = dict(arms=list(arms), q=list(q.shape), kv=list(k.shape),
+                  dtype=str(q.dtype), repeats=repeats)
+    compute = lambda: _time_arms(arms, (q, k, v), flops=_attn_flops(q),
+                                 repeats=repeats)
+    return _hw_result(
+        'box-microbench', compute, config, entry='three-ways',
+        live_check=lambda r, same: _arms_live(r, same, arms, (q, k, v), live,
+                                              'tflops', 'TFLOP/s'),
+        show=lambda r: _show_attention(r, _arm_launches(arms, (q, k, v))),
+        live_label='attention')
+
+def _dram_read_gbs():
+    """The DRAM read plateau of the committed bandwidth ladder (GB/s), or
+    None while it is absent.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    try:
+        ladder = hw_box_log('box-microbench', 'ladder')
+    except (KeyError, OSError):
+        return None
+    return None if ladder.empty else _ladder_plateaus(ladder)[1]
+
+def _show_fns(r, launches=None):
+    """Microseconds and GB/s per arm against the committed DRAM read rate;
+    with launches (read live), the kernels per call.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    if r.empty:
+        return
+    t = r.set_index('arm')
+    t['us'] = t.ms * 1e3
+    cols, headers = ['us', 'gbs'], {'us': 'us per call', 'gbs': 'GB/s'}
+    dram = _dram_read_gbs()
+    if dram:
+        t['of_dram'] = [f'{x / dram:.0%}' for x in t.gbs]
+        cols.append('of_dram')
+        headers['of_dram'] = f'of DRAM read ({_hw_sig(dram)} GB/s)'
+    if launches:
+        t['kernels'] = [launches[a][0] for a in t.index]
+        cols.append('kernels')
+    show_table(t[cols], digits={'us': 0, 'gbs': 0}, headers=headers)
+
+def time_fns(fns, *args, nbytes, repeats=20, entry='rmsnorm'):
+    """Microseconds and GB/s (nbytes moved per call) of each function
+    ({name: fn(*args)}) on args, each after a warm-up, against the DRAM
+    read rate of the committed bandwidth ladder; the committed result is
+    the entry named entry (the RMSNorm kernels of the page).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    config = dict(arms=list(fns), shapes=[list(a.shape) for a in args],
+                  dtypes=[str(a.dtype) for a in args], nbytes=int(nbytes),
+                  repeats=repeats)
+    compute = lambda: _time_arms(fns, args, nbytes=nbytes, repeats=repeats)
+    return _hw_result(
+        'box-microbench', compute, config, entry=entry,
+        live_check=lambda r, same: _arms_live(r, same, fns, args, tuple(fns),
+                                              'gbs', 'GB/s'),
+        show=lambda r: _show_fns(r, _arm_launches(fns, args)),
+        live_label='RMSNorm')
+
+def _shape_sweep_compute(products, M, repeats):
+    rows = []
+    for name, n, k in products:
+        for m in sorted(M, reverse=True):  # largest first: a warm card
+            if _hw_fits(4 * (m * k + n * k) + 2 * m * n):
+                rows.append(dict(name=name, M=m, N=n, K=k, **_hw_steady(
+                    lambda: d2l.hw_matmul_bench(m, n, k, 'bf16', repeats),
+                    warm_s=0.25)))
+                torch.cuda.empty_cache()
+    order = [p[0] for p in products]
+    rows.sort(key=lambda r: (order.index(r['name']), r['M']))
+    return _hw_frame(rows)
+
+def _shape_live(r, same):
+    rows = r[r.name == r.name.iloc[0]]  # the first product at three M
+    pts = []
+    for j in (0, len(rows) // 2, len(rows) - 1):
+        i = rows.index[j]
+        m, n, k = int(r.M[i]), int(r.N[i]), int(r.K[i])
+        live = d2l.hw_matmul_bench(m, n, k, 'bf16', repeats=5)['tflops']
+        pts.append((f'{r.name[i]} M={m:,}', r.tflops[i], live,
+                    _hw_noise(r, i, 'tflops')))
+    return _hw_agreement(pts, same, 'TFLOP/s')
+
+def hw_shape_sweep(cfg, M, repeats=20):
+    """Achieved BF16 TFLOP/s of each weight product of a configuration
+    (gemm_shapes) at every token count M (hw_matmul_bench, each point after
+    a short warm-up, with the SM clock and power while it ran).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    table = gemm_shapes(cfg, 1)[['name', 'N', 'K']]
+    products = [(n, int(N), int(K))
+                for n, N, K in table.itertuples(index=False)]
+    M = [int(m) for m in M]
+    config = dict(products=products, M=M, dtype='bf16', repeats=repeats)
+    return _hw_result(
+        'box-microbench', lambda: _shape_sweep_compute(products, M, repeats),
+        config, entry='shape-sweep', live_check=_shape_live,
+        live_label='matmul shapes')
+
+def plot_shape_sweep(sweep, specs, reference=None):
+    """TFLOP/s against M (log2 x) for each weight product, with the
+    datasheet BF16 peak of the measured GPU's chip-table row; the A100
+    campaign's series dotted when its log is committed (else one line).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    if sweep.empty:
+        return
+    logs, status = [sweep], ''
+    if isinstance(reference, CampaignPending):
+        status = hw_status_line(reference).replace('not run yet', 'pending')
+    elif reference and 'shape-sweep' in reference:
+        logs.append(reference['shape-sweep'])
+    X, Y, fmts, legend = [], [], [], []
+    for j, df in enumerate(logs):
+        for i, name in enumerate(dict.fromkeys(sweep.name)):
+            part = df[df.name == name]
+            X.append(part.M.to_numpy())
+            Y.append(part.tflops.to_numpy())
+            fmts.append(f'C{i}' + ('-o' if j == 0 else ':'))
+            legend.append(name if j == 0 else f'{name} ({df.attrs["gpu"]})')
+    d2l.plot(X, Y, 'tokens M', 'TFLOP/s (BF16)', fmts=fmts, xscale='log',
+             figsize=(4.5, 3))
+    ax = d2l.plt.gca()
+    ax.set_xscale('log', base=2)
+    handles = ax.get_lines()[:len(Y)]
+    chip = _hw_chip_row(sweep.attrs.get('gpu'), sweep.attrs.get('mem_bytes'),
+                        specs)
+    if chip:
+        peak = specs.loc[chip, 'p16_tflops']
+        handles.append(ax.axhline(peak, color='k', ls='--', lw=1))
+        legend.append(f'datasheet {peak:,.0f} TFLOP/s')
+    ax.set_ylim(0, None)
+    ax.legend(handles, legend, fontsize=8, loc='center left',
+              bbox_to_anchor=(1.01, 0.5), frameon=False)
+    if status:
+        print(status)
+
+def _gemm_tile(m, n, k):
+    """The cuBLAS kernel a bf16 (m x k) @ (k x n) product runs and the tile
+    its name encodes (the first 'AxB' in it), e.g. ('..._128x128_...',
+    '128 x 128'); empty strings when the profiler recorded no kernel.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    fn = d2l.hw_matmul_op(m, n, k, 'bf16')
+    launches = _kernel_launches(fn)
+    if not launches:
+        return '', ''
+    name = _short_kernel(max(launches, key=lambda s: launches[s][1]), 200)
+    tile = re.search(r'(\d+)x(\d+)', name)
+    return name, (f'{tile[1]} x {tile[2]}' if tile else '')
+
+def _wave_tiles(M, K, N, tile_every=16):
+    """{N: the tile of the cuBLAS kernel} at every tile_every-th N, read
+    live (None as for _arm_launches).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    if not torch.cuda.is_available() or 'box-microbench' in _hw_regenerating():
+        return None
+    return {n: _gemm_tile(M, n, K)[1] for n in list(N)[::tile_every]}
+
+@triton.jit
+def _tile_matmul_kernel(A, B, C, M, N, K, BLOCK_M: tl.constexpr,
+                        BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr):
+    """One BLOCK_M x BLOCK_N tile of C = A B per program (row-major).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    i, j = tl.program_id(0), tl.program_id(1)
+    a = tl.make_block_ptr(A, (M, K), (K, 1), (i * BLOCK_M, 0),
+                          (BLOCK_M, BLOCK_K), (1, 0))
+    b = tl.make_block_ptr(B, (K, N), (N, 1), (0, j * BLOCK_N),
+                          (BLOCK_K, BLOCK_N), (1, 0))
+    acc = tl.zeros((BLOCK_M, BLOCK_N), tl.float32)
+    for _ in range(0, K, BLOCK_K):
+        acc += tl.dot(tl.load(a, boundary_check=(0, 1)),
+                      tl.load(b, boundary_check=(0, 1)))
+        a, b = tl.advance(a, (0, BLOCK_K)), tl.advance(b, (BLOCK_K, 0))
+    c = tl.make_block_ptr(C, (M, N), (N, 1), (i * BLOCK_M, j * BLOCK_N),
+                          (BLOCK_M, BLOCK_N), (1, 0))
+    tl.store(c, acc.to(C.dtype.element_ty), boundary_check=(0, 1))
+
+def tile_matmul(a, b, tile=(128, 128), block_k=64, num_warps=8,
+                num_stages=3):
+    """a @ b for contiguous 2-D a and b with one fixed tile of the output
+    per program, whatever the shape (cuBLAS picks a kernel per shape).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    M, K = a.shape
+    N = b.shape[1]
+    c = torch.empty(M, N, device=a.device, dtype=a.dtype)
+    grid = (triton.cdiv(M, tile[0]), triton.cdiv(N, tile[1]))
+    _tile_matmul_kernel[grid](a, b, c, M, N, K, *tile, block_k,
+                              num_warps=num_warps, num_stages=num_stages)
+    return c
+
+_WAVE_TILE = (128, 128)  # the fixed tile of the Triton arm
+
+def _wave_bench(arm, m, n, k, repeats):
+    """TFLOP/s, ms and MAD of a BF16 m x n x k product: cuBLAS
+    (hw_matmul_bench) or tile_matmul with _WAVE_TILE.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    if arm == 'cuBLAS':
+        return d2l.hw_matmul_bench(m, n, k, 'bf16', repeats)
+    g = torch.Generator(device='cuda').manual_seed(0)
+    a = torch.randn(m, k, device='cuda', dtype=torch.bfloat16, generator=g)
+    b = torch.randn(k, n, device='cuda', dtype=torch.bfloat16, generator=g)
+    ms, mad = d2l._hw_stats(d2l._hw_time(
+        lambda: tile_matmul(a, b, _WAVE_TILE), repeats))
+    return dict(tflops=2 * m * n * k / ms / 1e9, ms=ms, mad=mad)
+
+def _wave_arm_name():
+    return 'Triton {} x {}'.format(*_WAVE_TILE)
+
+def _wave_compute(M, K, N, repeats):
+    _hw_steady(lambda: d2l.hw_matmul_bench(M, max(N), K, 'bf16', 5),
+               warm_s=2.0)  # the card at its loaded clock before the sweep
+    rows = [dict(arm=arm, N=n, **_hw_steady(
+        lambda: _wave_bench(arm, M, n, K, repeats), warm_s=0.1))
+        for arm in ('cuBLAS', _wave_arm_name()) for n in N]
+    df = _hw_frame(rows)
+    df.attrs.update(M=M, K=K)
+    return df
+
+def _sawtooth_period(N, y, min_ratio=4.0):
+    """The period (in N) of the strongest periodic component of y over the
+    evenly spaced N, after removing a linear trend: the periodogram's peak
+    over periods from two steps to half the range; None when that peak is
+    below min_ratio times the median power (no clear saw-tooth).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    N, y = np.asarray(N, float), np.asarray(y, float)
+    r = y - np.polyval(np.polyfit(N, y, 1), N)
+    step = N[1] - N[0]
+    periods = np.arange(2 * step, (N[-1] - N[0]) / 2 + step, step)
+    power = np.array([np.abs(np.sum(r * np.exp(-2j * np.pi * N / p)))**2
+                      for p in periods])
+    best = int(np.argmax(power))
+    return float(periods[best]) if power[best] >= min_ratio * np.median(
+        power) else None
+
+def _show_wave(wave, tiles=None):
+    """The fixed-tile arm's measured saw-tooth period against one wave of
+    tiles, n_SM T_m T_n / M columns, and the TFLOP/s range of each arm;
+    with tiles ({N: tile}, read live) the tiles cuBLAS's kernels encode.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    if wave.empty:
+        return
+    M, n_sm, (tm, tn) = wave.attrs['M'], wave.attrs['n_sm'], _WAVE_TILE
+    for arm, r in wave.groupby('arm', sort=False):
+        line = f'{arm}: {r.tflops.min():.0f}-{r.tflops.max():.0f} TFLOP/s'
+        if arm != 'cuBLAS':
+            p = _sawtooth_period(r.N, r.tflops)
+            line += (', no clear saw-tooth' if p is None else
+                     f', saw-tooth period {p:,.0f} columns (measured)')
+        print(line)
+    print(f'one wave: n_SM T_m T_n / M = {n_sm} x {tm} x {tn} / {M:,} = '
+          f'{n_sm * tm * tn / M:,.0f} columns')
+    if tiles:
+        print('cuBLAS tiles by kernel name: ' + ', '.join(
+            dict.fromkeys(t for t in tiles.values() if t)))
+
+def _wave_live(r, same):
+    """Four points of the fixed-tile arm around its largest drop.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    r = r[r.arm != 'cuBLAS'].reset_index(drop=True)
+    i = int(np.argmax(-np.diff(r.tflops.to_numpy())))  # the largest drop
+    picks = [j for j in range(i - 1, i + 3) if 0 <= j < len(r)]
+    M, K = r.attrs['M'], r.attrs['K']
+    pts = [(f'N={int(r.N[j]):,}', r.tflops[j], _wave_bench(
+        r.arm[j], M, int(r.N[j]), K, repeats=10)['tflops'],
+        _hw_noise(r, j, 'tflops')) for j in picks]
+    return _hw_agreement(pts, same, 'TFLOP/s')
+
+def hw_wave_sweep(M, K, N, repeats=10):
+    """BF16 TFLOP/s of an M x N x K product for every N (after one warm-up
+    of the card), with cuBLAS and with tile_matmul's one fixed tile.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    N = [int(n) for n in N]
+    config = dict(M=M, K=K, N=N, dtype='bf16', repeats=repeats,
+                  tile=list(_WAVE_TILE))
+    return _hw_result(
+        'box-microbench', lambda: _wave_compute(M, K, N, repeats), config,
+        entry='wave', live_check=_wave_live,
+        show=lambda w: _show_wave(w, _wave_tiles(M, K, N)),
+        live_label='saw-tooth')
+
+def plot_wave(wave):
+    """TFLOP/s against N of the wave sweep, one line per arm.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    if wave.empty:
+        return
+    arms = list(dict.fromkeys(wave.arm))
+    parts = [wave[wave.arm == a] for a in arms]
+    d2l.plot(parts[0].N.to_numpy(), [p.tflops.to_numpy() for p in parts],
+             'N (columns)', 'TFLOP/s (BF16)', legend=arms, figsize=(4.5, 2.5))
+
+def _flash_arms(block_q, block_k, num_warps, num_stages):
+    """{label: flash_attention_triton with that configuration}.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    import functools
+    return {f'{bq} x {bk}, {nw} warps': functools.partial(
+                d2l.flash_attention_triton, block_q=bq, block_k=bk,
+                num_warps=nw, num_stages=num_stages)
+            for bq in block_q for bk in block_k for nw in num_warps}
+
+def _resource_error(e):
+    """'shared memory 128 KiB > 99 KiB' from Triton's OutOfResources.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    return (f'{e.name} {e.required / 2**10:g} KiB > {e.limit / 2**10:g} KiB'
+            if hasattr(e, 'required') else type(e).__name__)
+
+def _flash_compute(shapes, seq, block_q, block_k, num_warps, num_stages,
+                   repeats):
+    rows = []
+    for shape, (cfg, batch) in shapes.items():
+        q, k, v = attention_inputs(cfg, batch, seq)
+        H, H_kv, d_h = _attn_dims(cfg)
+        base = dict(shape=shape, H=H, H_kv=H_kv, d_h=d_h)
+        arms = dict(_flash_arms(block_q, block_k, num_warps, num_stages),
+                    SDPA=sdpa_causal, compiled=torch.compile(
+                        d2l.chunked_causal_attention, dynamic=False))
+        for label, fn in arms.items():
+            kw = getattr(fn, 'keywords', {})  # 0: not a Triton configuration
+            tiles = {key: kw.get(key, 0)
+                     for key in ('block_q', 'block_k', 'num_warps')}
+            try:
+                r = _time_arms({label: fn}, (q, k, v), flops=_attn_flops(q),
+                               repeats=repeats, warm_s=0.25)
+                row = dict(r.iloc[0].to_dict(), error='')
+            except Exception as e:  # a tile that does not fit on chip
+                if type(e).__name__ != 'OutOfResources':
+                    raise
+                row = dict(arm=label, ms=math.nan, mad=math.nan,
+                           sm_mhz=math.nan, power_w=math.nan,
+                           tflops=math.nan, error=_resource_error(e))
+            rows.append(dict(base, **tiles, **row))
+        del q, k, v
+        torch.cuda.empty_cache()
+    df = _hw_frame(rows)
+    df.attrs.update(seq=seq, num_stages=num_stages)
+    return df
+
+def _flash_summary(r, best=3, worst=1):
+    """Per shape: the best and worst Triton configurations, SDPA and the
+    compiled chunked attention, with TFLOP/s and the fraction of SDPA.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    out = []
+    for shape, part in r.groupby('shape', sort=False):
+        ok = part[(part.error == '') & (part.block_q > 0)].sort_values(
+            'tflops', ascending=False)
+        sdpa = float(part[part.arm == 'SDPA'].tflops.iloc[0])
+        keep = pd.concat([ok.head(best), ok.tail(worst),
+                          part[part.block_q == 0]]).drop_duplicates('arm')
+        for _, row in keep.iterrows():
+            out.append(dict(shape=shape, arm=row.arm, tflops=row.tflops,
+                            of_sdpa=f'{row.tflops / sdpa:.0%}'))
+    return pd.DataFrame(out)
+
+def _show_flash(r):
+    if r.empty:
+        return
+    show_table(_flash_summary(r).set_index(['shape', 'arm']), headers={
+        'tflops': 'TFLOP/s', 'of_sdpa': 'of SDPA'})
+    import textwrap
+    failed = r[r.error != '']
+    for err, part in failed.groupby('error', sort=False):
+        print(textwrap.fill('did not compile: ' + ', '.join(
+            f'{s} {a}' for s, a in zip(part['shape'], part.arm))
+            + f' ({err})', 79, subsequent_indent='  '))
+
+def _flash_live(r, same, shapes, seq):
+    pts = []
+    for shape, (cfg, batch) in shapes.items():
+        part = r[(r['shape'] == shape) & (r.error == '')]
+        tri = part[part.block_q > 0]
+        best = tri.index[int(np.argmax(tri.tflops.to_numpy()))]
+        sdpa = part.index[list(part.arm).index('SDPA')]
+        q, k, v = attention_inputs(cfg, batch, seq)
+        arms = dict(_flash_arms(
+            (int(r.block_q[best]),), (int(r.block_k[best]),),
+            (int(r.num_warps[best]),), r.attrs.get('num_stages', 2)),
+            SDPA=sdpa_causal)
+        for i, (label, fn) in zip((best, sdpa), arms.items()):
+            live = _time_arms({label: fn}, (q, k, v), warm_s=0.25)
+            pts.append((f'{shape} {label}', r.tflops[i],
+                        r.tflops[i] * r.ms[i] / live.ms.iloc[0],
+                        _hw_noise(r, i, 'ms')))
+    return _hw_agreement(pts, same, 'TFLOP/s')
+
+def flash_sweep(shapes, seq, block_q, block_k, num_warps, num_stages=2,
+                repeats=10):
+    """TFLOP/s (useful causal FLOPs) of flash_attention_triton for every
+    (block_q, block_k, num_warps) at each attention shape, against SDPA's
+    flash kernel and the compiled chunked attention; a configuration that
+    does not fit the GPU's on-chip memory is recorded with the reason.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    dims = {name: [*_attn_dims(cfg), batch]
+            for name, (cfg, batch) in shapes.items()}
+    config = dict(shapes=dims, seq=seq, block_q=list(block_q),
+                  block_k=list(block_k), num_warps=list(num_warps),
+                  num_stages=num_stages, repeats=repeats)
+    compute = lambda: _flash_compute(shapes, seq, block_q, block_k,
+                                     num_warps, num_stages, repeats)
+    return _hw_result(
+        'box-microbench', compute, config, entry='flash-sweep',
+        live_check=lambda r, same: _flash_live(r, same, shapes, seq),
+        show=_show_flash, live_label='attention kernels')
+
+def flash_sweep_table(log):
+    """The flash sweep of a campaign log, or its one status line while the
+    log is not committed.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    if isinstance(log, CampaignPending):
+        print(hw_status_line(log))
+    elif log and 'flash-sweep' in log:
+        _show_flash(log['flash-sweep'])
+
+def _compiled_metadata(kernel):
+    """(constexpr values by name, num_warps, num_stages, registers per
+    thread, spilled 32-bit words per thread) of every compiled
+    specialization of a Triton kernel on the current GPU.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    dev = torch.cuda.current_device()
+    out = []
+    for ck in kernel.device_caches[dev][0].values():
+        ck._init_handles()
+        consts = {kernel.arg_names[key[0]]: val
+                  for key, val in ck.src.constants.items()}
+        out.append((consts, ck.metadata.num_warps, ck.metadata.num_stages,
+                    ck.n_regs, ck.n_spills))
+    return out
+
+def triton_spills(launcher, flash):
+    """Registers per thread and spilled registers (32-bit words of local
+    memory per thread) of every Triton configuration of a flash sweep,
+    read from the compiled kernels' metadata (deterministic for the pinned
+    Triton), next to each configuration's committed TFLOP/s.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    kernels = [launcher.__globals__[n] for n in launcher.__code__.co_names
+               if isinstance(launcher.__globals__.get(n),
+                             triton.runtime.JITFunction)]
+    tri = flash[flash.block_q > 0]
+    rows = {}
+    for (shape, arm), row in tri.set_index(['shape', 'arm']).iterrows():
+        H, H_kv, d = int(row.H), int(row.H_kv), int(row.d_h)
+        n = 2 * max(int(row.block_q), int(row.block_k))
+        q = torch.zeros(1, H, n, d, dtype=torch.bfloat16, device='cuda')
+        kv = torch.zeros(1, H_kv, n, d, dtype=torch.bfloat16, device='cuda')
+        try:
+            with d2l._quiet():
+                launcher(q, kv, kv, block_q=int(row.block_q),
+                         block_k=int(row.block_k),
+                         num_warps=int(row.num_warps),
+                         num_stages=flash.attrs.get('num_stages', 2))
+        except Exception as e:
+            if type(e).__name__ != 'OutOfResources':
+                raise
+        regs = spills = math.nan
+        for consts, nw, ns, n_regs, n_spills in (
+                m for k in kernels for m in _compiled_metadata(k)):
+            if (consts.get('BLOCK_Q') == row.block_q
+                    and consts.get('BLOCK_K') == row.block_k
+                    and consts.get('D') == d
+                    and consts.get('GROUP') == H // H_kv
+                    and nw == row.num_warps):
+                regs, spills = n_regs, n_spills
+        tag = shape.split('-')[-1] if '-' in shape else shape[:3]
+        label = f'{int(row.block_q)}x{int(row.block_k)} w{int(row.num_warps)}'
+        rows.setdefault(label, {}).update({
+            f'TF/s {tag}': row.tflops, f'regs {tag}': regs,
+            f'spills {tag}': spills})
+    t = pd.DataFrame.from_dict(rows, orient='index')
+    show_table(t, digits={c: 0 for c in t.columns if not c.startswith('TF')})
+    print('regs: registers per thread; spills: 32-bit words per thread in '
+          'local memory')
+
+def inductor_kernels(fn, *args, rows=8, width=79):
+    """The CUDA kernels one call of a compiled function launches, most
+    launched first: library kernels (cuBLAS, CUTLASS) by name, and the
+    Triton kernels Inductor generated by kind (pointwise, reduction) and
+    the operations each one fuses (read from its name).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    import textwrap
+    with d2l._quiet():
+        fn(*args)  # compile
+    launches = _kernel_launches(lambda: fn(*args))
+    total = sum(c for c, _ in launches.values())
+    print(f'{total} launches per call, {len(launches)} distinct kernels:')
+    kinds = {'poi': 'pointwise', 'per': 'reduction', 'red': 'reduction'}
+    for name, (c, ms) in sorted(launches.items(),
+                                key=lambda kv: -kv[1][0])[:rows]:
+        m = re.match(r'triton_(\w{3})_fused_(.*?)(_\d+)?$', name)
+        if m:  # Inductor names a kernel after the operations it fuses
+            text = (f'{c:3d} x Inductor {kinds.get(m[1], m[1])}: '
+                    + m[2].strip('_').replace('_', ' '))
+        else:
+            text = f'{c:3d} x library {_short_kernel(name, width - 16)}'
+        print(textwrap.fill(text, width, subsequent_indent=' ' * 6))
+
+def _regen_kernels():
+    """The kernels section's measurements (the page's calls): entries
+    three-ways, shape-sweep, wave, rmsnorm and flash-sweep; returns
+    (command, table) pairs for the benchmark log.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    R = d2l.r2_config('r2').arch
+    cfg_8b = d2l.hw_config('Qwen/Qwen3-8B')
+    shapes = {'reference': (R, 8), 'Qwen3-8B': (cfg_8b, 1)}
+    seq = 4096
+    q, k, v = attention_inputs(R, batch=8, seq=seq)
+    ways = time_attention({
+        'chunked': d2l.chunked_causal_attention,
+        'compiled': torch.compile(d2l.chunked_causal_attention),
+        'SDPA': sdpa_causal}, q, k, v)
+    del q, k, v
+    torch.cuda.empty_cache()
+    wave = hw_wave_sweep(M=4096, K=4096, N=range(1024, 8193, 64))
+    d = 4096
+    x = torch.randn(8 * 4096, d, device='cuda')
+    w = torch.randn(d, device='cuda')
+    norms = time_fns({
+        'Triton': d2l.triton_rmsnorm, 'formula': d2l.rms_norm_formula,
+        'formula, compiled': torch.compile(d2l.rms_norm_formula),
+        'F.rms_norm': lambda x, w: F.rms_norm(x, (d,), w, eps=1e-6)},
+        x, w, nbytes=2 * x.nbytes)
+    del x, w
+    torch.cuda.empty_cache()
+    flash = flash_sweep(shapes, seq, block_q=(64, 128), block_k=(32, 64, 128),
+                        num_warps=(4, 8))
+    sweep = hw_shape_sweep(cfg_8b, M=2**np.arange(9, 15))
+    return [('time_attention', ways), ('hw_shape_sweep', sweep),
+            ('hw_wave_sweep', wave), ('time_fns', norms),
+            ('flash_sweep', flash)]
+
 import inspect
 import collections
 from collections import defaultdict
@@ -11993,6 +12754,173 @@ def hw_matmul_bench(m, n, k, dtype, repeats=20, graph=True):
     with d2l._hw_tf32(dtype == 'tf32'):
         ms, mad = d2l._hw_stats(d2l._hw_time(fn, repeats, graph))
     return dict(tflops=2 * m * n * k / ms / 1e9, ms=ms, mad=mad)
+
+def chunked_causal_attention(q, k, v, chunk=512):
+    """Exact causal attention of q (B, H, N, d) against k and v
+    (B, H_kv, N, d), one chunk of keys at a time with the online softmax;
+    the H // H_kv query heads sharing a key-value head are stacked as rows
+    against it (GQA without copying k and v).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    B, H, N, d = q.shape
+    H_kv = k.shape[1]
+    Q = q.reshape(B, H_kv, H // H_kv * N, d)  # a group's queries as rows
+    pos_q = torch.arange(N, device=q.device).repeat(H // H_kv)[:, None]
+    lowest = torch.finfo(torch.float32).min
+    m = torch.full((B, H_kv, Q.shape[2], 1), lowest, device=q.device)
+    s = torch.zeros_like(m)
+    O = torch.zeros(Q.shape, device=q.device)
+    for start in range(0, N, chunk):
+        Kc, Vc = k[:, :, start:start + chunk], v[:, :, start:start + chunk]
+        pos_k = torch.arange(start, start + Kc.shape[2], device=q.device)
+        a = (Q @ Kc.transpose(-2, -1)).float() / math.sqrt(d)
+        a.masked_fill_(pos_k > pos_q, lowest)
+        m_new = torch.maximum(m, a.amax(-1, keepdim=True))
+        scale = torch.exp(m - m_new)  # rescale the past
+        P = torch.exp(a - m_new)
+        s = s * scale + P.sum(-1, keepdim=True)
+        O = O * scale + (P.to(Vc.dtype) @ Vc).float()
+        m = m_new
+    return (O / s).to(q.dtype).view(B, H, N, d)
+
+def tile_intensity(Tm, Tn, b=2):
+    """FLOPs per byte loaded of a Tm x Tn output tile: each K-slab of depth
+    T_k brings b T_k (Tm + Tn) bytes for 2 Tm Tn T_k FLOPs.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    return 2 * Tm * Tn / (b * (Tm + Tn))
+
+def tile_roof(rows, b=2, rf_kib=256):
+    """For each chip (a chip_specs row): the ridge R = P / beta (FLOP per
+    byte, dense 16-bit), the smallest square tile T = ceil(b R) that
+    reaches it from DRAM, its FP32 accumulators 4 T^2 (KiB), and the
+    register file of one SM (KiB).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    R = rows.p16_tflops / rows.mem_bw_tbs  # TFLOP/s over TB/s
+    T = np.ceil(b * R).astype(int)
+    return pd.DataFrame({'ridge': R, 'T': T, 'acc_kib': 4 * T**2 / 2**10,
+                         'rf_kib': rf_kib})
+
+def gemm_shapes(cfg, tokens):
+    """The weight products of one forward pass over `tokens` tokens of a
+    decoder (an Arch or a Transformers config): per product, the shape
+    M x N x K of one layer's matmul and the GFLOP over all layers (the head
+    once). The attention scores are not weight products.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    L, d, H, H_kv, d_h, f, V, tie = d2l._arch_fields(cfg)
+    products = [('QKV', (H + 2 * H_kv) * d_h, d, L), ('out', d, H * d_h, L),
+                ('gate-up', 2 * f, d, L), ('down', d, f, L), ('head', V, d, 1)]
+    return pd.DataFrame([
+        dict(name=name, M=tokens, N=n, K=k, gflop=2 * tokens * n * k * c / 1e9)
+        for name, n, k, c in products])
+
+@triton.jit
+def _rmsnorm_kernel(X, W, Y, d, eps, BLOCK: tl.constexpr):
+    row = tl.program_id(0)  # one program per row
+    cols = tl.arange(0, BLOCK)
+    mask = cols < d
+    x = tl.load(X + row * d + cols, mask=mask, other=0.0).to(tl.float32)
+    w = tl.load(W + cols, mask=mask, other=0.0).to(tl.float32)
+    r = tl.rsqrt(tl.sum(x * x, axis=0) / d + eps)
+    tl.store(Y + row * d + cols, (x * r * w).to(Y.dtype.element_ty),
+             mask=mask)
+
+def triton_rmsnorm(x, weight, eps=1e-6):
+    """RMSNorm over the last dimension of x in one Triton kernel (one
+    program per row, FP32 accumulation).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    X = x.reshape(-1, x.shape[-1]).contiguous()
+    Y = torch.empty_like(X)
+    _rmsnorm_kernel[(X.shape[0],)](X, weight, Y, X.shape[1], eps,
+                                   BLOCK=triton.next_power_of_2(X.shape[1]))
+    return Y.view_as(x)
+
+def rms_norm_formula(x, weight, eps=1e-6):
+    """RMSNorm as written: x / sqrt(mean(x^2) + eps) * weight.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + eps) * weight
+
+@triton.jit
+def _attend(q, K_tile, V_tile, m, s, acc, start, rows, N, scale,
+            MASK: tl.constexpr, CAUSAL: tl.constexpr, BLOCK_K: tl.constexpr):
+    """One key-value tile of the online softmax of a query tile.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    k = tl.load(K_tile, boundary_check=(0,))
+    a = tl.dot(q, tl.trans(k)) * scale  # scores in log2 units
+    if MASK:  # a tile on the diagonal, or past the last key
+        cols = start + tl.arange(0, BLOCK_K)
+        keep = cols[None, :] < N
+        if CAUSAL:
+            keep = keep & (rows[:, None] >= cols[None, :])
+        a = tl.where(keep, a, float('-inf'))
+    m_new = tl.maximum(m, tl.max(a, axis=1))
+    alpha = tl.exp2(m - m_new)  # rescale the past
+    p = tl.exp2(a - m_new[:, None])
+    v = tl.load(V_tile, boundary_check=(0,))
+    acc = acc * alpha[:, None] + tl.dot(p.to(v.dtype), v)
+    return m_new, s * alpha + tl.sum(p, axis=1), acc
+
+@triton.jit
+def _flash_fwd_kernel(Q, K, V, O, sm_scale, N, H, GROUP: tl.constexpr,
+                      D: tl.constexpr, BLOCK_Q: tl.constexpr,
+                      BLOCK_K: tl.constexpr, CAUSAL: tl.constexpr):
+    i, bh = tl.program_id(0), tl.program_id(1)  # query tile, (batch, head)
+    b, h = bh // H, bh % H
+    q_base = bh * N * D
+    kv_base = (b * (H // GROUP) + h // GROUP) * N * D  # the shared KV head
+    Q_tile = tl.make_block_ptr(Q + q_base, (N, D), (D, 1), (i * BLOCK_Q, 0),
+                               (BLOCK_Q, D), (1, 0))
+    K_tile = tl.make_block_ptr(K + kv_base, (N, D), (D, 1), (0, 0),
+                               (BLOCK_K, D), (1, 0))
+    V_tile = tl.make_block_ptr(V + kv_base, (N, D), (D, 1), (0, 0),
+                               (BLOCK_K, D), (1, 0))
+    q = tl.load(Q_tile, boundary_check=(0,))
+    m = tl.full([BLOCK_Q], float('-inf'), tl.float32)
+    s = tl.zeros([BLOCK_Q], tl.float32)
+    acc = tl.zeros([BLOCK_Q, D], tl.float32)
+    scale = sm_scale * 1.4426950408889634  # e^x = 2^(x log2 e)
+    rows = i * BLOCK_Q + tl.arange(0, BLOCK_Q)
+    if CAUSAL:  # full tiles below the diagonal, then the diagonal tiles
+        lo = i * BLOCK_Q // BLOCK_K * BLOCK_K
+        hi = tl.minimum((i + 1) * BLOCK_Q, N)  # later keys: skipped
+    else:
+        lo, hi = N // BLOCK_K * BLOCK_K, N
+    for start in range(0, lo, BLOCK_K):
+        m, s, acc = _attend(q, K_tile, V_tile, m, s, acc, start, rows, N,
+                            scale, False, CAUSAL, BLOCK_K)
+        K_tile = tl.advance(K_tile, (BLOCK_K, 0))
+        V_tile = tl.advance(V_tile, (BLOCK_K, 0))
+    for start in range(lo, hi, BLOCK_K):
+        m, s, acc = _attend(q, K_tile, V_tile, m, s, acc, start, rows, N,
+                            scale, True, CAUSAL, BLOCK_K)
+        K_tile = tl.advance(K_tile, (BLOCK_K, 0))
+        V_tile = tl.advance(V_tile, (BLOCK_K, 0))
+    O_tile = tl.make_block_ptr(O + q_base, (N, D), (D, 1), (i * BLOCK_Q, 0),
+                               (BLOCK_Q, D), (1, 0))
+    tl.store(O_tile, (acc / s[:, None]).to(O.dtype.element_ty),
+             boundary_check=(0,))
+
+def flash_attention_triton(q, k, v, causal=True, block_q=128,
+                           block_k=64, num_warps=4, num_stages=2):
+    """Attention forward of q (B, H, N, d) against k and v (B, H_kv, N, d)
+    in one Triton kernel: one program per query tile and head, the online
+    softmax over key-value tiles; no dropout, no backward.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    q, k, v = q.contiguous(), k.contiguous(), v.contiguous()
+    B, H, N, D = q.shape
+    o = torch.empty_like(q)
+    grid = (triton.cdiv(N, block_q), B * H)
+    _flash_fwd_kernel[grid](q, k, v, o, 1 / math.sqrt(D), N, H,
+                            GROUP=H // k.shape[1], D=D, BLOCK_Q=block_q,
+                            BLOCK_K=block_k, CAUSAL=causal,
+                            num_warps=num_warps, num_stages=num_stages)
+    return o
 
 def fit_alpha_beta(sizes, times, weights=None):
     """Fit t = alpha + s / beta to transfer times (seconds) at sizes
@@ -24261,11 +25189,13 @@ def regen_microbench(config='box'):
             n=8192, formats=('fp32', 'tf32', 'bf16', 'fp16') + fp8)
         smem = hw_smem_bench()
         lat = hw_latency_bench(sizes=2**np.arange(12, 31))
+        kernels = _regen_kernels()  # sec_lm_kernels: kernels-lib.md
         for cmd, df in (('hw_copy_bench', ladder), ('hw_matmul_bench', dtypes),
-                        ('pointer chase', lat)):
+                        ('pointer chase', lat), *kernels):
             for rec in df.to_dict('records'):
-                log.record(cmd, {k: rec[k] for k in ('bytes', 'kind', 'format')
-                                 if k in rec}, rec)
+                log.record(cmd, {k: rec[k] for k in (
+                    'bytes', 'kind', 'format', 'arm', 'name', 'M', 'N', 'K',
+                    'shape') if k in rec}, rec)
         log.record('l1 read kernel', {}, smem)
 
 d2l.HW_ARTIFACTS['box-workloads'] = ('lm-hw-buildbox-workloads-v1', 'jsonl')

@@ -1831,8 +1831,9 @@ def hw_dtype_ladder(n, formats):
 ## The Regeneration Driver
 
 `tools/hw_regen.py box-microbench` calls this in each of its three processes.
-It runs the page's calls on the full configuration (the kernels section adds
-its entries here) and writes the fingerprint, `nvidia-smi topo -m` and one
+It runs the page's calls on the full configuration, then the kernels
+section's (`_regen_kernels`, in `kernels-lib.md`: entries three-ways,
+shape-sweep, wave, rmsnorm, flash-sweep) and writes the fingerprint, `nvidia-smi topo -m` and one
 BenchLog record per measured point next to the entries. With `--config t2`
 the same calls run on the A100 of campaign C-T2 and write its log.
 
@@ -1881,10 +1882,12 @@ def regen_microbench(config='box'):
             n=8192, formats=('fp32', 'tf32', 'bf16', 'fp16') + fp8)
         smem = hw_smem_bench()
         lat = hw_latency_bench(sizes=2**np.arange(12, 31))
+        kernels = _regen_kernels()  # sec_lm_kernels: kernels-lib.md
         for cmd, df in (('hw_copy_bench', ladder), ('hw_matmul_bench', dtypes),
-                        ('pointer chase', lat)):
+                        ('pointer chase', lat), *kernels):
             for rec in df.to_dict('records'):
-                log.record(cmd, {k: rec[k] for k in ('bytes', 'kind', 'format')
-                                 if k in rec}, rec)
+                log.record(cmd, {k: rec[k] for k in (
+                    'bytes', 'kind', 'format', 'arm', 'name', 'M', 'N', 'K',
+                    'shape') if k in rec}, rec)
         log.record('l1 read kernel', {}, smem)
 ```

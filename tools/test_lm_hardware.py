@@ -3324,9 +3324,11 @@ def sweep_log(P_s=80.0, k=80.0, clocks=(0.6, 0.76, 0.92, 1.08, 1.24, 1.4),
         rows = []
         for cap in (150, 225, 300, 450):
             rows.append(dict(kind='cap', setting=cap, workload='train-8192',
-                             step_ms=100 * 450 / cap))
+                             step_ms=100 * 450 / cap, step_mad_ms=1.0,
+                             power_w=min(cap, 355.0)))
             rows.append(dict(kind='cap', setting=cap, workload='decode-b1',
-                             step_ms=3.0))
+                             step_ms=3.0 * max(1.0, 190 / cap),
+                             step_mad_ms=0.03, power_w=min(cap, 190.0)))
         df = pd.concat([df, pd.DataFrame(rows)], ignore_index=True)
     df.attrs.update(source='measured on a test card', synthetic=False)
     return df
@@ -3413,8 +3415,15 @@ class TestEnergyCost(unittest.TestCase):
         self.assertEqual(fit.f_min, f[np.argmin((60 + 90 * f**3) / f)])
         width, lines, _ = max_width(d2l.plot_dvfs, fit)
         self.assertLessEqual(width, 79)
-        self.assertIn('measured energy minimum', lines[-2])
+        self.assertIn('measured energy minimum', lines[-3])
+        self.assertIn('inside the swept clocks', lines[-2])
         self.assertEqual(lines[-1], 'measured on a test card')
+        # a sweep that stops above f*: the model extrapolates
+        fit = d2l.dvfs_fit(sweep_log(P_s=60, k=90, clocks=(1.0, 1.2, 1.4)))
+        self.assertGreater(min(fit.clocks), fit.f_star)
+        width, lines, _ = max_width(d2l.plot_dvfs, fit)
+        self.assertIn('the model extrapolates', lines[-2])
+        self.assertLessEqual(width, 79)
 
     def test_clock_sweep_needs_root(self):
         refused = d2l.HWRun([], 4, '', 'denied', 0.1, 'exit status 4')
@@ -3458,14 +3467,90 @@ class TestEnergyCost(unittest.TestCase):
 
     def test_cap_effect(self):
         width, lines, out = max_width(d2l.cap_effect, sweep_log())
-        self.assertIsNone(out)
+        self.assertEqual(len(out), 0)
         self.assertEqual(len(lines), 1)
-        self.assertIn('pending', lines[0])
+        self.assertIn('not measured yet', lines[0])
+        self.assertNotIn('C-box', lines[0])
+        # the page's E5 check holds on the empty table
+        above = out[out['cap W'] > 1.1 * out.attrs['decode_w']]
+        self.assertTrue((above['decode ratio'] - 1 < above['noise']).all())
         width, lines, t = max_width(d2l.cap_effect, sweep_log(caps=True))
         self.assertLessEqual(width, 79)
         self.assertEqual(list(t['cap W']), [150, 225, 300])
         np.testing.assert_allclose(t['train ratio'], [3, 2, 1.5])
-        np.testing.assert_allclose(t['decode ratio'], 1)
+        np.testing.assert_allclose(t['decode ratio'], [190 / 150, 1, 1])
+        np.testing.assert_allclose(t['noise'], 0.03)  # 3 x 0.01 < floor
+        self.assertEqual(t.attrs['decode_w'], 190.0)
+        self.assertIn('measured on a test card', lines[-1])
+        self.assertIn('decode draws 190 W', lines[-1])
+        # E5 holds above decode's draw, and the 150 W cap below it is out
+        above = t[t['cap W'] > 1.1 * t.attrs['decode_w']]
+        self.assertEqual(list(above['cap W']), [225, 300])
+        self.assertTrue((above['decode ratio'] - 1 < above['noise']).all())
+        log = sweep_log(caps=True)
+        log = log[~log.workload.str.startswith('train')]
+        log.attrs.update(source='x', synthetic=False)
+        with self.assertRaisesRegex(ValueError, 'no train workload'):
+            d2l.cap_effect(log)
+
+    def test_quiet_window_discards_contended(self):
+        flags = iter([1.0, 1.0, 0.0])
+        window = lambda step, work, **kw: dict(contended=next(flags), n=1)
+        with mock.patch.object(d2l, '_power_window', window):
+            self.assertEqual(d2l._quiet_window(None, 1)['contended'], 0.0)
+        window = lambda step, work, **kw: dict(contended=1.0)
+        with mock.patch.object(d2l, '_power_window', window):
+            with self.assertRaisesRegex(RuntimeError, 'foreign process'):
+                d2l._quiet_window(None, 1)
+
+    def test_power_window_counter(self):
+        samples = [dict(t=0.1 * i, power_w=200.0, sm_mhz=2500,
+                        throttle=0x4) for i in range(11)]
+
+        @contextlib.contextmanager
+        def trace(hz):
+            yield samples
+        energy = iter([1000.0, 1100.0])  # J at the window's two ends
+        contention = iter([(0, 0), (1, 0)])  # a foreign process appears
+        with mock.patch.object(d2l, '_hw_power_trace', trace), \
+                mock.patch.object(d2l, '_hw_energy_j', lambda: next(energy)), \
+                mock.patch.object(d2l, '_hw_contention',
+                                  lambda: next(contention)), \
+                mock.patch.object(d2l.torch.cuda, 'synchronize', lambda: 0):
+            w = d2l._power_window(lambda: None, 5, steps=4, warm_s=0)
+        self.assertEqual(w['steps'], 4)
+        self.assertAlmostEqual(w['j_per_unit_counter'], 100 / 20)
+        self.assertAlmostEqual(w['power_w'], 200.0)
+        self.assertEqual(w['contended'], 1.0)
+        self.assertEqual(w['thr_SW_power_cap'], 1.0)
+        self.assertGreaterEqual(w['step_mad_ms'], 0)
+
+    def test_cap_sweep_safety(self):
+        with mock.patch.object(d2l, '_hw_visible_uuids', lambda: ['GPU-x']), \
+                mock.patch.object(d2l, '_hw_gpu_limits', lambda: {}):
+            with self.assertRaisesRegex(RuntimeError, 'default power limit'):
+                d2l._cap_sweep([300], ['decode-b1'])
+        refused = d2l.HWRun([], 4, '', 'denied', 0.1, 'exit status 4')
+        calls = []
+
+        def run(cmd, timeout_s, **kw):
+            calls.append(cmd[3:])
+            return refused
+        with mock.patch.object(d2l, 'hw_run', run), mock.patch.object(
+                d2l, '_hw_visible_uuids', lambda: ['GPU-x']), \
+                mock.patch.object(d2l, '_hw_gpu_limits',
+                                  lambda: {'power_default_limit': 450.0}):
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf), \
+                    self.assertRaisesRegex(PermissionError, 'root'):
+                d2l._cap_sweep([300], ['decode-b1'])
+        self.assertEqual(calls, [['-pl', '300'], ['-pl', '450']])
+        self.assertIn('-pl 450 failed', buf.getvalue())  # one line
+        self.assertEqual(len(buf.getvalue().splitlines()), 1)
+        with mock.patch.object(d2l.os, 'geteuid', lambda: 0), \
+                mock.patch.dict(os.environ, {'HF_HOME': ''}):
+            with self.assertRaisesRegex(RuntimeError, 'HF_HOME'):
+                d2l.hw_root_sweep()
 
     def test_decode_slopes_and_display(self):
         e = decode_frame()
@@ -3493,15 +3578,19 @@ class TestEnergyCost(unittest.TestCase):
         self.assertIn('SW power cap', lines[3])
         self.assertIn('matmul 8192^3', lines[3])
         self.assertIn('limit 450 W', lines[-1])
+        self.assertIn('idle (context open)', lines[1])
+        self.assertNotIn('top SM', lines[-1])
         tr = pd.DataFrame(dict(tokens_per_step=[8192, 32768], accum=[1, 4],
                                tokens_per_s=[9e4, 1e5],
                                power_w=[420.0, 430.0],
                                j_per_token=[0.0047, 0.0043],
+                               j_per_token_counter=[0.0048, 0.0043],
                                mfu=[0.45, 0.5]))
         tr.attrs['peak_flops'] = 165.2e12
         width, lines, _ = max_width(d2l._show_train_energy, tr)
         self.assertLessEqual(width, 79)
-        self.assertIn('165 TFLOP/s', lines[-1])
+        self.assertIn('165 TFLOP/s', lines[-2])
+        self.assertIn('within 2.1%', lines[-1])
 
     def test_cost_functions(self):
         N, D, P = 1e9, 1e12, 989.4e12
@@ -3625,14 +3714,33 @@ class TestEnergyCost(unittest.TestCase):
         with mock.patch.object(d2l, '_reference_run_mfu', lambda a: None), \
                 mock.patch.object(d2l, 'hw_box_log', lambda n, e: tr), \
                 mock.patch.object(d2l, '_box_qwen8b_mfu',
-                                  lambda cfg: (0.5, 2048)), \
+                                  lambda cfg: (0.7, 2048)), \
                 mock.patch.object(d2l, 'hw_campaign_log', lambda n: table):
             df = d2l.training_mfu()
-        self.assertEqual(list(df.model), ['reference'] + ['Qwen3-8B'] * 3)
-        self.assertEqual(df.mfu[0], 0.45)
+        self.assertEqual(list(df.model), ['reference'] + ['Qwen3-8B'] * 4)
+        self.assertAlmostEqual(df.mfu[0], 0.425)  # the median
+        box = df[(df.model == 'Qwen3-8B') & (df.chip == 'RTX 4090')].iloc[0]
+        self.assertEqual(box['mfu'], 0.7)
+        self.assertIn('upper bound', box['source'])
         h100 = df[df.chip == 'H100 SXM'].iloc[0]
         self.assertEqual((h100['mfu'], h100['T']), (0.38, 4096))
-        self.assertIn('upper bound', df[df.chip == 'B200'].source.iloc[0])
+        for chip in ('A100 SXM 80 GB', 'B200'):
+            r = df[df.chip == chip].iloc[0]
+            self.assertEqual((r['mfu'], r['T']), (0.4, 2048))
+            self.assertIn('stated', r['source'])
+        # a 4090 MFU never appears on another chip
+        self.assertEqual(set(df[df.mfu == 0.7].chip), {'RTX 4090'})
+        pending = d2l.CampaignPending('mfu-table', 'chapter 23', 'x')
+        with mock.patch.object(d2l, '_reference_run_mfu', lambda a: None), \
+                mock.patch.object(d2l, 'hw_box_log', lambda n, e: tr), \
+                mock.patch.object(d2l, '_box_qwen8b_mfu',
+                                  lambda cfg: (0.7, 2048)), \
+                mock.patch.object(d2l, 'hw_campaign_log',
+                                  lambda n: pending):
+            df = d2l.training_mfu()
+        dc = df[df.chip != 'RTX 4090']
+        self.assertEqual(list(dc.mfu), [0.4] * 3)
+        self.assertLessEqual(max(map(len, df.source)), 30)
         with mock.patch.dict(d2l.DATA_HUB, {}, clear=True):
             self.assertEqual(d2l.training_goodput(0.85)[0], 0.85)
         with mock.patch.object(d2l, 'hw_campaign_log',

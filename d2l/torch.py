@@ -13800,10 +13800,7 @@ def hw_clock_sweep(clocks, workloads, device=0):
     card the power trace reads); needs root, restores the default clocks.
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    if device != 0:
-        raise ValueError('make the card visible GPU 0 (CUDA_VISIBLE_DEVICES)')
-    uuid = d2l._hw_visible_uuids()[device]
-    smi = lambda *args: d2l.hw_run(['nvidia-smi', '-i', uuid, *args], 60)
+    smi = d2l.hw_smi_card(device)  # nvidia-smi on that card (by UUID)
     if smi('-lgc', f'{clocks[0]},{clocks[0]}').refused:
         raise PermissionError('locking the SM clock needs root')
     rows = []
@@ -13812,7 +13809,7 @@ def hw_clock_sweep(clocks, workloads, device=0):
             smi('-lgc', f'{f},{f}')  # minimum = maximum: the clock is pinned
             rows += d2l._sweep_rows('clock', f, workloads)
     finally:
-        smi('-rgc')  # back to the default clocks
+        smi.restore('-rgc')  # back to the default clocks, or say it failed
     return pd.DataFrame(rows)
 
 def energy_per_token(power_trace, tokens):
@@ -32318,36 +32315,61 @@ def _throttle_names(row, share=0.5):
              if row.get(f'thr_{name.replace(" ", "_")}', 0) >= share]
     return ', '.join(names) or 'none'
 
+def _hw_energy_j():
+    """The first visible GPU's cumulative energy counter in J (NVML's
+    nvmlDeviceGetTotalEnergyConsumption, Volta and later), or None where
+    it cannot be read.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    try:
+        import pynvml
+        pynvml.nvmlInit()
+        try:
+            h = pynvml.nvmlDeviceGetHandleByUUID(_hw_visible_uuids()[0])
+            return pynvml.nvmlDeviceGetTotalEnergyConsumption(h) / 1e3
+        finally:
+            pynvml.nvmlShutdown()
+    except Exception:
+        return None
+
 def _power_window(step, work, seconds=None, steps=None, warm_s=None,
                   hz=None):
     """Run step() (work units each) for warm_s seconds, then for `seconds`
-    or `steps` under a power trace. A dict: rate (units/s), the trace's mean
-    power (W, trapezoid), median SM and memory clocks (MHz) and
-    temperature, energy per unit (J), the clock-event fractions, whether a
-    foreign process was on the card, and the trace itself.
+    or `steps` under a power trace. A dict: rate (units/s), the median step
+    time and its median absolute deviation (ms), the trace's mean power (W,
+    trapezoid), median SM and memory clocks (MHz) and temperature, energy
+    per unit (J) from the trace and, independently, from the card's energy
+    counter, the clock-event fractions, whether a foreign process was on
+    the card, and the trace itself.
 
     Defined in :numref:`sec_lm_energy_cost`"""
     warm_s = _HW_POWER['warm_s'] if warm_s is None else warm_s
     hz = hz or _HW_POWER['hz']
-    t = time.perf_counter()
-    while time.perf_counter() - t < warm_s:
+    t_warm = time.perf_counter()
+    while time.perf_counter() - t_warm < warm_s:
         step()
         torch.cuda.synchronize()
     foreign = _hw_contention()[0]
     with _hw_power_trace(hz) as samples:
-        n, t0 = 0, time.perf_counter()
-        while n < steps if steps else time.perf_counter() - t0 < seconds:
+        E0, times, t0 = _hw_energy_j(), [], time.perf_counter()
+        while (len(times) < steps if steps
+               else time.perf_counter() - t0 < seconds):
+            t = time.perf_counter()
             step()
             torch.cuda.synchronize()
-            n += 1
-        elapsed = time.perf_counter() - t0
+            times.append(time.perf_counter() - t)
+        elapsed, E1 = time.perf_counter() - t0, _hw_energy_j()
     foreign += _hw_contention()[0]
+    n, times = len(times), np.array(times)
     rate = n * work / elapsed
     P = np.array([s['power_w'] for s in samples], dtype=float)
     ts = np.array([s['t'] for s in samples], dtype=float)
     span = ts[-1] - ts[0] if len(ts) > 1 else 0.0
+    counted = work and E0 is not None and E1 is not None
     return dict(
         rate=rate, seconds=elapsed, steps=n,
+        step_ms=1e3 * float(np.median(times)),
+        step_mad_ms=1e3 * float(np.median(np.abs(times - np.median(times)))),
         power_w=(np.trapezoid(P, ts) / span if span else
                  float(np.mean(P)) if len(P) else math.nan),
         sm_mhz=_hw_median(samples, 'sm_mhz'),
@@ -32355,17 +32377,23 @@ def _power_window(step, work, seconds=None, steps=None, warm_s=None,
         temp_c=_hw_median(samples, 'temp_c'),
         j_per_unit=(d2l.energy_per_token(samples, rate * span)
                     if work and span else math.nan),
+        j_per_unit_counter=(E1 - E0) / (n * work) if counted else math.nan,
         contended=float(bool(foreign)), **_throttle_fractions(samples),
         trace=dict(t=ts.round(3).tolist(), power_w=P.round(1).tolist(),
                    sm_mhz=[s.get('sm_mhz') for s in samples]))
 
-def _quiet_window(step, work, **kwargs):
-    """_power_window, repeated once if a foreign process shared the card
-    (the second window is kept either way; its contended flag says so).
+def _quiet_window(step, work, tries=3, **kwargs):
+    """_power_window, repeated while a foreign process shared the card, up
+    to tries windows; raises if every one was shared, so no contended
+    window reaches a committed result.
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    w = _power_window(step, work, **kwargs)
-    return _power_window(step, work, **kwargs) if w['contended'] else w
+    for _ in range(tries):
+        w = _power_window(step, work, **kwargs)
+        if not w['contended']:
+            return w
+    raise RuntimeError(f'a foreign process shared the card in {tries} '
+                       'windows in a row: regenerate when it is free')
 
 def _split_traces(rows, key):
     """rows without their traces, and the traces keyed by key(row).
@@ -32376,17 +32404,17 @@ def _split_traces(rows, key):
 
 def _sweep_rows(kind, setting, workloads, seconds=10):
     """One row per workload at one sweep setting (a locked clock in MHz or
-    a power cap in W): the traced window and the step time.
+    a power cap in W): the traced window with its median step time and
+    that time's median absolute deviation.
 
     Defined in :numref:`sec_lm_energy_cost`"""
     rows = []
     for name in workloads:
         step, work, unit = _power_load(name)
-        w = _power_window(step, work, seconds=seconds)
+        w = _quiet_window(step, work, seconds=seconds)
         w.pop('trace')
         rows.append(dict(kind=kind, setting=setting, workload=name,
-                         unit=unit, step_ms=1e3 * w['seconds'] / w['steps'],
-                         **w))
+                         unit=unit, **w))
         del step
         d2l.lm_free()
     return rows
@@ -32413,8 +32441,9 @@ def _profile_compute(workloads, seconds):
                     hz=_HW_POWER['hz'], **_power_limits())
     return df
 
-_HW_WORKLOAD_NAMES = {'idle': 'idle', 'decode': 'decode, b = {}',
-                      'matmul': 'matmul {}^3', 'train': 'training, {} tok'}
+_HW_WORKLOAD_NAMES = {'idle': 'idle (context open)',
+                      'decode': 'decode, b = {}', 'matmul': 'matmul {}^3',
+                      'train': 'training, {} tok'}
 
 def _workload_label(name):
     kind, _, size = name.partition('-')
@@ -32431,8 +32460,8 @@ def _show_profile(prof):
                                 prof.to_dict('records')]})
     d2l.show_table(table, digits={'W': 0, 'SM MHz': 0}, width=79)
     a = prof.attrs
-    print(f'{a["field"]} at {a["hz"]} Hz; limit {_hw_fmt(a["power_limit_w"])}'
-          f' W, top SM {_hw_fmt(a["max_sm_mhz"])} MHz')
+    print(f'{a["field"]} at {a["hz"]} Hz; power limit '
+          f'{_hw_fmt(a["power_limit_w"])} W')
 
 def _profile_live(prof, same, name='matmul-8192', seconds=3):
     row = prof[prof.workload == name]
@@ -32456,7 +32485,10 @@ def power_profile(workloads=('idle', 'decode-b1', 'matmul-8192'),
         'box-power', lambda: _profile_compute(workloads, seconds),
         dict(workloads=workloads, seconds=seconds, load=_HW_POWER),
         entry='profile', live_check=_profile_live, show=_show_profile,
-        live_label='3 s of the matrix product')
+        live_label='matrix product, 3 s')
+
+_HW_PER_TOKEN = {'rate': 'tokens_per_s', 'j_per_unit': 'j_per_token',
+                 'j_per_unit_counter': 'j_per_token_counter'}
 
 def _decode_energy_compute(model_id, batches, contexts, seconds):
     chip = d2l.chip_specs().loc['RTX 4090']  # the committed card's cut
@@ -32476,8 +32508,7 @@ def _decode_energy_compute(model_id, batches, contexts, seconds):
     del model
     d2l.lm_free()
     rows, traces = _split_traces(rows, lambda r: f'b={r["b"]},L={r["L"]}')
-    df = _hw_frame(rows).rename(columns={'rate': 'tokens_per_s',
-                                         'j_per_unit': 'j_per_token'})
+    df = _hw_frame(rows).rename(columns=_HW_PER_TOKEN)
     knee = {str(L): sm.weight_bytes() / (L * sm.kv_bytes_per_token())
             for L in contexts}  # the caches' bytes equal the weights'
     df.attrs.update(model=model_id, cut=cut, knee=knee, traces=traces,
@@ -32572,7 +32603,7 @@ def decode_energy(cfg, batches, L, seconds=None):
         dict(model=model_id, batches=batches, L=contexts, seconds=seconds,
              load=_HW_POWER),
         entry='decode', live_check=_decode_live, show=_show_decode_energy,
-        live_label='J/token at b = 1 and 64')
+        live_label='J/token at b = 1, 64')
 
 def _train_energy_compute(arch, tokens_per_step, micro_batch, seconds):
     rows, peak = [], d2l.chip_specs().loc['RTX 4090'].p16_tflops * 1e12
@@ -32588,8 +32619,7 @@ def _train_energy_compute(arch, tokens_per_step, micro_batch, seconds):
         del step
         d2l.lm_free()
     rows, traces = _split_traces(rows, lambda r: r['tokens_per_step'])
-    df = _hw_frame(rows).rename(columns={'rate': 'tokens_per_s',
-                                         'j_per_unit': 'j_per_token'})
+    df = _hw_frame(rows).rename(columns=_HW_PER_TOKEN)
     df['mfu'] = [d2l.mfu(r, arch, peak, T=arch.T, causal_half=True)
                  for r in df.tokens_per_s]
     df.attrs.update(arch=arch._asdict(), peak_flops=peak, traces=traces,
@@ -32608,15 +32638,18 @@ def _show_train_energy(tr):
                                   'MFU': 2}, width=79)
     print(f'MFU: of the {tr.attrs["peak_flops"] / 1e12:.0f} TFLOP/s bf16 '
           'datasheet peak, causal attention counted at half')
+    gap = (tr.j_per_token_counter / tr.j_per_token - 1).abs().max()
+    print(f'energy counter\'s J/token: within {gap:.1%} of the trace\'s '
+          'W / (tokens/s)')
 
-def _train_live(tr, same, steps=5):
+def _train_live(tr, same, seconds=3):
     arch = d2l.Arch(**tr.attrs['arch'])
     row = tr.iloc[0]
     tokens = int(row.tokens_per_step)
     step, _ = _train_load(arch, tokens, _HW_POWER['micro_batch'])
     for _ in range(3):
         step()
-    w = _power_window(step, tokens, steps=steps, warm_s=1.0)
+    w = _power_window(step, tokens, seconds=seconds, warm_s=1.0)
     del step
     d2l.lm_free()
     return _hw_agreement([('tokens/s', row.tokens_per_s, w['rate'], 0.03),
@@ -32636,7 +32669,7 @@ def train_energy(arch, tokens_per_step, micro_batch, seconds=10):
         dict(arch=arch._asdict(), tokens_per_step=tokens_per_step,
              micro_batch=micro_batch, seconds=seconds),
         entry='train', live_check=_train_live, show=_show_train_energy,
-        live_label='5 steps of 8,192 tokens')
+        live_label='training steps, 3 s')
 
 _HW_SYNTHETIC_DVFS = dict(P_s=80.0, k=80.0,  # W, W/GHz^3 (the plan's case)
                           clocks_ghz=(0.6, 0.76, 0.92, 1.08, 1.24, 1.4))
@@ -32652,8 +32685,9 @@ def _synthetic_sweep():
                            workload='matmul-8192', sm_mhz=f * 1e3,
                            power_w=s['P_s'] + s['k'] * f**3,
                            rate=f / f.max(), unit='relative'))
-    df.attrs.update(source='synthetic: the plan\'s P_s = 80 W, k = 80 '
-                    'W/GHz^3; no measurement yet', synthetic=True)
+    df.attrs.update(source=f'synthetic numbers (P_s = {s["P_s"]:.0f} W, '
+                    f'k = {s["k"]:.0f} W/GHz^3): no measured sweep yet',
+                    synthetic=True)
     return df
 
 def hw_clock_sweep_log():
@@ -32671,41 +32705,78 @@ def hw_clock_sweep_log():
             return df
     return _synthetic_sweep()
 
-def _cap_sweep(caps, workloads, seconds=10):
-    """Rows (kind 'cap') of each workload under each power limit (W) on
-    visible GPU 0, the default limit restored at the end (root).
+class _HWSmi:
+    """nvidia-smi on one visible GPU, addressed by its UUID. A call returns
+    the HWRun (a refusal is a result here, not an error); restore() runs a
+    reset command and prints one line if it failed, so a card is never left
+    locked or capped without a word.
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    uuid = _hw_visible_uuids()[0]
-    default = _hw_gpu_limits().get('power_default_limit')
+    def __init__(self, device=0):
+        if device != 0:
+            raise ValueError('make the card visible GPU 0 '
+                             '(CUDA_VISIBLE_DEVICES): the power trace reads '
+                             'that one')
+        self.uuid = _hw_visible_uuids()[device]
 
-    def limit(watts):
-        if hw_run(['nvidia-smi', '-i', uuid, '-pl', str(int(watts))],
-                  60).refused:
-            raise PermissionError('setting the power limit needs root')
+    def __call__(self, *args):
+        return hw_run(['nvidia-smi', '-i', self.uuid, *args], 60,
+                      record=True)
+
+    def restore(self, *args):
+        run = self(*args)
+        if run.refused:
+            print(f'nvidia-smi {" ".join(args)} failed ({run.refused}): '
+                  'reset the card by hand')
+        return run
+
+def hw_smi_card(device=0):
+    """nvidia-smi on visible GPU device (which must be 0, the card the power
+    trace reads): smi(*args) runs it, smi.restore(*args) resets loudly.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    return _HWSmi(device)
+
+def _cap_sweep(caps, workloads, seconds=10):
+    """Rows (kind 'cap') of each workload under each power limit (W) on
+    visible GPU 0, the default limit restored at the end (root). Refuses to
+    start while the default limit is unknown (no way back).
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    smi = hw_smi_card(0)
+    default = _hw_gpu_limits().get('power_default_limit')
+    if not default:
+        raise RuntimeError('the default power limit is unknown: no cap is '
+                           'set without a way back')
     rows = []
     try:
         for cap in caps:
-            limit(cap)
+            if smi('-pl', str(int(cap))).refused:
+                raise PermissionError('setting the power limit needs root')
             rows += _sweep_rows('cap', cap, workloads, seconds)
     finally:
-        if default:
-            limit(default)
+        smi.restore('-pl', str(int(default)))
     return rows
 
 def hw_root_sweep(clocks=None, caps=(150, 225, 300, 375, 450),
                   workloads=('matmul-8192', 'decode-b1', 'train-8192')):
     """The author's root sweep on visible GPU 0 (clocks in MHz, by default
-    six from 40% to 100% of the top clock; power caps in W): one table of
-    both sweeps, written as the entry 'sweep' under D2L_HW_OUT for the
-    campaign package to pack and upload. Needs root; restores the clocks
-    and the limit on exit.
+    six from 25% to 100% of the top clock, so that the energy-optimal clock
+    of a 4090-like card lies inside the swept range; power caps in W): one
+    table of both sweeps, written as the entry 'sweep' under D2L_HW_OUT for
+    the campaign package to pack and upload. Needs root; restores the
+    clocks and the limit on exit. sudo drops HF_HOME and PYTHONPATH, so the
+    package passes them (sudo env HF_HOME=... PYTHONPATH=...); as root
+    without HF_HOME this raises rather than fill root's cache.
 
     Defined in :numref:`sec_lm_energy_cost`"""
+    if os.geteuid() == 0 and not os.environ.get('HF_HOME'):
+        raise RuntimeError('running as root without HF_HOME: pass it '
+                           '(sudo env HF_HOME=... PYTHONPATH=...)')
     if clocks is None:
         top = _hw_gpu_limits()['clocks_max_sm']
         clocks = [int(15 * round(top * x / 15))
-                  for x in np.linspace(0.4, 1.0, 6)]
+                  for x in np.linspace(0.25, 1.0, 6)]
     rows = d2l.hw_clock_sweep(clocks, workloads).to_dict('records')
     rows += _cap_sweep(caps, workloads)
     df = _hw_frame(rows)
@@ -32719,8 +32790,9 @@ def hw_root_sweep(clocks=None, caps=(150, 225, 300, 375, 450),
 def plot_dvfs(fit):
     """Power (left) and throughput per watt relative to the top clock
     (right, dashed) against the SM clock: the sweep's points, the fitted
-    model, f* dotted; prints the fit and the predicted against the measured
-    energy minimum (or that the set is synthetic).
+    model, f* dotted; prints the fit, the predicted against the measured
+    energy minimum and whether f* lies inside the swept clocks (else the
+    model extrapolates), or that the set is synthetic.
 
     Defined in :numref:`sec_lm_energy_cost`"""
     f = np.linspace(min(fit.clocks) * 0.9, max(fit.clocks) * 1.05, 200)
@@ -32743,35 +32815,62 @@ def plot_dvfs(fit):
     print(f'at f*: {gain:.1f}x the work per joule and '
           f'{fit.f_star / f_top:.2f}x the throughput of {f_top:.2f} GHz')
     if not fit.synthetic:
-        print(f'measured energy minimum at {fit.f_min:.2f} GHz, f* = '
-              f'{fit.f_star:.2f} GHz (sweep step {fit.step:.2f} GHz)')
+        inside = min(fit.clocks) <= fit.f_star <= f_top
+        print(f'measured energy minimum at {fit.f_min:.2f} GHz (sweep step '
+              f'{fit.step:.2f} GHz)')
+        print(f'f* = {fit.f_star:.2f} GHz lies ' + (
+            'inside the swept clocks' if inside else
+            'outside the swept clocks: the model extrapolates'))
     print(fit.source)
 
-def cap_effect(log):
+def _cap_column(caps, kind):
+    """Step times of the first workload of kind ('train', 'decode') under
+    each cap, by cap, with the uncapped (top) row; raises if the sweep has
+    no such workload.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    names = sorted(w for w in set(caps.workload) if w.startswith(kind))
+    if not names:
+        raise ValueError(f'the sweep log has no {kind} workload under a cap')
+    return caps[caps.workload == names[0]].set_index('setting').sort_index()
+
+_HW_CAP_COLUMNS = ('cap W', 'train ms', 'train ratio', 'decode ms',
+                   'decode ratio', 'noise')
+
+def cap_effect(log, floor=0.02):
     """The power-cap rows of a sweep log: training and batch-1 decode step
-    times under each cap and their ratios to the uncapped (highest) limit;
-    one line while no root sweep exists. Returns the table or None.
+    times (medians) under each cap and their ratios to the uncapped
+    (highest) limit; noise is 3 median absolute deviations of the capped
+    decode window's step times as a ratio, at least floor (windows also
+    drift between each other). attrs['decode_w']: decode's uncapped power.
+    Prints the table and the log's source, or one line while no root sweep
+    exists, and then returns an empty table.
 
     Defined in :numref:`sec_lm_energy_cost`"""
     caps = log[log.kind == 'cap']
     if not len(caps):
-        print('power-cap sweep pending (it needs root: the author\'s '
-              'C-box-root script)')
-        return None
-    t = caps.pivot_table(index='setting', columns='workload',
-                         values='step_ms').sort_index()
-    train = next(c for c in t.columns if c.startswith('train'))
-    decode = next(c for c in t.columns if c.startswith('decode'))
-    top = t.index.max()
+        print('power-cap sweep not measured yet (setting a power limit '
+              'needs root)')
+        table = pd.DataFrame({c: pd.Series(dtype=float)
+                              for c in _HW_CAP_COLUMNS})
+        table.attrs['decode_w'] = math.nan
+        return table
+    top = caps.setting.max()
+    train, decode = (_cap_column(caps, k) for k in ('train', 'decode'))
+    lower = [c for c in train.index if c < top]
     table = pd.DataFrame({
-        'cap W': t.index, 'train ms': t[train].values,
-        'train ratio': (t[train] / t.loc[top, train]).values,
-        'decode b=1 ms': t[decode].values,
-        'decode ratio': (t[decode] / t.loc[top, decode]).values})
-    table = table[table['cap W'] < top].reset_index(drop=True)
+        'cap W': lower, 'train ms': train.step_ms[lower].values,
+        'train ratio': (train.step_ms[lower] / train.step_ms[top]).values,
+        'decode ms': decode.step_ms[lower].values,
+        'decode ratio': (decode.step_ms[lower] / decode.step_ms[top]).values,
+        'noise': np.maximum(3 * decode.step_mad_ms[lower].values
+                            / decode.step_ms[top], floor)})
+    table.attrs['decode_w'] = float(decode.power_w[top])
     d2l.show_table(table, digits={'cap W': 0, 'train ms': 0,
-                                  'train ratio': 2, 'decode b=1 ms': 2,
-                                  'decode ratio': 2}, width=79)
+                                  'train ratio': 2, 'decode ms': 2,
+                                  'decode ratio': 2, 'noise': 2}, width=79)
+    print(f'uncapped: {top:.0f} W; decode draws {table.attrs["decode_w"]:.0f}'
+          f' W; {log.attrs.get("source", "")}')
     return table
 
 _HW_PRICE_COLUMNS = ('item', 'chip', 'value', 'unit', 'kind', 'source_url',
@@ -32876,14 +32975,19 @@ def _box_qwen8b_mfu(cfg):
     peak = d2l.chip_specs().loc['RTX 4090'].p16_tflops * 1e12
     return d2l.mfu(b * s / t_step, cfg, peak, T=s, causal_half=True), s
 
-def training_mfu(chips=('A100 SXM 80 GB', 'H100 SXM', 'B200')):
+_HW_STATED_MFU = 0.4  # Llama 3 reports 0.38-0.43 bf16 MFU on H100 (Table 4)
+
+def training_mfu(chips=('A100 SXM 80 GB', 'H100 SXM', 'B200'),
+                 stated=_HW_STATED_MFU):
     """One row per (model, chip): the MFU a training-cost estimate uses,
     its context T and its source. The reference model on the RTX 4090:
     chapter 21's four-card run when registered, else this section's
-    one-card measurement (box-power). Qwen3-8B on each of chips: chapter
-    23's mfu-table when registered (records with model, chip, mfu, T; the
-    causal half counted), else 22.3's one-card Qwen3-8B MFU on the box, an
-    upper bound.
+    one-card measurement (box-power, the median of its step sizes).
+    Qwen3-8B on the RTX 4090: 22.3's one-card depth series, an upper bound
+    (no communication). Qwen3-8B on each of chips: chapter 23's mfu-table
+    when registered (records with model, chip, mfu, T; the causal half
+    counted), else the stated value at the same context: an RTX 4090
+    number is never attached to another chip.
 
     Defined in :numref:`sec_lm_energy_cost`"""
     arch = d2l.r2_config('r2').arch
@@ -32894,20 +32998,21 @@ def training_mfu(chips=('A100 SXM 80 GB', 'H100 SXM', 'B200')):
     else:
         tr = hw_box_log('box-power', 'train')
         rows = [dict(model='reference', chip='RTX 4090',
-                     mfu=float(tr.mfu.max()), T=arch.T,
+                     mfu=float(tr.mfu.median()), T=arch.T,
                      source='1 x RTX 4090, this section')]
+    box, T = _box_qwen8b_mfu(d2l.hw_config('Qwen/Qwen3-8B'))
+    rows.append(dict(model='Qwen3-8B', chip='RTX 4090', mfu=box, T=T,
+                     source='1 x RTX 4090, upper bound'))
     table = hw_campaign_log('mfu-table')
     measured = {(r['model'], r['chip']): r for r in table} if table else {}
-    cfg, box = d2l.hw_config('Qwen/Qwen3-8B'), None
     for chip in chips:
         r = measured.get(('Qwen3-8B', chip))
         if r is not None:
             rows.append(dict(model='Qwen3-8B', chip=chip, mfu=r['mfu'],
                              T=r['T'], source='chapter 23, measured'))
-            continue
-        box = box or _box_qwen8b_mfu(cfg)
-        rows.append(dict(model='Qwen3-8B', chip=chip, mfu=box[0], T=box[1],
-                         source='1 x RTX 4090, upper bound'))
+        else:
+            rows.append(dict(model='Qwen3-8B', chip=chip, mfu=stated, T=T,
+                             source='stated; chapter 23 measures it'))
     return pd.DataFrame(rows)
 
 def training_goodput(stated=0.9):

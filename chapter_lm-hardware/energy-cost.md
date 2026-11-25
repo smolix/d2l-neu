@@ -92,19 +92,23 @@ kernels: the card then holds a high clock and draws well above its rest
 power, as the table shows), decode of Qwen3-0.6B at batch 1 over a
 512-token cache (CUDA graph), and a bf16 8,192^3 matrix product. Read the
 table against the limit line under it: the matrix product sits at the
-limit with the SM clock below its top value and the power-cap reason set
-(claim E1); decode at batch 1 draws a fraction of it. Quote the committed
-W at 2 digits and the reason names; the live line only shows agreement. -->
+limit with the power-cap reason set, and the limiter has pulled its SM
+clock below the clock the card holds under the light decode load (claim
+E1: quote that drop in MHz, not NVML's maximum clock, which no load
+reaches); decode at batch 1 draws a fraction of the power. Quote the
+committed W at 2 digits and the reason names; the live line only shows
+agreement. -->
 
 ```{.python .input #energy-cost-idle-and-peak}
 %%tab pytorch
 prof = d2l.power_profile(workloads=('idle', 'decode-b1', 'matmul-8192'),
                          seconds=10)
-P = prof.set_index('workload').power_w  # mean board power (W)
-peak = prof.set_index('workload').loc['matmul-8192']
+w = prof.set_index('workload')  # mean board power (W), median SM clock
+peak, light = w.loc['matmul-8192'], w.loc['decode-b1']
 assert peak.power_w > 0.9 * prof.attrs['power_limit_w']  # E1: at the limit
-assert peak.sm_mhz < prof.attrs['max_sm_mhz']  # E1: below the top clock
-assert P['decode-b1'] < 0.6 * P['matmul-8192']  # E1: decode draws far less
+assert peak.thr_SW_power_cap >= 0.5  # E1: the power limiter acted
+assert peak.sm_mhz < light.sm_mhz  # E1: clocked below the light load
+assert light.power_w < 0.6 * peak.power_w  # E1: decode draws far less
 ```
 
 ### The Energy-Optimal Clock
@@ -149,18 +153,21 @@ def dvfs_fit(log):  #@save
 <!-- Placeholder (prose): locking clocks needs root, so no notebook does
 it: the box's sweep is a script the author runs with sudo (C-box-root), and
 campaign C-T2 sweeps the A100. Until either log is committed the fit runs on
-the plan's synthetic numbers, and the output says so. Read the plot: power
-grows as the cube of the clock past a static floor, the work per joule
-(dashed) peaks at f*. Claim E4 (pending): the predicted f* within one sweep
-step of the measured energy minimum. Pending: part of the root sweep and the
-A100 campaign. -->
+synthetic numbers (the plan's worked case), and the output says so. Read the
+plot: power grows as the cube of the clock past a static floor, the work per
+joule (dashed) peaks at f*. Claim E4 (pending): the predicted f* within one
+sweep step of the measured energy minimum when f* lies inside the swept
+clocks; otherwise the output says the model extrapolates, and the text says
+so. Pending: part of the root sweep and the A100 campaign. -->
 <!-- campaign: lm-hw-buildbox-clocksweep-v1 -->
 
 ```{.python .input #energy-cost-dvfs}
 %%tab pytorch
 fit = d2l.dvfs_fit(d2l.hw_clock_sweep_log())
 d2l.plot_dvfs(fit)
-assert fit.synthetic or abs(fit.f_star - fit.f_min) <= fit.step  # E4
+inside = min(fit.clocks) <= fit.f_star <= max(fit.clocks)  # else extrapolated
+measured = not fit.synthetic and inside
+assert not measured or abs(fit.f_star - fit.f_min) <= fit.step  # E4
 ```
 
 <!-- Placeholder (prose): the sweep the root script runs, shown because it
@@ -176,10 +183,7 @@ def hw_clock_sweep(clocks, workloads, device=0):  #@save
     """Board power, clocks and work rate of each named workload with the SM
     clock locked at each of clocks (MHz) on visible GPU `device` (0: the
     card the power trace reads); needs root, restores the default clocks."""
-    if device != 0:
-        raise ValueError('make the card visible GPU 0 (CUDA_VISIBLE_DEVICES)')
-    uuid = d2l._hw_visible_uuids()[device]
-    smi = lambda *args: d2l.hw_run(['nvidia-smi', '-i', uuid, *args], 60)
+    smi = d2l.hw_smi_card(device)  # nvidia-smi on that card (by UUID)
     if smi('-lgc', f'{clocks[0]},{clocks[0]}').refused:
         raise PermissionError('locking the SM clock needs root')
     rows = []
@@ -188,22 +192,26 @@ def hw_clock_sweep(clocks, workloads, device=0):  #@save
             smi('-lgc', f'{f},{f}')  # minimum = maximum: the clock is pinned
             rows += d2l._sweep_rows('clock', f, workloads)
     finally:
-        smi('-rgc')  # back to the default clocks
+        smi.restore('-rgc')  # back to the default clocks, or say it failed
     return pd.DataFrame(rows)
 ```
 
 <!-- Placeholder (prose): what a cap does: a cap lowers the clock only when
 the load would pass it, so a compute-bound training step slows and a
-batch-1 decode step, far below the cap, does not (claim E5, pending until
-the root sweep exists: the cell prints one line now; then a 4-row table of
-cap W, training and decode step times and their ratios to the uncapped
-limit). Zeus measures the same energy-time trade-off per job. -->
+batch-1 decode step does not while the cap stays above decode's own draw
+(claim E5, only for caps above that draw: a cap below it slows decode too;
+pending until the root sweep exists: the cell prints one line now; then a
+4-row table of cap W, training and decode step times, their ratios to the
+uncapped limit and the decode noise, 3 median absolute deviations of its
+step times as a ratio, and a line with decode's uncapped power and the
+log's source). Zeus measures the same energy-time trade-off per job. -->
 <!-- campaign: lm-hw-buildbox-clocksweep-v1 -->
 
 ```{.python .input #energy-cost-cap-effect}
 %%tab pytorch
-caps = d2l.cap_effect(d2l.hw_clock_sweep_log())
-assert caps is None or (caps['decode ratio'] < 1.05).all()  # E5
+caps = d2l.cap_effect(d2l.hw_clock_sweep_log())  # empty until measured
+above = caps[caps['cap W'] > 1.1 * caps.attrs['decode_w']]  # above its draw
+assert (above['decode ratio'] - 1 < above['noise']).all()  # E5
 ```
 
 ## Energy per Token
@@ -212,7 +220,10 @@ assert caps is None or (caps['decode ratio'] < 1.05).all()  # E5
 <!-- Placeholder (prose): energy per token is power divided by tokens per
 second, measured as the integral of a window's power trace over its
 duration divided by the tokens produced in it (the function below; the
-trace's samples are 0.1 s apart). -->
+trace's samples are 0.1 s apart). The card also keeps a cumulative energy
+counter (NVML's total energy consumption, in mJ, Volta and later); the
+library reads it at both ends of every window, an independent measurement
+the cells below check the trace against. -->
 
 ```{.python .input #energy-cost-energy-per-token-def}
 %%tab pytorch
@@ -257,6 +268,7 @@ for L in (512, 2048):
 g = e[e.L == 512].set_index('b')
 assert g.power_w[64] / g.power_w[1] < 2  # E2: power less than doubles
 assert g.tokens_per_s[64] / g.tokens_per_s[1] > 10  # E2: tokens/s x10+
+assert np.allclose(e.j_per_token_counter, e.j_per_token, rtol=0.05)
 ```
 
 <!-- Placeholder (prose): training at 6N FLOPs per token (plus attention,
@@ -265,8 +277,11 @@ architecture of sec_lm_reference_model (138.4M parameters, random weights)
 on one card, micro-batches of 2 sequences of 4,096 tokens, fp32 master
 weights, bf16 autocast, fused AdamW and the chunked loss, eager; steps of
 8,192 tokens (no accumulation) and 32,768 (four micro-batches). J/token is
-power over tokens per second (claim E3, asserted), and MFU sets the tokens
-per second; quote the measured power against the 450 W limit (the smoke run
+power over tokens per second (claim E3): the card's energy counter, read
+independently of the power trace, agrees with W / (tokens/s) to the
+percentage the last line prints, which also checks the 1 s averaging of
+power.draw; MFU sets the tokens per second. Quote the measured power
+against the 450 W limit (the smoke run
 drew about 355 W at MFU 0.36: this step stays below the limit). MFU here
 halves the
 causal attention term; chapter 21 prints MFU with the full term, so a
@@ -277,8 +292,8 @@ at 2 digits. -->
 %%tab pytorch
 R = d2l.r2_config('r2').arch
 tr = d2l.train_energy(R, tokens_per_step=(8192, 32768), micro_batch=2)
-assert np.allclose(tr.j_per_token, tr.power_w / tr.tokens_per_s,
-                   rtol=0.05)  # E3: J/token = W / (tokens/s)
+assert np.allclose(tr.j_per_token_counter, tr.power_w / tr.tokens_per_s,
+                   rtol=0.05)  # E3: the counter's J/token is W / (tokens/s)
 ```
 
 <!-- Placeholder (prose): from the chip to the building. A datacentre
@@ -340,24 +355,36 @@ def cost_per_mtok_serve(price_gpu_h, tps_per_gpu, utilization=1.0):  #@save
     return 1e6 * price_gpu_h / 3600 / (tps_per_gpu * utilization)
 ```
 
-<!-- Placeholder (prose): the formula against eq_six_nd: with F_tok = 6N,
-D tokens take 6 N D / (MFU P 3600) GPU-hours, which the first lines check
-exactly for N = 1e9, D = 1e12, MFU = 0.4 on an H100 (about 4,200
-GPU-hours; the "GPU-hours before dollars" arithmetic, restated here because
-sec_cloud_instances no longer carries that exercise). Then the table: the
-reference model on the box's card and Qwen3-8B on three data-centre chips,
-each MFU with its source (chapter 21's four-card run or this section's
-one-card measurement; chapter 23's measured MFU when committed, else the
-box's one-card Qwen3-8B MFU, an upper bound because it pays no
-communication), each chip at the median of its rent quotes. The dollar
-column is read in the table, never quoted. -->
+<!-- Placeholder (prose): the formula against eq_six_nd: with F_tok = 6N
+and a price of one dollar per GPU-hour, the dollars are GPU-hours, and D
+tokens take 6 N D / (MFU P 3600) of them: about 4,200 for N = 1e9,
+D = 1e12, MFU = 0.4 on an H100 (the "GPU-hours before dollars" arithmetic,
+restated here because sec_cloud_instances no longer carries that
+exercise). -->
 
-```{.python .input #energy-cost-train-cost}
+```{.python .input #energy-cost-six-nd}
 %%tab pytorch
 N, D, P_h100 = 1e9, 1e12, specs.loc['H100 SXM'].p16_tflops * 1e12
 gpu_h = d2l.cost_per_mtok_train(1.0, 6 * N, P_h100, 0.4) * D / 1e6  # $1/h
-assert math.isclose(gpu_h, 6 * N * D / (0.4 * P_h100 * 3600))  # eq_six_nd
 print(f'6 N D at N = 1e9, D = 1e12, MFU 0.4, H100: {gpu_h:,.0f} GPU-hours')
+```
+
+<!-- Placeholder (prose): the table: the reference model and Qwen3-8B on
+the box's card, and Qwen3-8B on three data-centre chips, each chip at the
+median of its rent quotes and each MFU with its source. The reference
+model's MFU is chapter 21's four-card run (or this section's one-card
+measurement). Qwen3-8B on the RTX 4090 is 22.3's one-card depth series,
+an upper bound because it pays no communication, and it stays on its own
+chip. The data-centre rows use chapter 23's measured MFU once committed;
+until then a stated MFU of 0.4, the value Llama 3 reports for its H100
+training (38-43% bf16 MFU, :cite:`Grattafiori.Dubey.Jauhri.ea.2024`), the
+same for A100 and B200 as an assumption. Those rows are pending T2-T4
+(chapter 23), and their dollar column is conditional on the stated MFU.
+The dollar column is read in the table, never quoted. -->
+<!-- campaign: lm-mfu-table-v1 -->
+
+```{.python .input #energy-cost-train-cost}
+%%tab pytorch
 g, g_source = d2l.training_goodput(stated=0.9)
 mfu = d2l.training_mfu()
 cfgs = {'reference': R, 'Qwen3-8B': d2l.hw_config('Qwen/Qwen3-8B')}
@@ -418,13 +445,21 @@ def owned_vs_rented(capex, life_h, power_kw, pue, elec_per_kwh, ops_per_h,
 
 <!-- Placeholder (prose): the box's card (a quarter of the four-card
 server, an assumption; its marketplace rent) against an H100 SXM (the
-quoted purchase price per GPU; the median of its rents), both at their TDP
-and the shared electricity, PUE and life rows. The interval draws every
-input uniformly within +-30% (10,000 draws, seed 0); the tornado moves one
-input at a time, assumption inputs hatched. Claim E6: u* is most sensitive
-to the rent (the price ratio), and the interval is wide; state the ranking
-and the intervals, and that a conclusion resting on one assumption row is
-conditional on it. -->
+quoted purchase price per GPU, the midpoint of a 20-30k USD range; the
+median of its rents), both at their TDP and the shared electricity, PUE and
+life rows. The H100 stands in for the plan's A100: no dated A100 purchase
+quote was found. Name the simplifications: power is charged at TDP for
+every hour, used or not, and the host's power (CPU, memory, fans, a large
+share of a server's wall power) is left out. The interval draws every input
+uniformly within +-30% (10,000 draws, seed 0); the tornado moves one input
+at a time, assumption inputs hatched. Claim E6: the rent comes first in
+both tornadoes, but that is a property of the formula, not of the data:
+u* = h_own / r has elasticity -1 in the rent and less than 1 in any owned
+input, whose share of h_own is below one. The data decide the order of the
+rest: read it from the plot (the smoke run had power, PUE and electricity
+first for the box card and the life, then the purchase, for the H100).
+State the intervals, and that a conclusion resting on one assumption row
+is conditional on it. -->
 
 ```{.python .input #energy-cost-owned-rented}
 %%tab pytorch
@@ -433,7 +468,6 @@ for name, x in inputs.items():
     u_star = d2l.owned_vs_rented(**x)['u_star']
     lo, hi = d2l.u_star_interval(x, rel=0.3, draws=10_000, seed=0)
     print(f'{name}: u* = {u_star:.2f}, 90% of draws in {lo:.2f}-{hi:.2f}')
-    assert d2l.tornado_order(x, rel=0.3)[0][0] == 'rent_per_h'  # E6
 d2l.plot_tornado(inputs, rel=0.3)
 ```
 

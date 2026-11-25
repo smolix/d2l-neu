@@ -140,7 +140,7 @@ print(f'vs Transformers (truncate=False): {(yarn - hf).abs().max():.1e}; '
 ntk = d2l.rope_inv_freq(d_head, scheme='ntk', s=4)
 d2l.plot(torch.arange(d_head // 2), [pi / theta, ntk / theta, ratio],
          'pair index m', 'θ′ / θ', legend=['PI', 'NTK', 'YaRN'],
-         yscale='log', figsize=(4, 2.5))
+         ylim=(0, 1.05), figsize=(4, 2.5))
 ```
 
 <!-- Placeholder (prose): zero-shot, the schemes only change which angles the model sees; whether a model uses 16K tokens is decided by training and measured below. -->
@@ -302,7 +302,9 @@ print(f'long-context gain: oracle {gain["oracle"]:+.2f} nats, '
 ```{.python .input #long-context-data}
 %%tab pytorch
 long = d2l.long_data('t2')
-print(long.table.to_string(index=False))
+print(long.table.to_string(index=False, formatters={
+    'documents': '{:,}'.format, 'tokens': '{:,}'.format,
+    'median length': '{:,.0f}'.format}))
 ```
 
 <!-- Placeholder (prose): every scheme at scale 4 without training: loss per position bucket on 64 test books and recall at 4K, 8K and 16K (five depths, 100 items each). The none row's recall at 4K is the control: the task is solved inside the trained window before recall at 16K measures anything. The mscale = 1 row: YaRN's alpha and beta were tuned for head dimension 128, the reference model has 32 pairs. -->
@@ -365,12 +367,12 @@ d2l.plot_lc_position(lc.position)
 THRESHOLD = 0.5  # lower 95% bound of recall (the effective-context rule)
 eff = d2l.effective_context(lc.recall, lc.gain, threshold=THRESHOLD)
 grid = lc.recall.groupby(['model', 'length', 'depth'])['correct'].mean()
-longest = lc.recall['length'].max()
+shortest, longest = lc.recall['length'].min(), lc.recall['length'].max()
+print(f'{"model":<10} {"effective":<10} worst depth at {longest // 1024}K')
 for model, length in eff.items():
     worst = grid[model, longest]
-    reach = f'{length // 1024}K' if length else 'below the trained window'
-    print(f'{model:<10} effective context {reach:<8} worst depth at '
-          f'{longest // 1024}K: {worst.idxmin():.1f} ({worst.min():.0%})')
+    reach = f'{length // 1024}K' if length else f'below {shortest // 1024}K'
+    print(f'{model:<10} {reach:<10} {worst.idxmin():.1f} ({worst.min():.0%})')
 d2l.plot_recall_grid(lc.recall, models=('PI', 'YaRN'), threshold=THRESHOLD)
 ```
 
@@ -379,7 +381,8 @@ d2l.plot_recall_grid(lc.recall, models=('PI', 'YaRN'), threshold=THRESHOLD)
 ```{.python .input #long-context-gain}
 %%tab pytorch
 gain = lc.gain[~lc.gain['rule'].astype(bool)]
-ci = lambda r: f'{r.gain:.2f} [{r.lo:.2f}, {r.hi:.2f}]'
+num = lambda x: f'{round(x, 2) + 0:.2f}'  # no '-0.00'
+ci = lambda r: f'{num(r.gain)} [{num(r.lo)}, {num(r.hi)}]'
 print(f'{"gap":<10}' + ''.join(f'{b:>20}' for b in
                                dict.fromkeys(gain['bucket'])))
 for model, rows in gain.groupby('model', sort=False):
@@ -440,9 +443,10 @@ for tier, runs in (('T1', t1), ('T2', lc)):
         print(f'{tier}: pending')
         continue
     d = d2l.scheme_difference(runs, 'YaRN', 'PI')
-    print(f'{tier}, {d["method"]}: YaRN - PI recall {d["recall"]:+.2f} '
-          f'[{d["recall_lo"]:+.2f}, {d["recall_hi"]:+.2f}], last-bucket NLL '
-          f'{d["nll"]:+.3f} [{d["nll_lo"]:+.3f}, {d["nll_hi"]:+.3f}]')
+    num = lambda k, n: f'{round(d[k], n) + 0:+.{n}f}'  # no '-0.00'
+    print(f'{tier}, {d["method"]}: YaRN - PI recall {num("recall", 2)} '
+          f'[{num("recall_lo", 2)}, {num("recall_hi", 2)}], last-bucket NLL '
+          f'{num("nll", 3)} [{num("nll_lo", 3)}, {num("nll_hi", 3)}]')
 ```
 
 ## Toward a Million Tokens

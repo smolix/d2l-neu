@@ -1383,11 +1383,13 @@ def plot_lc_position(position):
     series = {m: tuple(g.set_index('bucket').reindex(buckets)[k].to_numpy()
                        for k in ('nll', 'lo', 'hi'))
               for m, g in position.groupby('model', sort=False)}
-    d2l.plot_intervals(buckets, series, 'position bucket', 'loss (nats)')
+    axes = d2l.plot_intervals(buckets, series, 'position bucket',
+                              'loss (nats)')
+    axes.legend(loc='upper left', bbox_to_anchor=(1.01, 1))
 
 def plot_recall_grid(recall, models=('PI', 'YaRN'), threshold=0.5):
-    """Recall over length (columns) and depth (rows) for each model, with
-    the threshold as a contour."""
+    """Recall over length (columns) and depth (rows) for each model on
+    one 0-1 scale, with the threshold as a contour."""
     if not len(recall):
         return
     lengths = sorted(recall['length'].unique())
@@ -1399,6 +1401,9 @@ def plot_recall_grid(recall, models=('PI', 'YaRN'), threshold=0.5):
                       titles=list(models), figsize=(5, 2.5), cmap='Blues',
                       xticklabels=[_length_name(L) for L in lengths],
                       yticklabels=[f'{d:.1f}' for d in depths])
+    for ax in d2l.plt.gcf().axes:  # recall on 0-1 in every panel and bar
+        for image in ax.images:
+            image.set_clim(0, 1)
     for ax, Z in zip(d2l.plt.gcf().axes, M):
         if np.nanmin(Z) < threshold < np.nanmax(Z):
             ax.contour(Z, levels=[threshold], colors='black',
@@ -1413,8 +1418,9 @@ def plot_lc_gain(gain):
     series = {m: tuple(x.set_index('bucket').reindex(buckets)[k].to_numpy()
                        for k in ('gain', 'lo', 'hi'))
               for m, x in g.groupby('model', sort=False)}
-    d2l.plot_intervals(buckets, series, 'gap to the previous occurrence',
-                       'gain (nats)')
+    axes = d2l.plot_intervals(buckets, series,
+                              'gap to the previous occurrence', 'gain (nats)')
+    axes.legend(loc='upper left', bbox_to_anchor=(1.01, 1))
 
 def scheme_difference(runs, a='YaRN', b='PI'):
     """a minus b on recall at the longest length (pooled over depths) and

@@ -35,14 +35,14 @@ Every guardrail below addresses a real class of defects previously introduced by
 
 ---
 
-## 2. Rule 1 — Zero Framework Leaks (Prose, Code, Exercises, Slides, & Diagrams)
+## 2. Rule 1 — Multi-Variant Coherence & Zero Framework Leaks
 
-A reader viewing the JAX, TensorFlow, or MXNet tab/deck/PDF must **never** encounter untabbed PyTorch API names, NCHW-only tensor shapes, or claims that hold only in PyTorch.
+Each framework tab renders a **separate, self-contained book** (`4` variants in Basics/Image/Math/Tools, `2` in Advanced, `1` in Ch. 14 RL & LMs). On `https://d2l.smola.org/`, code tabsets keep their framework tab bar visible, whereas text-only `:begin_tab:` blocks unwrap into plain `<p>` paragraphs (`.d2l-text-only`) and any tabset lacking the active framework is hidden (`display: none`).
 
-1. **Untabbed book prose must be 100% framework-neutral:**
-   - State the shared mathematical or systems concept in untabbed prose.
-   - Put any framework-specific API name (`nn.Module`, `torch.save`, `torch.load`, `nnx.Optimizer`, `optax`, `GradientTape`, `init_cnn`, etc.), tensor layout (`NCHW` `(B, C, H, W)` vs. `NHWC` `(B, H, W, C)`), initialization default, or state-allocation detail inside single-framework `:begin_tab:` / `:end_tab:` blocks (one block per supported framework, `:begin_tab:` and `:end_tab:` each alone on its own line).
-   - Never cross-compare tabs inside a single framework's tab note or code comments (e.g., never write `# same as PyTorch above` in a JAX cell).
+1. **Per-tab-stream check & framework-neutral untabbed prose:**
+   - **Extract and read each framework's rendered stream independently** (and inspect the compiled page on `https://d2l.smola.org/<chapter>/<section>.html`) rather than only reading the interleaved `.md` source. Check every untabbed $\leftrightarrow$ `:begin_tab:` seam for: (a) self-contradictions (e.g., untabbed prose saying *"the framework records..."* right above a JAX note saying *"JAX records nothing"*), (b) back-to-back duplicate explanations across consecutive tab blocks, and (c) subsections left with a dangling question and zero code when a cell lacks one framework's tab.
+   - Put framework-specific API names (`nn.Module`, `torch.save`, `nnx.Optimizer`, `optax`, `GradientTape`, etc.), tensor layouts (`NCHW` vs. `NHWC`), or state-allocation details inside `:begin_tab:` / `:end_tab:` blocks (each directive alone on its own line). Never write `# same as PyTorch above` inside another framework's cell.
+   - **Fourth-wall rule:** Breaking the fourth wall to note that frameworks differ is acceptable **only very rarely** when the contrast itself teaches a core systems distinction (e.g., mutable vs. immutable tensors in `ndarray.md`), and never with meta-language like *"the tab note shows how yours..."*.
 2. **Respect each part's framework set:**
    - Never add TensorFlow or MXNet tabs, exercise variants, or slide branches to **Advanced (Ch. 9–17)** or **Language Models (Ch. 18–31)**.
    - In Basics (Ch. 1–8), Image Models (Ch. 32), Math (Ch. 33–38), and Tools (Ch. 39), verify claims and code against **all four** frameworks (`pytorch`, `jax`, `tensorflow`, `mxnet`).
@@ -58,8 +58,8 @@ A reader viewing the JAX, TensorFlow, or MXNet tab/deck/PDF must **never** encou
 
 Never invent, extrapolate, or guess quantitative results, benchmark figures, hardware specs, or paper claims.
 
-1. **Verify every number against `outputs/<fw>/...` across ALL supported frameworks:**
-   - Before writing any loss, accuracy, perplexity, timing, parameter count, shape, or error figure into prose, tables, slide bullets, or SVG diagram cards, read `outputs/<fw>/<chapter>/<section>.json` for **every** framework the page carries (`pytorch`, `jax`, `tensorflow`, `mxnet`).
+1. **Verify every number and plot claim against `outputs/<fw>/...` (and `d2l.smola.org`):**
+   - Before writing any loss, accuracy, perplexity, timing, parameter count, shape, error figure, or plot description into prose, tables, slide bullets, or SVG diagram cards, check `outputs/<fw>/<chapter>/<section>.json` **and** the Git-LFS plot assets under `outputs/<fw>/<chapter>/<section>/` (plus compiled pages on `https://d2l.smola.org/`) for **every** framework the page carries.
    - **Quote only precision that survives re-execution** (`CLAUDE.md` → *Experimental results in prose*): seed-level metrics fluctuate across frameworks and runs. Never quote brittle per-seed last digits (`"90.21%"`) or single-framework figures when another framework prints `86.8%` — widen to a range supported by all stored outputs (`"87–90%"`, `"about 92%"`, `"roughly 1.5×"`), and never build a conceptual conclusion on a difference smaller than run-to-run noise.
    - Double-check back-of-the-envelope systems arithmetic (FLOPs, KV-cache bytes, roofline ridge points, collective bandwidth `2(W-1)/W`, checkpoint intervals) with Python before putting numbers on cards.
 2. **Verify citations and paper attributions:**
@@ -132,13 +132,18 @@ Every slide deck builds **three** deliverables (`make slides`): Reveal.js HTML, 
 
 ---
 
-## 7. Rule 6 — Markdown, Pandoc, LaTeX/PDF, & CSS Tripwires
+## 7. Rule 6 — Prose Style, Markdown, Pandoc, LaTeX/PDF, & CSS Tripwires
 
-1. **Multi-line display math with `:eqlabel:`:** Put `$$` **alone** on its opening and closing lines, with `:eqlabel:` immediately on the next line (otherwise the label detaches). Multi-line `\\` requires `\begin{aligned}...\end{aligned}`.
-2. **Image captions:** Never put unbalanced `]` or nested `[[...]]` inside `![caption](...)` — Pandoc truncates the alt text and prints `{#fig-...}` literally. Write matrices in captions as `\left(\begin{smallmatrix}a & b \\ c & d\end{smallmatrix}\right)`. Always follow `![...](../img/...)` immediately with `:label:\`fig_...\``.
-3. **Closing `$` before a digit:** Never write `$x$2` or `$\mathcal{F}$1` — Pandoc's currency heuristic refuses to close the math span and breaks XeLaTeX (`\symcal allowed only in math mode`). Keep digits inside math or `\text{...}`.
-4. **Block boundaries:** Keep `:begin_tab:` and `:end_tab:` alone on their own lines, leave a blank line before every bullet/numbered list and ATX heading, and never start a wrapped list continuation line with `<n>. ` or `(@ref)`.
-5. **CSS & Chromium hazards:**
+1. **Pedagogical voice & punctuation (`docs/writing-guide.md`):**
+   - Model exposition on Schölkopf & Smola (*Learning with Kernels*, Ch. 1) and Cover & Thomas (*Elements of Information Theory*, Ch. 2): motivate before formalizing, state the plain-English meaning after derived identities, anticipate natural reader questions, and balance conciseness (no multi-pass repetition) against clarity (never pack 3–4 definitions into nested parentheticals).
+   - **Curb `---` (em-dash) overuse without a mechanical zero-dash ban:** Previous AI edits went overboard littering prose with `---` where colons, parentheses, or clean clauses belong. Replace overused `---` chains, **but do not mechanically strip every dash** when an occasional em-dash is genuinely the most natural punctuation (or a clean label separator on slides). Avoid exclamation marks in prose and stock AI filler phrases.
+2. **Multi-line display math & no orphaned post-equation fragments:**
+   - Put `$$` **alone** on its opening and closing lines, with `:eqlabel:` immediately on the next line (otherwise the label detaches). Multi-line `\\` requires `\begin{aligned}...\end{aligned}`.
+   - **Never** place `(:numref:\`fig_...\`).` or lone punctuation on the line after `$$` — Pandoc renders it as a new `<p>` starting with `(Figure X.Y.Z).`. Put the figure reference before the display equation and end the equation with punctuation inside `$$...$$`.
+3. **Image captions:** Never put unbalanced `]` or nested `[[...]]` inside `![caption](...)` — Pandoc truncates the alt text and prints `{#fig-...}` literally. Write matrices in captions as `\left(\begin{smallmatrix}a & b \\ c & d\end{smallmatrix}\right)`. Always follow `![...](../img/...)` immediately with `:label:\`fig_...\``.
+4. **Closing `$` before a digit:** Never write `$x$2` or `$\mathcal{F}$1` — Pandoc's currency heuristic refuses to close the math span and breaks XeLaTeX (`\symcal allowed only in math mode`). Keep digits inside math or `\text{...}`.
+5. **Block boundaries:** Keep `:begin_tab:` and `:end_tab:` alone on their own lines, leave a blank line before every bullet/numbered list and ATX heading, and never start a wrapped list continuation line with `<n>. ` or `(@ref)`.
+6. **CSS & Chromium hazards:**
    - Never add `vertical-align: middle` to `.math.inline` in `_d2l-style.css` (shifts inline math off the text baseline across the whole book).
    - Never set `text-wrap: pretty` on `p, li` in `_d2l-slides.scss` (hangs Chromium layout on list items containing inline KaTeX).
 

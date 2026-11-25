@@ -509,9 +509,11 @@ def _update_rms(model, before, optimizer):
 ```{.python .input #reference-model-lib-val}
 %%tab pytorch
 #@save
-def _val_fn(cfg, batch_size=None):
+def _val_fn(cfg, batch_size=None, inference=True):
     """Validation loss on the first cfg.val_tokens tokens of the validation
-    shard, as windows of arch.T tokens with the training targets."""
+    shard, as windows of arch.T tokens with the training targets; under
+    torch.no_grad instead of inference mode when not inference (for layers
+    that refuse inference tensors)."""
     with d2l._quiet():
         shards = d2l.fwedu_shards('val')
     T, eos = cfg.arch.T, shards.eos_id
@@ -522,7 +524,8 @@ def _val_fn(cfg, batch_size=None):
     def val(model):
         dev = next(model.parameters()).device
         total, count = 0.0, 0
-        with torch.inference_mode(), torch.autocast(
+        grad_off = torch.inference_mode() if inference else torch.no_grad()
+        with grad_off, torch.autocast(
                 dev.type, torch.bfloat16, enabled=cfg.dtype == 'bf16'):
             for i in range(0, n, bs):
                 W = torch.from_numpy(windows[i:i + bs]).long().to(dev)

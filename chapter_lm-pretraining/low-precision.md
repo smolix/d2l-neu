@@ -74,7 +74,7 @@ for fmt, scale, Q in casts:
     print(f'{fmt:>6} {scale:>15} {zeroed:>7.1%} {nmse:>7.4f}')
 ```
 
-<!-- Placeholder (prose): read the table: with one scale for the whole tensor, E2M1 rounds most small entries to zero (quote the measured zeroed share; "most" only if above one half) and E4M3 still loses its smallest values; blocks restore both. The rest of the section explains why, and what it costs in a training run. -->
+<!-- Placeholder (prose): read the table: with one scale for the whole tensor, E2M1 rounds most small entries to zero (quote the measured zeroed share; "most" only if above one half); blocks restore it. The E4M3 sentence follows the measured rows: E4M3 spans about 18 binades, so one tensor scale rarely zeroes an activation; if its two rows tie (as on random weights), say that E4M3's range absorbs one scale per tensor for this activation and let the E2M1 rows carry the point; claim a loss of small values only if the per-tensor row shows it. The rest of the section explains why, and what it costs in a training run. -->
 
 ## Which GEMMs, Which Formats, What Stays Wide
 
@@ -99,7 +99,9 @@ def fp8_quant(x, fmt='e4m3', granularity='tensor', scale_mode='current',
     fmax = torch.finfo(dtype).max  # 448 (E4M3) or 57,344 (E5M2)
     tiles, untile = d2l._fp8_tiles(x.detach().float(), granularity)
     amax = tiles.abs().amax(-1, keepdim=True)  # one per tile
-    if scale_mode == 'delayed':
+    if scale_mode == 'delayed':  # state: the caller's dict, kept per operand
+        if state is None:
+            raise ValueError('delayed scaling needs a state dict')
         history = state.get('amax', amax.expand(16, *amax.shape))
         state['amax'] = torch.cat([history[1:], amax[None]])
         amax = history.amax(0)  # from the earlier calls only
@@ -142,7 +144,7 @@ d2l.plot(BLOCKS, [measured, modelled], 'block size', 'NMSE',
 
 ### One Outlier Sets the Scale
 
-<!-- Placeholder (prose): one outlier of ρ standard deviations sets s = ρσ/6; once every other value sits in the absolute regime its error is s^2 Δ_s^2 / 12 per value, NMSE ≈ ρ^2 Δ_s^2 / (12 Q^2) = ρ^2 / 1728, quadratic in the in-block dynamic range, until the other values fall below Δ_s / 2 in grid units and round to zero (NMSE saturates at 1, near ρ ≈ 24 and beyond). Smallest case: ρ = 8 gives 0.0370. -->
+<!-- Placeholder (prose): one outlier of ρ standard deviations sets s = ρσ/6; once every other value sits in the absolute regime its error is s^2 Δ_s^2 / 12 per value, NMSE ≈ ρ^2 Δ_s^2 / (12 Q^2) = ρ^2 / 1728, quadratic in the in-block dynamic range. Near ρ ≈ 24 a typical (1σ) value falls below half the first grid step (s · 0.25 = ρσ/24) and rounds to zero: ρ ≈ 24 is the zeroing point, not a saturation point, and the formula still holds there; beyond about 30 it over-predicts (the zeroed values' error is at most their own size), and the NMSE approaches 1 only slowly. Read the measured table, not the plan: its "saturating near ρ ≈ 24" is wrong as an NMSE statement, and its "0.0375 against the measured 0.0370" swaps model and measurement (model 0.0370, measured 0.0375). -->
 
 ```{.python .input #low-precision-outlier}
 %%tab pytorch
@@ -157,13 +159,13 @@ def outlier_blocks(rho):  # blocks of 16 with one rho-sigma outlier each
     return float(((q - rest) ** 2).sum() / (rest ** 2).sum()), float(
         (q == 0).float().mean())
 
-for rho in (8, 16):
-    nmse, _ = outlier_blocks(rho)
-    assert abs(nmse / (rho ** 2 / 1728) - 1) < 0.1  # claim 3
-    print(f'ρ = {rho}: model {rho ** 2 / 1728:.4f}, measured {nmse:.4f}')
-nmse, zeroed = outlier_blocks(24)
-print(f'ρ = 24: {zeroed:.0%} of the other values round to 0; NMSE caps '
-      f'at 1 (model: ρ = {math.sqrt(1728):.0f})')
+print(f'{"ρ":>3} {"model":>7} {"measured":>9} {"zeroed":>7}')
+for rho in (8, 16, 24, 32):
+    nmse, zeroed = outlier_blocks(rho)
+    formula = rho ** 2 / 1728  # rho^2 Delta_s^2 / (12 Q^2)
+    if rho <= 16:
+        assert abs(nmse / formula - 1) < 0.1  # claim 3
+    print(f'{rho:>3} {formula:>7.4f} {nmse:>9.4f} {zeroed:>7.0%}')
 ```
 
 ## Four-Bit Formats
@@ -182,7 +184,8 @@ def fake_quant_fp4(x, block=16, scale='e4m3', rounding='rtn', dim=-1,
                    tensor_scale=True, generator=None):
     """x rounded to E2M1 times one scale per `block` values along dim.
     Scales: 'fp32'; 'e4m3' (NVFP4, under an fp32 tensor scale); 'pow2'
-    (MXFP4's E8M0). Rounding: to nearest ('rtn') or stochastic ('sr')."""
+    (MXFP4's E8M0). Rounding: to nearest, ties to even ('rtn'), or
+    stochastic ('sr')."""
     xt = x.float().movedim(dim, -1)
     xb = xt.reshape(-1, block)
     amax = xb.abs().amax(-1, keepdim=True)
@@ -197,9 +200,12 @@ def fake_quant_fp4(x, block=16, scale='e4m3', rounding='rtn', dim=-1,
     grid = torch.tensor(E2M1, device=x.device)
     i = (torch.bucketize(z, grid, right=True) - 1).clamp(max=6)
     lo, hi = grid[i], grid[i + 1]  # the grid values around z
-    u = (torch.rand(z.shape, generator=generator, device=z.device)
-         if rounding == 'sr' else 0.5)  # up with prob. (z - lo) / (hi - lo)
-    q = torch.where((z - lo) / (hi - lo) > u, hi, lo) * torch.sign(xb) * s
+    frac = (z - lo) / (hi - lo)
+    if rounding == 'sr':  # up with probability frac: unbiased
+        up = frac > torch.rand(z.shape, generator=generator, device=z.device)
+    else:  # to nearest; a tie goes to the even code (even index), as in E2M1
+        up = (frac > 0.5) | ((frac == 0.5) & (i % 2 == 1))
+    q = torch.where(up, hi, lo) * torch.sign(xb) * s
     return q.reshape(xt.shape).movedim(-1, dim).to(x.dtype)
 
 #@save
@@ -225,37 +231,43 @@ bias = float(((mean - v) / v).abs().max())
 x = torch.randn(2 ** 20, generator=gen)
 q = fake_quant_fp4(x)
 idempotent = torch.equal(fake_quant_fp4(q), q)
-nmse = {s: block_nmse(x, lambda xb, b, s=s: fake_quant_fp4(xb, b, s), 16)
-        for s in ('fp32', 'e4m3', 'pow2')}
+n_fp32, n_e4m3, n_pow2 = (  # NMSE per scale format, blocks of 16
+    block_nmse(x, lambda xb, b, s=s: fake_quant_fp4(xb, b, s), 16)
+    for s in ('fp32', 'e4m3', 'pow2'))
 assert exact and idempotent and bias < 0.01  # claim 5
-assert nmse['e4m3'] / nmse['fp32'] < 1.06 and (  # claim 4
-    1.3 <= nmse['pow2'] / nmse['e4m3'] <= 2.5)
+assert n_e4m3 / n_fp32 < 1.06 and 1.3 <= n_pow2 / n_e4m3 <= 2.5  # claim 4
 print(f'on-grid: {"exact" if exact else "not exact"}')
 print(f'stochastic rounding bias: {bias:.1%} ({DRAWS:,} draws)')
 print(f'round-to-nearest idempotent: {idempotent}')
 print(f'NMSE fp32 / E4M3 scale / power-of-two (block 16): '
-      f'{nmse["fp32"]:.4f} / {nmse["e4m3"]:.4f} / {nmse["pow2"]:.4f}')
-print(f'power-of-two vs E4M3: ×{nmse["pow2"] / nmse["e4m3"]:.1f}')
+      f'{n_fp32:.4f} / {n_e4m3:.4f} / {n_pow2:.4f}')
+print(f'power-of-two vs E4M3: ×{n_pow2 / n_e4m3:.1f}')
 ```
 
 ### Rotating Outliers Away
 
-<!-- Placeholder (prose): a random Hadamard transform (orthogonal: H H^T = I) applied to both operands along the reduction dimension leaves the product unchanged and spreads an outlier over the block, so no value is crushed to zero; the NVFP4 recipe applies a 16x16 one to the inputs of the weight-gradient GEMM. Read the cell honestly: for one outlier per block the squared error does not fall (the crushed values' ρ^2/1728 each and the rotated block's relative-regime error are about the same total); what changes is that the small values are no longer zeroed. The recipe's benefit is reported at scale (the NVFP4 paper), not measurable in one block. d2l._hadamard is the library's Sylvester construction. -->
+<!-- Placeholder (prose): a random Hadamard transform (orthogonal: H H^T = I) applied to both operands along the reduction dimension leaves the product unchanged and spreads an outlier over the block, so no value is crushed to zero; the NVFP4 recipe applies a 16x16 one to the inputs of the weight-gradient GEMM. Say plainly what the cell measures: one outlier per block is the case rotation does not fix. The per-block scale already confines the outlier to its block; rotating spreads it into ±ρ/4 on every value, which lands the block in E2M1's coarse top cells, so the error on the 15 small values, the outlier's own error and the block's total all go up (quote the table). (The build also tried Student-t and log-normal blocks of 16: rotation did not lower the NMSE either.) The recipe's benefit is the NVFP4 paper's ablation at scale (quote it as the paper's result), not something one block shows. d2l._hadamard is the library's Sylvester construction. -->
 
 ```{.python .input #low-precision-hadamard}
 %%tab pytorch
-H = d2l._hadamard(16, generator=torch.Generator().manual_seed(3))
+gen = torch.Generator().manual_seed(3)
+H = d2l._hadamard(16, generator=gen)  # random column signs
 orth_err = float((H @ H.T - torch.eye(16)).abs().max())
 assert orth_err < 1e-6
-xb = torch.randn(N_BLOCKS, 16, generator=gen)
+xb = torch.randn(10_000, 16, generator=gen)
 xb[:, 0] = 16  # one outlier of 16 standard deviations per block
 q_plain = fake_quant_fp4(xb)
 q_rot = fake_quant_fp4(xb @ H.T) @ H  # rotate, quantize, rotate back
-nmse = lambda q: float(((q - xb) ** 2).sum() / (xb ** 2).sum())
-zeroed = lambda q: float((q[:, 1:] == 0).float().mean())
+
+def part_nmse(q, cols):  # the NMSE of the values in columns cols
+    return float(((q - xb)[:, cols] ** 2).sum() / (xb[:, cols] ** 2).sum())
+
 print(f'max |H Hᵀ − I| = {orth_err:.0e}')
-print(f'outlier block NMSE: {nmse(q_plain):.4f} → {nmse(q_rot):.4f} after '
-      f'rotation; zeroed: {zeroed(q_plain):.0%} → {zeroed(q_rot):.0%}')
+print(f'{"NMSE of":>14} {"plain":>7} {"rotated":>8}')
+for part, cols in (('the outlier', [0]), ('the other 15', slice(1, None)),
+                   ('the block', slice(None))):
+    print(f'{part:>14} {part_nmse(q_plain, cols):>7.4f} '
+          f'{part_nmse(q_rot, cols):>8.4f}')
 ```
 
 ### Stochastic Rounding for Gradients
@@ -265,7 +277,7 @@ print(f'outlier block NMSE: {nmse(q_plain):.4f} → {nmse(q_rot):.4f} after '
 ```{.python .input #low-precision-sr-sum}
 %%tab pytorch
 N_UPDATES, DELTA = 10_000, 0.2  # updates, each 0.2 of a grid step
-u = torch.rand(N_UPDATES, generator=gen)
+u = torch.rand(N_UPDATES, generator=torch.Generator().manual_seed(4))
 w_rtn, w_sr, rtn, sr = 0.0, 0.0, [], []
 for k in range(N_UPDATES):
     w_rtn = round(w_rtn + DELTA)  # to the nearest grid value
@@ -293,8 +305,9 @@ d2l.plot(list(range(1, N_UPDATES + 1)), [exact, sr, rtn], 'updates',
 class _Fp8Matmul(torch.autograd.Function):
     """Y = X W^T and its two backward GEMMs on fp8 operands."""
     @staticmethod
-    def forward(ctx, X, W, lin):
-        x, w = lin.quant(X, 'x'), lin.quant(W, 'w')  # (q, scale), E4M3
+    def forward(ctx, X, W, lin, training):
+        x = lin.quant(X, 'x', training)  # (q, scale), E4M3
+        w = lin.quant(W, 'w', training)
         ctx.lin, ctx.dtypes = lin, (X.dtype, W.dtype)
         ctx.save_for_backward(*x, *w)
         return d2l._fp8_mm(x, w, lin.native, d2l._out_dtype(X), tb=True)
@@ -305,13 +318,13 @@ class _Fp8Matmul(torch.autograd.Function):
         dy, native = ctx.lin.quant(dY, 'dy'), ctx.lin.native  # E5M2
         dX = d2l._fp8_mm(dy, (wq, ws), native, ctx.dtypes[0])  # dY W
         dW = d2l._fp8_mm(dy, (xq, xs), native, ctx.dtypes[1], ta=True)
-        return dX, dW, None  # dW = dY^T X
+        return dX, dW, None, None  # dW = dY^T X
 
 #@save
 class Fp8Linear(nn.Linear):
     """nn.Linear with fp8 GEMMs: X, W in E4M3, dY in E5M2, fp32
     accumulation; simulated, or native (torch._scaled_mm, Ada or newer).
-    While self.track, .stats() reports each operand's casts."""
+    While self.track, .stats() reports each training step's casts."""
     def __init__(self, in_features, out_features, bias=False,
                  granularity='tensor', scale_mode='current', native=False):
         super().__init__(in_features, out_features, bias=bias)
@@ -319,16 +332,20 @@ class Fp8Linear(nn.Linear):
         self.native, self.track, self.records = native, False, []
         self.state = {'x': {}, 'w': {}, 'dy': {}}  # delayed: amax histories
 
-    def quant(self, t, role):
+    def quant(self, t, role, training=True):
+        """A cast of operand role; outside training (no gradients, e.g. a
+        validation pass) the amax history is read but not updated."""
         fmt = 'e5m2' if role == 'dy' else 'e4m3'
         gran = d2l._fp8_granularity(self.granularity, role)
-        q, s = fp8_quant(t, fmt, gran, self.scale_mode, self.state[role])
-        if self.track:
+        state = self.state[role] if training else dict(self.state[role])
+        q, s = fp8_quant(t, fmt, gran, self.scale_mode, state)
+        if self.track and training:
             self.records.append(d2l._fp8_record(t, q, s, fmt, gran, role))
         return q, s
 
     def forward(self, X):
-        Y = _Fp8Matmul.apply(X.reshape(-1, X.shape[-1]), self.weight, self)
+        Y = _Fp8Matmul.apply(X.reshape(-1, X.shape[-1]), self.weight, self,
+                             torch.is_grad_enabled())
         Y = Y.reshape(*X.shape[:-1], -1)
         return Y if self.bias is None else Y + self.bias
 
@@ -360,15 +377,14 @@ print(f'input / weight grad error: {rel(dX, dX_ref):.1e} / '
 ```{.python .input #low-precision-fp8-native}
 %%tab pytorch
 dev = d2l.try_gpu()
-if d2l._fp8_native_ok(dev):  # fp8 tensor cores: Ada or newer
+if d2l.has_fp8_cores(dev):  # Ada or newer
     sim = Fp8Linear(512, 256).to(dev)
     nat = Fp8Linear(512, 256, native=True).to(dev)
     nat.load_state_dict(sim.state_dict())
     Xg = torch.randn(1024, 512, device=dev, dtype=torch.bfloat16)
     err = rel(nat(Xg).float(), sim(Xg).float())
     assert err < 5e-3  # claim 6: bf16 output rounding, no more
-    gpu = torch.cuda.get_device_name(dev).replace('NVIDIA GeForce ', '')
-    print(f'native vs simulated ({gpu}): {err:.1e}')
+    print(f'native vs simulated ({d2l.device_name(dev)}): {err:.1e}')
 else:
     print('native vs simulated: skipped (needs an Ada or newer GPU)')
 state = {}  # delayed scaling: a history of 16 amaxes near 1, then a jump
@@ -427,22 +443,27 @@ class Fp4Linear(nn.Linear):
 
 ### When fp8 Pays: the Crossover and Amdahl's Bound
 
-<!-- Placeholder (prose): the cost model (blueprint D2): with bf16 peak P, fp8 peak rP and casts that read 2 bytes and write 1 byte per operand element at bandwidth W, an n x n x n GEMM gains (2 n^3 / ηP)(1 - 1/r) and pays c · 6 n^2 / W of cast traffic, so fp8 wins above n* = 3 c η P r / ((r - 1) W) (990 for the 4090's 165 TFLOP/s, 1.0 TB/s, r = 2, c = η = 1; tab_gpu_specs). The sweep times one linear layer's training step (forward and both backward products) at 16,384 x n x n and at this section's preset shapes, in a process of its own on a whole card: bf16, fp8 with the casts a step pays, and the fp8 GEMMs alone. GeForce Ada runs fp8 with fp32 accumulation at a reduced rate: one reason the measured ratio may stay below the datasheet's 2; the sweep measures it rather than assuming. Datasheet ratios are not speedups. -->
+<!-- Placeholder (prose): the cost model (blueprint D2): with bf16 peak P, fp8 peak rP and casts that read 2 bytes and write 1 byte per operand element at bandwidth W, a forward-only n x n x n GEMM gains (2 n^3 / ηP)(1 - 1/r) and pays c · 6 n^2 / W of cast traffic (two operands), so it wins above n*_fwd = 3 c η P r / ((r - 1) W) (990 for the 4090's 165 TFLOP/s, 1.0 TB/s, r = 2, c = η = 1; tab_gpu_specs). A training step has three GEMMs (6 n^3) against three operand casts (9 n^2 bytes) plus the transposed copies the backward GEMMs read (about 3 n^2 more), so its crossover is n* ≈ (1.5 to 2) c η P r / ((r - 1) W) ≈ 500 to 660 at c = η = 1: the forward-only crossover is 1.5 to 2 times the training one, not half of it (the plan has this backwards). Compare the sweep with the training form: a measured training crossover near 3,072 means c of about 4 to 6 for this sweep's casts (compute it from the measured crossover and quote it). The sweep times one linear layer's training step (forward and both backward products) at 16,384 x n x n and at this section's preset shapes, in a process of its own on a whole card: bf16, fp8 with the casts a step pays, and the fp8 GEMMs alone. GeForce Ada runs fp8 with fp32 accumulation at a reduced rate: one reason the measured ratio may stay below the datasheet's 2; the sweep measures it rather than assuming. Datasheet ratios are not speedups. -->
 
 ```{.python .input #low-precision-gemm-sweep}
 %%tab pytorch
-arch = d2l.r2_config('fp8').arch  # the preset of the arms below
-M = 16 * 1024  # tokens in one step of the arms
+cfg = d2l.r2_config('fp8')  # the preset of the arms below
+arch = cfg.arch
+M = cfg.global_batch * arch.T  # tokens in one step of the arms
 SHAPES = [(M, arch.d, n) for n in (arch.d, arch.H_kv * arch.d_h, arch.f)] + [
     (M, arch.f, arch.d)]  # W_q and W_o; W_k and W_v; W_g and W_1; W_2
 sweep = d2l.fp8_gemm_sweep(m=M, ns=(512, 768, 1024, 1536, 2048, 3072, 4096),
                            shapes=SHAPES)
 t = sweep.table.set_index('n')
 ratio, n_max = t['fp8 with casts'] / t['bf16'], t.index[-1]
-wins = ratio.index[ratio > 1]  # claim 7: the crossover
-print(f'fp8 with casts beats bf16 from n = {wins[0]:,} on (n = {n_max:,}: '
-      f'×{ratio[n_max]:.2f})' if len(wins) else f'fp8 with casts never '
-      f'beats bf16 up to n = {n_max:,} (×{ratio[n_max]:.2f} there)')
+# claim 7: the crossover, the smallest n from which every larger n wins
+wins = [n for n in ratio.index if (ratio[ratio.index >= n] > 1).all()]
+if wins:
+    print(f'fp8 with casts beats bf16 from n = {wins[0]:,} on '
+          f'(n = {n_max:,}: ×{ratio[n_max]:.2f})')
+else:
+    print(f'fp8 with casts does not beat bf16 at n = {n_max:,} '
+          f'(×{ratio[n_max]:.2f})')
 print(f'fp8 without casts / bf16 at n = {n_max:,}: '
       f'×{t["fp8 GEMM only"][n_max] / t["bf16"][n_max]:.2f} (datasheet ×2)')
 d2l.plot_gemm_sweep(sweep)
@@ -454,8 +475,7 @@ d2l.plot_gemm_sweep(sweep)
 
 ```{.python .input #low-precision-preset}
 %%tab pytorch
-cfg = d2l.r2_config('fp8')
-a = cfg.arch
+a = cfg.arch  # the preset of the sweep cell
 with torch.device('meta'):  # shapes only, no memory
     P = sum(p.numel() for p in d2l.PackedGPT.from_arch(a).parameters())
 widths = (a.d, a.f, a.H_kv * a.d_h)
@@ -479,25 +499,28 @@ ARMS = {  # name: (recipe, seeds)
     'rowwise': ('torchao-rowwise', (0,)),
     'delayed': ('fp8-delayed', (0,)),
     'nvfp4-mlp': ('nvfp4-mlp', (0,))}
-runs = d2l.lowp_arms(cfg, ARMS)
-print(runs.table.to_string(index=False, formatters={
+runs = d2l.lowp_arms(cfg, ARMS)  # speeds: '—' where fp8 runs outside compile
+print(runs.table.to_string(index=False, na_rep='—', formatters={
     'val loss': '{:.3f}'.format, 'tok/s': '{:,.0f}'.format,
     'IQR': '{:,.0f}'.format, '÷bf16': '{:.2f}'.format,
     'GiB': '{:.1f}'.format}))
 ```
 
-<!-- Placeholder (prose): Amdahl: only the block GEMMs are cast, so with share s of a bf16 step in them and a measured fp8 speedup r on exactly those GEMMs, the step speeds up at most 1 / ((1 - s) + s / r). s comes from a profile of the bf16 arm's seed 0 (steps 200-210); r weights each preset shape of the sweep by its bf16 time and by how many of it a block holds (two each of W_q/W_o, W_k/W_v, W_g/W_1, one W_2). The plan's FLOP-weighted estimate (s ≈ 0.57, bound ≈ 1.40 at r = 2) is the datasheet version of the same arithmetic. If the measured ratio in the table is below one, say so and name the reasons from the measurements (casts, the GeForce fp8 accumulation rate, compile graph breaks). -->
+<!-- Placeholder (prose): Amdahl: only the block GEMMs are cast, so with share s of a bf16 step in them and a speedup r on exactly those GEMMs, the step speeds up at most 1 / ((1 - s) + s / r). s comes from a profile of the bf16 arm's seed 0 (steps 200-210); it is a measured time share, which is why it is far below the plan's FLOP share (s ≈ 0.57, bound ≈ 1.40 at r = 2: the datasheet version of the same arithmetic; attention and elementwise work dominate at width 768). r is the sweep's GEMM-only speedup at the preset shapes, each weighted by its bf16 time and by how many of it a block holds (two each of W_q/W_o, W_k/W_v, W_g/W_1, one W_2): casts only add time, so this is the true ceiling. The profile table then shows where the fp8 step's time actually goes, against the bf16 step: its block GEMMs (realized, not the sweep's), the fp8 copies of the compiler workaround (torch 2.11 / Triton 3.6; quote their measured ms and share, not just a clause), and the other kernels, where torchao's fused casts land. If the measured ratio in the arms table is below one, say so and name the reasons from these rows (casts and copies in "other kernels" and "fp8 copies", the GeForce fp8 accumulation rate as the gap between the realized and the datasheet GEMM speedup). -->
 
 ```{.python .input #low-precision-amdahl}
 %%tab pytorch
-s = float(runs.profile.set_index('kernels').loc['block GEMMs', 'share'])
+ms = runs.profile.pivot_table('ms', 'kernels', 'arm', sort=False)  # per step
+ms.loc['whole step'] = ms.sum()
+s = ms.loc['block GEMMs', 'bf16'] / ms.loc['whole step', 'bf16']
 COUNTS = [2, 2, 2, 1]  # per block: W_q, W_o | W_k, W_v | W_g, W_1 | W_2
 r = float((sweep.shapes['bf16'] * COUNTS).sum() /
-          (sweep.shapes['fp8 with casts'] * COUNTS).sum())
-bound = 1 / ((1 - s) + s / r)
-print(f'GEMM share of a bf16 step: {s:.2f}')
-print(f'fp8 GEMM speedup at these shapes: ×{r:.2f}')
+          (sweep.shapes['fp8 GEMM only'] * COUNTS).sum())
+bound = 1 / ((1 - s) + s / r)  # casts only add time: an upper bound
+print(f'GEMM share of a bf16 step: {s:.2f}; fp8 GEMM-only speedup: ×{r:.2f}')
 print(f'end-to-end bound: ×{bound:.2f}')
+print(ms[['bf16', 'tensorwise']].rename_axis(
+    index=None, columns='ms per step').round(1).to_string())
 d2l.plot_lowp_runs(runs, bound)
 ```
 
@@ -522,18 +545,23 @@ print(f'tensorwise seeds {", ".join(map(str, tw.index))}: '
                   for v in tw))
 ```
 
-<!-- Placeholder (prose): delayed against current scaling, on the same tensors: every 10 steps the delayed arm records, per operand, the share of values that saturate at the format's maximum and the share that underflow to zero under its delayed scales and under a current scale of the same tensor (current scaling never saturates by construction). Read the windows of ±50 steps around the end of warmup and the start of the decay; "no difference at this scale" if the two are within 10% of each other. -->
+<!-- Placeholder (prose): delayed against current scaling, on the same tensors: every 10 steps the delayed arm records, per operand, the share of values that saturate at the format's maximum and the share that underflow to zero under its delayed scales and under a current scale of the same tensor (current scaling never saturates by construction). Read the windows of ±50 steps around the end of warmup and the start of the decay, per operand (x and w in E4M3, dy in E5M2; averaging the roles hides the effect: in the smoke, dy underflow differed by about 100× while x and w were within 10%); "no difference at this scale" for a role whose delayed/current underflow ratio lies within 10% of 1. Saturation: current scaling never saturates, so any delayed saturation is the effect. Validation passes do not touch the amax histories (Fp8Linear reads them without updating outside training). -->
 
 ```{.python .input #low-precision-scaling-stats}
 %%tab pytorch
 WINDOW = 50  # steps on either side of a phase change
-stats = runs.stats.groupby('step').mean(numeric_only=True)
-near = lambda step: stats[abs(stats.index - step) <= WINDOW].mean()
-warm, decay = near(cfg.warmup), near(cfg.steps - cfg.decay)
-for what in ('saturation', 'underflow'):
-    print(f'{what} (delayed / current), warmup end: '
-          f'{warm[what]:.2%} / {warm[what + "_current"]:.2%}; decay: '
-          f'{decay[what]:.2%} / {decay[what + "_current"]:.2%}')
+phases = {'warmup end': cfg.warmup, 'decay start': cfg.steps - cfg.decay}
+print(f'{"in ppm":>11} {"operand":>7} {"saturated":>9} {"underflow":>9} '
+      f'{"(current)":>9} {"ratio":>6}')
+for phase, step in phases.items():
+    near = runs.stats[(runs.stats['step'] - step).abs() <= WINDOW]
+    ppm = 1e6 * near.groupby('role').mean(numeric_only=True)
+    for role in ('x', 'w', 'dy'):
+        sat, under, cur = ppm.loc[role, ['saturation', 'underflow',
+                                         'underflow_current']]
+        under_ratio = f'{under / cur:.2f}' if cur > 0 else '—'
+        print(f'{phase:>11} {role:>7} {sat:>9.3g} {under:>9.3g} {cur:>9.3g} '
+              f'{under_ratio:>6}')  # ratio: delayed / current
 d2l.plot_lowp_stats(runs.stats, marks=(cfg.warmup, cfg.steps - cfg.decay))
 ```
 
@@ -555,4 +583,4 @@ print(f'NVFP4 (simulated, MLP) − bf16 mean: {gap:+.3f} = {gap / sd:.1f} '
 
 ## Exercises
 
-<!-- Placeholder (prose): exercises 5-7 per spec part H: the error ratio of block sizes 16 and 128 for Gaussian values (derive); which operands need E5M2 and why; the crossover n* for forward-only GEMMs (half the training value; optional sweep, 5 min); overflow under delayed scaling after a jump (amax 6 against a history of 1 saturates at 448; CPU); the NVFP4 block-size and scale-format sweep on 5M tokens with two seeds (one card, about 40 min); open: a SwiGLU outlier miniature that destabilizes per-tensor scaling, and the block size that fixes it (one card, about 20 min). -->
+<!-- Placeholder (prose): exercises 5-7 per spec part H: the error ratio of block sizes 16 and 128 for Gaussian values (derive); which operands need E5M2 and why; the crossover n* for forward-only GEMMs (1.5 to 2 times the training value, not half of it: one GEMM against two casts instead of three GEMMs against three casts and their transposed copies; optional sweep, 5 min); overflow under delayed scaling after a jump (amax 6 against a history of 1 saturates at 448; CPU); the NVFP4 block-size and scale-format sweep on 5M tokens with two seeds (one card, about 40 min); open: a SwiGLU outlier miniature that destabilizes per-tensor scaling, and the block size that fixes it (one card, about 20 min). -->

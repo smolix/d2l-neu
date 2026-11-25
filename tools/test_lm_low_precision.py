@@ -14,8 +14,11 @@ two refused) and `_rotate_rows` (dY^T X unchanged); `_fp4_weight` 16 x 16
 tiles read the same along both dimensions; `Fp4Linear` gradients against
 fp32; `_swap_linears` on a toy PackedGPT (outputs unchanged in fp32 within
 the fp8 error); `mlp_input` against a hook-free recomputation;
-`_stats_hook`; `_profile_table` on a stub profiler; `_lowp_merge`;
-`lowp_arms` and `fp8_gemm_sweep` pending; the jobs of `PRETRAIN_JOBS`
+`_stats_hook`; a no-grad forward leaves the amax histories and records
+alone; `_profile_table` on a stub profiler; `_lowp_merge` (speeds only
+for natively compiled arms, a profile per arm); `lowp_arms` and
+`fp8_gemm_sweep` pending, and a stored labelled result prints its label;
+`has_fp8_cores` and `device_name` on the CPU; the jobs of `PRETRAIN_JOBS`
 against the page's literals.
 """
 import ast
@@ -89,6 +92,10 @@ class Fp8QuantTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             d2l._fp8_tiles(x, 'columns')
 
+    def test_delayed_needs_state(self):
+        with self.assertRaises(ValueError):
+            d2l.fp8_quant(torch.randn(8, 8), scale_mode='delayed')
+
     def test_delayed(self):
         state = {}
         x = torch.randn(64, 128)
@@ -157,6 +164,27 @@ class Fp8LinearTest(unittest.TestCase):
         self.assertEqual(tuple(lin.state['x']['amax'].shape), (16, 1, 1))
         self.assertIn('amax', lin.state['dy'])
 
+    def test_no_grad_forward_is_read_only(self):
+        torch.manual_seed(4)
+        lin = d2l.Fp8Linear(128, 64, scale_mode='delayed')
+        X = torch.randn(32, 128)
+        lin(X.requires_grad_()).sum().backward()
+        lin.track = True
+        before = {r: {k: v.clone() for k, v in st.items()}
+                  for r, st in lin.state.items()}
+        with torch.no_grad():
+            Y = lin(100 * X)  # a validation pass with a far larger amax
+        self.assertEqual(lin.records, [])
+        for role, st in lin.state.items():
+            for k, v in st.items():
+                self.assertTrue(torch.equal(v, before[role][k]), role)
+        # it read the history: the training step's scale, so 100 X
+        # saturates and the output is far from the exact one
+        with torch.no_grad():
+            self.assertGreater(rel(Y, F.linear(100 * X, lin.weight)), 0.5)
+        lin(X).sum().backward()  # a training step records again
+        self.assertEqual({r for r, _ in lin.records}, {'x', 'w', 'dy'})
+
 
 class Fp4Test(unittest.TestCase):
     def test_grid_and_rounding(self):
@@ -183,6 +211,15 @@ class Fp4Test(unittest.TestCase):
         mean = d2l.fake_quant_fp4(blocks, 16, 'fp32', 'sr',
                                   generator=g)[:, :4].mean(0)
         self.assertLess(float(((mean - v) / v).abs().max()), 0.01)
+
+    def test_ties_to_even(self):
+        # midpoints between grid values (scale 1: the block holds a 6)
+        ties = torch.tensor([0.25, 0.75, 1.25, 1.75, 2.5, 3.5, 5.0])
+        even = torch.tensor([0.0, 1.0, 1.0, 2.0, 2.0, 4.0, 4.0])
+        x = torch.cat([ties, torch.tensor([6.0]), torch.zeros(8)])
+        for sign in (1, -1):
+            q = d2l.fake_quant_fp4(sign * x, 16, 'fp32')[:7]
+            self.assertTrue(torch.equal(q, sign * even), q)
 
     def test_scales_dim_dtype(self):
         g = torch.Generator().manual_seed(1)
@@ -312,8 +349,9 @@ class ModelTest(unittest.TestCase):
 
 
 class _Event:
-    def __init__(self, key, us, shapes=(), device='cpu'):
+    def __init__(self, key, us, shapes=(), device='cpu', total=None):
         self.key, self.self_device_time_total = key, us
+        self.device_time_total = us if total is None else total
         self.input_shapes = list(shapes)
         self.device_type = (torch.autograd.DeviceType.CUDA if device == 'cuda'
                             else torch.autograd.DeviceType.CPU)
@@ -328,15 +366,19 @@ class ArmsTest(unittest.TestCase):
             _Event('aten::_scaled_mm', 20_000, [[16384, 2048], [2048, 768]]),
             _Event('aten::mm', 10_000, [[16384, 768], [768, cfg.arch.vocab]]),
             _Event('triton_poi_fused', 20_000),  # CPU side: not counted
+            _Event('d2l::fp8_copy', 0, total=5_000),  # kernels in children
             _Event('sgemm', 70_000, device='cuda'),
             _Event('triton_poi_fused', 20_000, device='cuda'),
+            _Event('copy_kernel', 5_000, device='cuda'),
             _Event('## Call CompiledFxGraph', 90_000, device='cuda')]
         t = d2l._profile_table(prof, cfg, wall=0.0100, steps=10)
+        self.assertEqual(tuple(t.columns), d2l._PROFILE_COLUMNS)
         t = t.set_index('kernels')
         self.assertAlmostEqual(t.loc['block GEMMs', 'ms'], 6.0)
         self.assertAlmostEqual(t.loc['head GEMMs', 'ms'], 1.0)
+        self.assertAlmostEqual(t.loc['fp8 copies', 'ms'], 0.5)
         self.assertAlmostEqual(t.loc['other kernels', 'ms'], 2.0)
-        self.assertAlmostEqual(t.loc['host and launches', 'ms'], 1.0)
+        self.assertAlmostEqual(t.loc['host and launches', 'ms'], 0.5)
         self.assertAlmostEqual(t['share'].sum(), 1.0)
 
     def runs(self):
@@ -351,16 +393,17 @@ class ArmsTest(unittest.TestCase):
                                    saturation_current=0.0,
                                    underflow_current=0.1)])
         prof = pd.DataFrame([('block GEMMs', 6.0, 0.6)],
-                            columns=d2l._LOWP_COLUMNS['profile'])
+                            columns=d2l._PROFILE_COLUMNS)
         mk = lambda r, v, n, s=None, p=None: dict(
             log=log(r, v), native=n, gib=3.0,
             stats=s if s is not None else empty('stats'),
-            profile=p if p is not None else empty('profile'))
+            profile=p if p is not None else pd.DataFrame(
+                columns=d2l._PROFILE_COLUMNS))
         arms = {'bf16': ('bf16', (0, 1)), 'tensorwise':
                 ('torchao-tensorwise', (0,)), 'delayed': ('fp8-delayed', (0,))}
         runs = {('bf16', 0): mk(100, 3.0, '—', p=prof),
                 ('bf16', 1): mk(102, 3.2, '—'),
-                ('tensorwise', 0): mk(150, 3.1, 'yes'),
+                ('tensorwise', 0): mk(150, 3.1, 'yes', p=prof),
                 ('delayed', 0): mk(20, 3.3, 'simulated', s=stats)}
         return d2l._lowp_merge(runs, arms)
 
@@ -375,8 +418,14 @@ class ArmsTest(unittest.TestCase):
                                t.loc['tensorwise', 'tok/s'] /
                                t.loc['bf16', 'tok/s'])
         self.assertEqual(t.loc['delayed', 'native'], 'simulated')
+        # no speeds for an arm whose fp8 GEMMs run outside the compiled step
+        self.assertTrue(t.loc['delayed', ['tok/s', 'IQR', '÷bf16']]
+                        .isna().all())
+        self.assertFalse(np.isnan(t.loc['delayed', 'val loss']))
         self.assertEqual(len(r.stats), 1)
-        self.assertEqual(len(r.profile), 1)
+        self.assertEqual(list(r.profile.columns),
+                         d2l._LOWP_COLUMNS['profile'])
+        self.assertEqual(list(r.profile['arm']), ['bf16', 'tensorwise'])
         self.assertEqual(len(r.losses), 4 * 500)
         final = r.losses.dropna(subset=['val_loss']).groupby(
             ['arm', 'seed'])['val_loss'].last()
@@ -395,6 +444,35 @@ class ArmsTest(unittest.TestCase):
                          d2l._LOWP_COLUMNS['table'])
         self.assertEqual(list(sweep.shapes.columns),
                          ['m', 'k', 'n', *d2l._SWEEP_COLUMNS])
+
+    def test_stored_label_printed(self):
+        runs = self.runs()._replace(label='smoke')
+        sweep = d2l.GemmSweep(pd.DataFrame(columns=['n']),
+                              pd.DataFrame(columns=['m']), label='H100')
+        for fn, result, args in (
+                (d2l.lowp_arms, runs, (d2l.r2_config('fp8'), {})),
+                (d2l.fp8_gemm_sweep, sweep, (16384, (512,), []))):
+            out = io.StringIO()
+            with mock.patch.object(d2l, '_pretrain_result',
+                                   lambda *a, **k: result), \
+                    contextlib.redirect_stdout(out):
+                got = fn(*args)
+            self.assertEqual(got.label, result.label)
+            self.assertEqual(out.getvalue(), f'[{result.label}]\n')
+
+    def test_devices(self):
+        self.assertFalse(d2l.has_fp8_cores('cpu'))
+        self.assertEqual(d2l.device_name('cpu'), 'CPU')
+        with mock.patch.object(torch.cuda, 'get_device_name',
+                               lambda d=None: 'NVIDIA GeForce RTX 4090'):
+            self.assertEqual(d2l.device_name('cuda:0'), 'RTX 4090')
+        arms = {'bf16': ('bf16', (0,)), 'tw': ('torchao-tensorwise', (0,)),
+                'rw': ('torchao-rowwise', (0,))}
+        with mock.patch.object(d2l, '_rowwise_ok', lambda dev: False):
+            self.assertEqual(d2l._torchao_recipes(arms), ('tensorwise',))
+        with mock.patch.object(d2l, '_rowwise_ok', lambda dev: True):
+            self.assertEqual(d2l._torchao_recipes(arms),
+                             ('rowwise', 'tensorwise'))
 
 
 class JobsTest(unittest.TestCase):

@@ -152,12 +152,21 @@ second column-major, tensor scales, and dimensions divisible by 16.
 ```{.python .input #low-precision-lib-gemm}
 %%tab pytorch
 #@save
-def _fp8_native_ok(device):
+def has_fp8_cores(device):
     """Whether device has fp8 tensor cores (CUDA, compute capability 8.9:
     Ada, or newer)."""
     device = torch.device(device)
     return device.type == 'cuda' and (
         torch.cuda.get_device_capability(device) >= (8, 9))
+
+#@save
+def device_name(device):
+    """A short name of device: 'RTX 4090', 'A100-SXM4-80GB', or 'CPU'."""
+    device = torch.device(device)
+    if device.type != 'cuda':
+        return device.type.upper()
+    name = torch.cuda.get_device_name(device)
+    return re.sub(r'^NVIDIA (GeForce )?', '', name)
 
 #@save
 def _out_dtype(X):
@@ -278,8 +287,11 @@ millions of non-finite weight gradients (eager torchao is fine; a plain
 Triton kernel with the two stores reproduces it, int8 and fp16 do not).
 Inside the arms and the sweep, an Inductor pass therefore moves every fp8
 copy (`aten.clone` of an fp8 tensor) into an opaque operator that runs
-PyTorch's own copy kernel; `_fp8_compile_check` compares a compiled
-torchao layer pair with the eager one before any run.
+PyTorch's own copy kernel. Before any run, `_fp8_compile_check` compares
+a compiled torchao layer pair with the eager one for every torchao recipe
+of the arms, and `_train_gemms_check` the sweep's compiled casts and GEMMs
+with the eager ones. The copies cost time of their own; the arms' profile
+reports it as a row.
 
 ```{.python .input #low-precision-lib-workaround}
 %%tab pytorch
@@ -329,36 +341,45 @@ def _lowp_compile_settings():
         {'post_grad_custom_post_pass': _fp8_clone_pass()})
 
 #@save
-def _fp8_compile_check(tol=0.1):
-    """Gradients of a compiled torchao tensorwise MLP (1,024 -> 4,096 ->
-    1,024 on 8,192 tokens) against the eager ones: raises unless every
-    gradient is finite and within tol (relative Frobenius error)."""
+def _fp8_compile_check(recipes=('tensorwise',), tol=0.1):
+    """Gradients of a compiled torchao MLP (1,024 -> 4,096 -> 1,024 on 8,192
+    tokens) against the eager ones, per float8 recipe: raises unless every
+    gradient is finite and within tol (relative Frobenius error); returns
+    {recipe: errors}."""
     from torchao.float8 import (Float8LinearConfig,
                                 convert_to_float8_training)
     dev = torch.device('cuda')
     torch.manual_seed(0)
     X = torch.randn(8192, 1024, device=dev)
 
-    def grads(compiled):
+    def grads(recipe, compiled):
         torch.manual_seed(0)
         mlp = nn.Sequential(nn.Linear(1024, 4096, bias=False), nn.GELU(),
                             nn.Linear(4096, 1024, bias=False)).to(dev)
         convert_to_float8_training(
-            mlp, config=Float8LinearConfig.from_recipe_name('tensorwise'))
+            mlp, config=Float8LinearConfig.from_recipe_name(recipe))
         net = torch.compile(mlp) if compiled else mlp
         with torch.autocast('cuda', torch.bfloat16):
             net(X).float().pow(2).mean().backward()
         return [p.grad.float() for p in mlp.parameters()]
-    torch._dynamo.reset()
-    with _lowp_compile_settings(), d2l._quiet():
-        got = grads(True)
-    ref = grads(False)
-    torch._dynamo.reset()
-    errs = [float(torch.linalg.norm(g - r) / torch.linalg.norm(r))
-            for g, r in zip(got, ref)]
+    out = {}
+    for recipe in recipes:
+        torch._dynamo.reset()
+        with _lowp_compile_settings(), d2l._quiet():
+            got = grads(recipe, True)
+        ref = grads(recipe, False)
+        torch._dynamo.reset()
+        out[recipe] = _check_close(got, ref, tol, f'compiled {recipe}')
+    return out
+
+#@save
+def _check_close(got, ref, tol, what):
+    """Relative Frobenius errors of got against ref; raises unless each is
+    finite and below tol."""
+    errs = [float(torch.linalg.norm(g.float() - r.float()) /
+                  torch.linalg.norm(r.float())) for g, r in zip(got, ref)]
     if not all(math.isfinite(e) and e < tol for e in errs):
-        raise RuntimeError(f'compiled fp8 gradients differ from eager: '
-                           f'{errs}')
+        raise RuntimeError(f'{what} differs from eager: {errs}')
     return errs
 ```
 
@@ -388,6 +409,17 @@ def _train_gemms_fp8(X, W, dY):
     return (_fp8_mm(x, w, True, torch.bfloat16, tb=True),
             _fp8_mm(dy, w, True, torch.bfloat16),
             _fp8_mm(dy, x, True, torch.bfloat16, ta=True))
+
+#@save
+def _train_gemms_check(compiled, m=4096, n=1024, tol=1e-2):
+    """The compiled _train_gemms_fp8 against the eager one on an m x n x n
+    layer: raises unless all three products agree within tol."""
+    dev = torch.device('cuda')
+    g = torch.Generator(dev).manual_seed(0)
+    X, W, dY = (torch.randn(r, n, device=dev, generator=g,
+                            dtype=torch.bfloat16) for r in (m, n, m))
+    return _check_close(compiled(X, W, dY), _train_gemms_fp8(X, W, dY), tol,
+                        'compiled _train_gemms_fp8')
 
 #@save
 def _gemm_times(m, k, n, repeats, compiled):
@@ -427,11 +459,12 @@ def fp8_gemm_sweep(m, ns, shapes, repeats=3):
                   repeats=repeats)
 
     def compute():
-        if not _fp8_native_ok('cuda' if torch.cuda.is_available() else 'cpu'):
+        if not has_fp8_cores('cuda' if torch.cuda.is_available() else 'cpu'):
             raise RuntimeError('the GEMM sweep needs an Ada or newer GPU')
         tflop = lambda m, k, n: 3 * 2 * m * k * n / 1e12
         with _lowp_compile_settings(), d2l._quiet():
             compiled = torch.compile(_train_gemms_fp8)
+            _train_gemms_check(compiled)
             rows = [[n, *(tflop(m, n, n) / _gemm_times(m, n, n, repeats,
                                                          compiled))]
                     for n in ns]
@@ -443,9 +476,9 @@ def fp8_gemm_sweep(m, ns, shapes, repeats=3):
             pd.DataFrame(srows, columns=['m', 'k', 'n', *_SWEEP_COLUMNS]),
             label='' if gpu == 'NVIDIA GeForce RTX 4090' else gpu)
     result = d2l._pretrain_result('gemm-sweep', compute, config)
-    return d2l._as_tuple(GemmSweep, result, {
+    return d2l._show_label(d2l._as_tuple(GemmSweep, result, {
         'table': ['n', *_SWEEP_COLUMNS],
-        'shapes': ['m', 'k', 'n', *_SWEEP_COLUMNS]})
+        'shapes': ['m', 'k', 'n', *_SWEEP_COLUMNS]}))
 
 #@save
 def plot_gemm_sweep(sweep, peaks=(165, 330)):
@@ -487,7 +520,10 @@ _LOWP_COLUMNS = {
               'GiB'],
     'losses': ['arm', 'seed', 'step', 'tokens', 'loss', 'val_loss'],
     'stats': ['step', 'role', *_FP8_STAT_COLUMNS],
-    'profile': ['kernels', 'ms', 'share']}
+    'profile': ['arm', 'kernels', 'ms', 'share']}
+
+#@save
+_PROFILE_COLUMNS = ('kernels', 'ms', 'share')
 
 #@save
 _BLOCK_LINEARS = ('attention.W_q', 'attention.W_k', 'attention.W_v',
@@ -508,6 +544,18 @@ def _swap_linears(model, make, names=_BLOCK_LINEARS):
             setattr(getattr(blk, parent), attr, new)
 
 #@save
+def _rowwise_ok(dev):
+    """Whether torch._scaled_mm runs one rowwise-scaled product on dev."""
+    try:
+        a = torch.ones(32, 32, device=dev).to(torch.float8_e4m3fn)
+        torch._scaled_mm(a, a.t(), torch.ones(32, 1, device=dev),
+                         torch.ones(1, 32, device=dev),
+                         out_dtype=torch.bfloat16)
+        return True
+    except RuntimeError:
+        return False
+
+#@save
 def _torchao_float8(model, recipe):
     """torchao's float8 training (recipe 'tensorwise' or 'rowwise') on the
     block linears whose dimensions are multiples of 16; False (and nothing
@@ -518,16 +566,10 @@ def _torchao_float8(model, recipe):
     except ImportError:
         return False
     dev = next(model.parameters()).device
-    if not _fp8_native_ok(dev):
+    if not has_fp8_cores(dev):
         return False
-    if recipe == 'rowwise':  # one rowwise product on this card
-        try:
-            a = torch.ones(32, 32, device=dev).to(torch.float8_e4m3fn)
-            torch._scaled_mm(a, a.t(), torch.ones(32, 1, device=dev),
-                             torch.ones(1, 32, device=dev),
-                             out_dtype=torch.bfloat16)
-        except RuntimeError:
-            return False
+    if recipe == 'rowwise' and not _rowwise_ok(dev):
+        return False
     keep = lambda mod, fqn: ('blks.' in fqn and mod.in_features % 16 == 0
                              and mod.out_features % 16 == 0)
     with d2l._quiet():
@@ -554,7 +596,7 @@ def _lowp_convert(model, recipe):
             i, o, granularity='row'))
         return 'simulated'
     if recipe == 'fp8-delayed':  # native GEMMs if the card has them, run
-        native = _fp8_native_ok(dev)  # eagerly: its speed is not claimed
+        native = has_fp8_cores(dev)  # eagerly: its speed is not claimed
         _swap_linears(model, lambda i, o: d2l.Fp8Linear(
             i, o, scale_mode='delayed', native=native))
         return 'eager' if native else 'simulated'
@@ -607,8 +649,9 @@ def _profile_hook(cfg, out, start=200, stop=210):
 def _profile_table(prof, cfg, wall, steps):
     """Milliseconds per step and share of the step: the GEMMs of the block
     linears, the head's GEMMs (a dimension equal to the vocabulary), the
+    fp8 copies of the compiler workaround (torch.ops.d2l.fp8_copy), the
     other kernels, and the rest of the wall-clock step (host, launches)."""
-    gemm = {'block GEMMs': 0.0, 'head GEMMs': 0.0}
+    parts = {'block GEMMs': 0.0, 'head GEMMs': 0.0, 'fp8 copies': 0.0}
     total = 0.0  # the kernels' time: device events, not annotations
     for e in prof.key_averages(group_by_input_shape=True):
         t = e.self_device_time_total / 1e3 / steps  # ms per step
@@ -620,42 +663,21 @@ def _profile_table(prof, cfg, wall, steps):
                        'aten::_scaled_mm'):  # the kernels it launched
             shapes = [s for s in e.input_shapes if s]
             head = any(cfg.arch.vocab in s for s in shapes)
-            gemm['head GEMMs' if head else 'block GEMMs'] += t
+            parts['head GEMMs' if head else 'block GEMMs'] += t
+        elif e.key == 'd2l::fp8_copy':  # its kernels run in child ops
+            parts['fp8 copies'] += e.device_time_total / 1e3 / steps
     ms = 1e3 * wall
-    rows = [*gemm.items(), ('other kernels', total - sum(gemm.values())),
+    rows = [*parts.items(), ('other kernels', total - sum(parts.values())),
             ('host and launches', max(ms - total, 0.0))]
     return pd.DataFrame([(k, v, v / ms) for k, v in rows],
-                        columns=_LOWP_COLUMNS['profile'])
-
-#@save
-def _lowp_val_fn(cfg):
-    """_val_fn's validation loss under torch.no_grad instead of inference
-    mode: torchao's float8 layers refuse inference tensors (torchao 0.17)."""
-    with d2l._quiet():
-        shards = d2l.fwedu_shards('val')
-    T, eos, bs = cfg.arch.T, shards.eos_id, cfg.micro_batch
-    n = cfg.val_tokens // T
-    windows = np.stack([shards.read(i * T, T + 1) for i in range(n)])
-
-    def val(model):
-        dev = next(model.parameters()).device
-        total, count = 0.0, 0
-        with torch.no_grad(), torch.autocast(dev.type, torch.bfloat16):
-            for i in range(0, n, bs):
-                W = torch.from_numpy(windows[i:i + bs]).long().to(dev)
-                X, Y = W[:, :-1], W[:, 1:].clone()
-                Y[X == eos] = -100
-                ctx = d2l.PackCtx(*d2l.doc_ids_from_eos(X.int(), eos))
-                H, Wt = model(X, ctx, return_hidden=True)
-                s, c = d2l.chunked_lm_loss(H, Wt, Y)
-                total, count = total + s.float(), count + c
-        return float(total / count)
-    return val
+                        columns=_PROFILE_COLUMNS)
 
 #@save
 def _lowp_run(cfg, recipe, seed, profile=False, stats=False):
     """One run of lowp_arms on the GPU: the log, the peak memory, whether
-    it ran natively, and the statistics or profile it was asked for."""
+    it ran natively, and the statistics or profile it was asked for. The
+    validation runs under torch.no_grad, not inference mode: torchao's
+    float8 layers refuse inference tensors (torchao 0.17)."""
     dev = torch.device('cuda')
     c = dataclasses.replace(cfg, seed=seed, data_seed=seed, probe_every=0,
                             stats_every=0)  # nothing here reads the probes
@@ -672,8 +694,8 @@ def _lowp_run(cfg, recipe, seed, profile=False, stats=False):
         hooks.append(_profile_hook(c, prof))
     torch.cuda.reset_peak_memory_stats(dev)
     with _lowp_compile_settings(), d2l._quiet():
-        log = d2l.pretrain(model, stream, c, val_fn=_lowp_val_fn(c),
-                           hooks=hooks)
+        log = d2l.pretrain(model, stream, c, hooks=hooks,
+                           val_fn=d2l._val_fn(c, inference=False))
     if not np.isfinite(log['loss']).all():
         raise RuntimeError(f'{recipe} seed {seed}: non-finite loss')
     return dict(log=log, native=native, stats=pd.DataFrame(rows),
@@ -695,7 +717,7 @@ def _lowp_run_cached(cfg, name, recipe, seed, profile, stats):
     r = _lowp_run(cfg, recipe, seed, profile, stats)
     parts = dict(log=r['log'], stats=r['stats'], profile=(
         r['profile'] if r['profile'] is not None else pd.DataFrame(
-            columns=_LOWP_COLUMNS['profile'])),
+            columns=_PROFILE_COLUMNS)),
                  native=r['native'], gib=r['gib'])
     d2l._write_result(path, 'json-table', parts,
                       dict(config=d2l._jsonable(config), label=''))
@@ -703,8 +725,10 @@ def _lowp_run_cached(cfg, name, recipe, seed, profile, stats):
 
 #@save
 def _lowp_merge(runs, arms):
-    """LowpRuns from {(arm, seed): run}; the first arm is the baseline."""
-    losses, table, stats, profile = [], [], None, None
+    """LowpRuns from {(arm, seed): run}; the first arm is the baseline.
+    Speeds are left out (NaN) for arms whose fp8 GEMMs do not run natively
+    inside the compiled step (native 'eager' or 'simulated')."""
+    losses, table, stats, profiles = [], [], None, []
     for name, (recipe, seeds) in arms.items():
         vals, rates, iqrs, gib = [], [], [], 0.0
         for seed in seeds:
@@ -723,17 +747,20 @@ def _lowp_merge(runs, arms):
             if len(r['stats']):
                 stats = r['stats']
             if len(r['profile']):
-                profile = r['profile']
+                profiles.append(r['profile'].assign(arm=name))
         table.append([name, len(seeds), r['native'], float(np.mean(vals)),
                       float(np.mean(rates)), float(np.mean(iqrs)), 0.0,
                       gib])
     table = pd.DataFrame(table, columns=_LOWP_COLUMNS['table'])
     table['÷bf16'] = table['tok/s'] / table['tok/s'].iloc[0]
+    claimed = table['native'].isin(['yes', '—'])
+    table.loc[~claimed, ['tok/s', 'IQR', '÷bf16']] = np.nan
     empty = lambda k: pd.DataFrame(columns=_LOWP_COLUMNS[k])
+    profile = (pd.concat(profiles, ignore_index=True)[_LOWP_COLUMNS[
+        'profile']] if profiles else empty('profile'))
     return LowpRuns(table, pd.concat(losses, ignore_index=True),
                     stats if stats is not None else empty('stats'),
-                    profile if profile is not None else empty('profile'),
-                    label='')
+                    profile, label='')
 
 #@save
 def lowp_arms(cfg, arms):
@@ -742,66 +769,92 @@ def lowp_arms(cfg, arms):
     card can, else the simulated rowwise Fp8Linear), 'fp8-delayed' (the
     from-scratch Fp8Linear with delayed scaling, operand statistics every
     10 steps) and 'nvfp4-mlp' (Fp4Linear on the MLP). A run's model and
-    data seed are its seed. The first arm is the baseline and its first
-    seed is profiled over steps 200-210. Returns LowpRuns: table (per arm:
-    runs, native, final validation loss (seed mean), tokens/s (median over
-    steps 200-400) and its IQR, ratio to the baseline, peak GiB), losses,
-    stats, profile. Computed only in a regeneration (one whole card, about
-    an hour); else the committed result."""
+    data seed are its seed. The first arm is the baseline; every arm's
+    first seed is profiled over steps 200-210. Returns LowpRuns: table (per
+    arm: runs, native, final validation loss (seed mean), tokens/s (median
+    over steps 200-400) and its IQR, ratio to the baseline, peak GiB;
+    speeds only where the fp8 GEMMs run natively in the compiled step),
+    losses, stats, profile (per arm). Computed only in a regeneration (one
+    whole card, about an hour); else the committed result."""
     config = dict(cfg=d2l._cfg_json(cfg),
                   arms={k: [r, list(s)] for k, (r, s) in arms.items()})
 
     def compute():
-        if not _fp8_native_ok('cuda' if torch.cuda.is_available() else 'cpu'):
+        if not has_fp8_cores('cuda' if torch.cuda.is_available() else 'cpu'):
             raise RuntimeError('the arms need an Ada or newer GPU')
-        if any(r.startswith('torchao') for r, _ in arms.values()):
-            _fp8_compile_check()
-        first = next(iter(arms))
+        _fp8_compile_check(_torchao_recipes(arms))
         runs = {(name, s): _lowp_run_cached(
-            cfg, name, recipe, s, profile=(name == first and s == seeds[0]),
+            cfg, name, recipe, s, profile=(s == seeds[0]),
             stats=(recipe == 'fp8-delayed'))
             for name, (recipe, seeds) in arms.items() for s in seeds}
         return _lowp_merge(runs, arms)
     result = d2l._pretrain_result('lowp-runs', compute, config)
-    return d2l._as_tuple(LowpRuns, result, _LOWP_COLUMNS)
+    return d2l._show_label(d2l._as_tuple(LowpRuns, result, _LOWP_COLUMNS))
+
+#@save
+def _torchao_recipes(arms):
+    """The torchao float8 recipes among arms that this card runs natively
+    (the ones the compile check covers)."""
+    recipes = {r.split('-')[1] for r, _ in arms.values()
+               if r.startswith('torchao-')}
+    if 'rowwise' in recipes and not _rowwise_ok(torch.device('cuda')):
+        recipes.remove('rowwise')
+    return tuple(sorted(recipes))
 
 #@save
 def plot_lowp_runs(runs, bound):
-    """Validation loss against tokens per arm (seed means; left) and each
-    arm's tokens/s relative to the baseline, with the Amdahl bound
-    (right)."""
+    """Left: each arm's validation loss minus the baseline's seed mean
+    against tokens (seed means), with the band of the baseline's seeds.
+    Right: tokens/s relative to the baseline for the arms whose speed is
+    measured, with the Amdahl bound."""
     fig, (ax1, ax2) = d2l.plt.subplots(1, 2, figsize=(7.5, 3))
     v = runs.losses.dropna(subset=['val_loss'])
-    v = v.groupby(['arm', 'tokens'], sort=False)['val_loss'].mean()
-    for arm in runs.table['arm']:
-        s = v[arm]
-        ax1.plot(s.index / 1e6, s.values, '-o', ms=3, label=arm)
+    base = runs.table['arm'].iloc[0]
+    seeds = v[v['arm'] == base].pivot_table('val_loss', 'tokens', 'seed')
+    mean = seeds.mean(axis=1)
+    x = mean.index / 1e6
+    ax1.fill_between(x, seeds.min(axis=1) - mean, seeds.max(axis=1) - mean,
+                     color='C0', alpha=0.2, label=f'{base} seeds')
+    for i, arm in enumerate(runs.table['arm']):
+        a = v[v['arm'] == arm].groupby('tokens')['val_loss'].mean()
+        ax1.plot(a.index / 1e6, a.values - mean.reindex(a.index).values,
+                 '-o', ms=3, color=f'C{i}', label=arm)
     ax1.set_xlabel('tokens (millions)')
-    ax1.set_ylabel('validation loss')
+    ax1.set_ylabel(f'validation loss − {base} mean')
     ax1.legend(fontsize=8)
-    t = runs.table
+    t = runs.table.dropna(subset=['÷bf16'])
     ax2.bar(t['arm'], t['÷bf16'], color='C0')
+    ax2.set_ylim(0, 1.15 * max(bound, t['÷bf16'].max()))
     ax2.axhline(bound, color='black', ls='--', lw=1)
     ax2.text(len(t) - 0.5, bound, 'Amdahl bound', ha='right', va='bottom',
              fontsize=8)
     ax2.set_ylabel('tokens/s ÷ bf16')
-    ax2.tick_params(axis='x', labelrotation=30, labelsize=8)
+    ax2.tick_params(axis='x', labelsize=8)
     fig.tight_layout()
 
 #@save
 def plot_lowp_stats(stats, marks=()):
-    """Saturation and underflow (mean over the operand roles) against step,
-    under delayed scales and under current scales of the same tensors, with
-    vertical lines at marks (warmup end, decay start)."""
-    s = stats.groupby('step')[list(_FP8_STAT_COLUMNS)].mean()
-    fig, axes = d2l.plt.subplots(1, 2, figsize=(7.5, 2.8))
-    for ax, what in zip(axes, ('saturation', 'underflow')):
-        ax.plot(s.index, 100 * s[what], label='delayed')
-        ax.plot(s.index, 100 * s[f'{what}_current'], label='current')
+    """Per operand role, against step: the saturated share under delayed
+    scales (left; current scales never saturate) and the underflowing share
+    under delayed (solid) and current (dashed) scales of the same tensors
+    (right, log scale), both in parts per million, with vertical lines at
+    marks (warmup end, decay start)."""
+    fig, (ax1, ax2) = d2l.plt.subplots(1, 2, figsize=(7.5, 2.8))
+    for i, (role, s) in enumerate(stats.groupby('role', sort=False)):
+        s = s.groupby('step')[list(_FP8_STAT_COLUMNS)].mean()
+        c = f'C{i}'
+        ax1.plot(s.index, 1e6 * s['saturation'], color=c, label=role)
+        ax2.plot(s.index, 1e6 * s['underflow'], color=c, label=role)
+        ax2.plot(s.index, 1e6 * s['underflow_current'], color=c, ls='--')
+    ax2.set_yscale('log', nonpositive='mask')
+    ax2.legend([d2l.plt.Line2D([], [], color='black'),
+                d2l.plt.Line2D([], [], color='black', ls='--')],
+               ['delayed', 'current'], fontsize=8)
+    for ax, what in ((ax1, 'saturation'), (ax2, 'underflow')):
         for m in marks:
             ax.axvline(m, color='black', ls=':', lw=1)
         ax.set_xlabel('step')
-        ax.set_ylabel(f'{what} (%)')
-    axes[0].legend(fontsize=8)
+        ax.set_ylabel(f'{what} (ppm)')
+    ax1.legend(fontsize=8, title='operand', title_fontsize=8)
     fig.tight_layout()
 ```

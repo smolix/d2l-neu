@@ -86,7 +86,7 @@ Geometrically, the difference quotient is the slope of the *secant line* through
 ![The difference quotient $(f(x+h)-f(x))/h$ is the slope of the secant through $P$ and $Q$. As $h \to 0$, $Q$ slides toward $P$ and the secant turns into the tangent at $P$, whose slope is $f'(x)$.](../img/calculus-secant-tangent.svg)
 :label:`fig_calc_secant_tangent`
 
-Not every function is differentiable everywhere: $|x|$ has a corner at $x = 0$ (slope $-1$ from the left, $+1$ from the right). Even worse, discrete classification accuracy is flat ($f'(x) = 0$) almost everywhere and jumps discontinuously where a prediction flips, providing no gradient signal—which is why classifiers are trained by minimizing smooth surrogate losses such as cross-entropy (:numref:`fig_calc_surrogate`).
+Not every function is differentiable everywhere: $|x|$ has a corner at $x = 0$ (slope $-1$ from the left, $+1$ from the right). Even worse, discrete classification accuracy is flat ($f'(x) = 0$) almost everywhere and jumps discontinuously where a prediction flips, providing no gradient signal. That is why classifiers are trained by minimizing smooth surrogate losses such as cross-entropy (:numref:`fig_calc_surrogate`).
 
 ![The 0--1 error ($1$ for a wrong prediction, $0$ for a correct one) and a smooth surrogate loss, plotted against a score $z$ that is positive when the classifier is right. The 0--1 error is flat on either side of its jump, so its slope says nothing. The surrogate slopes downward everywhere and tells the parameters which way to move.](../img/calculus-surrogate-loss.svg)
 :label:`fig_calc_surrogate`
@@ -123,7 +123,7 @@ Multiplying $\frac{f(x+h) - f(x)}{h} \approx f'(x)$ by $h$ gives the *first-orde
 $$f(x + h) \approx f(x) + f'(x)\, h.$$
 :eqlabel:`eq_calculus-linear-1d`
 
-Because $L'(1) = 2 > 0$, decreasing $w$ reduces the loss: stepping opposite the derivative via $w \leftarrow w - \eta L'(w)$ with step size $\eta = 0.1$ moves $w$ from $1$ to $1 - 0.1(2) = 0.8$, lowering $L$ from $1$ to $L(0.8) = 0.72$ (close to the tangent prediction $1 + 2(-0.2) = 0.60$, with the $0.12$ difference equal to the quadratic curvature $3h^2$). At any smooth local minimum, the derivative must vanish ($f'(x) = 0$); setting $L'(w) = 6w - 4 = 0$ yields the unique global minimizer $w^* = 2/3$ (the mean of the labels $1, 1, 0$).
+Because $L'(1) = 2 > 0$, decreasing $w$ lowers the loss. Stepping opposite the derivative via $w \leftarrow w - \eta L'(w)$ with step size $\eta = 0.1$ moves $w$ from $1$ to $1 - 0.1(2) = 0.8$ and drops $L$ from $1$ to $L(0.8) = 0.72$, close to the tangent prediction $1 + 2(-0.2) = 0.60$ (the $0.12$ gap is the neglected quadratic curvature $3h^2$). At any smooth local minimum, the tangent must be horizontal ($f'(x) = 0$); setting $L'(w) = 6w - 4 = 0$ gives the unique global minimizer $w^* = 2/3$, the sample mean of the three labels $1, 1, 0$.
 
 ```{.python .input #calculus-visualization-utilities-5}
 w = np.linspace(0, 2, 101)
@@ -179,7 +179,7 @@ w = np.array([1.0, 0.0])
 numerical_gradient(line_loss, w)
 ```
 
-Note that `numerical_gradient` requires $n$ extra evaluations of $f$ for $n$ parameters—prohibitive when $n = 10^8$.
+Note that `numerical_gradient` requires $n$ extra evaluations of $f$ for $n$ parameters, which becomes prohibitive when $n = 10^8$.
 
 ### Numerical Precision Limits of Finite Differences
 
@@ -239,7 +239,7 @@ For a step $\mathbf{h} = t\mathbf{d}$ of length $t > 0$ along unit vector $\math
 ![Level sets of the loss $L(w_1, w_2)$ of the line model. The gradients (red) are perpendicular to the level set through their base points and point uphill. From $\mathbf{w} = (1, 0)$ (black dot), gradient descent with $\eta = 0.1$ (orange) starts along $-\nabla L$, which does not point at the minimum, and zigzags toward it.](../img/calculus-gradient-field.svg)
 :label:`fig_calc_gradient_field`
 
-This motivates *gradient descent*, $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w})$: from $\mathbf{w} = (1, 0)$ with learning rate $\eta = 0.1$, one step moves to $(1, 0) - 0.1(2, 4) = (0.8, -0.4)$, cutting the loss from $1.0$ to $0.4$ (while zigzagging across the elliptical contours toward the global minimum $\mathbf{w}^* = (7/6, -1/2)$; see :numref:`chap_optimization`).
+This motivates *gradient descent*, $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w})$: from $\mathbf{w} = (1, 0)$ with learning rate $\eta = 0.1$, one step moves to $(1, 0) - 0.1(2, 4) = (0.8, -0.4)$, cutting the loss from $1.0$ to $0.4$. Why does steepest descent zigzag across the valley in :numref:`fig_calc_gradient_field` instead of pointing straight at the global minimum $\mathbf{w}^* = (7/6, -1/2)$? Because "steepest" is measured per unit of Euclidean step length $\|\mathbf{h}\|_2$, which depends on the units of each coordinate: stretching one feature axis flattens its contours and tilts $-\nabla L$ away from the minimum, which is why standardizing features (:numref:`sec_pandas`) and preconditioning curvature (:numref:`chap_optimization`) matter so much in practice.
 
 ### Matrix Calculus Identities
 
@@ -258,6 +258,8 @@ Expanding $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2 = \mathbf{w}^
 $$\nabla L(\mathbf{w}) = 2\mathbf{X}^\top \mathbf{X} \mathbf{w} - 2\mathbf{X}^\top \mathbf{y} = 2\mathbf{X}^\top (\mathbf{X}\mathbf{w} - \mathbf{y}).$$
 :eqlabel:`eq_calculus-line-grad`
 
+In words, each component of the gradient is twice the dot product of the corresponding feature column of $\mathbf{X}$ with the residual vector $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$; at the optimum $\nabla L(\mathbf{w}^*) = \mathbf{0}$, the prediction errors are orthogonal to every feature.
+
 ## The Chain Rule
 :label:`subsec_calculus-chain-rule`
 
@@ -274,7 +276,7 @@ A small case is worth working by hand. Let $z = u^2 + v$ with $u = x_1 x_2$ and 
 ![The chain rule for $z = u^2 + v$ with $u = x_1 x_2$ and $v = x_2^2$ at $(x_1, x_2) = (1, 2)$. Each box shows the value of a variable (black) and the derivative of $z$ with respect to it (red), and each red arrow carries a local derivative. Derivatives multiply along a path and add where two paths meet, as they do at $x_2$.](../img/calculus-parallel-dag.svg)
 :label:`fig_calc_chain_paths`
 
-Decomposing our line loss $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ into two stages—(1) inner residuals $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ with Jacobian $\mathbf{J} = \mathbf{X}$, and (2) outer squared norm $L = \|\mathbf{r}\|^2$ with gradient $\nabla_{\mathbf{r}} L = 2\mathbf{r}$—the multivariate chain rule immediately recovers $\nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r})$ in two passes:
+Decomposing our line loss $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ into two stages, namely (1) inner residuals $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ with Jacobian $\mathbf{J} = \mathbf{X}$ and (2) outer squared norm $L = \|\mathbf{r}\|^2$ with gradient $\nabla_{\mathbf{r}} L = 2\mathbf{r}$, the multivariate chain rule recovers $\nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r})$ in two passes:
 
 ```{.python .input #calculus-functions-of-many-variables}
 r = X @ w - y    # forward: errors, from which the loss is r @ r
@@ -286,7 +288,7 @@ The *forward pass* computes $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ and
 
 ## Summary
 
-The derivative $f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$ gives the slope of the tangent line and the local linear approximation $f(x+h) \approx f(x) + f'(x)h$. For $f: \mathbb{R}^n \to \mathbb{R}$, the gradient $\nabla_{\mathbf{x}} f(\mathbf{x})$ collects all partial derivatives, satisfies $f(\mathbf{x}+\mathbf{h}) \approx f(\mathbf{x}) + \nabla f(\mathbf{x})^\top \mathbf{h}$, and points in the direction of steepest ascent (perpendicular to level sets), motivating gradient descent $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w})$. Unlike finite differences—which cost $O(n)$ evaluations and lose precision to catastrophic cancellation ($\sim \sqrt{\epsilon}$)—the multivariate chain rule $\nabla_{\mathbf{x}} z = \mathbf{J}^\top \nabla_{\mathbf{u}} z$ propagates exact gradients backward from the loss to all parameters in a single backward pass (*backpropagation*).
+The derivative $f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$ gives the slope of the tangent line and the local linear approximation $f(x+h) \approx f(x) + f'(x)h$. For $f: \mathbb{R}^n \to \mathbb{R}$, the gradient $\nabla_{\mathbf{x}} f(\mathbf{x})$ collects all partial derivatives, satisfies $f(\mathbf{x}+\mathbf{h}) \approx f(\mathbf{x}) + \nabla f(\mathbf{x})^\top \mathbf{h}$, and points in the direction of steepest ascent (perpendicular to level sets), motivating gradient descent $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w})$. Unlike finite differences, which cost $O(n)$ evaluations and lose precision to catastrophic cancellation ($\sim \sqrt{\epsilon}$), the multivariate chain rule $\nabla_{\mathbf{x}} z = \mathbf{J}^\top \nabla_{\mathbf{u}} z$ propagates exact gradients backward from the loss to all parameters in a single backward pass (*backpropagation*).
 
 ## Exercises
 
@@ -310,7 +312,7 @@ The derivative $f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$ gives the slope 
 
    $$\frac{f(x+h) - f(x-h)}{2h}$$
 
-   evaluates $f$ at $x+h$ and $x-h$ so that the $O(h)$ quadratic terms cancel out! Write a central-difference version of `quotient_error` and evaluate it across our logarithmic grid of $h$ values in `float64`:
+   evaluates $f$ at $x+h$ and $x-h$ so that the $O(h)$ quadratic terms cancel out. Write a central-difference version of `quotient_error` and evaluate it across our logarithmic grid of $h$ values in `float64`:
     1. For the quadratic loss $L(w) = 3w^2 - 4w + 2$ at $w = 1$, plot the forward-difference and central-difference error curves on the same log--log axes. Why does the central-difference error drop straight to machine epsilon ($\sim 10^{-16}$) even at large $h = 10^{-1}$ on a quadratic function?
     1. Now repeat the comparison on a non-quadratic function, $f(x) = e^x$ at $x = 0$ (where $f'(0) = 1$). Compare the slope of the large-$h$ truncation branch of the central-difference curve against the slope-$1$ forward-difference branch, identify the optimal step size $h^*$ and minimum achievable error for each method, and explain both using the Taylor expansion $e^{\pm h} = 1 \pm h + \frac{h^2}{2} \pm \frac{h^3}{6} + \cdots$.
 
@@ -367,7 +369,7 @@ Differential Calculus: Derivatives, Gradients, Jacobians, and the Chain Rule<br>
 ::: {.col}
 - The **derivative** $f'(x)$ is the instantaneous rate of change—the limit of the **secant slope** between $(x, f(x))$ and $(x+h, f(x+h))$ as $h \to 0$:
   $$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$$
-- On $f(x) = 3x^2 - 4x$ at $x = 1$, expanding $f(1+h) = -1 + 2h + 3h^2$ gives $\frac{f(1+h)-f(1)}{h} = 2 + 3h \to 2$:
+- On $L(w) = 3w^2 - 4w + 2$ at $w = 1$, expanding $L(1+h) = 1 + 2h + 3h^2$ gives $\frac{L(1+h)-L(1)}{h} = 2 + 3h \to 2$:
 
 @calculus-derivatives-and-differentiation-2
 :::
@@ -407,7 +409,7 @@ Differential Calculus: Derivatives, Gradients, Jacobians, and the Chain Rule<br>
 | Constant $C$ | $0$ | **Linearity** | $(\alpha u + \beta v)' = \alpha u' + \beta v'$ |
 | Power $x^n$ | $n x^{n-1}$ | **Product** | $(u\,v)' = u'v + u\,v'$ |
 | Exp $e^x$ | $e^x$ | **Quotient** | $(u/v)' = (u'v - u\,v')/v^2$ |
-| Log $\ln x$ | $1/x$ | **$3x^2 - 4x$** | $3(2x) - 4(1) = 6x - 4$ |
+| Log $\ln x$ | $1/x$ | **$3w^2 - 4w + 2$** | $3(2w) - 4(1) = 6w - 4$ |
 
 - **Product rule geometry:** Expanding a rectangle $f(x)g(x)$ by $h$ adds two strips $g(x)f'(x)h + f(x)g'(x)h$ plus an $O(h^2)$ corner that vanishes as $h \to 0$.
 :::
@@ -425,7 +427,7 @@ Differential Calculus: Derivatives, Gradients, Jacobians, and the Chain Rule<br>
 ::: {.col}
 - For $f: \mathbb{R}^n \to \mathbb{R}$, the **partial derivative** $\frac{\partial f}{\partial x_i}$ holds all coordinates fixed except $x_i$, measuring the slope of a 1D slice:
   $$\frac{\partial f}{\partial x_i} = \lim_{h \to 0} \frac{f(x_1, \ldots, x_i + h, \ldots, x_n) - f(x_1, \ldots, x_n)}{h}$$
-- On $f(x_1, x_2) = x_1^2 + 2x_2^2$ at $(1, 1)$ (and line loss $L(w_1, w_2)$ at $(1, 0)$), $\frac{\partial f}{\partial x_1} = 2$ and $\frac{\partial f}{\partial x_2} = 4$:
+- On our line loss $L(w_1, w_2) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ at $\mathbf{w} = (1, 0)$, slicing gives $L(w_1, 0) = 3w_1^2 - 4w_1 + 2$ and $L(1, w_2) = 5w_2^2 + 4w_2 + 1$, so $\frac{\partial L}{\partial w_1} = 2$ and $\frac{\partial L}{\partial w_2} = 4$:
 
 @calculus-partial-derivatives-2
 :::
@@ -555,7 +557,7 @@ Approximating $f'(x) \approx \frac{f(x+h) - f(x)}{h}$ has **two fatal flaws** in
 
 1. **The Numerical V-Curve:**
    - **Too large $h$:** Taylor truncation error grows as $O(h)$ (or $O(h^2)$ for central differences).
-   - **Too small $h$:** Subtracting nearly equal floats $f(x+h) - f(x)$ erases mantissa bits (**catastrophic cancellation**, error $\sim \epsilon / h$, capping `float32` at $\sim 4$ valid digits!).
+   - **Too small $h$:** Subtracting nearly equal floats $f(x+h) - f(x)$ erases mantissa bits (**catastrophic cancellation**, error $\sim \epsilon / h$, capping `float32` at $\sim 4$ valid digits).
 2. **Computational $O(d)$ Blowup:** Perturbing $d = 10^9$ weights requires **$10^9 + 1$ forward passes** per step, whereas reverse-mode AD (§{sec_autograd}) takes **one backward pass**.
 :::
 

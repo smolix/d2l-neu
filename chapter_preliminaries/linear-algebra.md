@@ -44,7 +44,7 @@ from jax import numpy as jnp
 
 ## Scalars, Vectors, Matrices, and Tensors
 
-The building blocks of linear algebra are distinguished by how many indices (axes, or `ndim` in code) specify a single numerical entry.
+We already created and reshaped $0^\textrm{th}$-, $1^\textrm{st}$-, $2^\textrm{nd}$-, and $4^\textrm{th}$-order arrays in :numref:`sec_ndarray`; here we pair each order (`ndim` in code) with its standard mathematical name and notation.
 
 ### Scalars
 
@@ -280,7 +280,7 @@ PyTorch accepts both `dim`/`keepdim` and the NumPy aliases `axis`/`keepdims`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow tensors have no `.sum` or `.mean` method: write `A.sum(axis=1)` as `tf.reduce_sum(A, axis=1)` and `X.mean(axis=1)` as `tf.reduce_mean(X, axis=1)`, here and in the exercises.
+TensorFlow tensors have no `.sum` or `.mean` method: use `tf.reduce_sum(A, axis=1)` and `tf.reduce_mean(X, axis=1)` instead.
 :end_tab:
 
 Because `sum_A` has shape `(2, 1)`, dividing `A / sum_A` broadcasts each row sum across all three columns so that every row of the resulting $2 \times 3$ matrix sums to $1$:
@@ -477,7 +477,7 @@ O = X @ W + b                                 # Row i: image i
 O.shape, O.argmax(axis=1).shape
 ```
 
-Multiplying an $m \times k$ matrix by a $k \times n$ matrix computes $mn$ dot products of length $k$, costing $\approx 2mkn$ FLOPs ($2 \times 256 \times 784 \times 10 \approx 4 \times 10^6$ FLOPs for `X @ W`, or $2n^3$ FLOPs for two $n \times n$ matrices against only $3n^2$ memory entries; see :numref:`chap_performance`). The *identity matrix* $\mathbf{I} \in \mathbb{R}^{n \times n}$ ($1$s on the main diagonal, $0$s elsewhere) satisfies $\mathbf{I}\mathbf{x} = \mathbf{x}$, and the *inverse* $\mathbf{A}^{-1}$ of an invertible square matrix $\mathbf{A}$ satisfies $\mathbf{A}^{-1}\mathbf{A} = \mathbf{A}\mathbf{A}^{-1} = \mathbf{I}$ (:numref:`subsec_mdl-inverses`).
+Multiplying an $m \times k$ matrix by a $k \times n$ matrix computes $mn$ dot products of length $k$, costing $\approx 2mkn$ FLOPs ($2 \times 256 \times 784 \times 10 \approx 4 \times 10^6$ FLOPs for `X @ W`, or $2n^3$ FLOPs against only $3n^2$ memory entries for two $n \times n$ matrices; see :numref:`chap_performance`). Two special square matrices recur throughout linear algebra: the *identity matrix* $\mathbf{I} \in \mathbb{R}^{n \times n}$ ($1$s on the main diagonal and $0$s elsewhere), which leaves every vector unchanged ($\mathbf{I}\mathbf{x} = \mathbf{x}$), and the *inverse* $\mathbf{A}^{-1}$ of an invertible matrix $\mathbf{A}$, defined by $\mathbf{A}^{-1}\mathbf{A} = \mathbf{A}\mathbf{A}^{-1} = \mathbf{I}$ (:numref:`subsec_mdl-inverses`).
 
 Later models multiply a whole stack of matrices at once, one for each example in the minibatch. The `@` operator does this without a loop: on tensors with more than two axes it multiplies along the last two and broadcasts over the leading ones (:numref:`subsec_broadcasting`). Where `@` does not fit, `einsum` lets us write the sum in :eqref:`eq_matmul` out index by index. The string `'bil,lj->bij'` names the axes of each factor and of the result, and an index that is missing from the result, here `l`, is summed over. We stack three multiples of `A` and multiply them all by `B`:
 
@@ -514,7 +514,7 @@ The result holds three $2 \times 4$ products, one per matrix in the stack, and `
 ## Norms
 :label:`subsec_lin-algebra-norms`
 
-*Norms* measure the magnitude of a vector or matrix—used in machine learning both for *loss functions* (measuring prediction error $\hat{\mathbf{y}} - \mathbf{y}$) and *regularization penalties* (constraining weight magnitude).
+*Norms* measure the magnitude of a vector or matrix, serving in machine learning both as *loss functions* (measuring prediction error $\hat{\mathbf{y}} - \mathbf{y}$) and as *regularization penalties* (constraining weight magnitude).
 
 ### Euclidean Length and Angle
 
@@ -522,12 +522,12 @@ The *$\ell_2$ norm* (or *Euclidean norm*) of $\mathbf{x} \in \mathbb{R}^n$ is
 
 $$\|\mathbf{x}\|_2 = \sqrt{\mathbf{x}^\top \mathbf{x}} = \sqrt{\sum_{i=1}^n x_i^2},$$
 
-often abbreviated $\|\mathbf{x}\|$. For two planar vectors $\mathbf{x}, \mathbf{y}$ separated by angle $\theta$, equating the law of cosines $\|\mathbf{x} - \mathbf{y}\|^2 = \|\mathbf{x}\|^2 + \|\mathbf{y}\|^2 - 2\|\mathbf{x}\|\|\mathbf{y}\|\cos\theta$ with the bilinear expansion $(\mathbf{x} - \mathbf{y})^\top(\mathbf{x} - \mathbf{y}) = \|\mathbf{x}\|^2 - 2\mathbf{x}^\top\mathbf{y} + \|\mathbf{y}\|^2$ yields
+often abbreviated $\|\mathbf{x}\|$. For two planar vectors $\mathbf{x}, \mathbf{y}$ separated by angle $\theta$, equating the law of cosines $\|\mathbf{x} - \mathbf{y}\|^2 = \|\mathbf{x}\|^2 + \|\mathbf{y}\|^2 - 2\|\mathbf{x}\|\|\mathbf{y}\|\cos\theta$ with the bilinear expansion $(\mathbf{x} - \mathbf{y})^\top(\mathbf{x} - \mathbf{y}) = \|\mathbf{x}\|^2 - 2\mathbf{x}^\top\mathbf{y} + \|\mathbf{y}\|^2$ yields (:numref:`fig_la_dot`)
 
-$$\mathbf{x}^\top \mathbf{y} = \|\mathbf{x}\| \|\mathbf{y}\| \cos\theta$$
+$$\mathbf{x}^\top \mathbf{y} = \|\mathbf{x}\| \|\mathbf{y}\| \cos\theta.$$
 :eqlabel:`eq_dot_cos`
 
-(:numref:`fig_la_dot`). In arbitrary dimension $d$, we read :eqref:`eq_dot_cos` in reverse to define the *cosine similarity* between nonzero vectors:
+In arbitrary dimension $d$, we read :eqref:`eq_dot_cos` in reverse to define the *cosine similarity* between nonzero vectors:
 
 $$\cos\theta = \frac{\mathbf{x}^\top \mathbf{y}}{\|\mathbf{x}\| \|\mathbf{y}\|},$$
 :eqlabel:`eq_cos_sim`
@@ -817,13 +817,23 @@ Linear algebra expresses whole-minibatch models compactly: stacking $256$ flatte
     1. Show that the transpose of a matrix product reverses the order of the factors: $(\mathbf{A}\mathbf{B})^\top = \mathbf{B}^\top\mathbf{A}^\top$ whenever $\mathbf{A}\mathbf{B}$ is defined. (Write out the $(i, j)$ entry of both sides using :eqref:`eq_matmul`.)
     1. Show that for *any* rectangular matrix $\mathbf{X} \in \mathbb{R}^{m \times n}$, the product $\mathbf{X}\mathbf{X}^\top$ is always square and symmetric (and likewise for $\mathbf{X}^\top\mathbf{X}$). For our $256 \times 784$ image minibatch $\mathbf{X}$, what is the shape of $\mathbf{X}\mathbf{X}^\top$, and what does its $(i, j)$ entry measure?
 
-1. [code] **Predicting reduction and broadcasting shapes.** Without running any code, predict the shape (or error) of each expression below for `images` of shape $(256, 1, 28, 28)$ and `X` of shape $(256, 784)$, then verify your answers in code:
+:begin_tab:`mxnet, pytorch, jax`
+2. [code] **Predicting reduction and broadcasting shapes.** Without running any code, predict the shape (or error) of each expression below for `images` of shape $(256, 1, 28, 28)$ and `X` of shape $(256, 784)$, then verify your answers in code:
     1. What does `len(images)` return? What are the shapes of `images.sum(axis=(2, 3))` with `keepdims=False` versus `keepdims=True`? Which of the two can divide `images` directly via broadcasting, and what does `images / images.sum(axis=(2, 3), keepdims=True)` compute?
     1. What happens when you evaluate `X - X.mean(axis=1)` on our $256 \times 784$ matrix `X`, and how does `keepdims=True` fix it?
-    1. Now suppose your minibatch happens to contain $n = 784$ images, so that `X` is a square $784 \times 784$ matrix. Show that `X - X.mean(axis=1)` executes *without raising any error*! Write out what entry $(i, j)$ of `X - X.mean(axis=1)` actually computes in terms of the entries of `X`, and explain why a silent broadcasting bug on a square matrix is far more dangerous than a shape error.
+    1. Now suppose your minibatch happens to contain $n = 784$ images, so that `X` is a square $784 \times 784$ matrix. Show that `X - X.mean(axis=1)` executes *without raising any error*. Write out what entry $(i, j)$ of `X - X.mean(axis=1)` actually computes in terms of the entries of `X`, and explain why a silent broadcasting bug on a square matrix is far more dangerous than a shape error.
    :exlabel:`ex_linear-algebra-shape-prediction`
+:end_tab:
 
-1. **How mutually obtuse can a set of vectors be?** The following questions explore how negative all pairwise dot products among $k$ vectors can simultaneously be.
+:begin_tab:`tensorflow`
+2. [code] **Predicting reduction and broadcasting shapes.** Without running any code, predict the shape (or error) of each expression below for `images` of shape $(256, 1, 28, 28)$ (cast to `float32`) and `X` of shape $(256, 784)$, then verify your answers in code:
+    1. What does `len(images)` return? What are the shapes of `tf.reduce_sum(images, axis=(2, 3))` with `keepdims=False` versus `keepdims=True`? Which of the two can divide `images` directly via broadcasting, and what does `images / tf.reduce_sum(images, axis=(2, 3), keepdims=True)` compute?
+    1. What happens when you evaluate `X - tf.reduce_mean(X, axis=1)` on our $256 \times 784$ matrix `X`, and how does `keepdims=True` fix it?
+    1. Now suppose your minibatch happens to contain $n = 784$ images, so that `X` is a square $784 \times 784$ matrix. Show that `X - tf.reduce_mean(X, axis=1)` executes *without raising any error*. Write out what entry $(i, j)$ of `X - tf.reduce_mean(X, axis=1)` actually computes in terms of the entries of `X`, and explain why a silent broadcasting bug on a square matrix is far more dangerous than a shape error.
+   :exlabel:`ex_linear-algebra-shape-prediction`
+:end_tab:
+
+3. **How mutually obtuse can a set of vectors be?** The following questions explore how negative all pairwise dot products among $k$ vectors can simultaneously be.
     1. Can three vectors $\mathbf{u}, \mathbf{v}, \mathbf{w} \in \mathbb{R}^2$ in the plane satisfy $\mathbf{u}^\top\mathbf{v} < 0$, $\mathbf{v}^\top\mathbf{w} < 0$, and $\mathbf{u}^\top\mathbf{w} < 0$ simultaneously? Provide a concrete numerical example, or prove that none exists.
     1. Suppose $k \geq 2$ unit vectors $\mathbf{u}_1, \ldots, \mathbf{u}_k \in \mathbb{R}^d$ ($d \geq k - 1$) are arranged symmetrically so that every distinct pair has the exact same dot product $\mathbf{u}_i^\top\mathbf{u}_j = c$ for all $i \neq j$. By expanding $0 \leq \|\mathbf{u}_1 + \cdots + \mathbf{u}_k\|_2^2$, prove that $c \geq -\frac{1}{k - 1}$. What does this bound imply about the pairwise cosine similarity of $10$ unit-length class templates in a 10-class classifier when all $10$ templates are separated by equal angles?
 
@@ -833,7 +843,7 @@ Linear algebra expresses whole-minibatch models compactly: stacking $256$ flatte
     1. Evaluate the vector norm with default arguments on a 3D tensor of shape $(2, 3, 4)$, state in words what mathematical formula it computes, and confirm your answer by squaring, summing, and taking the square root of the entries manually.
     1. A deep neural network stores its learnable parameters across a list of weight and bias tensors of varying orders and shapes. When monitoring training or clipping gradients (:numref:`sec_rnn-scratch`), we often need the single global $\ell_2$ norm of all parameters concatenated into one giant vector. Express this global $\ell_2$ norm in terms of the individual tensor norms without flattening or concatenating the tensors, and verify your formula in code on three tensors of shapes $(3, 4)$, $(4,)$, and $(2, 3, 5)$.
 
-1. **Associativity of matrix multiplication and computational cost.** Although matrix multiplication is associative---$(\mathbf{A}\mathbf{B})\mathbf{C} = \mathbf{A}(\mathbf{B}\mathbf{C})$ mathematically---the order in which you parenthesize a chain of matrix products can change its computational cost by orders of magnitude. Given $\mathbf{A} \in \mathbb{R}^{1000 \times 50000}$, $\mathbf{B} \in \mathbb{R}^{50000 \times 20}$, and $\mathbf{C} \in \mathbb{R}^{20 \times 10000}$, calculate the total FLOP count and the number of entries in the intermediate product matrix under both $(\mathbf{A}\mathbf{B})\mathbf{C}$ and $\mathbf{A}(\mathbf{B}\mathbf{C})$. By what factors do the two evaluation orders differ in arithmetic work and intermediate memory?
+1. **Associativity of matrix multiplication and computational cost.** Although matrix multiplication is associative, meaning $(\mathbf{A}\mathbf{B})\mathbf{C} = \mathbf{A}(\mathbf{B}\mathbf{C})$ mathematically, the order in which you parenthesize a chain of matrix products can change its computational cost by orders of magnitude. Given $\mathbf{A} \in \mathbb{R}^{1000 \times 50000}$, $\mathbf{B} \in \mathbb{R}^{50000 \times 20}$, and $\mathbf{C} \in \mathbb{R}^{20 \times 10000}$, calculate the total FLOP count and the number of entries in the intermediate product matrix under both $(\mathbf{A}\mathbf{B})\mathbf{C}$ and $\mathbf{A}(\mathbf{B}\mathbf{C})$. By what factors do the two evaluation orders differ in arithmetic work and intermediate memory?
 
 1. [code] **All-pairs Euclidean distance matrix without loops.** ● Given two collections of $50$ vectors in $\mathbb{R}^8$ stacked as the rows of $\mathbf{X} \in \mathbb{R}^{50 \times 8}$ and $\mathbf{Y} \in \mathbb{R}^{50 \times 8}$, we want to compute the $50 \times 50$ matrix $\mathbf{D}$ of squared Euclidean distances $D_{ij} = \|\mathbf{x}_i - \mathbf{y}_j\|_2^2$ without Python loops:
     1. Compute $\mathbf{D}$ first via 3D broadcasting: reshape $\mathbf{X}$ to $(50, 1, 8)$ and $\mathbf{Y}$ to $(1, 50, 8)$, subtract, square, and sum along the last axis. Second, compute $\mathbf{D}$ via the quadratic expansion $\|\mathbf{x}_i - \mathbf{y}_j\|_2^2 = \|\mathbf{x}_i\|_2^2 + \|\mathbf{y}_j\|_2^2 - 2\mathbf{x}_i^\top\mathbf{y}_j$, which requires only row-norm reductions, 2D broadcasting, and a single matrix multiplication $\mathbf{X}\mathbf{Y}^\top$. Verify that both results match to floating-point precision.
@@ -842,7 +852,7 @@ Linear algebra expresses whole-minibatch models compactly: stacking $256$ flatte
 
     *Adapted from Stanford CS231n, [Assignment 1](https://cs231n.github.io/assignments2026/assignment1/) ($k$-nearest-neighbor distances), and fast.ai, [Deep Learning from the Foundations](https://github.com/fastai/course-v3/blob/master/files/dl-2019/notes/notes-2-8.md), Lesson 8.*
 
-1. [code] **Power iteration and convergence rate.** ● Implement normalized power iteration---repeatedly updating $\mathbf{v}_{k+1} = \mathbf{A}\mathbf{v}_k / \|\mathbf{A}\mathbf{v}_k\|_2$ from a random unit vector $\mathbf{v}_0$---on the $3 \times 3$ symmetric matrix
+1. [code] **Power iteration and convergence rate.** ● Implement normalized power iteration, repeatedly updating $\mathbf{v}_{k+1} = \mathbf{A}\mathbf{v}_k / \|\mathbf{A}\mathbf{v}_k\|_2$ from a random unit vector $\mathbf{v}_0$, on the $3 \times 3$ symmetric matrix
 
    $$\mathbf{A} = \begin{bmatrix} 1 & 2 & 3 \\ 2 & 0 & 4 \\ 3 & 4 & 5 \end{bmatrix}.$$
 
@@ -901,7 +911,7 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 ::: {.col}
 - **Scalars ($x \in \mathbb{R}$):** $0^\textrm{th}$-order tensors with empty shape `()` (e.g., loss $\mathcal{L}$ or learning rate $\eta$).
 - **Vectors ($\mathbf{x} \in \mathbb{R}^d$):** $1^\textrm{st}$-order tensors of shape `(d,)`, treated mathematically as column vectors $\mathbf{x} = [x_1, \ldots, x_d]^\top$.
-- **Terminology trap:** A vector's **dimensionality** $d$ is its length along axis 0 (`len(x)`), whereas a tensor's **order (rank)** is its number of axes (`ndim`). A $784$-D vector is a $1^\textrm{st}$-order tensor!
+- **Terminology trap:** A vector's **dimensionality** $d$ is its length along axis 0 (`len(x)`), whereas a tensor's **order (rank)** is its number of axes (`ndim`). A $784$-D vector is a $1^\textrm{st}$-order tensor.
 
 @linear-algebra-scalars
 :::
@@ -973,7 +983,7 @@ Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetr
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why `A / A.sum(axis=1)` fails:** Dividing `(2, 3)` by `(2,)` right-aligns as `(2, 3)` vs. `(1, 2)`—trailing dimensions $3 \neq 2$ clash!
+- **Why `A / A.sum(axis=1)` fails:** Dividing `(2, 3)` by `(2,)` right-aligns as `(2, 3)` vs. `(1, 2)`—trailing dimensions $3 \neq 2$ clash.
 - **`keepdims=True` retains length 1 (`(2, 1)`):** Now `A / sum_A` broadcasts across columns so each row sums to $1$ (**softmax**, **attention**).
 - **Centering $\mathbf{X} \in \mathbb{R}^{256 \times 784}$:** Per-pixel means (`axis=0`, `(784,)`) broadcast directly; per-image means (`axis=1`, `(256, 1)`) need `keepdims=True` (**LayerNorm**).
 :::
@@ -1103,7 +1113,7 @@ Given flattened minibatch `X` of shape `(256, 784)` and weight matrix `W_T` stor
 
 1. Inner dimensions $784 \neq 10$ mismatch; transposing via **`X @ W_T.T`** aligns `(256, 784) @ (784, 10) -> (256, 10)`.
 2. `X.sum(axis=0)` has shape **`(784,)`** (per-pixel totals); `X.sum(axis=1, keepdims=True)` has shape **`(256, 1)`** (per-image totals).
-3. **Silent broadcasting bug!** `X.mean(axis=1)` has shape `(784,)`, which right-aligns to `(1, 784)` and subtracts *image $j$'s mean from pixel $j$ of every image* without raising an error!
+3. **Silent broadcasting bug:** `X.mean(axis=1)` has shape `(784,)`, which right-aligns to `(1, 784)` and subtracts *image $j$'s mean from pixel $j$ of every image* without raising an error.
 :::
 :::
 

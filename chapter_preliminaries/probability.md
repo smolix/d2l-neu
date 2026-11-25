@@ -263,7 +263,7 @@ $$\mathbb{E}[X] = \sum_x x \, P(X = x),$$
 
 and for any function $f$, $\mathbb{E}[f(X)] = \sum_x f(x)\,P(X = x)$. For an investment returning $0\times$ with probability $0.5$, $2\times$ with probability $0.4$, and $10\times$ with probability $0.1$, $\mathbb{E}[X] = 0.5(0) + 0.4(2) + 0.1(10) = 1.8$. For a coin-toss indicator $X = \mathbf{1}(\textrm{heads}) \in \{0, 1\}$, $\mathbb{E}[X] = 1\cdot p + 0\cdot(1-p) = p$.
 
-Expectation is always *linear*—$\mathbb{E}[aX + bY] = a\,\mathbb{E}[X] + b\,\mathbb{E}[Y]$ whether or not $X$ and $Y$ are independent—so the sample frequency $\hat{p} = \frac{1}{n}\sum_{i=1}^n X_i$ satisfies $\mathbb{E}[\hat{p}] = \frac{1}{n}\sum_{i=1}^n \mathbb{E}[X_i] = p$ ($\hat{p}$ is an *unbiased* estimator of $p$).
+Expectation is always *linear*: $\mathbb{E}[aX + bY] = a\,\mathbb{E}[X] + b\,\mathbb{E}[Y]$ holds whether or not $X$ and $Y$ are independent. Consequently, the sample frequency $\hat{p} = \frac{1}{n}\sum_{i=1}^n X_i$ satisfies $\mathbb{E}[\hat{p}] = \frac{1}{n}\sum_{i=1}^n \mathbb{E}[X_i] = p$, making $\hat{p}$ an *unbiased* estimator of $p$.
 
 ### Variance and Sums of Independent Variables
 
@@ -271,7 +271,7 @@ To measure spread around $\mu = \mathbb{E}[X]$, the *variance* averages the squa
 
 $$\textrm{Var}(X) = \mathbb{E}\left[(X - \mu)^2\right] = \mathbb{E}[X^2] - \mu^2, \qquad \textrm{Var}(aX + b) = a^2\,\textrm{Var}(X).$$
 
-For our investment, $\mathbb{E}[X^2] = 0.5(0) + 0.4(4) + 0.1(100) = 11.6$, so $\textrm{Var}(X) = 11.6 - 1.8^2 = 8.36$ ($\sigma \approx 2.9$). For a single coin-toss indicator $X \in \{0, 1\}$, $X^2 = X$, so $\textrm{Var}(X) = p - p^2 = p(1 - p)$ (maximized at $p = 0.5$, where $\textrm{Var}(X) = 1/4$). (When estimating variance from $n$ sample points around their sample mean as in :numref:`sec_pandas`, dividing by $n - 1$—Bessel's correction—corrects for the slight underestimation of dividing by $n$.)
+For our investment, $\mathbb{E}[X^2] = 0.5(0) + 0.4(4) + 0.1(100) = 11.6$, so $\textrm{Var}(X) = 11.6 - 1.8^2 = 8.36$ ($\sigma \approx 2.9$). For a single coin-toss indicator $X \in \{0, 1\}$, $X^2 = X$, so $\textrm{Var}(X) = p - p^2 = p(1 - p)$, which reaches its maximum $1/4$ at $p = 0.5$. When estimating variance from $n$ observations around their sample mean as in :numref:`sec_pandas`, dividing by $n - 1$ (*Bessel's correction*) compensates for the slight downward bias of dividing by $n$.
 
 For a sum of two random variables, expanding $\mathbb{E}[(X - \mu_X + Y - \mu_Y)^2]$ gives
 
@@ -282,14 +282,16 @@ $$
 \end{aligned}
 $$
 
-where the *covariance* $\textrm{Cov}(X, Y)$ (and dimensionless *correlation* $\rho = \textrm{Cov}(X, Y)/(\sigma_X\sigma_Y) \in [-1, 1]$) measures linear co-movement (:numref:`fig_prob_covariance`; for a random vector $\mathbf{x}$, the *covariance matrix* $\boldsymbol{\Sigma} = \mathbb{E}[(\mathbf{x}-\boldsymbol{\mu})(\mathbf{x}-\boldsymbol{\mu})^\top]$ satisfies $\textrm{Var}(\mathbf{v}^\top\mathbf{x}) = \mathbf{v}^\top\boldsymbol{\Sigma}\mathbf{v}$).
+where the *covariance* $\textrm{Cov}(X, Y)$ and dimensionless *correlation* $\rho = \textrm{Cov}(X, Y)/(\sigma_X\sigma_Y) \in [-1, 1]$ measure linear co-movement (:numref:`fig_prob_covariance`). More generally, for a random vector $\mathbf{x} \in \mathbb{R}^d$ with mean $\boldsymbol{\mu} = \mathbb{E}[\mathbf{x}]$, collecting all pairwise covariances $\Sigma_{ij} = \textrm{Cov}(x_i, x_j)$ forms the symmetric $d \times d$ *covariance matrix* $\boldsymbol{\Sigma} = \mathbb{E}[(\mathbf{x}-\boldsymbol{\mu})(\mathbf{x}-\boldsymbol{\mu})^\top]$, and any linear combination $\mathbf{v}^\top\mathbf{x}$ has variance $\textrm{Var}(\mathbf{v}^\top\mathbf{x}) = \mathbf{v}^\top\boldsymbol{\Sigma}\mathbf{v}$.
 
 ![Samples of three pairs of random variables, with positive, near-zero, and negative covariance.](../img/probability-covariance.svg)
 :label:`fig_prob_covariance`
 
-When $X$ and $Y$ are *independent*, $\textrm{Cov}(X, Y) = \mathbb{E}[X - \mu_X]\mathbb{E}[Y - \mu_Y] = 0$ (though zero covariance does not imply independence, e.g., $Y = X^2$ for $X \in \{-1, 0, 1\}$), so **variances of independent variables add**:
+When $X$ and $Y$ are *independent*, their expectation factorizes so $\textrm{Cov}(X, Y) = \mathbb{E}[X - \mu_X]\mathbb{E}[Y - \mu_Y] = 0$, and **variances of independent variables add**:
 
 $$\textrm{Var}(X + Y) = \textrm{Var}(X) + \textrm{Var}(Y).$$
+
+Zero covariance does not, however, imply independence: if $X$ takes $-1, 0, +1$ with equal probability and $Y = X^2$, then $Y$ is completely determined by $X$, yet by symmetry $\mathbb{E}[X] = 0$ and $\mathbb{E}[XY] = \mathbb{E}[X^3] = 0$, giving $\textrm{Cov}(X, Y) = 0$.
 
 ## Estimation Error
 
@@ -394,7 +396,7 @@ key, k1, k2 = jax.random.split(key, 3)
 fraction_as_far(k1, 56, 100), fraction_as_far(k2, 5600, 10000)
 ```
 
-Roughly a quarter of fair 100-toss runs deviate by $6$ or more heads, so $56/100$ is no evidence of bias, whereas zero out of $1000$ fair 10,000-toss runs come anywhere near $5{,}600$. By *Chebyshev's inequality* (:numref:`sec_mdl-random_variables`), $P(|X - \mu| \geq k\sigma) \leq 1/k^2$ for any distribution, and by the *central limit theorem* (:numref:`sec_mdl-distributions`), sample averages follow an approximately normal bell curve landing within $2$ standard errors roughly $95\%$ of the time. Likewise, a classifier with true accuracy $0.9$ has standard error $\sqrt{0.9 \cdot 0.1 / 256} \approx 0.019$ on a minibatch of $256$ images (so $\pm 2\%$ swings are routine noise), versus $0.003$ on a test set of $10{,}000$ images.
+Roughly a quarter of fair 100-toss runs deviate by $6$ or more heads, so $56/100$ is no evidence of bias, whereas zero out of $1000$ fair 10,000-toss runs come anywhere near $5{,}600$. Two general theorems quantify these tail probabilities: *Chebyshev's inequality* (:numref:`sec_mdl-random_variables`) guarantees $P(|X - \mu| \geq k\sigma) \leq 1/k^2$ for any distribution with finite variance, while the *central limit theorem* (:numref:`sec_mdl-distributions`) shows that averages of independent draws approach a Gaussian bell curve, landing within $2$ standard errors about $95\%$ of the time. The same arithmetic governs model evaluation: a classifier with true accuracy $0.9$ has standard error $\sqrt{0.9 \cdot 0.1 / 256} \approx 0.019$ on a single $256$-image minibatch (so $\pm 2\%$ swings are ordinary noise), versus $0.003$ across a $10{,}000$-image test set.
 
 Notice finally that collecting more data shrinks *epistemic uncertainty* (uncertainty about the model parameter $p$, decaying as $1/\sqrt{n}$), but never reduces *aleatoric uncertainty* (the intrinsic 50/50 randomness of the next coin toss itself, or an inherently ambiguous image) :cite:`Der-Kiureghian.Ditlevsen.2009`.
 
@@ -412,7 +414,7 @@ $$P(X \mid Y) = \frac{P(Y \mid X) P(X)}{P(Y)}.$$
 
 For a hypothesis $H$ and observed data $D$, Bayes' theorem updates the *prior* $P(H)$ via the *likelihood* $P(D \mid H)$ and evidence $P(D)$ to produce the *posterior* $P(H \mid D) \propto P(D \mid H)P(H)$.
 
-Two variables $X$ and $Y$ are *conditionally independent* given $Z$ ($X \perp Y \mid Z$) if $P(X, Y \mid Z) = P(X \mid Z)P(Y \mid Z)$. Conditioning can either *remove* dependence (as when conditioning on a common cause like age removes the correlation between shoe size and reading level, or conditioning on the present state in a Markov chain) or *create* dependence (conditioning on a common effect—*explaining away*—as when knowing a hospitalized patient has a broken bone lowers the probability they were admitted for lung cancer; :numref:`fig_prob_explaining_away`).
+Two variables $X$ and $Y$ are *conditionally independent* given $Z$ ($X \perp Y \mid Z$) if $P(X, Y \mid Z) = P(X \mid Z)P(Y \mid Z)$. Conditioning can either remove or introduce dependence (:numref:`fig_prob_explaining_away`): observing a *common cause* $Z$ (such as a child's age) removes the correlation between shoe size and reading level, and observing the present state $Y$ in a *Markov chain* $X \to Y \to Z$ renders past $X$ and future $Z$ independent; conversely, conditioning on a *common effect* $Z$ (*explaining away*) couples two independent causes, as when learning that a hospitalized patient has a broken bone lowers the probability they were admitted for lung cancer.
 
 ![Conditioning changes dependence. A common cause $Z$ makes $X$ and $Y$ dependent, and observing $Z$ removes the dependence. In a chain, $X$ and $Z$ are independent given $Y$. A common effect $Z$ makes its independent causes dependent once $Z$ is observed.](../img/probability-explaining-away.svg)
 :label:`fig_prob_explaining_away`
@@ -431,16 +433,16 @@ If the population prevalence is $P(H = 1) = 0.0015$ ($P(H = 0) = 0.9985$) and th
 
 $$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = \frac{0.0015}{0.011485} = 0.1306.$$
 
-Out of $10{,}000$ people (:numref:`fig_prob_natural_freq`), all $15$ infected people test positive, but so do $1\%$ of the $9{,}985$ healthy people ($\approx 100$ false alarms), leaving only $15 / 115 \approx 13\%$ of positive tests truly infected!
+Out of $10{,}000$ people (:numref:`fig_prob_natural_freq`), all $15$ infected people test positive, but so do $1\%$ of the $9{,}985$ healthy people ($\approx 100$ false alarms), leaving only $15 / 115 \approx 13\%$ of positive tests truly infected.
 
 ![The HIV test applied to 10,000 people. The 15 infected people test positive, and so do about 100 of the 9,985 healthy people, so only 15 of about 115 positive results are correct.](../img/probability-natural-frequencies.svg)
 :label:`fig_prob_natural_freq`
 
-Now suppose a follow-up test $D_2$ (with $P(D_2 = 1 \mid H = 1) = 0.98$ and false-positive rate $P(D_2 = 1 \mid H = 0) = 0.03$) also comes back positive. Assuming $D_1$ and $D_2$ are conditionally independent given $H$, the joint false-positive rate drops to $0.01 \cdot 0.03 = 0.0003$ while sensitivity is $1 \cdot 0.98 = 0.98$. Marginalizing gives $P(D_1 = 1, D_2 = 1) = 0.0003(0.9985) + 0.98(0.0015) = 0.00176955$, and Bayes' theorem raises the posterior probability of infection to
+Now suppose a follow-up test $D_2$ (with $P(D_2 = 1 \mid H = 1) = 0.98$ and false-positive rate $P(D_2 = 1 \mid H = 0) = 0.03$) also comes back positive. Assuming $D_1$ and $D_2$ are conditionally independent given $H$, the joint false-positive rate drops to $0.01 \cdot 0.03 = 0.0003$ while sensitivity is $1 \cdot 0.98 = 0.98$. Marginalizing gives $P(D_1 = 1, D_2 = 1) = 0.0003(0.9985) + 0.98(0.0015) = 0.00176955$, and Bayes' theorem raises the posterior probability of infection (:numref:`fig_prob_update`) to
 
-$$P(H = 1 \mid D_1 = 1, D_2 = 1) = \frac{0.98 \cdot 0.0015}{0.00176955} = 0.8307$$
+$$P(H = 1 \mid D_1 = 1, D_2 = 1) = \frac{0.98 \cdot 0.0015}{0.00176955} = 0.8307.$$
 
-(:numref:`fig_prob_update`). Simulating two million virtual patients confirms $0.8307$ (with standard error $\sqrt{0.83 \cdot 0.17 / 3500} \approx 0.006$ over the $\approx 3{,}500$ double-positive patients):
+Simulating two million virtual patients yields an empirical fraction around $0.82\text{--}0.83$, within two $\pm 0.006$ standard errors ($\sqrt{0.83 \cdot 0.17 / 3500}$) of the exact value $0.8307$ across the $\approx 3{,}500$ double-positive patients:
 
 ![The probability that the patient has HIV: the prior, after one positive test, and after two conditionally independent positive tests.](../img/probability-bayes-update.svg)
 :label:`fig_prob_update`
@@ -485,11 +487,7 @@ H[D1 & D2].mean()  # Exact value: 0.8307
 
 ## Summary
 
-* *Probability* reasons forward from a model to data; *statistics* reasons backward from data to infer the underlying model.
-* Kolmogorov's three axioms generate all probability rules. Joint distributions $P(X, Y)$ marginalize by summing out variables, and factorize as $P(X)P(Y)$ when $X$ and $Y$ are independent.
-* Expectation $\mathbb{E}[X]$ is always linear, while variance $\textrm{Var}(X) = \mathbb{E}[(X-\mu)^2]$ is additive for independent variables, giving an average of $n$ independent draws standard error $\sigma/\sqrt{n}$.
-* Measuring deviations in standard errors separates signal from noise ($56/100$ heads is $1.2$ standard errors; $5600/10000$ is $12$). More data reduces *epistemic* uncertainty as $1/\sqrt{n}$ but leaves *aleatoric* uncertainty unchanged.
-* Bayes' theorem $P(H \mid D) = P(D \mid H)P(H)/P(D)$ reverses conditioning: for a disease with $0.15\%$ prevalence, one positive test ($1\%$ false-positive rate) yields a $13.1\%$ posterior, while a second conditionally independent positive test ($3\%$ false-positive rate) raises it to $83.1\%$.
+Probability reasons forward from a model to the likelihood of outcomes, whereas statistics reasons backward from observed data to infer properties of the underlying process. Built on Kolmogorov's three axioms, joint distributions $P(X, Y)$ marginalize by summing out variables and factorize as $P(X)P(Y)$ when variables are independent. Expectation $\mathbb{E}[X]$ is always linear, while variance $\textrm{Var}(X) = \mathbb{E}[(X-\mu)^2]$ adds across independent variables, giving the average of $n$ independent draws standard error $\sigma/\sqrt{n}$: measuring deviations in standard errors shows why $56/100$ heads ($1.2$ standard errors) is routine chance whereas $5{,}600/10{,}000$ ($12$ standard errors) is decisive, and why collecting more data shrinks *epistemic* uncertainty as $1/\sqrt{n}$ while leaving *aleatoric* uncertainty unchanged. Finally, Bayes' theorem $P(H \mid D) = P(D \mid H)P(H)/P(D)$ updates prior beliefs in light of evidence, explaining why a single positive test for a rare condition ($0.15\%$ prevalence, $1\%$ false-positive rate) yields only a $13.1\%$ posterior until a second conditionally independent test raises it to $83.1\%$.
 
 ## Exercises
 
@@ -755,7 +753,7 @@ Drawing realizations from a distribution $P$ is called **sampling**. For $n$ ind
 - **Discrete (probability mass function):** Assigns mass $P(X = v) \ge 0$ to individual values with $\sum_v P(X = v) = 1$ (e.g., softmax over classes or vocabulary tokens).
 - **Continuous (probability density function):** Described by a density $p(x) \ge 0$ where probability is **area under the curve**:
   $$P(a \le X \le b) = \int_a^b p(x)\,dx, \quad \int_{-\infty}^{\infty} p(x)\,dx = 1$$
-  Note: $p(x)$ can exceed $1$, while $P(X = x) = 0$ at any single point!
+  Note: $p(x)$ can exceed $1$, while $P(X = x) = 0$ at any single point.
 :::
 
 ::: {.col .fig .big}
@@ -809,7 +807,7 @@ Drawing realizations from a distribution $P$ is called **sampling**. For $n$ ind
 - **Conditional independence ($X \perp Y \mid Z$):** $P(X, Y \mid Z) = P(X \mid Z)P(Y \mid Z)$. Conditioning can *destroy* or *create* dependence:
   1. **Common cause ($X \leftarrow Z \to Y$):** Dependent marginally, but independent once common cause $Z$ is observed.
   2. **Markov chain ($X \to Y \to Z$):** Past $X \perp$ future $Z$ given present $Y$.
-  3. **Common effect ($X \to Z \leftarrow Y$, *explaining away*):** Independent causes (Rain $\perp$ Sprinkler) become **negatively dependent** once common effect $Z = 1$ (wet grass) is observed!
+  3. **Common effect ($X \to Z \leftarrow Y$, *explaining away*):** Independent causes (Rain $\perp$ Sprinkler) become **negatively dependent** once common effect $Z = 1$ (wet grass) is observed.
 :::
 
 ::: {.col .fig}
@@ -826,7 +824,7 @@ Drawing realizations from a distribution $P$ is called **sampling**. For $n$ ind
 - The **expectation** (mean $\mu = \mathbb{E}[X]$) is the probability-weighted center of mass:
   $$\mathbb{E}[X] = \sum_x x\,P(X = x), \qquad \mathbb{E}[f(X)] = \sum_x f(x)\,P(X = x)$$
 - *Examples:* Investment return $0.5(0) + 0.4(2) + 0.1(10) = 1.8$; Bernoulli indicator $X \in \{0, 1\}$ has $\mathbb{E}[X] = p$.
-- **Linearity of expectation (always holds, even if $X, Y$ are dependent!):**
+- **Linearity of expectation (always holds, even if $X, Y$ are dependent):**
   $$\mathbb{E}[aX + bY] = a\,\mathbb{E}[X] + b\,\mathbb{E}[Y]$$
   Thus $\mathbb{E}[\hat{p}_n] = \frac{1}{n}\sum_{i=1}^n \mathbb{E}[X_i] = p$: sample frequencies and minibatch SGD gradients are **unbiased** estimators.
 :::
@@ -899,8 +897,8 @@ Drawing realizations from a distribution $P$ is called **sampling**. For $n$ ind
 ::: {.col}
 Each test prediction is Bernoulli with $\mathrm{SE}(\hat{p}_n) = \sqrt{p(1-p)/n}$:
 
-- **Minibatch ($n = 256$) vs. test set ($n = 10{,}000$) at $p = 0.90$:** Minibatch $\mathrm{SE} \approx \mathbf{1.9\%}$ (a $3\%$ dip is normal noise!), whereas test-set $\mathrm{SE} = \mathbf{0.30\%}$.
-- **Why paired evaluation on the *same* test set wins:** On $10{,}000$ shared images, $9{,}700$ agreements cancel ($\mathrm{Cov} > 0$), cutting $\mathrm{SE}(\hat{p}_A - \hat{p}_B)$ from $0.42\%$ to **$\mathbf{0.17\%}$** ($+0.5\%$ gain $= 2.9\,\mathrm{SE}$!).
+- **Minibatch ($n = 256$) vs. test set ($n = 10{,}000$) at $p = 0.90$:** Minibatch $\mathrm{SE} \approx \mathbf{1.9\%}$ (a $3\%$ dip is normal noise), whereas test-set $\mathrm{SE} = \mathbf{0.30\%}$.
+- **Why paired evaluation on the *same* test set wins:** On $10{,}000$ shared images, $9{,}700$ agreements cancel ($\mathrm{Cov} > 0$), cutting $\mathrm{SE}(\hat{p}_A - \hat{p}_B)$ from $0.42\%$ to **$\mathbf{0.17\%}$** ($+0.5\%$ gain $= 2.9\,\mathrm{SE}$).
 :::
 
 ::: {.col .fig}
@@ -933,7 +931,7 @@ Each test prediction is Bernoulli with $\mathrm{SE}(\hat{p}_n) = \sqrt{p(1-p)/n}
 ::: {.col}
 - **Follow-up test $D_2$** (sensitivity $0.98$, FPR $0.03$): Under conditional independence $D_1 \perp D_2 \mid H$, joint false positives drop to $0.01 \times 0.03 = 0.0003$:
   $$P(H{=}1 \mid D_1{=}1, D_2{=}1) = \frac{0.00147}{0.00147 + 0.00030} = \mathbf{0.8307}$$
-- **Correlated errors:** If shared biochemistry couples false positives ($P(D_1{=}1, D_2{=}1 \mid H{=}0) > 0.0003$), the posterior drops ($82.2\%$).
+- **Correlated errors:** If shared biochemistry couples false positives ($P(D_1{=}1, D_2{=}1 \mid H{=}0) > 0.0003$), false alarms multiply and the posterior drops (e.g., to $32.9\%$ if joint FPR rises tenfold to $0.003$).
 :::
 
 ::: {.col .fig}
@@ -957,7 +955,7 @@ Test your intuition on three practical machine learning design problems:
 **Answers:**
 
 1. $\sqrt{0.9 \times 0.1 / n} = 0.005 \implies n = 0.09 / 0.000025 = \mathbf{3{,}600}$ images. Halving $\mathrm{SE}$ to $0.0025$ requires $4\times$ more data: **$\mathbf{14{,}400}$** images.
-2. $P(X = 1 \mid Z = 1) = \mathbf{2/3}$ (among $\{(1,0), (0,1), (1,1)\}$). Observing $Y = 1$ *explains away* $Z = 1$, dropping $P(X = 1 \mid Z = 1, Y = 1)$ back to **$\mathbf{1/2}$**!
+2. $P(X = 1 \mid Z = 1) = \mathbf{2/3}$ (among $\{(1,0), (0,1), (1,1)\}$). Observing $Y = 1$ *explains away* $Z = 1$, dropping $P(X = 1 \mid Z = 1, Y = 1)$ back to **$\mathbf{1/2}$**.
 3. $P(H = 1 \mid D_1 = 1) = \frac{1.00 \times 0.01}{1.00(0.01) + 0.01(0.99)} = \frac{0.01}{0.0199} \approx \mathbf{50.3\%}$ (true positives and false positives are now $1{:}1$).
 :::
 :::

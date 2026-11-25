@@ -834,7 +834,7 @@ Because the expectation $\mathbb{E}_{\tau \sim P(\cdot; \theta)}$ is taken under
 
 @!policy-gradient-on-policy-fresh-data-after-every-update
 
-- **On-policy sample tax:** Reaching $0.70$ batch return takes a median of $37$ updates ($\approx 4{,}800$ steps), and 256 updates consume $\approx 27{,}000$ steps—compared with $\approx 3{,}500$ steps for off-policy Q-learning on the same calm lake.
+- **On-policy sample tax:** Reaching $0.70$ batch return takes a median of $32$ updates ($4{,}313$ steps), and 256 updates consume $\approx 27{,}000$ steps—compared with $\approx 3{,}500$ steps for off-policy Q-learning on the same calm lake.
 :::
 
 ::: {.slide title="Exact Policy Gradient via Differentiable Linear Solve"}
@@ -844,7 +844,7 @@ Because $J(\theta) = V^{\pi_\theta}(s_0) = [(I - \gamma P_{\pi_\theta})^{-1}r_{\
 
 @!policy-gradient-unbiased-and-how-noisy-1
 
-- **Frozen probe policy:** After 16 updates of seed 3, the probe achieves $J(\theta) = 0.313$ (roughly halfway between the uniform policy's $0.008$ and the $0.774$ ceiling), providing a testbed to measure estimator noise.
+- **Frozen probe policy:** After 16 updates of seed 3, the probe achieves $J(\theta) = 0.313$ (roughly halfway between the uniform policy's $0.008$ and the $0.774$ ceiling), providing a reference point to measure estimator noise.
 :::
 
 ::: {.slide title="Measuring REINFORCE Variance Against Exact Grad J"}
@@ -854,7 +854,7 @@ Drawing 50 independent REINFORCE batch estimates at the frozen probe for batch s
 
 @!policy-gradient-unbiased-and-how-noisy-2
 
-- **Three gradient lengths of noise at $n = 4$:** A single 4-episode draw misses $\nabla_\theta J$ by **$3.38\times$ the gradient's norm** (and $12/50$ batches are identically zero); quadrupling $n$ halves the error ($3.38 \to 1.66 \to 0.85$), while the 50-draw mean matches $\textrm{one}/\sqrt{50}$, confirming zero bias.
+- **Nearly four gradient lengths of noise at $n = 4$:** A single 4-episode draw misses $\nabla_\theta J$ by **$3.85\times$ the gradient's norm** (and $3/50$ batches are identically zero); quadrupling $n$ roughly halves the error ($3.85 \to 1.78 \to 0.96$), while the 50-draw mean matches $\textrm{one}/\sqrt{50}$, confirming zero bias.
 :::
 
 ::: {.slide title="Non-Concavity, Softmax Plateaus, and Locking"}
@@ -874,14 +874,14 @@ Verify your mastery of the score function, log-derivative cancellation, and vari
 
 1. **One lucky trajectory:** At the uniform policy ($\pi_\theta(a \mid s) = 1/4$) with batch size $n = 16$, suppose 15 episodes hit holes ($R = 0$) and 1 episode reaches the goal in 6 steps ($R = \gamma^5 \approx 0.774$). What is the REINFORCE update vector $\hat{u}$ at each of the 6 visited states?
 2. **Model-free property:** Where do the transition probabilities $P(s_{t+1} \mid s_t, a_t)$ enter $\nabla_\theta J(\theta)$ if they disappear from $\nabla_\theta \log P(\tau; \theta)$?
-3. **Batch size scaling:** At the frozen probe, a batch of $n = 4$ episodes has relative RMS error $3.38$. Approximately how many episodes per batch are needed to reduce the single-batch relative error below $0.50$?
+3. **Batch size scaling:** At the frozen probe, a batch of $n = 4$ episodes has relative RMS error $3.85$. Approximately how many episodes per batch are needed to reduce the single-batch relative error below $0.50$?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. Only the single successful episode contributes: at each of its 6 visited states, $\hat{u}_s = \frac{\gamma^5}{16}(\mathbf{e}_{a_t} - \frac{1}{4}\mathbf{1})$, which is $+0.0363$ on the taken action and $-0.0121$ on the other three actions.
 2. $P(s_{t+1} \mid s_t, a_t)$ determines the sampling distribution $P(\tau; \theta)$ over which the expectation $\mathbb{E}_{\tau \sim P(\cdot; \theta)}[\cdots]$ is taken, which the environment simulator executes for us.
-3. Because RMS error scales as $1/\sqrt{n}$, we need $n \approx 4 \times (3.38 / 0.50)^2 \approx 4 \times 45.7 \approx 183$ episodes per batch—motivating variance reduction via baselines in §{sec_baselines}!
+3. Because RMS error scales as $1/\sqrt{n}$, we need $n \approx 4 \times (3.85 / 0.50)^2 \approx 4 \times 59.3 \approx 237$ episodes per batch, motivating variance reduction via baselines in §{sec_baselines}.
 :::
 :::
 

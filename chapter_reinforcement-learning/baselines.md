@@ -60,7 +60,7 @@ env = gym.make('FrozenLake-v1', is_slippery=False, max_episode_steps=200)
 
 ## The Zero-Mean Identity
 
-Every method in this section changes the weight of a score and must leave the mean in place. One identity, already used in the proof of :eqref:`eq_pg_theorem`, guarantees this; we state it here for every differentiable policy.
+Every method in this section changes the weight of a score and must leave the mean in place. One identity, already used in the proof of the policy gradient theorem (:numref:`sec_policygradient`), guarantees this; we state it here for every differentiable policy.
 
 ### The Zero-Mean Lemma
 
@@ -995,7 +995,7 @@ When summing weighted scores across episodes of varying lengths $T_i$ ($N = \sum
 
 @!baselines-summing-over-episodes-of-different-lengths
 
-- **Three parallel, one tilted:** Dividing by episodes $n$, total steps $N$ (DAPO), or a fixed constant (Dr. GRPO) produces parallel gradients (`cos = 1.000`) differing only in scale, whereas dividing each episode by its own length $T_i$ (GRPO) reweights short vs. long episodes and tilts the direction (`cos = 0.992`).
+- **Three parallel, one tilted:** Dividing by episodes $n$, total steps $N$ (DAPO), or a fixed constant (Dr. GRPO) produces parallel gradients (`cos = 1.000`) differing only in scale, whereas dividing each episode by its own length $T_i$ (GRPO) reweights short vs. long episodes and tilts the direction (`cos = 0.937`).
 :::
 
 ::: {.slide title="Benchmarking Six Estimators at a Frozen Policy" layout="tall-output"}
@@ -1029,7 +1029,7 @@ Comparing all six estimators under plain SGD at $\eta = 2$ (20 seeds) vs. the th
 
 @!baselines-five-estimators-6
 
-- **At $\eta = 2$, normalization wins purely by taking $3\times$ larger steps:** Normalization reaches $90\%$ success in $32.5$ updates because its step norm is $0.58$ vs. $0.20$ for centered and $0.34$ for reward-to-go.
+- **At $\eta = 2$, normalization wins purely by taking $3\times$ larger steps:** Normalization reaches $90\%$ success in a median of $32.0$ updates because its step norm is $0.93$ vs. $0.32$ for centered and $0.53$ for reward-to-go.
 :::
 
 ::: {.slide title="Lower Variance Unlocks Larger, Stable Step Sizes"}

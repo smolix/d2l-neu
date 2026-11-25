@@ -572,7 +572,7 @@ Gymnasium exposes the tabular transition kernel as a nested dictionary `env.unwr
 @mdp-states-actions-and-the-transition-kernel-1
 
 ::: {.d2l-note}
-Commanding *down* (`1`) from state 9 branches into three equally likely outcomes—cells 8, 13, and 10—each with probability $1/3$ and immediate reward $0.0$.
+Commanding *down* (`1`) from state 9 branches into three equally likely outcomes (cells 8, 13, and 10), each with probability $1/3$ and immediate reward $0.0$.
 :::
 :::
 
@@ -684,7 +684,7 @@ Gymnasium distinguishes physical episode endings (`terminated=True`) from artifi
 Representing terminal states consistently keeps matrix equations and finite-horizon rollouts aligned:
 
 - **Absorbing-state convention:** `TabularMDP` models each hole and the goal as a self-loop ($P(s \mid s, a) = 1$) with $r(s, a) = 0$, ensuring every row of $P$ sums to $1$ without altering trajectory returns.
-- **When $\gamma = 1$ is well-defined:** If every policy terminates in finitely many steps—or total reward is bounded above (FrozenLake pays at most $1$ per episode)—undiscounted returns remain finite.
+- **When $\gamma = 1$ is well-defined:** If every policy terminates in finitely many steps, or if total reward is bounded above (FrozenLake pays at most $1$ per episode), undiscounted returns remain finite.
 - **When $\gamma = 1$ diverges:** Adding a $+0.05$ per-step survival bonus makes the cyclic always-*up* policy collect infinite undiscounted return, forcing continuing tasks to use $\gamma < 1$.
 :::
 

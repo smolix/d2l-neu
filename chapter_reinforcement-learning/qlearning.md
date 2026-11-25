@@ -723,7 +723,7 @@ At the $n$-th visit to pair $(s, a)$, setting $\alpha_n = 1/n$ computes the exac
 $$\sum_{n=1}^{\infty} \alpha_n = \infty, \qquad \sum_{n=1}^{\infty} \alpha_n^2 < \infty$$
 
 - **Asymptotic convergence theorem (Watkins & Dayan, 1992):** In a finite MDP with $\gamma < 1$, if every pair $(s, a)$ is visited infinitely often and $\alpha_n(s, a)$ satisfies Robbins-Monro, then $Q_n \to Q^*$ with probability $1$.
-- **Finite-budget pitfall of $\alpha_n = 1/n$:** Equal weighting gives early targets—bootstrapped when $Q$ was still mostly zero—the same weight as late targets, requiring exponentially many updates in $1/(1-\gamma)$ (Even-Dar & Mansour, 2003).
+- **Finite-budget pitfall of $\alpha_n = 1/n$:** Equal weighting gives early targets (bootstrapped when $Q$ was still mostly zero) the same weight as late targets, requiring exponentially many updates in $1/(1-\gamma)$ (Even-Dar & Mansour, 2003).
 - **Polynomial-weight default:** Our schedule $\alpha_n = 1/(1 + 0.1\,n)$ satisfies Robbins-Monro while weighting the $k$-th target in proportion to $\approx k^9$, rapidly forgetting early zero targets.
 :::
 
@@ -749,7 +749,7 @@ $$\delta = r + \gamma\big(1 - \mathbf{1}(s'\text{ terminal})\big)\max_{a'} Q(s',
 ::: {.slide title="Epsilon-Greedy Behavior Policy with Tie-Breaking"}
 [Ensuring All Pairs Are Tried]{.kicker}
 
-To prevent greedy selection from getting stuck on an unvisited zero table—or permanently ignoring an underestimated action—the behavior policy $\pi_e$ explores with probability $\epsilon$:
+To prevent greedy selection from getting stuck on an unvisited zero table or permanently ignoring an underestimated action, the behavior policy $\pi_e$ explores with probability $\epsilon$:
 
 $$\pi_e(a \mid s) = \begin{cases} 1 - \epsilon + \epsilon / |\mathcal{A}| & \text{if } a = \mathrm{argmax}_{a'} Q(s, a') \\ \epsilon / |\mathcal{A}| & \text{otherwise} \end{cases}$$
 
@@ -862,7 +862,7 @@ In the step-size trace of $Q(s_0, \textrm{left})$ above, exact backups from zero
 $$\mathbb{E}\Big[\max_{a' \in \mathcal{A}} \hat{Q}(s', a')\Big] \geq \max_{a' \in \mathcal{A}} \mathbb{E}\big[\hat{Q}(s', a')\big]$$
 
 - **Jensen's inequality on $\max$:** Taking the maximum over noisy estimates selects whichever action currently has a positive estimation error, biasing every bootstrapped target upward.
-- **Double Q-learning (van Hasselt, 2010):** Maintains two independent tables $\hat{Q}_A$ and $\hat{Q}_B$—using $\hat{Q}_A$ to select $a^* = \mathrm{argmax}_{a'} \hat{Q}_A(s', a')$ and $\hat{Q}_B(s', a^*)$ to evaluate its target—eliminating upward maximization bias.
+- **Double Q-learning (van Hasselt, 2010):** Maintains two independent tables $\hat{Q}_A$ and $\hat{Q}_B$, using $\hat{Q}_A$ to select $a^* = \mathrm{argmax}_{a'} \hat{Q}_A(s', a')$ and $\hat{Q}_B(s', a^*)$ to evaluate its target, which eliminates upward maximization bias.
 :::
 
 ::: {.slide title="Certainty-Equivalent Planning in a Learned Model"}
@@ -872,7 +872,7 @@ Instead of discarding each transition $(s, a, r, s')$ after one TD step, we can 
 
 @!qlearning-planning-in-a-learned-model-2
 
-- **Global vs. local propagation:** At 500 episodes ($\approx 10{,}000$ steps), planning in $\hat{P}$ reaches a $69.5\%$ success rate vs. $51.4\%$ for Q-learning because value iteration sweeps rewards across all recorded transitions simultaneously.
+- **Global vs. local propagation:** At 500 episodes ($\approx 10{,}000$ steps), planning in $\hat{P}$ reaches a $63.9\%$ median success rate vs. $48.6\%$ for Q-learning because value iteration sweeps rewards across all recorded transitions simultaneously.
 :::
 
 ::: {.slide title="Concept Check: Temporal-Difference Control"}

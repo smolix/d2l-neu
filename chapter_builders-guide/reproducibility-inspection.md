@@ -11,7 +11,7 @@ Fashion-MNIST edges up by 0.3 percentage points. Before celebrating, you need to
 know how much two runs of the *unchanged* script vary on their own. In
 :numref:`subsec_seed_spread`, we run softmax regression five times differing only
 in their random seed and watch final accuracies span one to four percentage
-points simply from different initial weights and batch shuffling—swamping a 0.3
+points simply from different initial weights and batch shuffling, swamping a 0.3
 point gain completely.
 
 Debugging a crashing training run presents the mirror-image problem: if the loss
@@ -88,14 +88,14 @@ practitioners realize: weight initialization (:numref:`sec_init_param`), dropout
 masks at every step, epoch-by-epoch minibatch shuffling, random data
 augmentations (crops, flips, color jitter), and parallel data-loader worker
 processes. Every random number comes from a *pseudorandom number generator*
-(PRNG)—a deterministic algorithm whose entire sequence is determined by its
+(PRNG), a deterministic algorithm whose entire sequence is determined by its
 initial *seed*. Seeding every generator the pipeline touches therefore locks
 down every random draw.
 
 ### Global Seeds
 
 Deep learning frameworks either pull random numbers from a shared global
-generator or require passing generator state explicitly as an argument. Let's
+generator or require passing generator state explicitly as an argument. Below we
 demonstrate seeding on a small five-step training loop where weights and
 synthetic inputs all come from one seeded source.
 
@@ -212,8 +212,8 @@ print('same seed, identical loss and weights:',
 print('different seed:', loss_a, 'vs', loss_c)
 ```
 
-Both runs with `seed=0` match *bit for bit*—every weight and the final loss are
-identical—because identical initial weights, data, and deterministic arithmetic
+Both runs with `seed=0` match *bit for bit* (every weight and the final loss are
+identical) because identical initial weights, data, and deterministic arithmetic
 produce identical gradients (we examine operation order in
 :numref:`subsec_deterministic_arithmetic`). Changing the seed to `1` yields a
 distinct trajectory and loss.
@@ -389,7 +389,7 @@ JAX's `jax.random` works this way.
 ### The Spread across Seeds
 :label:`subsec_seed_spread`
 
-Now let's measure the seed-to-seed variance mentioned at the start of the
+Now we measure the seed-to-seed variance mentioned at the start of the
 section. Below we train softmax regression (:numref:`sec_softmax_concise`) on
 Fashion-MNIST for three epochs on a GPU across five seeds (0 through 4), seeding
 every generator involved and returning each run's final validation accuracy and
@@ -478,11 +478,11 @@ print(f'mean {accs.mean():.1f}, max - min {np.ptp(accs):.1f} points')
 ```
 
 Even though all five runs execute identical code and hyperparameters, their
-final accuracies spread by one to four percentage points around 81%—confirming
+final accuracies spread by one to four percentage points around 81%, confirming
 that a 0.3-point jump from a single run is pure noise. Sound empirical
 comparisons always report the mean and spread across multiple seeds.
 
-To verify that seed choice alone drove those differences, let's rerun `seed=0`
+To verify that seed choice alone drove those differences, we rerun `seed=0`
 and compare both accuracy and every weight against the first run:
 
 ```{.python .input #reproducibility-inspection-seed-spread-2}
@@ -520,7 +520,7 @@ print('same accuracy:', acc == runs[0][0],
 
 The rerun matches the first run's validation accuracy identically. Whether every
 single weight matches down to the last bit depends on whether the GPU sums
-floating-point numbers in a fixed order—something seeds alone do not control
+floating-point numbers in a fixed order, something seeds alone do not control
 (:numref:`subsec_deterministic_arithmetic`).
 
 :begin_tab:`tensorflow`
@@ -568,13 +568,13 @@ forward versus backward routinely differs in the lowest bits.
 
 On a CPU with a fixed thread count, reduction order usually stays constant, so
 seeded runs repeat cleanly. On a GPU, thousands of threads race in parallel, and
-several fast kernels—including embedding gradients, scatter-adds, certain
-convolution backward passes, and reductions—accumulate partial results via
+several fast kernels (including embedding gradients, scatter-adds, certain
+convolution backward passes, and reductions) accumulate partial results via
 *atomic additions* that land in whatever order threads finish. Two identically
 seeded runs on the same GPU can therefore diverge in their lowest bits, which
 chaotic gradient steps eventually amplify into visibly distinct loss curves.
 Every framework provides a determinism mode (or alternative kernel) that forces
-a fixed summation order, typically at some speed cost. Let's watch this directly
+a fixed summation order, typically at some speed cost. Below we observe this directly
 on a GPU *scatter-add* summing one million random numbers into ten bins twice in
 a row.
 
@@ -684,7 +684,7 @@ tf.keras.utils.set_random_seed(random.SystemRandom().getrandbits(31))
 ```
 
 Remember the proper scope of bitwise reproducibility: it holds only on a single
-machine, software stack, and hardware configuration—no framework promises
+machine, software stack, and hardware configuration; no framework promises
 identical bits across library upgrades, different GPU architectures, or CPU vs.
 GPU. Bitwise determinism is an invaluable *debugging* tool for bisecting the
 exact step where two runs diverge. Scientific reproducibility is both looser and
@@ -698,7 +698,7 @@ or last-bit rounding needs stronger evidence.
 
 Repeating a bug reliably proves it is real, not *where* inside the network it
 originates. Inserting print statements into every layer's `forward` method is
-clumsy—and impractical for third-party library models whose source code you do
+clumsy, and impractical for third-party library models whose source code you do
 not want to fork. A *hook* solves this cleanly: it is a callback registered from
 outside the model that the framework invokes automatically before or after a
 layer executes.
@@ -886,15 +886,15 @@ for k, layer in enumerate(net.layers):
     print(f'{type(layer).__name__:15s} std {out.std():.2f}')
 ```
 
-Activation standard deviations climb steadily with depth—from roughly 0.7 right
-after the input layer to around 3–4 after the eighth block—matching theory
+Activation standard deviations climb steadily with depth, from roughly 0.7 right
+after the input layer to around 3–4.5 after the eighth block, matching theory
 closely. Xavier initialization gives the $20 \to 64$ input layer weight variance
 $2/84$, yielding output variance $20 \cdot 2/84 \approx 0.48$ (standard
 deviation 0.69). Each residual block then adds an approximately uncorrelated
 body output whose variance is half its input variance (the first linear layer
 preserves variance, ReLU halves the mean square, and the second linear layer
-preserves it), multiplying total variance by $1.5$—and standard deviation by
-$\sqrt{1.5} \approx 1.22$—at every block. Across eight blocks,
+preserves it), multiplying total variance by $1.5$ (and standard deviation by
+$\sqrt{1.5} \approx 1.22$) at every block. Across eight blocks,
 $0.69 \times 1.5^4 \approx 3.5$, right in the middle of our measurements. This
 is the exact variance-growth analysis of :numref:`sec_init_param` (with factor
 $1.5$ here instead of $2$ under He initialization), underscoring why deep
@@ -1115,8 +1115,8 @@ print(f"kernel {float(jnp.linalg.norm(layer['kernel'][...])):.3g}, "
 ```
 
 Reading backward from the eighth block to the first, the output gradient norm
-grows by roughly $1.2\times$ to $1.4\times$ per block—five- to sixfold across
-the stack—mirroring the forward $1.22\times$ growth for the exact same reason:
+grows by roughly $1.2\times$ to $1.4\times$ per block (five- to sixfold across
+the stack), mirroring the forward $1.22\times$ growth for the exact same reason:
 on the backward pass, each residual block adds the branch gradient back onto the
 skip-connection gradient. Isolated parameter gradient norms mean little on their
 own, but comparing them across depth or tracking them across training steps
@@ -1124,13 +1124,13 @@ reveals vanishing or exploding dynamics immediately (see the exercises).
 
 Remember what these debugging tools do and do not solve: they cannot force two
 different machines to match bit for bit, nor can a single run settle whether an
-experimental gain is real—for that, compare distributions across multiple seeds.
+experimental gain is real (for that, compare distributions across multiple seeds).
 Yet combined with resumable checkpoints (:numref:`sec_read_write`), you now have
 every piece needed to replay a failing job right up to the crash and attach a
 diagnostic hook to isolate the exact layer at fault.
 
-The 8-billion-parameter language model that opened this chapter has not shrunk—it
-still weighs 32 GB in fp32—but nothing about how frameworks handle it is a black
+The 8-billion-parameter language model that opened this chapter has not shrunk
+(it still weighs 32 GB in fp32), but nothing about how frameworks handle it is a black
 box anymore. Constructing architectures from configs, auditing parameters and
 buffers, initializing deep stacks, building custom layers and gradients, training
 in mixed precision, saving crash-safe checkpoints, managing GPU memory, and
@@ -1141,13 +1141,13 @@ networks in :numref:`chap_cnn`.
 
 ## Summary
 
-Every random choice in training—initialization, shuffling, dropout, and data
-augmentation—traces back to pseudorandom number generators controlled by seeds,
+Every random choice in training (initialization, shuffling, dropout, and data
+augmentation) traces back to pseudorandom number generators controlled by seeds,
 with private generator objects or explicit keys preventing unrelated code from
 perturbing a stream. Because floating-point addition is non-associative and
 parallel GPU atomic operations sum in arbitrary thread order, bit-for-bit
 repeatability also requires deterministic kernels and holds only on one machine
-and software stack—making bitwise determinism a debugging tool, while scientific
+and software stack, making bitwise determinism a debugging tool while scientific
 conclusions must hold across multiple seeds. Finally, forward and backward
 hooks (and their framework equivalents) let us inspect activation scales,
 gradient norms, and first-occurrence NaNs inside unmodified models.
@@ -1392,7 +1392,7 @@ Reproducibility, Debugging, and Model Inspection<br>**PRNG seeds & keys · data-
 ::: {.cols .vc}
 ::: {.col}
 - **Model & layer randomness:** Weight initialization ($\mathbf{W}_0$) and stochastic forward masks (Dropout $\boldsymbol{\xi}_j$).
-- **Data & worker randomness:** Epoch minibatch shuffling, random data augmentations, and forked multi-process data-loader workers (which clone identical NumPy RNG state unless re-seeded per worker!).
+- **Data & worker randomness:** Epoch minibatch shuffling, random data augmentations, and forked multi-process data-loader workers (which clone identical NumPy RNG state unless re-seeded per worker).
 :::
 
 ::: {.col .fig .big}
@@ -1534,7 +1534,7 @@ When debugging a deep network or a locked third-party library model, editing eve
 - **Pipeline around `forward`:** Invoking `net(X)` runs registered pre-hooks, executes `forward(X)`, and passes `(module, inputs, output)` to registered forward hooks.
 :::
 
-::: {.slide title="Building an 8-Block Residual Testbed for Inspection"}
+::: {.slide title="Building an 8-Block Residual Stack for Inspection"}
 [Unscaled Xavier Residual Stack]{.kicker}
 
 ::: {.cols .vc}
@@ -1548,7 +1548,7 @@ When debugging a deep network or a locked third-party library model, editing eve
 :::
 :::
 
-::: {.slide title="The 8-Block Residual Testbed in Code"}
+::: {.slide title="The 8-Block Residual Stack in Code"}
 [Unscaled Xavier Residual Stack]{.kicker}
 
 @-reproducibility-inspection-hooks-looking-inside
@@ -1565,8 +1565,8 @@ Attaching a forward hook to every top-level module captures the activation growt
 :::
 
 ::: {.col}
-- **Steady growth across blocks:** The output standard deviation starts at $\approx 0.69$ after the $20 \to 64$ input layer and climbs steadily to $\approx 3.3\text{--}3.8$ after the eighth residual block.
-- **Zero model edits:** The hook callback records `(type(module).__name__, output.detach().std().item())` and unregisters itself immediately afterward.
+- **Steady growth across blocks:** The output standard deviation starts at $\approx 0.7$ after the $20 \to 64$ input layer and climbs steadily to $\approx 3.2\text{--}4.5$ after the eighth residual block.
+- **Zero model edits:** Capturing intermediate outputs from outside records each block's output scale cleanly without modifying layer definitions.
 :::
 :::
 :::
@@ -1579,7 +1579,7 @@ Attaching a forward hook to every top-level module captures the activation growt
 $$\text{Var}[\mathbf{h}_k] \approx \text{Var}[\mathbf{x}_k] + \frac{1}{2}\text{Var}[\mathbf{x}_k] = 1.5\,\text{Var}[\mathbf{x}_k]$$
 
 - **Why the body contributes $\frac{1}{2}\text{Var}[\mathbf{x}_k]$:** The first $64 \to 64$ Xavier layer preserves variance ($1\times$), ReLU halves the mean square ($\frac{1}{2}\times$), and the second Xavier layer preserves that half ($\frac{1}{2}\times$).
-- **Exact match with hooks:** Starting from $\approx 0.69$, multiplying by $\sqrt{1.5} \approx 1.225$ across 8 blocks predicts $0.69 \times 1.5^4 \approx 3.5$!
+- **Exact match with hooks:** Starting from $\approx 0.69$, multiplying by $\sqrt{1.5} \approx 1.225$ across 8 blocks predicts $0.69 \times 1.5^4 \approx 3.5$.
 :::
 
 ::: {.col .fig}
@@ -1633,7 +1633,7 @@ Test your diagnostic skills on these three questions:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **Single-process runs differ** because `np.random.default_rng()` draws fresh OS entropy ignoring the framework seed. **With 4 forked workers, all 4 inherit identical clones** of `self.rng` and apply identical noise!
+1. **Single-process runs differ** because `np.random.default_rng()` draws fresh OS entropy ignoring the framework seed. **With 4 forked workers, all 4 inherit identical clones** of `self.rng` and apply identical noise.
 2. **$1.5^{k/2} \ge 100 \implies k \ge \frac{2 \ln 100}{\ln 1.5} \approx 22.7$ (23 blocks).**
 3. **Out-of-memory (OOM) crash:** Each `output` keeps its entire autograd graph and intermediate activations alive in `history` forever.
 :::
@@ -1644,9 +1644,9 @@ Test your diagnostic skills on these three questions:
 
 ::: {.cols .vc}
 ::: {.col}
-- **PRNG seeding & statistics:** Seed framework, NumPy, Python `random`, and `worker_init_fn`; report mean $\pm$ std across $N \ge 5$ seeds.
-- **Bitwise determinism:** Enable `use_deterministic_algorithms(True)` to replace non-associative parallel GPU atomic adds with fixed-order reductions during bug bisection.
-- **Execution hooks:** Attach forward and backward hooks (always `.detach()`ing tensors and removing handles) to profile scales and trap the first `NaN` layer.
+- **PRNG seeding & statistics:** Seed framework, NumPy, Python `random`, and data-loader workers; report mean $\pm$ std across $N \ge 5$ seeds.
+- **Bitwise determinism:** Enable deterministic GPU kernels to replace non-associative parallel atomic adds with fixed-order reductions during bug bisection.
+- **Execution hooks:** Capture forward activations and backward gradients from outside (detaching stored tensors and removing handles when done) to profile scales and trap the first `NaN` layer.
 :::
 
 ::: {.col .fig .big}

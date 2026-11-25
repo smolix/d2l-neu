@@ -9,8 +9,8 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 A deep learning framework's built-in library covers the standard layers everyone
 needed yesterday: linear projections, activation functions, dropout. Research
 moves faster than release cycles, however, and a newly proposed layer can take
-years to appear in official libraries. *RMSNorm*—a normalization layer that
-rescales each activation vector to unit root-mean-square magnitude—is a case in
+years to appear in official libraries. *RMSNorm*, a normalization layer that
+rescales each activation vector to unit root-mean-square magnitude, is a case in
 point: published in 2019 :cite:`Zhang.Sennrich.2019`, it took years to reach
 the standard layer libraries. Until then, every codebase that wanted
 RMSNorm either implemented it by hand or imported a third-party version. To
@@ -22,14 +22,14 @@ into sequential and custom containers alongside built-in layers.
 Sometimes the obstacle is not the forward operation at all, but its derivative.
 To squeeze an 8-billion-parameter model (:numref:`sec_model_construction`) into
 tight memory, practitioners often quantize weights down to 4-bit integers,
-cutting storage to just 4 GB—a quarter of 16-bit floating point. Quantizing a
+cutting storage to just 4 GB (a quarter of 16-bit floating point). Quantizing a
 finished model needs no gradients. *Training* with quantized weights in the
 forward pass does, and there the rounding is in the way: it has derivative zero
 almost everywhere, so any weight quantized inside the forward pass receives zero
 gradient and stops learning.
 
 In this section, we build both kinds of extensions. Because every framework
-operation—optimization, checkpointing, and device movement—walks registered
+operation (optimization, checkpointing, and device movement) walks registered
 state in the module tree (:numref:`sec_model_construction`), subclassing the
 base module and registering our tensors is all it takes for a custom layer to
 participate automatically. We progress through four concrete examples: a
@@ -229,7 +229,7 @@ A small constant $\epsilon$ (such as $10^{-6}$) guards against division by
 zero. With $\mathbf{g}$ initialized to $\mathbf{1}$, the output always has root
 mean square close to 1 regardless of the input's scale. For example, for
 $\mathbf{x} = (3, 4)$, the mean square is $(9 + 16)/2 = 12.5$ and the RMS is
-$3.536$, yielding $(0.849, 1.131)$—and rescaling the input to $(300, 400)$
+$3.536$, yielding $(0.849, 1.131)$, and rescaling the input to $(300, 400)$
 produces the exact same output. Geometrically (:numref:`fig_bg_rmsnorm`),
 RMSNorm preserves the direction of $\mathbf{x}$ while projecting it onto the
 sphere of radius $\sqrt{d}$, after which $\mathbf{g}$ stretches each coordinate
@@ -242,8 +242,8 @@ RMSNorm streamlines *layer normalization* :cite:`Ba.Kiros.Hinton.2016`, which
 additionally subtracts each example's mean (like a per-row `CenteredLayer`) and
 adds a learned bias after rescaling. Zhang and Sennrich showed that dropping
 mean-centering rarely hurts performance while cutting computation, which is why
-many modern language models—including Llama 3 8B
-:cite:`Grattafiori.Dubey.Jauhri.ea.2024` (:numref:`sec_model_construction`)—adopt
+many modern language models, including Llama 3 8B
+:cite:`Grattafiori.Dubey.Jauhri.ea.2024` (:numref:`sec_model_construction`), adopt
 RMSNorm throughout.
 
 Because $\mathbf{g}$ must be trained, the layer registers it as a parameter
@@ -328,7 +328,7 @@ class RMSNorm(nnx.Module):
         return self.gain * X / rms
 ```
 
-Let's test `RMSNorm` on $(3, 4)$ and on the 100-fold rescaled vector
+We test `RMSNorm` on $(3, 4)$ and on the 100-fold rescaled vector
 $(300, 400)$; both rows should map to $(0.849, 1.131)$:
 
 ```{.python .input #custom-layers-layers-with-parameters-rmsnorm-2}
@@ -363,9 +363,9 @@ with a standalone gain tensor? Because module registration automatically grants
 our custom layer all four capabilities of built-in layers: parameter discovery
 by optimizers, composability inside containers, checkpoint serialization, and
 device migration (:numref:`sec_model_construction`, :numref:`sec_parameters`).
-Let's verify this end to end by sandwiching `RMSNorm` between two linear layers,
+We verify this end to end by sandwiching `RMSNorm` between two linear layers,
 taking one gradient step so the gain moves off ones, and copying the full state
-into a freshly initialized clone—after which both models should produce
+into a freshly initialized clone, after which both models should produce
 identical outputs (:numref:`sec_read_write` extends this to disk checkpoints).
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
@@ -436,7 +436,7 @@ net.layers[1].gain[...], bool(jnp.array_equal(net(X), clone(X)))
 ```
 
 Sure enough, the gain updates away from ones and the clone matches the trained
-model bit for bit—with zero boilerplate inside `RMSNorm` beyond registering
+model bit for bit, with zero boilerplate inside `RMSNorm` beyond registering
 `self.gain`.
 
 ### Comparison with Framework Implementations
@@ -575,7 +575,7 @@ class RandomFeatures(nnx.Module):
         return jnp.sqrt(2 / self.b.shape[0]) * jnp.cos(X @ self.W + self.b)
 ```
 
-Let's put `RandomFeatures` to work by fitting $y = \sin(3x)$ across 100 evenly
+We now put `RandomFeatures` to work by fitting $y = \sin(3x)$ across 100 evenly
 spaced points in $[-2, 2]$ using 500 random features feeding a single linear
 layer trained with Adam. Because $\mathbf{W}$ and $\mathbf{b}$ are registered as
 buffers rather than parameters, handing the whole model to the optimizer updates
@@ -723,7 +723,7 @@ print(f'full state:        mean squared error {mse(fresh, X, y):.2g}')
 ```
 
 Loading only the linear weights causes the MSE to explode by more than two
-orders of magnitude—no better than predicting zero—whereas restoring the full
+orders of magnitude (no better than predicting zero), whereas restoring the full
 state including the buffers recovers the trained fit exactly.
 
 This exact same buffer mechanism stores non-trainable tables and running
@@ -875,7 +875,7 @@ Always invoke `RoundSTE.apply(X)` (calling `forward` directly bypasses autograd 
 :begin_tab:`jax`
 `round_ste_fwd` returns `(output, residuals)` (`None` when no forward values are needed), and `round_ste_bwd(residuals, grad_output)` returns a one-element tuple `(grad_output,)` matching the input arguments.
 :end_tab:
-Let's verify our custom backward rule by multiplying the rounded weights by
+We verify our custom backward rule by multiplying the rounded weights by
 $(1, 2, 3)$ and summing: the straight-through estimator should deliver
 $(1, 2, 3)$ directly as the gradient with respect to $\mathbf{w}$:
 
@@ -909,7 +909,7 @@ jax.grad(lambda w: (round_ste(w) * jnp.array([1.0, 2.0, 3.0])).sum())(w)
 
 The gradient passes straight back to $\mathbf{w}$ as if rounding were the
 identity, while the forward pass still operates on integer-rounded weights. Can
-gradient descent actually learn through this surrogate? Let's fit an eight-weight
+gradient descent actually learn through this surrogate? Below we fit an eight-weight
 linear model whose weights are rounded to integers during the forward pass on
 synthetic data generated by weights drawn uniformly from $[-7, 7]$ (the 4-bit
 signed range). Starting from $\mathbf{w} = \mathbf{0}$, we compare plain
@@ -1002,9 +1002,9 @@ print(f'start {(y ** 2).mean():.3g}, '
 
 With plain rounding, every gradient is zero and the loss never budges from its
 starting value. With the straight-through estimator, the loss plunges from tens
-or hundreds down to 1 or 2—within a small factor of the loss of the rounded
-ground-truth weights. A deliberately "wrong" surrogate gradient successfully
-trains a quantized model!
+or hundreds down to 1 or 2, within a small factor of the loss of the rounded
+ground-truth weights. A deliberately approximate surrogate gradient successfully
+trains a quantized model.
 
 The identity is just one possible surrogate. A full 4-bit quantizer also clamps
 its inputs to $[-8, 7]$, so practical implementations often pass gradients only
@@ -1013,7 +1013,7 @@ the exercises). Choosing the right surrogate is a modeling decision tailored to
 the operation it approximates.
 
 When the surrogate *is* the identity, there is an elegant one-line trick that
-avoids writing a custom autograd function altogether—and is what you will most
+avoids writing a custom autograd function altogether, and it is what you will most
 often encounter in production code. Using a *stop-gradient* operator (which acts
 as the identity in the forward pass and has zero derivative in the backward
 pass), writing $X + \textrm{stop}(\textrm{round}(X) - X)$ evaluates to
@@ -1102,7 +1102,7 @@ def loss(f, w):
 A backward rule written by hand can be wrong, and nothing in the forward pass
 will show it. The standard test is a *gradient check*: perturb each input by a
 small amount, measure how much the output changes, and compare this
-finite-difference slope with the gradient that the rule returns. Let's check a
+finite-difference slope with the gradient that the rule returns. Below we check a
 smooth built-in function and our straight-through rule:
 
 ```{.python .input #custom-layers-functions-with-custom-gradients-1}
@@ -1566,7 +1566,7 @@ Fitting an 8-weight linear model whose weights are rounded to integers on every 
 
 @!custom-layers-custom-gradients-5
 
-- **The stop-gradient one-liner:** For an identity surrogate, writing `X + stop_gradient(round(X) - X)` evaluates to `round(X)` forward and differentiates through `X` backward without a custom class!
+- **The stop-gradient one-liner:** For an identity surrogate, writing `X + stop_gradient(round(X) - X)` evaluates to `round(X)` forward and differentiates through `X` backward without a custom class.
 :::
 
 ::: {.slide title="The Stop-Gradient Shortcut for Identity Surrogates"}

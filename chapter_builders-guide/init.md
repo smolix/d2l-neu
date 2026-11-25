@@ -15,14 +15,14 @@ exponentially, stalling training before it even begins.
 That section also derived the remedy for a single layer: draw weights with
 standard deviation $g/\sqrt{n_\textrm{in}}$, where $n_\textrm{in}$ is the
 layer's input width and the *gain* $g$ compensates for the activation function
-that follows—$g = \sqrt{2}$ before a ReLU (He initialization,
+that follows: $g = \sqrt{2}$ before a ReLU (He initialization,
 :numref:`subsec_he_init`) and $g = 1$ for a linear output. Under that rule, each
 layer preserves the mean square of its input.
 
 You might expect that applying this rule to every layer settles initialization
 once and for all. Surprisingly, it does not. In a residual network, activations
 still explode with depth even when every individual layer obeys He
-initialization! Each residual block adds the output of its body $f$
+initialization. Each residual block adds the output of its body $f$
 (:numref:`sec_model_construction`) to its input. If the body preserves the input
 mean square and produces an output uncorrelated with the input, their sum has
 *double* the mean square. Across 32 residual blocks, the activation standard
@@ -79,13 +79,13 @@ from d2l import jax as d2l
 
 ## Applying Initializers
 
-As we saw in :numref:`sec_numerical_stability`, no framework defaults to He
-initialization (:numref:`subsec_he_init`) for linear layers; the tab note gives
-yours. To apply He initialization—or the
-depth-dependent residual scaling we derive shortly—across an entire model, we
-walk the module tree (:numref:`sec_model_construction`). Let's compare default
-versus He initialization on a 10-layer ReLU stack of width 256 (without biases)
-fed 1,024 standard-normal inputs.
+As we saw in :numref:`sec_numerical_stability`, default linear-layer
+initializers do not apply He initialization (:numref:`subsec_he_init`). To
+apply He initialization (or the depth-dependent residual scaling we derive
+shortly) across an entire model, we walk the module tree
+(:numref:`sec_model_construction`). Below we compare default versus He
+initialization on a 10-layer ReLU stack of width 256 (without biases) fed 1,024
+standard-normal inputs.
 
 :begin_tab:`mxnet`
 Gluon's default draws from $U(-0.07, 0.07)$. `net.initialize(init.MSRAPrelu(factor_type='in', slope=0), force_reinit=True)` applies He initialization ($g = \sqrt{2}$) across the block tree, overwriting existing weights:
@@ -173,7 +173,7 @@ print(f'He:      mean square of the output {(net(X) ** 2).mean():.2g}')
 Under the default initializer, the output mean square collapses by orders of
 magnitude because every layer multiplies variance by a factor strictly less than
 one. Switching to He initialization brings the output mean square right back to
-within roughly a factor of two of 1 (the input mean square)—the residual spread
+within roughly a factor of two of 1 (the input mean square), with the remaining spread
 coming simply from random finite-width fluctuations compounding across ten
 layers.
 
@@ -264,7 +264,7 @@ hit the exact target variance.
 ## Custom Initializers and Direct Edits
 
 Whenever built-in initializers do not match what a paper or architecture calls
-for, we can write our own initializer—or edit parameter tensors directly. Both
+for, we can write our own initializer or edit parameter tensors directly. Both
 build on each framework's initializer interface:
 
 :begin_tab:`mxnet`
@@ -289,7 +289,7 @@ In NNX, an initializer is any function with the signature `(key, shape, dtype)
 
 ### A Rule with a Gain of Our Choice
 
-Let's implement the gain-parameterized normal rule from the introduction: draw
+We now implement the gain-parameterized normal rule from the introduction: draw
 weights with standard deviation $g/\sqrt{n_\textrm{in}}$ for any chosen gain
 $g$. He initialization corresponds to $g = \sqrt{2}$, and our residual-network
 experiments below will also test $g = 1$, $g = 1/\sqrt{N}$ (for $N$ blocks), and
@@ -357,7 +357,7 @@ def scaled_normal(gain):
 
 ### Direct Edits
 
-Occasionally we want to modify parameter values directly—either right after
+Occasionally we want to modify parameter values directly, either right after
 initialization or after loading weights. Because ReLU is positively homogeneous,
 halving the final layer's weights in our ten-layer stack halves every output
 activation and should therefore reduce the output mean square by a factor of
@@ -416,7 +416,7 @@ value.
 ### Variance Growth across Blocks
 
 Earlier we claimed that a deep residual stack explodes at initialization even
-when every individual layer follows He's rule. Let's prove it. A residual block
+when every individual layer follows He's rule. To prove it, note that a residual block
 computes $\mathbf{x}_{k+1} = \mathbf{x}_k + f_k(\mathbf{x}_k)$. Take the
 two-layer body from :numref:`sec_model_construction`, expanded fourfold in the
 middle as in many modern residual blocks and transformers: a linear layer from
@@ -453,8 +453,8 @@ back at every block.
 
 Across $N$ blocks, the per-block factor compounds to $(1 + g^2)^N$. Keeping
 activations well scaled at arbitrary depth therefore requires shrinking $g$ as
-$N$ grows. Choosing $g^2 = 1/N$—scaling every body's output projection by
-$1/\sqrt{N}$—does the trick:
+$N$ grows. Choosing $g^2 = 1/N$, scaling every body's output projection by
+$1/\sqrt{N}$, bounds the compounding cleanly:
 
 $$m_N = \left(1 + \frac{1}{N}\right)^N m_0 \leq e\, m_0,$$
 
@@ -498,8 +498,8 @@ zero matrix with a single learnable scalar per branch that starts at zero
 ### Measuring Variance across Depth
 :label:`subsec_variance_across_depth`
 
-Let's test all three predictions empirically. `WideResidualBlock` implements our
-$d \to 4d \to d$ residual block using our custom gain-scaled normal initializer—gain
+We now test all three predictions empirically. `WideResidualBlock` implements our
+$d \to 4d \to d$ residual block using our custom gain-scaled normal initializer, with gain
 $\sqrt{2}$ on the expansion layer and a configurable `out_gain` on the output
 projection:
 
@@ -624,8 +624,8 @@ def std_across_depth(num_blocks, out_gain):
     return stds
 ```
 
-We compare all three gain schedules—unscaled ($g = 1$), scaled
-($g = 1/\sqrt{N}$), and zero ($g = 0$)—printing final standard deviations for
+We compare all three gain schedules: unscaled ($g = 1$), scaled
+($g = 1/\sqrt{N}$), and zero ($g = 0$), printing final standard deviations for
 $N = 2, 8, 32$ and plotting the full depth profile at $N = 32$:
 
 ```{.python .input #init-watching-the-variance-compound-3}
@@ -641,14 +641,14 @@ d2l.plot(list(range(33)), profiles[32], 'blocks', 'std of activations',
 ```
 
 The empirical curves confirm our analysis. The unscaled stack grows by roughly
-$\sqrt{2}$ per block—a clean straight line on the log scale—reaching anywhere
+$\sqrt{2}$ per block (a straight line on the log scale), reaching anywhere
 from about 20,000 to 200,000 after 32 blocks (most individual runs sit slightly
 below the theoretical $\sqrt{\mathbb{E}[m_{32}]} = 65{,}536$ because multiplying
 random positive factors produces a right-skewed distribution whose median falls
 below the square root of its mean). With initial activations already in the tens
 of thousands, there is little point even attempting to train the unscaled stack.
 By contrast, the $1/\sqrt{N}$-scaled stack stays comfortably between 1.4 and 1.9
-at every depth—right around our 1.5–1.65 prediction—while zeroing the output
+at every depth, matching our 1.5–1.65 prediction, while zeroing the output
 projections holds the standard deviation flat at 1 across all 32 blocks.
 
 Running a quick forward-pass diagnostic like this catches broken initializations
@@ -660,14 +660,14 @@ updates.
 
 Finally, remember that initialization controls only step zero. As gradient steps
 update the weights, nothing in initialization alone guarantees that activations
-stay well scaled—which is where normalization layers (:numref:`sec_batch_norm`)
+stay well scaled, which is where normalization layers (:numref:`sec_batch_norm`)
 step in.
 
 ## Summary
 
 Framework default initializers do not use He initialization, so deep networks
-without normalization layers require explicit initialization—applied via
-constructor arguments, tree-wide callbacks, or direct in-place edits—and
+without normalization layers require explicit initialization (applied via
+constructor arguments, tree-wide callbacks, or direct in-place edits), and
 truncated normals prevent rare extreme outliers in large models. Crucially,
 per-layer variance rules (:numref:`sec_numerical_stability`) are not enough for
 residual architectures: adding each block's body back to its input multiplies
@@ -774,7 +774,7 @@ Parameter Initialization<br>**framework defaults · tree-wide initializers · tr
 ::: {.col}
 - **Additive skip connections:** Every residual block computes $\mathbf{x}_{k+1} = \mathbf{x}_k + f_k(\mathbf{x}_k)$.
 - **Uncorrelated variances add:** When both $\mathbf{x}_k$ and $f_k(\mathbf{x}_k)$ have unit mean square and are uncorrelated, their sum has **double** the mean square ($2\times$ variance per block).
-- **Exponential blow-up with depth:** Across $N = 32$ residual blocks, activation standard deviation compounds by $2^{32/2} = 2^{16} = 65{,}536\times$ at step $0$!
+- **Exponential blow-up with depth:** Across $N = 32$ residual blocks, activation standard deviation compounds by $2^{32/2} = 2^{16} = 65{,}536\times$ at step $0$.
 :::
 
 ::: {.col .fig .big}

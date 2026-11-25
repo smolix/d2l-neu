@@ -7,12 +7,12 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`sec_read_write`
 
 A trained neural network is surprisingly fragile: it exists only in the memory
-of the process that trained it. The moment that process terminates—whether
+of the process that trained it. The moment that process terminates (whether
 because your script finished, hit an error, tripped over a server's power cord,
-or ran on a preemptible cloud instance—every learned weight vanishes unless
+or ran on a preemptible cloud instance), every learned weight vanishes unless
 saved to disk. For the toy models of earlier chapters, losing progress costs
 minutes. At modern scale, it can erase weeks of compute, and hardware failures
-are not rare exceptions—they are routine. Over a 54-day window of pre-training
+are not rare exceptions: they are routine. Over a 54-day window of pre-training
 Llama 3 405B on up to 16,384 GPUs, Meta recorded 419 unexpected interruptions,
 roughly one every three hours :cite:`Grattafiori.Dubey.Jauhri.ea.2024`. Without
 reliable checkpointing and resumption, a run of that scale could never complete.
@@ -26,12 +26,12 @@ and how should we verify that weights match our architecture?
 The answer to *what* to save follows directly from :numref:`sec_parameters`. A
 model consists of code plus state: the code defines the architecture and forward
 pass, while the *state* is the collection of named tensors (parameters and
-buffers alike) produced by training. We serialize only the state—mapping names
-to tensors—and reconstruct the model by instantiating the architecture in code
+buffers alike) produced by training. We serialize only the state, mapping names
+to tensors, and reconstruct the model by instantiating the architecture in code
 and loading those tensors back in. Resuming an interrupted training run demands
 still more: besides model weights, we must save optimizer state (such as Adam's
 running moments), random-number generator states, the step counter, and the
-architecture configuration—making a training checkpoint several times larger
+architecture configuration, making a training checkpoint several times larger
 than an inference weight file.
 
 In this hands-on section, we first inspect and serialize model state, then
@@ -109,7 +109,7 @@ from safetensors.flax import load_file, save_file
 Because a model contains dozens or hundreds of tensors, saving it requires
 storing a mapping from names to tensors. Each framework generates this mapping
 automatically by traversing the module tree (:numref:`sec_model_construction`),
-keying every tensor by its path from the root. Let's inspect the state of a
+keying every tensor by its path from the root. Below we inspect the state of a
 simple single-hidden-layer MLP with 256 hidden units.
 
 :begin_tab:`mxnet, pytorch`
@@ -192,7 +192,7 @@ params = nnx.state(net, nnx.Param)
 [(path, tuple(value.shape)) for path, value in params.flat_state()]
 ```
 
-Notice that this state dictionary records names, shapes, and numerical values—and
+Notice that this state dictionary records names, shapes, and numerical values, and
 nothing else. It contains no trace of the `MLP` class, its forward logic, or its
 activation function. Restoring the model therefore requires Python code that
 recreates the exact matching names and shapes: even renaming an attribute from
@@ -203,13 +203,13 @@ We show how to catch and diagnose such mismatches later in this section.
 
 When checkpoint files never leave your own disk, almost any serialization format
 suffices. The moment you download pretrained weights from a public hub or accept
-a checkpoint from someone else, however, a security question enters the picture:
+a checkpoint from someone else, however, a security question arises:
 can loading that file execute arbitrary code on your machine? Unfortunately,
 with Python's default serialization format, the answer is yes.
 
 ### Code Execution on Load
 
-Python's built-in `pickle` module does not store passive data—it stores a
+Python's built-in `pickle` module does not store passive data: it stores a
 bytecode program that reconstructs Python objects, and unpickling *executes*
 that program, allowing it to call any importable function. Any class can
 customize what pickle executes via `__reduce__`, returning a callable and its
@@ -268,7 +268,7 @@ except Exception as e:
 ```
 
 Restricted unpicklers only protect you insofar as their allowlists have no
-bugs—and historical vulnerabilities have bypassed even hardened restricted loaders.
+bugs, and historical vulnerabilities have bypassed even hardened restricted loaders.
 A file format that simply *cannot* encode
 executable instructions eliminates the entire attack surface by design.
 
@@ -299,7 +299,7 @@ Face Hub.
 ![The safetensors file of the MLP below as one strip of bytes: an 8-byte length, the JSON header with each tensor's dtype, shape, and byte range, and the raw bytes of the four tensors back to back, in the order of their names. The offsets under the data are the ranges that the header records.](../img/bg-safetensors-layout.svg)
 :label:`fig_bg_safetensors_layout`
 
-Let's save our MLP's state to `mlp.safetensors`, load it into a fresh clone, and
+We save our MLP's state to `mlp.safetensors`, load it into a fresh clone, and
 verify that both instances produce identical outputs.
 
 ```{.python .input #saving-loading-safetensors-the-interchange-format-3}
@@ -405,8 +405,8 @@ step counter governing Adam's bias correction and any learning-rate schedule,
 and (5) the model configuration needed to rebuild the architecture. Gradients
 are omitted because the next step recomputes them immediately. That leaves 12 of
 the 16 bytes per parameter held during fp32 Adam training
-(:numref:`sec_parameters`)—weights plus two moments—meaning a resumable
-checkpoint for an 8-billion-parameter model weighs in at 96 GB, three times its
+(:numref:`sec_parameters`), namely weights plus two moments, so a resumable
+checkpoint for an 8-billion-parameter model weighs in at 96 GB: three times its
 32 GB fp32 weights and six times its 16 GB bf16 inference file
 (:numref:`sec_numerics`).
 
@@ -687,7 +687,7 @@ ckptr.wait_until_finished()
 key, uninterrupted = train(net, opt, key, 5)
 ```
 
-Now we simulate restarting in a fresh process: `resume(path, num_steps, restore_optimizer=True, restore_rng=True)` reads the saved config to rebuild the model and optimizer, loads the checkpoint (optionally skipping the optimizer or RNG state), computes the remaining steps `num_steps - step`, and runs `train`, while `max_diff(a, b)` computes the largest elementwise weight difference between two models:
+Now we simulate restarting in a fresh process: `resume` rebuilds the model and optimizer from the saved config, optionally restores the optimizer and RNG states alongside the weights, and runs the remaining steps up to `num_steps`, while `max_diff` reports the largest elementwise weight discrepancy between two models:
 
 :begin_tab:`tensorflow`
 Because Keras's `Adam` creates its moment variables lazily on the first update, `resume` calls `opt.build(model.trainable_variables)` before restoring into the optimizer.
@@ -774,7 +774,7 @@ def max_diff(a, b):
                zip(jax.tree.leaves(nnx.state(a)), jax.tree.leaves(nnx.state(b))))
 ```
 
-We now call `resume(path, 205, **kwargs)` twice—once restoring the `'full checkpoint'` and once `'without the generator'` (`restore_rng=False`, as if a script simply re-seeded from `0`)—and print `max_diff(resumed, net)` against the uninterrupted 205-step model `net`:
+We compare restoring the full checkpoint against omitting only the random generator (`restore_rng=False`, as if a script simply re-seeded from `0`) and measure the maximum weight discrepancy against the uninterrupted 205-step `net`:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-5}
 for name, kwargs in (('full checkpoint', {}),
@@ -784,9 +784,9 @@ for name, kwargs in (('full checkpoint', {}),
 ```
 
 Restoring the full checkpoint reproduces the uninterrupted weights with zero
-error—bit for bit. Omitting the RNG state causes the resumed loop to replay the
+error (bit for bit). Omitting the RNG state causes the resumed loop to replay the
 very first minibatches instead of drawing the next ones, introducing weight
-differences of roughly 0.005 to 0.02 (note that bit-for-bit equality also
+differences of roughly 0.004 to 0.02 (note that bit-for-bit equality also
 assumes deterministic operations, which we examine in :numref:`sec_repro`).
 
 Dropping the *optimizer* state is far more destructive. Below we resume with the
@@ -803,7 +803,7 @@ print('fresh optimizer:', [round(l, 4) for l in fresh])
 With the saved optimizer state, training picks up smoothly with losses hovering
 near 0.01 or below. With a fresh Adam optimizer, a *single* step blows the loss
 up roughly a thousandfold, and even four steps later it remains over a hundred
-times higher than before!
+times higher than before.
 
 Why does one step of a fresh Adam wreck a nearly converged model? Equation
 :eqref:`eq_saving_adam` tells the whole story. Starting from
@@ -812,8 +812,8 @@ on step 1 divides out the exact initialization factor, leaving
 $\hat{\mathbf{m}} = \mathbf{g}$ and
 $\hat{\mathbf{v}} = \mathbf{g} \odot \mathbf{g}$. Every parameter with any
 nonzero gradient therefore steps by
-$\eta\, |g_i| / (|g_i| + \epsilon) \approx \eta = 0.05$—the full learning rate,
-no matter how tiny its gradient! By contrast, the saved $\mathbf{v}$ remembers
+$\eta\, |g_i| / (|g_i| + \epsilon) \approx \eta = 0.05$: the full learning rate,
+no matter how tiny its gradient. By contrast, the saved $\mathbf{v}$ remembers
 the much larger squared gradients from earlier in training, keeping
 $\sqrt{\hat{\mathbf{v}}}$ large relative to the tiny late-stage gradients so
 updates remain gentle. The closer a model is to convergence, the more violent
@@ -865,7 +865,7 @@ net.fc.kernel.shape
 
 External weight files rarely match a custom target model one-to-one, and
 silently ignoring mismatches is a notorious source of bugs. To see how a careful
-loader audits partial transfers, let's strip two groups of tensors from our
+loader audits partial transfers, we strip two groups of tensors from our
 pretrained ResNet-50 state: the classification head (which we *intend* to
 replace) and the entire final stage of the backbone (simulating a corrupted or
 mismatched checkpoint). Loading the remaining tensors into a fresh 10-class
@@ -946,7 +946,7 @@ print('unexpected:', sorted(set(damaged) - set(fresh)))
 Missing keys for the new 10-class head's weight and bias are expected, since
 that head starts from random initialization. The missing keys from the final
 backbone stage are a red flag: had we loaded blindly with partial matching, a
-huge chunk of our "pretrained" ResNet-50 would silently remain random noise!
+huge chunk of our "pretrained" ResNet-50 would silently remain random noise.
 Here the unexpected set is empty; a nonempty unexpected set typically signals a
 renamed module whose weights were never loaded. In production code, always
 assert explicitly that the missing and unexpected sets match *only* the layers
@@ -961,8 +961,8 @@ Everything in this chapter so far has lived in host CPU memory. In
 
 ## Summary
 
-Persisting a model saves its *state*—a dictionary mapping module-tree paths to
-parameter and buffer tensors—while the architecture itself lives in code.
+Persisting a model saves its *state* (a dictionary mapping module-tree paths to
+parameter and buffer tensors), while the architecture itself lives in code.
 Because Python's `pickle` executes arbitrary code on load, weights shared across
 trust boundaries should use a code-free format such as `safetensors` (an 8-byte
 length prefix, a JSON header, and packed tensor bytes). Crash-safe training
@@ -1340,7 +1340,7 @@ Work out these three checkpointing questions:
 **Answers:**
 
 1. **$8 + 280 + 4 \times 7{,}946 = 32{,}072$ bytes:** 8-byte length prefix $+$ 280-byte JSON header $+$ $31{,}784$ bytes for the $7{,}946$ `float32` parameters.
-2. **$\|\Delta \mathbf{w}\|_2 \approx 0.05 \sqrt{1{,}409} \approx 1.88$:** Every coordinate steps by $\pm \eta = \pm 0.05$ regardless of how small $\|\mathbf{g}\|_2$ is!
+2. **$\|\Delta \mathbf{w}\|_2 \approx 0.05 \sqrt{1{,}409} \approx 1.88$:** Every coordinate steps by $\pm \eta = \pm 0.05$ regardless of how small $\|\mathbf{g}\|_2$ is.
 3. **`missing_keys` lists `classifier.weight, classifier.bias` (left random); `unexpected_keys` lists `fc.weight, fc.bias` (ignored from file).**
 :::
 :::

@@ -17,16 +17,16 @@ train in 16 bits and still recover the same model?
 Not naively. Sixteen-bit formats are noticeably coarser, opening the door to two
 silent failure modes that raise no runtime error. In fp16, $300^2$ already
 overflows to `inf`, flooding training with `inf` and NaN values. In bf16, adding
-$0.001$ to a weight of $1$ rounds right back to $1$, quietly stalling learning
+$0.001$ to a weight of $1$ rounds right back to $1$, silently stalling learning
 even while gradients look healthy.
 
 This section shows how to train reliably in 16 bits while avoiding both traps.
-Every tensor carries a *dtype*—its numerical format—and every format trades off
+Every tensor carries a *dtype* (its numerical format), and every format trades off
 *dynamic range* (how large or small representable numbers can be) against
 *precision* (how finely adjacent numbers are spaced). *Mixed-precision training*
 keeps an fp32 master copy of the weights so tiny gradient updates accumulate
 faithfully, while executing expensive matrix multiplications and storing
-activations in 16 bits—paired with *loss scaling* when using fp16 so small
+activations in 16 bits, paired with *loss scaling* when using fp16 so small
 gradients do not underflow to zero. Whereas :numref:`sec_parameters` counted
 bytes per parameter, here we control bytes per number. The second subsection
 (dtype promotion and model casting) is practical reference material you can skim
@@ -88,8 +88,8 @@ import random
 ### Range and Precision
 
 Simply squaring 300 in both 16-bit formats reveals the two distinct ways low
-precision can bite—and 300 is hardly exotic inside a neural network, where an
-unnormalized logit or intermediate variance sum can easily reach that size.
+precision can bite (300 is hardly exotic inside a neural network, where an
+unnormalized logit or intermediate variance sum can easily reach that size):
 
 ```{.python .input #numerics-the-dtype-zoo-1}
 %%tab mxnet
@@ -116,14 +116,13 @@ x.astype(jnp.float16)**2, x.astype(jnp.bfloat16)**2
 ```
 
 :begin_tab:`mxnet`
-MXNet supports bf16 only in part, and it cannot train bf16 weights, so the
-MXNet tab works in fp16 and the cell squares only in fp16. In bf16 the
-result would be 90112.
+MXNet supports bf16 only in part and cannot train bf16 weights, so here we
+work in fp16 and square 300 in fp16 alone. In bf16 the result would be 90112.
 :end_tab:
 
 In fp16 (*half precision*), $300^2$ overflows straight to `inf` because its
 largest finite value is just 65504. In bf16 (*brain floating point*), the result
-stays finite—90112 instead of 90000—yet already incurs rounding error in the
+stays finite (90112 instead of 90000), yet already incurs rounding error in the
 third significant digit. Both formats fit in 16 bits; they simply partition
 those bits differently. Any normal floating-point number stores a sign bit $s$,
 an exponent $e$, and a $t$-bit mantissa encoding a fraction $f \in [0, 1)$,
@@ -131,8 +130,8 @@ representing
 
 $$x = (-1)^s \cdot 2^{e} \cdot (1 + f).$$
 
-Exponent bits govern dynamic range—the largest and smallest magnitudes $|x|$ the
-format can represent—while mantissa bits govern relative precision: adjacent
+Exponent bits govern dynamic range (the largest and smallest magnitudes $|x|$ the
+format can represent), while mantissa bits govern relative precision: adjacent
 numbers between $1$ and $2$ sit $2^{-t}$ apart, and between $2^e$ and $2^{e+1}$
 they sit $2^{e-t}$ apart, maintaining uniform relative spacing across scales.
 The three formats we work with allocate their bits as follows:
@@ -146,7 +145,7 @@ The three formats we work with allocate their bits as follows:
 Notice the trade-off immediately. bf16 preserves all 8 exponent bits of fp32
 while trimming the mantissa down to 7 bits, delivering fp32's full dynamic range
 at coarser resolution. fp16 does the opposite, retaining 10 mantissa bits but
-only 5 exponent bits—finer local steps, far narrower range. We can check both
+only 5 exponent bits: finer local steps, far narrower range. We can check both
 outputs above by hand: with 5 exponent bits, $e$ spans $[-14, 15]$, capping fp16
 at $2^{15}(2 - 2^{-10}) = 65504$. With 7 mantissa bits, bf16 values between
 $2^{16}$ and $2^{17}$ are spaced by $2^9 = 512$, so 90000 falls between
@@ -228,7 +227,7 @@ hardware, leaving fp16 primarily for older GPUs and inference.
 Where bf16's coarse spacing *does* hurt is during parameter updates. A single
 gradient descent step shifts a weight by $\eta g$, often $10^{-3}$ or less of
 the weight's magnitude. Under round-to-nearest, any step smaller than half the
-local spacing vanishes completely. Let's add $10^{-3}$ and $10^{-4}$ to a weight
+local spacing vanishes completely. Below we add $10^{-3}$ and $10^{-4}$ to a weight
 of $1$ in each format:
 
 ```{.python .input #numerics-rounding-of-small-updates}
@@ -267,14 +266,14 @@ for dtype in (jnp.float32, jnp.bfloat16, jnp.float16):
 For bf16, which the cell leaves out, both sums come out as `1.0000000`.
 :end_tab:
 
-In fp32, both increments register cleanly. In bf16—whose spacing near 1 is
-$2^{-7} \approx 0.0078$—both round right back to 1, leaving the weight
+In fp32, both increments register cleanly. In bf16, whose spacing near 1 is
+$2^{-7} \approx 0.0078$, both round right back to 1, leaving the weight
 completely frozen. In fp16 (spacing $2^{-10} \approx 0.00098$), the $10^{-3}$
 step survives (rounded to one grid step) while $10^{-4}$ disappears.
 :numref:`fig_bg_update-swamping` draws both grids to one scale: an update
 registers only if it carries the weight more than half a grid spacing away.
 Storing weights directly in 16 bits can therefore stall optimization even when
-every gradient is accurate—which is why training keeps master weights in fp32.
+every gradient is accurate, which is why training keeps master weights in fp32.
 
 ![The bf16 grid (top) and the fp16 grid (bottom) near a weight of 1, drawn to one scale. A shaded interval holds the values that round back to 1; it reaches half a grid spacing to each side, and the spacing below 1 is half the spacing above it. In bf16 the update $1 + 10^{-3}$ lies inside the interval and is lost. In fp16 it lies outside and rounds to the next grid point, $1 + 2^{-10}$.](../img/bg-update-swamping.svg)
 :label:`fig_bg_update-swamping`
@@ -283,7 +282,7 @@ every gradient is accurate—which is why training keeps master weights in fp32.
 
 ### Promotion
 
-What dtype results when an expression combines mismatched operands? Let's test
+What dtype results when an expression combines mismatched operands? We test
 adding an fp16 tensor to an fp32 tensor, a Python float, and an integer tensor:
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-1}
@@ -320,7 +319,7 @@ x32 = jnp.ones(3, dtype=jnp.float32)
 ```
 
 :begin_tab:`mxnet, pytorch, jax`
-Combining two float tensors promotes to the wider format (and fp16 + bf16 promotes to fp32)—meaning a single stray fp32 tensor silently promotes an entire downstream 16-bit computation to fp32! Python float literals and integer tensors do not promote float tensors.
+Combining two float tensors promotes to the wider format (and fp16 + bf16 promotes to fp32), so a single stray fp32 tensor silently promotes an entire downstream 16-bit computation to fp32. Python float literals and integer tensors do not promote float tensors.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -331,8 +330,8 @@ TensorFlow never promotes across tensor dtypes: combining fp16 and fp32 raises a
 Since parameters are just tensors, we can cast an entire model to 16 bits.
 Throughout this section we use our Fashion-MNIST MLP from
 :numref:`sec_mlp-implementation`: 784 inputs, a 256-unit ReLU hidden layer, and
-10 outputs, with $\mathcal{N}(0, 0.01^2)$ weights and zero biases—203,530
-parameters occupying 814,120 bytes in fp32.
+10 outputs, with $\mathcal{N}(0, 0.01^2)$ weights and zero biases (203,530
+parameters occupying 814,120 bytes in fp32).
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-2}
 %%tab mxnet
@@ -459,13 +458,13 @@ print(net16(X).dtype, param_bytes(net16))
 print(net16(X.astype(jnp.bfloat16)).dtype)
 ```
 
-Casting halves parameter memory; the tab note and output above show what
-happens to an fp32 input.
+Casting halves parameter memory immediately, though frameworks differ in whether
+a 16-bit model casts an fp32 input automatically or rejects the dtype mismatch.
 
 For *inference*, casting a trained model to 16 bits immediately halves its
 weight footprint (subject to verifying that task accuracy holds up). For
 *training*, however, pure 16-bit weights run straight into the small-update
-rounding trap we just saw—as we confirm empirically below.
+rounding trap we just saw, as we confirm empirically below.
 
 ## Mixed-Precision Training
 
@@ -539,13 +538,13 @@ net(X).dtype, jax.tree.leaves(nnx.state(net, nnx.Param))[0].dtype
 ### Training in fp32 and in 16 Bits
 
 How much does 16-bit arithmetic affect optimization, and what goes wrong when we
-drop the fp32 master copy? Let's train our MLP three times with plain SGD on
+drop the fp32 master copy? Below we train our MLP three times with plain SGD on
 Fashion-MNIST minibatches of 256 images: full fp32, pure bf16 weights (with no
 fp32 master copy), and mixed precision. All three runs start from identical
 random weights and consume the exact same minibatches in the same order.
 
-Notice the learning rate: we set $\eta = 0.01$—one-tenth the rate used in
-:numref:`sec_mlp-implementation`—and run for 1000 steps (about four epochs). Our
+Notice the learning rate: we set $\eta = 0.01$ (one-tenth the rate used in
+:numref:`sec_mlp-implementation`) and run for 1000 steps (about four epochs). Our
 rounding analysis explains why $\eta$ matters so dramatically: an update
 $\eta g$ disappears whenever it falls below half the local bf16 grid spacing, so
 a smaller learning rate loses more updates. A small rate is no artificial
@@ -592,7 +591,7 @@ val_batch = (jnp.asarray(val_images[:1024, :, :, None], jnp.float32) / 255,
              jnp.asarray(val_labels[:1024], jnp.int32))
 ```
 
-With the deterministic training minibatches `batches` and 1,024-image validation slice `val_batch` preloaded in memory, we now define `train(net, ...)` to run $1{,}000$ SGD steps at $\eta = 0.01$—either updating low-precision weights directly or keeping an `fp32` master copy for the parameter update—and return the per-step losses and final accuracy on `val_batch`:
+With the training minibatches and a 1,024-image validation slice preloaded in memory, `train` runs $1{,}000$ SGD steps at $\eta = 0.01$ and returns the per-step losses alongside final validation accuracy:
 
 ```{.python .input #numerics-mixed-precision-training-3}
 %%tab mxnet
@@ -694,7 +693,7 @@ on every single step (:numref:`sec_use_gpu`).
 Because MXNet cannot train bf16 weights directly, `bf16_round` rounds fp32 weights to bf16's 7-bit mantissa after each step, while the mixed-precision run uses fp16 with `multi_precision=True`.
 :end_tab:
 
-Before training, let's check the rounding argument on the first minibatch. Of
+Before training, we check the rounding argument on the first minibatch. Of
 the nonzero first-layer updates $\eta g$ at initialization, what fraction would
 bf16 storage round away at $\eta = 0.01$ and at $\eta = 0.1$, and what share of
 the total update magnitude do the lost updates carry?
@@ -851,7 +850,7 @@ steps, its loss has only reached about 1.15 versus 0.85, and validation accuracy
 about 64% versus 68%. Just as our scalar experiment predicted, storing weights
 directly in bf16 rounds away most first-layer updates, whereas mixed precision
 applies them cleanly to fp32 master weights. None of the three runs is trained
-to convergence—what matters is the apples-to-apples comparison on identical data
+to convergence; what matters is the apples-to-apples comparison on identical data
 and step counts.
 
 Notice two important caveats about what mixed precision does and does not buy
@@ -865,9 +864,9 @@ fp32. That 16 GB footprint from the opening applies to an 8B model cast for
 stored 16-bit activations) and matrix-multiplication time.
 
 :begin_tab:`mxnet`
-The mixed-precision run of the MXNet tab computes in fp16 rather than bf16,
-and it trained without loss scaling. The next subsection measures what fp16
-does to the gradients of this network and explains when scaling is needed.
+In MXNet, the mixed-precision run above computed in fp16 rather than bf16 and
+trained without loss scaling. The next subsection measures what fp16 does to the
+gradients of this network and explains when scaling is needed.
 :end_tab:
 
 ### Loss Scaling for fp16
@@ -905,9 +904,9 @@ g = jnp.array(1e-8)
 g.astype(jnp.float16), (g * 2**16).astype(jnp.float16)
 ```
 
-How common are tiny gradients in practice? Let's compute first-layer fp32
+How common are tiny gradients in practice? Below we compute first-layer fp32
 gradients for our MLP on the first minibatch and measure what fraction of
-nonzero entries fall into fp16's subnormal or zero regimes—both unscaled and
+nonzero entries fall into fp16's subnormal or zero regimes, both unscaled and
 scaled by $2^{16}$:
 
 ```{.python .input #numerics-loss-scaling-for-fp16-3}
@@ -972,7 +971,7 @@ for scale in (1, 2**16):
 
 Roughly a third of the nonzero first-layer gradients land in fp16's subnormal
 range, and about two in a thousand underflow all the way to zero. On this small
-MLP the impact is mild because only the tiniest entries vanish—in fact, it is
+MLP the impact is mild because only the tiniest entries vanish; in fact, it is
 hard to construct a toy model where fp16 fails outright and loss scaling saves
 it. Severe underflow hits large, deep models where losses average over many
 tokens or pixels and gradients attenuate across dozens of layers:
@@ -987,10 +986,10 @@ of *loss scaling*: before the backward pass, multiply the scalar loss by a
 large constant $S$. By linearity of differentiation, every intermediate gradient
 shifts up by $S$ during backpropagation. Before stepping the optimizer, divide
 the gradients back down by $S$ in fp32, where tiny values are represented
-faithfully—leaving the mathematical parameter update completely unchanged while
+faithfully, leaving the mathematical parameter update completely unchanged while
 keeping intermediate fp16 gradients out of the underflow zone.
 
-Choosing $S$ statically is brittle—too small and gradients underflow, too large
+Choosing $S$ statically is brittle: too small and gradients underflow, too large
 and big gradients overflow to `inf`. *Dynamic loss scaling* automates the choice:
 start with a large $S$, inspect the gradients on every step, and whenever an
 `inf` or NaN appears, skip the optimizer update and halve $S$; after a streak of
@@ -1057,7 +1056,7 @@ One final hardware feature accelerates fp32 models without changing any tensor
 dtypes at all. Starting with NVIDIA's Ampere architecture, fp32 matrix
 multiplications can run on tensor cores in *tf32* mode: inputs are truncated to
 fp16's 10-bit mantissa while keeping fp32's 8-bit exponent, and inner products
-accumulate in full fp32—delivering substantial speedups while matching strict
+accumulate in full fp32, delivering substantial speedups while matching strict
 fp32 to three or four significant digits.
 
 :begin_tab:`mxnet`
@@ -1085,7 +1084,7 @@ rounding threshold.
 
 ### From Overflow to NaN
 
-A NaN loss is rarely the root cause—it is usually the aftermath of an earlier
+A NaN loss is rarely the root cause: it is usually the aftermath of an earlier
 overflow to `inf`, because indeterminate arithmetic like `inf - inf` or
 `inf / inf` produces NaN:
 
@@ -1115,8 +1114,8 @@ s, s - s
 
 That initial overflow may occur layers upstream before NaN ever reaches the
 loss, and once a single parameter update carries a NaN, every subsequent step is
-poisoned. Whenever a loss turns NaN, check value ranges first—is any operation
-running in fp16 near its 65504 ceiling?—before blaming the learning rate or
+poisoned. Whenever a loss turns NaN, check value ranges first (is any operation
+running in fp16 near its 65504 ceiling?) before blaming the learning rate or
 architecture.
 
 :begin_tab:`tensorflow`
@@ -1164,7 +1163,7 @@ back afterward,
 
 $$\log \sum_i \exp(x_i) = m + \log \sum_i \exp(x_i - m).$$
 
-Every exponent on the right is nonpositive—making overflow impossible—and the
+Every exponent on the right is nonpositive, making overflow impossible, and the
 largest term is exactly $e^0 = 1$, preventing underflow to $\log 0$. In
 practice you rarely need to code this shift yourself: built-in log-softmax and
 cross-entropy routines apply it automatically.
@@ -1173,7 +1172,7 @@ cross-entropy routines apply it automatically.
 
 Long sums accumulated in 16 bits stall silently: once the running total grows
 large enough, each small summand falls below half the local grid spacing and
-rounds to zero. Let's add $2^{-10}$ (represented *exactly* in fp16) 4096 times
+rounds to zero. Below we add $2^{-10}$ (represented *exactly* in fp16) 4096 times
 into an fp16 accumulator versus an fp32 accumulator:
 
 ```{.python .input #numerics-when-numerics-bite-3}
@@ -1191,13 +1190,13 @@ values lie $2^{-9}$ apart, so $2 + 2^{-10}$ lands right on the midpoint and
 round-to-nearest-even snaps it back to 2 forever. Batch averages, epoch loss
 totals, and variance calculations in normalization layers all share this hazard,
 which is why mixed-precision policies keep reductions and normalizations in
-fp32—and why any custom reduction over 16-bit tensors should accumulate in fp32.
+fp32, and why any custom reduction over 16-bit tensors should accumulate in fp32.
 
 All three failure modes trace back to the same root: an intermediate quantity
 outstripping the range or precision of a 16-bit format even when the final
 answer fits comfortably. Remember also that mixed precision and tf32 alter the
 lowest bits of arithmetic by design, so they will never match pure fp32 bit for
-bit. When runs *can* be made bit-for-bit repeatable—and how to achieve it—is
+bit. When runs *can* be made bit-for-bit repeatable, and how to achieve it, is
 the focus of :numref:`sec_repro`.
 
 ## Summary
@@ -1208,7 +1207,7 @@ past 65504 and underflowing tiny gradients), whereas bf16 keeps fp32's full
 8-bit exponent at just two to three decimal digits of precision. Storing weights
 directly in 16 bits rounds away small gradient updates and stalls training, so
 mixed-precision training keeps fp32 master weights while running matrix
-multiplications and storing activations in 16 bits—matching fp32 accuracy on our
+multiplications and storing activations in 16 bits, matching fp32 accuracy on our
 Fashion-MNIST MLP where pure bf16 weights fall behind. With fp16, dynamic loss
 scaling lifts gradients out of the subnormal/underflow zone during
 backpropagation; bf16 avoids this step altogether. Finally, guard low-precision
@@ -1478,7 +1477,7 @@ Training identical Fashion-MNIST MLPs for $1{,}000$ SGD steps at $\eta = 0.01$ a
 ::: {.cols .vc}
 ::: {.col}
 - **Static training floor stays `128 GB`:** Mixed precision must retain `fp32` master weights (`32 GB`), `fp32` gradients (`32 GB`) and `fp32` Adam moments $\mathbf{m}, \mathbf{v}$ (`64 GB`); the 16-bit values of the forward pass are cast from them.
-- **Where mixed precision wins:** It halves dynamic **forward activation memory** and doubles Tensor Core matrix-multiply throughput!
+- **Where mixed precision wins:** It halves dynamic **forward activation memory** and doubles Tensor Core matrix-multiply throughput.
 :::
 
 ::: {.col .fig .big}
@@ -1487,14 +1486,21 @@ Training identical Fashion-MNIST MLPs for $1{,}000$ SGD steps at $\eta = 0.01$ a
 :::
 :::
 
+::: {.slide title="Measuring Gradient Underflow in fp16"}
+[Why fp16 Needs Loss Scaling]{.kicker}
+
+@-numerics-loss-scaling-for-fp16-3
+:::
+
 ::: {.slide title="Gradient Underflow in fp16 and Dynamic Loss Scaling"}
 [Why fp16 Needs Loss Scaling]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-@numerics-loss-scaling-for-fp16-3
+@!numerics-loss-scaling-for-fp16-3
 
-- Scaling the loss by $S = 2^{16}$ before `backward()` lifts the roughly one-third of gradients that are subnormal into normal `fp16` range.
+- **One-third of gradients drop into subnormals:** Unscaled (`scale 1`), roughly a third of nonzero first-layer gradients fall below $2^{-14}$ and $\sim 0.1\text{--}0.2\%$ round to zero.
+- **Loss scaling ($S = 2^{16}$):** Multiplying the loss by $S$ before backpropagation lifts all of them safely into normal `fp16` range.
 :::
 
 ::: {.col .fig}

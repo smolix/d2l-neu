@@ -10,8 +10,8 @@ The multilayer perceptron in :numref:`sec_mlp-implementation` had just four
 parameter arrays, small enough to manage by hand. Real-world architectures are
 far more intricate. A modern residual network for computer vision stacks dozens
 or hundreds of layers, and a language model such as Llama 3 8B
-:cite:`Grattafiori.Dubey.Jauhri.ea.2024`—holding 8 billion parameters across 32
-identical transformer blocks—spreads its weights over 291 separate arrays. Every
+:cite:`Grattafiori.Dubey.Jauhri.ea.2024`, holding 8 billion parameters across 32
+identical transformer blocks, spreads its weights over 291 separate arrays. Every
 single one of those arrays must reach the optimizer, be written into
 checkpoints, and move onto the GPU. Worse, omitting an array raises no syntax
 error: it simply sits silently untrained or unsaved.
@@ -22,7 +22,7 @@ of layers, or an entire model. It owns parameters, owns child modules, and
 defines a forward computation mapping inputs to outputs. Because modules nest
 inside other modules, any architecture forms a tree of modules
 (:numref:`fig_blocks`). Every framework discovers all parameters by traversing
-this tree—provided each child is properly *registered* with its parent.
+this tree, provided each child is properly *registered* with its parent.
 
 This section is hands-on, and readers who have already built custom modules can
 skim the basics. Do not skip how registration works and how it fails silently,
@@ -85,7 +85,7 @@ Every model we have written since :numref:`sec_oo-design` has been a module:
 `d2l.Module` subclasses each framework's base module class. The fastest way to
 assemble a pipeline of layers is a *sequential container*, which chains its
 children together one after another. Below we construct an MLP with one hidden
-layer of 256 ReLU units and 10 outputs—matching :numref:`sec_mlp-implementation`—and
+layer of 256 ReLU units and 10 outputs, matching :numref:`sec_mlp-implementation`, and
 pass in a minibatch of two examples with 20 features each.
 
 :begin_tab:`mxnet`
@@ -514,11 +514,11 @@ except ValueError as e:
 ```
 
 :begin_tab:`mxnet`
-The forward pass succeeds, yet `collect_params()` is empty! While a completely empty parameter dict makes `Trainer` fail immediately, a *partly* registered model—where outer layers are attributes and inner layers sit in a plain list—fails silently during training. Let's take one SGD step on such a model and check which weights move:
+The forward pass succeeds, yet `collect_params()` is empty. While a completely empty parameter dict makes `Trainer` fail immediately, a *partly* registered model (where outer layers are attributes and inner layers sit in a plain list) fails silently during training. We take one SGD step on such a model and check which weights move:
 :end_tab:
 
 :begin_tab:`pytorch`
-The forward pass succeeds, yet `net.parameters()` is empty because `__setattr__` treats a plain Python `list` as an ordinary attribute rather than a module container. Worse than a completely empty model (which `torch.optim.SGD` rejects) is a *partly* registered model whose outer layers are attributes and inner layers sit in a plain list. Let's take one SGD step and check which weights move:
+The forward pass succeeds, yet `net.parameters()` is empty because `__setattr__` treats a plain Python `list` as an ordinary attribute rather than a module container. Worse than a completely empty model (which `torch.optim.SGD` rejects) is a *partly* registered model whose outer layers are attributes and inner layers sit in a plain list. We take one SGD step and check which weights move:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -593,11 +593,11 @@ optimizer.step()
 ```
 
 :begin_tab:`mxnet`
-Only the outer weights updated! Backpropagation flowed through `self.blocks` to reach `self.first`, but `Trainer` never received the list's parameters (though `collect_params()` does print a warning). Registering each child via `register_child` fixes the bug:
+Only the outer weights updated. Backpropagation flowed through `self.blocks` to reach `self.first`, but `Trainer` never received the list's parameters (though `collect_params()` does print a warning). Registering each child via `register_child` fixes the bug:
 :end_tab:
 
 :begin_tab:`pytorch`
-Only the outer weights updated, without a single warning or error! Backpropagation flowed through `self.blocks` to reach `self.first`, but the optimizer never saw the middle layers. Wrapping the list in `nn.ModuleList` (or `nn.ModuleDict` for dictionaries) registers every child properly:
+Only the outer weights updated, without a single warning or error. Backpropagation flowed through `self.blocks` to reach `self.first`, but the optimizer never saw the middle layers. Wrapping the list in `nn.ModuleList` (or `nn.ModuleDict` for dictionaries) registers every child properly:
 :end_tab:
 ```{.python .input #model-construction-sequential-and-friends-containers-4}
 %%tab mxnet
@@ -660,7 +660,7 @@ With `nnx.List` (or `nnx.Dict` for mappings), all 7,946 parameters are registere
 ## Forward Computation
 
 Because a module's forward method is just Python, it can invoke arbitrary tensor
-operations, loops, conditionals, and skip paths. Let's use this flexibility to
+operations, loops, conditionals, and skip paths. We use this flexibility to
 implement a residual connection, and then see what constraints arise when a
 framework compiles the training step.
 
@@ -668,8 +668,8 @@ framework compiles the training step.
 
 The simplest widely used architecture that is not a straight chain is a
 *residual connection*, which adds a block's input directly to its output
-:cite:`He.Zhang.Ren.ea.2016*1`. Writing $f$ for the block's *body*—here two
-fully connected layers with a ReLU between them—the block computes
+:cite:`He.Zhang.Ren.ea.2016*1`. Writing $f$ for the block's *body* (here two
+fully connected layers with a ReLU between them), the block computes
 
 $$\mathbf{y} = \mathbf{x} + f(\mathbf{x}).$$
 
@@ -773,7 +773,7 @@ block(X24).shape
 
 A forward method can also depend on values that are neither inputs nor trainable
 parameters. A scalar constant can live as an ordinary Python attribute, whereas
-a tensor tracked from data—such as running input statistics—must be saved in
+a tensor tracked from data (such as running input statistics) must be saved in
 checkpoints and moved across devices alongside the model without being updated
 by the optimizer. We cover how to register such non-trainable *buffers* in
 :numref:`subsec_params_buffers`.
@@ -787,7 +787,7 @@ calls. That speedup comes with a trade-off: compiled execution restricts
 data-dependent Python control flow inside the forward pass.
 
 :begin_tab:`mxnet, pytorch`
-Both Gluon `Block` and PyTorch `nn.Module` run *eagerly* by default—executing Python statement by statement—so data-dependent control flow works just like NumPy (we cover graph compilation in :numref:`chap_performance`).
+Both Gluon `Block` and PyTorch `nn.Module` run *eagerly* by default, executing Python statement by statement, so data-dependent control flow works just like NumPy (we cover graph compilation in :numref:`chap_performance`).
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -839,15 +839,15 @@ except jax.errors.TracerBoolConversionError as e:
 ```
 
 :begin_tab:`tensorflow, jax`
-Eager execution runs the data-dependent loop, whereas tracing rejects converting a symbolic tensor/tracer into a Python `bool` (requiring `tf.while_loop` or `jax.lax.while_loop`). Loops over static model structure—such as iterating over `self.modules`—unroll cleanly at trace time.
+Eager execution runs the data-dependent loop, whereas tracing rejects converting a symbolic tensor or tracer into a Python `bool` (requiring `tf.while_loop` or `jax.lax.while_loop`). Loops over static model structure, such as iterating over `self.modules`, unroll cleanly at trace time.
 :end_tab:
 ## Lazy Initialization
 :label:`sec_lazy_init`
 
 ### Shapes from Data
 
-Some layer libraries let a layer specify only its output dimension and infer
-its input width from the first minibatch; the tab note says whether yours does.
+Many layer libraries let a layer specify only its output dimension at
+construction and infer its input width from the first minibatch.
 
 :begin_tab:`mxnet`
 Before the first forward pass, `nn.Dense(256)` creates parameter placeholders with unknown input dimension `-1`:
@@ -923,9 +923,8 @@ layer, which quickly becomes error-prone in deep models. The trade-off is that
 parameters do not exist until data flows through the network: before that first
 pass, we cannot inspect parameter counts or run shape-dependent initializers
 such as Xavier initialization (:numref:`subsec_xavier`). A lazy model therefore needs its initializer either recorded up front or
-applied after a *dry run*—a single forward pass on a dummy minibatch whose
-output is discarded—that materializes every shape; the tab note shows which
-your framework uses.
+applied after a *dry run* (a single forward pass on a dummy minibatch whose
+output is discarded) that materializes every shape.
 
 :begin_tab:`mxnet`
 `net.initialize(init.Xavier())` records the initializer upfront and applies it automatically on the first forward pass.
@@ -1017,7 +1016,7 @@ When should we use lazy layers versus explicit dimensions? For rapid prototyping
 on unfamiliar datasets, lazy layers are handy. For production models whose
 parameters we want to count, initialize programmatically, or instantiate from a
 configuration file without dummy data, declaring explicit input and output
-widths is cleaner—and that is the convention we adopt for the rest of this
+widths is cleaner, and that is the convention we adopt for the rest of this
 chapter.
 
 ## Models from a Config
@@ -1033,8 +1032,8 @@ parameter-free choice such as ReLU vs. tanh).
 
 Architectural hyperparameters that vary across experiments therefore belong in a
 dedicated *configuration* object (*config*) that can be logged alongside metrics
-and saved next to checkpoints, while the topology itself—what each block
-computes and how blocks wire together—lives in code. Below, a Python `dataclass`
+and saved next to checkpoints, while the topology itself (what each block
+computes and how blocks wire together) lives in code. Below, a Python `dataclass`
 captures four architectural fields, and a `build` factory function turns any
 config into a complete module tree:
 
@@ -1419,7 +1418,7 @@ When layers form a straight pipeline, a sequential container registers each chil
 
 @model-construction-the-module-abstraction-4
 
-- **Automatic registration via `__setattr__`:** Assigning `self.hidden = ...` inserts the child into `_modules['hidden']`; always call `net(X)` to run hooks and builders.
+- **Automatic registration via `__setattr__`:** Assigning `self.hidden = ...` inserts the child into the module's child registry; always call `net(X)` to run hooks and builders.
 :::
 
 ::: {.col .fig}

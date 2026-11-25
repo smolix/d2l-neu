@@ -1,7 +1,7 @@
 # Further Reading
 :label:`sec_gan-further-reading`
 
-This section connects the core concepts of the chapter—density-ratio estimation, divergence formulations, relativistic objectives, gradient penalties, and adversarial post-training—to the broader literature and open-source implementations.
+This section connects the core concepts of the chapter (density-ratio estimation, divergence formulations, relativistic objectives, gradient penalties, and adversarial post-training) to the broader literature and open-source implementations.
 
 ## Recommended Entry Points and Codebases
 
@@ -14,7 +14,7 @@ This section connects the core concepts of the chapter—density-ratio estimatio
 ## Objectives and Minimax Dynamics
 
 - **Least-Squares GAN (LSGAN) Coding Schemes:** :numref:`sec_gan_objectives` showed that the 0–1 least-squares discriminator evaluates $\tfrac14 \chi^2(p \,\|\, m)$. :citet:`Mao.Li.Xie.ea.2017` analyze general target labels $b$ (real), $a$ (fake), and $c$ (generator target), showing that at the optimal critic the generator objective reduces to $\tfrac14 (a + b - 2c)^2 + \tfrac14 (b - a)^2 \chi^2(p \,\|\, m)$—a positive multiple of the same $\chi^2$ divergence for any $b \neq a$.
-- **Output Activations for $f$-GANs:** To ensure the critic output $t$ lies in the domain where the convex conjugate $f^*(t)$ is finite (:eqref:`eq_gan_fgan_bound`), :citet:`Nowozin.Cseke.Tomioka.2016` apply domain-specific output activations $t(v)$ to the raw network output $v$: identity for forward KL, $-e^{-v}$ for reverse KL ($t < 0$), and $\log 2 - \mathrm{softplus}(-v)$ for Jensen–Shannon ($t < \log 2$).
+- **Output Activations for $f$-GANs:** To ensure the critic output $t$ lies in the domain where the convex conjugate $f^*(t)$ is finite (:numref:`sec_gan_objectives`), :citet:`Nowozin.Cseke.Tomioka.2016` apply domain-specific output activations $t(v)$ to the raw network output $v$: identity for forward KL, $-e^{-v}$ for reverse KL ($t < 0$), and $\log 2 - \mathrm{softplus}(-v)$ for Jensen–Shannon ($t < \log 2$).
 - **General Relativistic Divergences:** :citet:`Jolicoeur-Martineau.2020` proves that the calibrated optimal value of the relativistic pairing objective (:numref:`sec_gan_relativistic`) defines a valid divergence for any concave payoff $\ell$ satisfying $\ell(0) = 0$, $\ell'(0) \neq 0$, and $\sup_{t > 0} \ell(t) > 0$.
 - **Optimization Algorithms for Bilinear Minimax Problems:** On the bilinear problem $\min_\theta \max_\psi \theta\psi$, simultaneous gradient descent of step size $h$ amplifies the distance to the origin by $\sqrt{1 + h^2}$ per step. The *extragradient* method :cite:`Korpelevich.1976` evaluates the gradient at a lookahead trial point, contracting the distance by $\sqrt{1 - h^2 + h^4} < 1$ for $0 < h < 1$. *Optimistic gradient descent* :cite:`Daskalakis.Ilyas.Syrgkanis.ea.2018` approximates the lookahead using the previous step's gradient, and negative momentum :cite:`Gidel.Askari-Hemmat.Pezeshki.ea.2019` stabilizes alternating updates. While these methods modify the optimizer, large-scale image GANs instead modify the objective via $R_1$/$R_2$ gradient penalties (:numref:`sec_gan_convergence`).
 

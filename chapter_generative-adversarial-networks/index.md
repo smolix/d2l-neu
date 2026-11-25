@@ -1,17 +1,13 @@
 # Generative Adversarial Networks
 :label:`chap_gans`
 
-Suppose we draw a 100-dimensional random vector $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ and pass it through a neural network $G(\mathbf{z})$ to generate an image. Writing down such a generator network takes only a few lines of code; training it is the challenge. Unlike classifiers or autoregressive language models—which maximize the log-likelihood of observed labels or tokens—a direct generator defines an implicit distribution over images without an explicit density $q(\mathbf{x})$ to maximize. How can we train a generative model when we can sample from it, but cannot evaluate its likelihood?
+Suppose we draw a 100-dimensional random vector $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ and pass it through a neural network $G(\mathbf{z})$ to generate an image. Writing down such a generator network takes only a few lines of code; training it is the challenge. Unlike classifiers or autoregressive language models, which maximize the log-likelihood of observed labels or tokens, a direct generator defines an implicit distribution over images without an explicit density $q(\mathbf{x})$ to maximize. How can we train a generative model when we can sample from it, but cannot evaluate its likelihood?
 
 We have already seen how a classifier can compare two distributions from samples alone. When correcting for covariate shift in :numref:`subsec_covariate-shift-correction`, we trained a binary classifier to distinguish training inputs from test inputs, and its optimal logit recovered the log density ratio between the two distributions. :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` turned this two-sample comparison into a generative training principle: in a *generative adversarial network* (GAN), a *discriminator* (or *critic*) $D$ is trained to distinguish real data from generated samples, while the *generator* $G$ is trained to produce samples that the discriminator cannot tell apart from real data. Through the discriminator's gradients, the generator learns where its samples are over- or under-represented relative to the data distribution, without either density ever being written down explicitly.
 
-Although diffusion and flow-matching models (:numref:`chap_diffusion`) have largely superseded standalone GANs for general-purpose image synthesis, adversarial objectives remain a core component of modern generative systems—training the latent autoencoders behind latent diffusion models, neural audio vocoders, and one-step generators distilled from multi-step diffusion teachers.
+Although diffusion and flow-matching models (:numref:`chap_diffusion`) have largely superseded standalone GANs for general-purpose image synthesis, adversarial objectives remain a core component of modern generative systems, training the latent autoencoders behind latent diffusion models, neural audio vocoders, and one-step generators distilled from multi-step diffusion teachers.
 
-This chapter is organized in three parts:
-
-1. **Objectives and Divergences (:numref:`sec_basic_gan`–:numref:`sec_gan_relativistic`):** :numref:`sec_basic_gan` derives the optimal discriminator and the Jensen–Shannon divergence for the classic logistic objective, and explains why the non-saturating generator loss is needed when generated samples lie far from the data. :numref:`sec_gan_objectives` generalizes this analysis to $f$-divergences (least-squares, hinge) and integral probability metrics (Maximum Mean Discrepancy and Wasserstein-1 distance). :numref:`sec_gan_relativistic` analyzes relativistic paired objectives (RpGAN) that train the critic to rank real–generated pairs via a Bradley–Terry model.
-2. **Training Dynamics and Gradient Penalties (:numref:`sec_gan_convergence`):** Minimax gradient training does not automatically converge to an equilibrium; even on a two-parameter bilinear problem (the Dirac-GAN), unregularized gradient updates rotate or spiral outward. :numref:`sec_gan_convergence` shows how zero-centered input-gradient penalties ($R_1$ and $R_2$) damp these oscillations, completing the modernized R3GAN training recipe :cite:`Huang.Gokaslan.Kuleshov.ea.2024` used in the rest of the chapter.
-3. **Architectures, Conditioning, and Modern Applications (:numref:`sec_dcgan`–:numref:`sec_gan_beyond`):** :numref:`sec_dcgan` builds convolutional image generators (both the classic 2015 DCGAN and a normalization-free backbone) and introduces quantitative evaluation metrics—Fréchet Distance (FID), Kernel Inception Distance (KID), and $k$-NN precision and recall. :numref:`sec_gan_conditional` extends training and evaluation to class-conditional generation on CIFAR-10 using feature modulation and projection discriminators. Finally, :numref:`sec_gan_beyond` explains why regression losses ($L_2$ and $L_1$) blur ambiguous targets toward conditional averages, and how adversarial losses prevent this blurring in diffusion distillation, image tokenizers, and speech vocoders.
+This chapter develops adversarial modeling in three stages. We begin with objectives and divergences: :numref:`sec_basic_gan` derives the optimal log-loss discriminator, its Jensen–Shannon divergence, and the non-saturating generator loss; :numref:`sec_gan_objectives` generalizes this framework to $f$-divergences and integral probability metrics (Maximum Mean Discrepancy and Wasserstein-1 distance); and :numref:`sec_gan_relativistic` introduces relativistic paired critics (RpGAN) based on Bradley–Terry ranking. Next, :numref:`sec_gan_convergence` studies minimax training dynamics on the Dirac-GAN, showing why unregularized updates rotate or spiral outward and how zero-centered gradient penalties ($R_1$ and $R_2$) stabilize the R3GAN recipe :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. Finally, :numref:`sec_dcgan` and :numref:`sec_gan_conditional` scale convolutional and projection-conditioned architectures to image synthesis alongside feature-space evaluation metrics (FID, KID, and $k$-NN precision and recall), while :numref:`sec_gan_beyond` explains how adversarial critics prevent conditional-mean blurring in diffusion distillation, image tokenizers, and speech vocoders.
 
 ```toc
 :maxdepth: 2
@@ -66,7 +62,7 @@ An **implicit generator** draws a latent vector $\mathbf{z} \sim \mathcal{N}(\ma
 ::: {.cols .vc}
 ::: {.col}
 - **Low-dimensional manifold support:** Mapping $100$ latent coordinates into $784$ (Fashion-MNIST) or $12{,}288$ ($64 \times 64$ RGB) pixels concentrates generated samples on a thin surface with no Lebesgue density.
-- **Why likelihood misleads (Theis et al., 2016):** Mixing the true density with $99\%$ noise, $\tilde{p} = 0.01\,p_{\textrm{data}} + 0.99\,p_{\textrm{noise}}$, satisfies $\log \tilde{p}(\mathbf{x}) \ge \log p_{\textrm{data}}(\mathbf{x}) - \log 100$—within $4.6$ nats of the optimal model (out of thousands of nats on images) while emitting $99\%$ pure noise!
+- **Why likelihood misleads (Theis et al., 2016):** Mixing the true density with $99\%$ noise, $\tilde{p} = 0.01\,p_{\textrm{data}} + 0.99\,p_{\textrm{noise}}$, satisfies $\log \tilde{p}(\mathbf{x}) \ge \log p_{\textrm{data}}(\mathbf{x}) - \log 100$—within $4.6$ nats of the optimal model (out of thousands of nats on images) while emitting $99\%$ pure noise.
 - **Core idea:** Replace likelihood evaluation with a learned **two-sample critic** $D$ that inspects generated samples directly.
 :::
 
@@ -116,9 +112,9 @@ Goodfellow et al. (2014) turned two-sample binary classification into a generati
 
 ::: {.cols .vc}
 ::: {.col}
-- **Part I — Objectives & Divergences (§§{sec_basic_gan}–§{num:sec_gan_relativistic}):** From log-loss density-ratio estimation ($D^\star = \log(p/q)$) and non-saturating weights ($2\,D_{\textrm{KL}}(m \,\|\, p)$) to $f$-divergences, IPMs ($W_1$, MMD), and relativistic pairing ($d_{\mathrm{Rp}}$).
-- **Part II — Dynamics & Convergence (§{sec_gan_convergence}):** Why unpenalized minimax steps orbit or spiral outward on the Dirac-GAN, and how zero-centered penalties $R_1 + R_2$ shift Jacobian eigenvalues into the open left half-plane.
-- **Part III — Images, Conditioning & Applications (§§{sec_dcgan}–§{num:sec_gan_beyond}):** DCGAN vs. normalization-free backbones, FID/KID and $K$-NN precision/recall, projection critics, and diffusion distillation (ADD/DMD2).
+- **Part I: Objectives & Divergences (§§{sec_basic_gan}–§{num:sec_gan_relativistic}):** From log-loss density-ratio estimation ($D^\star = \log(p/q)$) and non-saturating weights ($2\,D_{\textrm{KL}}(m \,\|\, p)$) to $f$-divergences, IPMs ($W_1$, MMD), and relativistic pairing ($d_{\mathrm{Rp}}$).
+- **Part II: Dynamics & Convergence (§{sec_gan_convergence}):** Why unpenalized minimax steps orbit or spiral outward on the Dirac-GAN, and how zero-centered penalties $R_1 + R_2$ shift Jacobian eigenvalues into the open left half-plane.
+- **Part III: Images, Conditioning & Applications (§§{sec_dcgan}–§{num:sec_gan_beyond}):** DCGAN vs. normalization-free backbones, FID/KID and $K$-NN precision/recall, projection critics, and diffusion distillation (ADD/DMD2).
 :::
 
 ::: {.col .fig .big}
@@ -130,13 +126,11 @@ Goodfellow et al. (2014) turned two-sample binary classification into a generati
 ::: {.slide title="Running Benchmarks and Study Guide"}
 [Pedagogical Thread]{.kicker}
 
-Each section tests its theoretical predictions on concrete analytical distributions before scaling to high-dimensional image datasets:
-
 ::: {.cols .vc}
 ::: {.col}
-- **Exact-density 2D Gaussians & mixtures (§{sec_basic_gan}–§{num:sec_gan_relativistic}):** Check learned critic logits directly against analytical $\lambda(x) = \log(p(x)/q(x))$ and measure generator fit in exact nats of $D_{\textrm{KL}}(q \,\|\, p)$ and $\mathrm{JS}(p, q)$.
+- **Exact-density 2D Gaussians & mixtures (§{sec_basic_gan}–§{num:sec_gan_relativistic}):** Check critic logits against analytical $\lambda(x) = \log(p(x)/q(x))$ and measure generator fit in exact nats of $D_{\textrm{KL}}(q \,\|\, p)$ and $\mathrm{JS}(p, q)$.
 - **25-Gaussian $5 \times 5$ grid (§{sec_gan_convergence}):** Isolate whether pairwise ranking or $R_1 + R_2$ gradient penalties eliminate mode dropping.
-- **Image & conditional synthesis (§{sec_basic_gan}, §{sec_dcgan}–§{num:sec_gan_conditional}):** $60{,}000$ Fashion-MNIST garments ($28 \times 28$), $40{,}597$ Pokémon sprites ($64 \times 64$), and 10-class CIFAR-10 ($32 \times 32$).
+- **Image & conditional synthesis (§{sec_basic_gan}, §{sec_dcgan}–§{num:sec_gan_conditional}):** Fashion-MNIST ($28 \times 28$), Pokémon sprites ($64 \times 64$), and 10-class CIFAR-10 ($32 \times 32$).
 - **Bimodal regression & distillation (§{sec_gan_beyond}):** Two-band benchmark $x = c \pm 1 + 0.05\,\xi$ with an exact closed-form denoising teacher.
 :::
 

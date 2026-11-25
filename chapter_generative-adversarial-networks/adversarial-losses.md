@@ -1,7 +1,7 @@
 # Adversarial Losses Beyond GANs
 :label:`sec_gan_beyond`
 
-When predicting a single scalar such as a house price, minimizing mean squared error ($L_2$ loss) is standard practice. On conditional image generation problems—such as super-resolution (mapping a low-resolution thumbnail $c$ to a high-resolution image $x$) or sketch-to-photo translation (pix2pix, :citet:`Isola.Zhu.Zhou.ea.2017`)—pixelwise $L_2$ and $L_1$ regression losses produce blurry outputs. Many distinct high-resolution textures correspond to the same low-resolution input, and minimizing pixelwise squared error forces the network to output their conditional average $\mathbb{E}[x \mid c]$—a blur that belongs to none of the plausible sharp images. Pairing the regression loss with a discriminator $D(x, c)$ that scores whether the output is a realistic image for condition $c$ restores sharp high-frequency detail.
+When predicting a single scalar such as a house price, minimizing mean squared error ($L_2$ loss) is standard practice. On conditional image generation problems, such as super-resolution (mapping a low-resolution thumbnail $c$ to a high-resolution image $x$) or sketch-to-photo translation (pix2pix, :citet:`Isola.Zhu.Zhou.ea.2017`), pixelwise $L_2$ and $L_1$ regression losses produce blurry outputs. Many distinct high-resolution textures correspond to the same low-resolution input, and minimizing pixelwise squared error forces the network to output their conditional average $\mathbb{E}[x \mid c]$, a blur that belongs to none of the plausible sharp images. Pairing the regression loss with a discriminator $D(x, c)$ that scores whether the output is a realistic image for condition $c$ restores sharp high-frequency detail.
 
 This mechanism explains why adversarial losses remain widely used even though diffusion and flow-matching models (:numref:`chap_diffusion`) have replaced standalone GANs for general image synthesis. A learned discriminator still trains one-step generators distilled from multi-step diffusion models, the image autoencoders (tokenizers) on which latent diffusion models operate, and neural audio vocoders that reconstruct speech waveforms from spectrograms. Below, we analyze the conditional-mean averaging effect on a minimal bimodal regression problem, demonstrate why one-step distillation from a high-noise denoising teacher collapses to the conditional mean without a discriminator, and summarize where adversarial losses are used in modern generative pipelines.
 
@@ -56,7 +56,7 @@ b &\in \{-1, +1\} \textrm{ with probability } \tfrac12 \textrm{ each},
 $$
 :eqlabel:`eq_beyond_twoband`
 
-The conditional mean $\mu(c) = c$ runs down the empty corridor between the bands $x = c \pm 1$, achieving $\mathbb{E}[(x - \mu(c))^2] = 1 + 0.05^2 = 1.0025$. By contrast, a predictor that commits to the upper band $g(c) = c + 1$ has squared error $\tfrac12(0) + \tfrac12(2^2) + 0.05^2 = 2.0025$—twice as large! Squared error therefore penalizes committing to a valid data mode.
+The conditional mean $\mu(c) = c$ runs down the empty corridor between the bands $x = c \pm 1$, achieving $\mathbb{E}[(x - \mu(c))^2] = 1 + 0.05^2 = 1.0025$. By contrast, a predictor that commits to the upper band $g(c) = c + 1$ has squared error $\tfrac12(0) + \tfrac12(2^2) + 0.05^2 = 2.0025$—twice as large. Squared error therefore penalizes committing to a valid data mode.
 
 A conditional discriminator $D(x, c)$, however, estimates the log density ratio (:numref:`sec_gan_conditional`):
 
@@ -241,7 +241,7 @@ $$
 
 We now equip each student $g(c, z)$ with a 1D Gaussian latent $z \sim \mathcal{N}(0, 1)$ so it has the capacity to cover both bands, and compare three training objectives at teacher noise level $\tau = 2$:
 
-1. *Regression only*: minimizing $\|\hat x - \operatorname{stop\_grad}(\text{teacher}(\hat x + \tau\xi, c, \tau))\|^2$. Because the slope of :eqref:`eq_beyond_teacher` in $\tilde x$ is at most $(\tau^2 + 0.05^2)^{-1} \approx \tfrac14 < 1$ at $\tau = 2$, the fixed-point equation $u = \mathbb{E}_\xi[\tanh((u + \sqrt{\tau^2 + 0.05^2}\,\xi)/(\tau^2 + 0.05^2))]$ for the offset $u = g(c, z) - c$ has the unique contraction fixed point $u = 0$ (the empty corridor!).
+1. *Regression only*: minimizing $\|\hat x - \operatorname{stop\_grad}(\text{teacher}(\hat x + \tau\xi, c, \tau))\|^2$. Because the slope of :eqref:`eq_beyond_teacher` in $\tilde x$ is at most $(\tau^2 + 0.05^2)^{-1} \approx \tfrac14 < 1$ at $\tau = 2$, the fixed-point equation $u = \mathbb{E}_\xi[\tanh((u + \sqrt{\tau^2 + 0.05^2}\,\xi)/(\tau^2 + 0.05^2))]$ for the offset $u = g(c, z) - c$ has the unique contraction fixed point $u = 0$ (the empty corridor).
 2. *Critic only*: training $g(c, z)$ against a conditional discriminator $D(x, c)$ with `d2l.gan_loss_D` and `d2l.gan_loss_G`.
 3. *Critic + regression*: summing the adversarial loss and the teacher regression loss with equal weight (as in Adversarial Diffusion Distillation, ADD, :citet:`Sauer.Lorenz.Blattmann.ea.2023`).
 
@@ -414,10 +414,7 @@ Compared to iterative diffusion and flow models (:numref:`chap_diffusion`), adve
 
 ## Summary
 
-- Minimizing squared error $\mathbb{E}[\|x - g(c)\|^2]$ forces a predictor toward the conditional mean $\mu(c) = \mathbb{E}[x \mid c]$ (:eqref:`eq_beyond_condmean`), which averages across distinct modes whenever the target $x$ is ambiguous given $c$.
-- An adversarial discriminator $D(x, c)$ estimates $\log(p(x, c)/q(x, c))$, penalizing predictions in low-density corridors between modes and forcing outputs onto the data manifold (at the cost of up to a $2\times$ increase in MSE / $3\text{ dB}$ drop in PSNR; :citet:`Blau.Michaeli.2017`).
-- Because a diffusion denoiser predicts the conditional mean $\mathbb{E}[x_0 \mid x_\tau]$, distilling a one-step generator by regressing directly onto a high-noise denoiser collapses to the conditional average unless paired with an adversarial discriminator.
-- For the same reason, adversarial discriminators remain a key component of modern latent image autoencoders (tokenizers), neural audio vocoders, and one-step distilled diffusion models.
+Minimizing squared error $\mathbb{E}[\|x - g(c)\|^2]$ drives a predictor toward the conditional mean $\mu(c) = \mathbb{E}[x \mid c]$ (:eqref:`eq_beyond_condmean`), which averages across distinct modes whenever the target $x$ is ambiguous given $c$. Pairing the predictor with a conditional discriminator $D(x, c)$ that estimates $\log(p(x, c)/q(x, c))$ penalizes predictions in low-density corridors between modes and forces outputs onto the data manifold, trading up to a twofold increase in MSE ($3\text{ dB}$ in PSNR) for perceptual realism :cite:`Blau.Michaeli.2017`. Because a diffusion denoiser likewise computes the posterior mean $\mathbb{E}[x_0 \mid x_\tau]$, distilling a one-step generator by regressing directly onto a high-noise denoiser contracts predictions toward the blurry average unless an adversarial critic is included. For the same reason, adversarial discriminators remain essential components of latent image autoencoders, neural speech vocoders, and one-step distilled diffusion generators.
 
 ## Exercises
 
@@ -484,7 +481,7 @@ Adversarial Losses Beyond Standalone GANs<br>**conditional-mean blurring · perc
 $$\mathbb{E}\big[(x - g(c))^2\big] = \underbrace{\mathbb{E}\big[(x - \mu(c))^2\big]}_{\mathrm{Var}(x \mid c)} + \underbrace{\mathbb{E}\big[(\mu(c) - g(c))^2\big]}_{\text{minimized at } g(c) = \mu(c)}$$
 
 - **Unique $L_2$ minimizer:** Adding and subtracting $\mu(c) = \mathbb{E}[x \mid c]$ eliminates the cross term by iterated expectation, proving $g^\star(c) = \mu(c)$ pixel by pixel.
-- **Multimodal void:** When $p(x \mid c)$ is bimodal, both the conditional mean $\mu(c)$ ($L_2$) and conditional median ($L_1$) sit in the empty low-density void between modes!
+- **Multimodal void:** When $p(x \mid c)$ is bimodal, both the conditional mean $\mu(c)$ ($L_2$) and conditional median ($L_1$) sit in the empty low-density void between modes.
 :::
 
 ::: {.col .fig}
@@ -494,14 +491,14 @@ $$\mathbb{E}\big[(x - g(c))^2\big] = \underbrace{\mathbb{E}\big[(x - \mu(c))^2\b
 :::
 
 ::: {.slide title="The Bimodal Two-Band Benchmark"}
-[Minimal Analytical Testbed]{.kicker}
+[Minimal Analytical Benchmark]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 $$x = c + b + 0.05\,\xi, \qquad b \in \{-1, +1\}\text{ w.p. }\tfrac{1}{2}$$
 
 - **Conditional mean $\mu(c) = c$ (empty corridor):** Lies $20\sigma$ away from every data point, yet achieves the minimum possible MSE of **$1.0025$**.
-- **On-band predictor $g(c) = c + 1$:** Always lands on valid data, yet incurs **$2.0025$** MSE ($2\times$ larger!).
+- **On-band predictor $g(c) = c + 1$:** Always lands on valid data, yet incurs **$2.0025$** MSE ($2\times$ larger).
 - **Adversarial critic $D(x, c)$:** Penalizes the empty corridor ($D^\star = \log(p/q) \ll 0$) and pushes predictions onto a valid band.
 :::
 
@@ -584,7 +581,7 @@ $$\mathbb{E}\big[(x - \hat{x})^2\big] = \mathbb{E}\big[(x - \mu(c))^2\big] + \ma
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Target ambiguity (aleatoric uncertainty):** Because $c$ carries zero bits of information about the band sign $b \in \{-1, +1\}$, *no* deterministic function $g(c)$—regardless of width or depth—can cover both bands at the same $c$.
+- **1. Target ambiguity (aleatoric uncertainty):** Because $c$ carries zero bits of information about the band sign $b \in \{-1, +1\}$, *no* deterministic function $g(c)$, regardless of width or depth, can cover both bands at the same $c$.
 - **2. Model capacity limit:** Even when a deterministic map exists (like a diffusion ODE), a small 1-step network averages across sharp jumps under $L_2$ regression.
 - **Stochastic latent routing:** Equipping the student with $z \sim \mathcal{N}(0, 1)$ lets $\hat{x} = g(c, z)$ route $z > 0$ and $z < 0$ to both data bands evenly.
 :::
@@ -603,7 +600,7 @@ $$\mathbb{E}\big[(x - \hat{x})^2\big] = \mathbb{E}\big[(x - \mu(c))^2\big] + \ma
 $$D_\tau^\star(x_\tau) = \arg\min_g \mathbb{E}\big[\|x_0 - g(x_\tau)\|^2\big] = \mathbb{E}\big[x_0 \mid x_\tau\big]$$
 
 - **Low noise ($\tau \ll 1$) vs. high noise ($\tau \gg 1$):** At low noise, $x_\tau = x_0 + \tau\xi$ fixes $x_0$ so $\mathbb{E}[x_0 \mid x_\tau]$ is sharp; at high noise, many clean images match $x_\tau$ so $\mathbb{E}[x_0 \mid x_\tau]$ is a blurry average.
-- **One-step distillation hazard:** Regressing a 1-step student $\hat{x} = g(c, z)$ directly onto a frozen high-noise teacher $\mathbb{E}[x_0 \mid \hat{x} + \tau\xi]$ pulls the student straight toward the conditional mean!
+- **One-step distillation hazard:** Regressing a 1-step student $\hat{x} = g(c, z)$ directly onto a frozen high-noise teacher $\mathbb{E}[x_0 \mid \hat{x} + \tau\xi]$ pulls the student straight toward the conditional mean.
 :::
 
 ::: {.col .fig}
@@ -620,7 +617,7 @@ $$D_\tau^\star(x_\tau) = \arg\min_g \mathbb{E}\big[\|x_0 - g(x_\tau)\|^2\big] = 
 $$\mathbb{E}\big[c + b \mid \tilde{x}, c\big] = c + \tanh\!\left(\frac{\tilde{x} - c}{\tau^2 + 0.05^2}\right)$$
 
 - **Exact posterior teacher:** By Bayes' rule on $\tilde{x} = x + \tau\xi$, the optimal denoiser applies $\tanh$ with slope $(\tau^2 + 0.05^2)^{-1}$.
-- **Contraction to the empty corridor at $\tau = 2$:** Since slope $\le (4.0025)^{-1} \approx 0.25 < 1$ everywhere, the fixed-point equation $u = \mathbb{E}_\xi[\tanh(\frac{u + \sqrt{\tau^2 + 0.05^2}\xi}{\tau^2 + 0.05^2})]$ contracts every latent $z$ to the unique fixed point $u^\star = 0$ (the empty corridor!).
+- **Contraction to the empty corridor at $\tau = 2$:** Since slope $\le (4.0025)^{-1} \approx 0.25 < 1$ everywhere, the fixed-point equation $u = \mathbb{E}_\xi[\tanh(\frac{u + \sqrt{\tau^2 + 0.05^2}\xi}{\tau^2 + 0.05^2})]$ contracts every latent $z$ to the unique fixed point $u^\star = 0$ (the empty corridor).
 :::
 
 ::: {.col .fig}
@@ -678,7 +675,7 @@ Evaluating all three student configurations across $201$ inputs $c$ and $64$ lat
 ::: {.cols .vc}
 ::: {.col}
 - **ADD / SDXL-Turbo (Sauer et al., 2023):** Pairs squared-error regression toward a frozen diffusion teacher's denoised estimate with a conditional discriminator built on frozen **DINOv2** vision features.
-- **DMD & DMD2 (Yin et al., 2024):** DMD uses a frozen teacher score $\nabla_x \log p_\tau$ minus a fake score $\nabla_x \log q_\tau$ to move student samples along $\nabla_x \log(p_\tau/q_\tau)$—the exact input gradient of an optimal log-loss critic—while DMD2 adds a real-image GAN critic to prevent mode dropping.
+- **DMD & DMD2 (Yin et al., 2024):** DMD uses a frozen teacher score $\nabla_x \log p_\tau$ minus a fake score $\nabla_x \log q_\tau$ to move student samples along $\nabla_x \log(p_\tau/q_\tau)$ (the exact input gradient of an optimal log-loss critic), while DMD2 adds a real-image GAN critic to prevent mode dropping.
 :::
 
 ::: {.col .fig .big}
@@ -712,7 +709,7 @@ Evaluating all three student configurations across $201$ inputs $c$ and $64$ lat
 ::: {.col}
 $$\mathbb{E}_\vartheta\big[\sin(\omega n + \vartheta)\big] = \frac{\sin a}{a}\,\sin(\omega n) \xrightarrow{a = \pi} 0$$
 
-- **Why time-domain $L_2$ waveform regression fails:** A mel-spectrogram specifies frequency magnitude $\omega$ but discards phase $\vartheta \sim \textrm{Uniform}[-\pi, \pi]$ ($a = \pi$), so the conditional-mean waveform is **complete silence** ($\frac{\sin\pi}{\pi} = 0$)!
+- **Why time-domain $L_2$ waveform regression fails:** A mel-spectrogram specifies frequency magnitude $\omega$ but discards phase $\vartheta \sim \textrm{Uniform}[-\pi, \pi]$ ($a = \pi$), so the conditional-mean waveform is **complete silence** ($\frac{\sin\pi}{\pi} = 0$).
 - **HiFi-GAN (Kong et al., 2020):** Pairs mel-spectrogram $L_1$ loss with multi-period and multi-scale time-domain waveform critics to enforce coherent phases across frames.
 :::
 

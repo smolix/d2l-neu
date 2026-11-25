@@ -8,7 +8,7 @@ The multilayer perceptron in :numref:`sec_basic_gan` generated recognizable $28 
 
 Convolutional generators and discriminators first scaled GANs to natural images with the Deep Convolutional GAN (DCGAN) of :citet:`Radford.Metz.Chintala.2015`. While diffusion models (:numref:`chap_diffusion`) have since become the primary method for general-purpose image synthesis, convolutional discriminators and feature-space evaluation metrics remain central to modern image tokenizers and one-step distilled generators (:numref:`sec_gan_beyond`).
 
-In this section, we train on a dataset of 40,597 $64 \times 64$ Pokémon sprites. We first implement the classic 2015 DCGAN architecture, and then construct a minimalist normalization-free convolutional backbone inspired by R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. By training this normalization-free backbone under three objectives—unpenalized classic logistic loss, classic logistic loss with $R_1 + R_2$ penalties, and relativistic pairing loss with $R_1 + R_2$ penalties—we test whether zero-centered gradient penalties (:numref:`sec_gan_convergence`) replace batch normalization and other architectural heuristics. We then implement the standard feature-space evaluation metrics—Fréchet Distance (FID), Kernel Inception Distance (KID), and $k$-NN precision and recall—and examine latent space interpolation and discriminator overfitting.
+In this section, we train on a dataset of 40,597 $64 \times 64$ Pokémon sprites. We first implement the classic 2015 DCGAN architecture, and then construct a minimalist normalization-free convolutional backbone inspired by R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. By training this normalization-free backbone under three objectives (unpenalized classic logistic loss, classic logistic loss with $R_1 + R_2$ penalties, and relativistic pairing loss with $R_1 + R_2$ penalties), we test whether zero-centered gradient penalties (:numref:`sec_gan_convergence`) replace batch normalization and other architectural heuristics. We then implement the standard feature-space evaluation metrics, namely Fréchet Distance (FID), Kernel Inception Distance (KID), and $k$-NN precision and recall, and examine latent space interpolation and discriminator overfitting.
 
 ```{.python .input #dcgan-setup}
 %%tab jax
@@ -386,7 +386,7 @@ Over the years following DCGAN, large-scale image GANs accumulated numerous arch
 
 We build a minimalist convolutional backbone (:numref:`fig_gan_backbone`) without normalization layers or output $\tanh$:
 
-- The generator concatenates a learned $4 \times 4 \times 128$ constant tensor with a linear projection of $z$ ($4 \times 4 \times 100$)—plus optional extra channels used for class conditioning in :numref:`sec_gan_conditional`—and upsamples four times ($4 \to 8 \to 16 \to 32 \to 64$) via bilinear interpolation followed by a $3 \times 3$ convolution and leaky ReLU ($\text{slope} = 0.2$). Bilinear upsampling followed by a $3 \times 3$ convolution avoids the checkerboard artifacts caused by uneven transposed-convolution overlap (:numref:`fig_gan_transposed_overlap`) :cite:`Odena.Dumoulin.Olah.2016`.
+- The generator concatenates a learned $4 \times 4 \times 128$ constant tensor with a linear projection of $z$ ($4 \times 4 \times 100$, plus optional extra channels used for class conditioning in :numref:`sec_gan_conditional`) and upsamples four times ($4 \to 8 \to 16 \to 32 \to 64$) via bilinear interpolation followed by a $3 \times 3$ convolution and leaky ReLU ($\text{slope} = 0.2$). Bilinear upsampling followed by a $3 \times 3$ convolution avoids the checkerboard artifacts caused by uneven transposed-convolution overlap (:numref:`fig_gan_transposed_overlap`) :cite:`Odena.Dumoulin.Olah.2016`.
 - The critic mirrors this structure with $3 \times 3$ convolutions, leaky ReLU, and bilinear downsampling down to a $4 \times 4$ feature map $\phi(x)$ followed by a linear head.
 - To preserve activation variance across layers without batch normalization, all weights use He fan-in initialization :cite:`He.Zhang.Ren.ea.2015` scaled for leaky ReLU of slope $0.2$: variance $2 / ((1 + 0.2^2)\,n_{\mathrm{in}})$.
 
@@ -770,7 +770,7 @@ for name, (loss_D, loss_G, gamma, num_steps) in arms.items():
           f'penalty {gamma / 2 * (r1 + r2):.3f}, train-holdout gap {gap:+.2f}')
 ```
 
-Both penalized critics settle moderately below their equilibrium values ($1.05$ vs. $2\log 2 \approx 1.39$ for classic logistic; $0.50$ vs. $\log 2 \approx 0.69$ for pairing), whereas the unpenalized critic drops to $0.60$.
+Both penalized critics settle moderately below their equilibrium values ($1.04$ vs. $2\log 2 \approx 1.39$ for classic logistic; $0.47\text{--}0.51$ vs. $\log 2 \approx 0.69$ for pairing), whereas the unpenalized critic drops to $0.57\text{--}0.58$.
 
 ### Training Traces and Generated Samples
 
@@ -1103,13 +1103,11 @@ The intermediate latent interpolants maintain the same feature precision ($\sim 
 
 ### Critic Overfitting and Non-Leaking Augmentation
 
-With $1.6\text{M}$ parameters and $36{,}538$ training sprites, the critic sees each training image roughly 20 times over 12,000 steps. The penalized critics exhibit a very small train–holdout score gap ($+0.02$ to $+0.05$ compared to a real-versus-fake margin of $\sim 0.7$; Exercise :exref:`ex_dcgan-scale-free-overfitting-statistic`). On smaller datasets or longer runs, however, discriminator memorization can degrade FID :cite:`Karras.Aittala.Hellsten.ea.2020`. The standard remedy—Adaptive Discriminator Augmentation (ADA, :citet:`Karras.Aittala.Hellsten.ea.2020`) and DiffAugment :cite:`Zhao.Liu.Lin.ea.2020`—applies invertible, *non-leaking* augmentations to both real and generated images inside the gradient path (whereas augmenting only real images, like our horizontal flips, trains the generator to match the augmented distribution; Exercise :exref:`ex_dcgan-augmentation-leaks`).
+With $1.6\text{M}$ parameters and $36{,}538$ training sprites, the critic sees each training image roughly 20 times over 12,000 steps. The penalized critics exhibit a very small train–holdout score gap ($+0.02$ to $+0.05$ compared to a real-versus-fake margin of $\sim 0.7$; Exercise :exref:`ex_dcgan-scale-free-overfitting-statistic`). On smaller datasets or longer runs, however, discriminator memorization can degrade FID :cite:`Karras.Aittala.Hellsten.ea.2020`. The standard remedy, Adaptive Discriminator Augmentation (ADA, :citet:`Karras.Aittala.Hellsten.ea.2020`) and DiffAugment :cite:`Zhao.Liu.Lin.ea.2020`, applies invertible, *non-leaking* augmentations to both real and generated images inside the gradient path (whereas augmenting only real images, like our horizontal flips, trains the generator to match the augmented distribution; Exercise :exref:`ex_dcgan-augmentation-leaks`).
 
 ## Summary
 
-- DCGAN stabilizes convolutional adversarial training under the classic logistic loss using transposed/strided convolutions, batch normalization, small weight initialization ($\sigma = 0.02$), and Adam with $\beta_1 = 0.5$.
-- Removing batch normalization and architectural stabilizers causes the classic unpenalized loss to collapse completely, whereas adding zero-centered gradient penalties ($R_1 + R_2$) damps critic gradients by two orders of magnitude and enables a minimalist bilinear-resampling backbone to train stably.
-- Quantitative image evaluation compares real and generated feature clouds via Fréchet Distance (FID, :eqref:`eq_gan_fid`), Kernel Inception Distance (KID, :eqref:`eq_gan_kid`), and $K$-NN precision (fidelity) and recall (coverage), always benchmarked against a real-versus-real finite-sample floor.
+DCGAN stabilizes convolutional adversarial training under the classic logistic loss through transposed and strided convolutions, batch normalization, small weight initialization ($\sigma = 0.02$), and Adam with $\beta_1 = 0.5$. Removing batch normalization and architectural stabilizers causes the unpenalized logistic loss to collapse completely, whereas adding zero-centered gradient penalties ($R_1 + R_2$) damps critic gradients by two orders of magnitude and allows a minimalist bilinear-resampling backbone to train reliably. Exponential moving averaging of the generator weights damps minimax oscillations further, provided batch-normalization running statistics are recalibrated when present. Finally, quantitative image evaluation compares real and generated feature clouds via Fréchet Distance (:eqref:`eq_gan_fid`), Kernel Inception Distance (:eqref:`eq_gan_kid`), and $K$-NN precision and recall, always calibrated against a real-versus-real finite-sample floor.
 
 ## Exercises
 
@@ -1271,7 +1269,7 @@ Because minimax gradient iterates orbit around equilibrium (§{sec_gan_convergen
 - **Half-life parameterization ($n_{1/2}$ steps, $\beta = 2^{-1/n_{1/2}}$):**
   $$\bar{\theta} \leftarrow \beta\,\bar{\theta} + (1 - \beta)\,\theta$$
   We set the half-life to $32{,}000$ images ($n_{1/2} = 125$ steps at batch size $256$; $500$ steps at batch size $64$).
-- **Pitfall — Stale BatchNorm statistics:** Copying running mean/variance buffers from the live network mismatches the averaged weights $\bar{\theta}$! After training, we run $100$ fresh forward batches in `train()` mode ($0.9^{100} \approx 3 \times 10^{-5}$) to recalibrate BatchNorm buffers for $\bar{\theta}$.
+- **Pitfall: Stale BatchNorm statistics:** Copying running mean/variance buffers from the live network mismatches the averaged weights $\bar{\theta}$. After training, we run $100$ fresh forward batches in `train()` mode ($0.9^{100} \approx 3 \times 10^{-5}$) to recalibrate BatchNorm buffers for $\bar{\theta}$.
 :::
 
 ::: {.col .fig}
@@ -1290,7 +1288,7 @@ Because minimax gradient iterates orbit around equilibrium (§{sec_gan_convergen
 - **Half-life parameterization ($n_{1/2}$ steps, $\beta = 2^{-1/n_{1/2}}$):**
   $$\bar{\theta} \leftarrow \beta\,\bar{\theta} + (1 - \beta)\,\theta$$
   We set the half-life to $32{,}000$ images ($n_{1/2} = 125$ steps at batch size $256$; $500$ steps at batch size $64$).
-- **Pitfall — Stale BatchNorm statistics:** Copying running mean/variance buffers from the live network mismatches the averaged weights $\bar{\theta}$! After training, we run $100$ fresh forward batches in `train()` mode ($0.9^{100} \approx 3 \times 10^{-5}$) to recalibrate BatchNorm buffers for $\bar{\theta}$.
+- **Pitfall: Stale BatchNorm statistics:** Copying running mean/variance buffers from the live network mismatches the averaged weights $\bar{\theta}$. After training, we run $100$ fresh forward batches in `train()` mode ($0.9^{100} \approx 3 \times 10^{-5}$) to recalibrate BatchNorm buffers for $\bar{\theta}$.
 :::
 
 ::: {.col .fig}
@@ -1331,7 +1329,7 @@ Training DCGAN for $20$ epochs ($2{,}840$ steps at batch size $256$, $\text{lr} 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Why remove BatchNorm for $R_1 + R_2$?** Batch normalization couples all samples in a minibatch, which invalidates the independent per-sample input gradients $\nabla_{x_i} D(x_i)$ penalized by $R_1$ and $R_2$!
+- **Why remove BatchNorm for $R_1 + R_2$?** Batch normalization couples all samples in a minibatch, which invalidates the independent per-sample input gradients $\nabla_{x_i} D(x_i)$ penalized by $R_1$ and $R_2$.
 - **Minimalist normalization-free architecture (inspired by R3GAN, Huang et al., 2024):**
   - **Bilinear resampling + $3 \times 3$ convolutions:** Replaces $4 \times 4$ transposed/strided convolutions to avoid checkerboard artifacts.
   - **No normalization layers & no output $\tanh$:** Both $G$ ($2.8\text{M}$ params, starting from a learned $4 \times 4 \times 128$ constant + projected $z$) and $D$ ($1.6\text{M}$ params) use leaky ReLU ($\text{slope} = 0.2$) with He fan-in initialization $\mathrm{Var}(w) = \frac{2}{(1 + 0.2^2)\,n_{\mathrm{in}}}$.
@@ -1409,7 +1407,7 @@ Logging $\mathbb{E}_x[\|\nabla_x D(x)\|^2]$, pairwise ranking accuracy $\hat{P}(
 ::: {.cols .vc}
 ::: {.col}
 - **Critic steepness ($\mathbb{E}_x\|\nabla_x D\|^2$, left):** Without $R_1 + R_2$, critic gradient norm climbs $100\times$ higher ($1\text{--}8$ vs. $\sim 0.01$ for both penalized arms).
-- **Accuracy vs. rank weight (middle & right):** All three critics order $> 90\%$ of pairs correctly, so ranking accuracy alone does not warn of collapse! However, the unpenalized critic drives $w_{\mathrm{Rp}}$ below $0.15$, whereas penalized critics maintain a small logit margin ($w_{\mathrm{Rp}} \in [0.25, 0.40]$, median difference $\approx 0.7$).
+- **Accuracy vs. rank weight (middle & right):** All three critics order $> 90\%$ of pairs correctly, so ranking accuracy alone does not warn of collapse. However, the unpenalized critic drives $w_{\mathrm{Rp}}$ below $0.15$, whereas penalized critics maintain a small logit margin ($w_{\mathrm{Rp}} \in [0.25, 0.40]$, median difference $\approx 0.7$).
 :::
 
 ::: {.col}

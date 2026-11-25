@@ -132,7 +132,7 @@ print(f'JS(p, q) = {js(p, q):.3f}   JS(P, Q) = {js(P.ravel(), Q.ravel()):.3f}   
 
 ### Lifting to Product Measures
 
-We can prove this equivalence in general by viewing the ordered pair $(a_1, a_2) \in \mathcal{X} \times \mathcal{X}$ as a single observation drawn either from $P = p \otimes q$ (real first) or from $Q = q \otimes p$ (real second), and considering the standard log-loss objective :eqref:`eq_gan_V` on $\mathcal{X} \times \mathcal{X}$ with a pair critic $\mathcal{D}(a_1, a_2)$:
+We can prove this equivalence in general by viewing the ordered pair $(a_1, a_2) \in \mathcal{X} \times \mathcal{X}$ as a single observation drawn either from $P = p \otimes q$ (real first) or from $Q = q \otimes p$ (real second), and considering the standard log-loss objective of :numref:`sec_basic_gan` on $\mathcal{X} \times \mathcal{X}$ with a pair critic $\mathcal{D}(a_1, a_2)$:
 
 $$
 \begin{aligned}
@@ -163,7 +163,7 @@ d_{\mathrm{Rp}}(p, q)
 $$
 :eqlabel:`eq_gan_rp_value`
 
-**Proof.** Combining Parts 2 and 3 of the Lifting Lemma with :eqref:`eq_gan_js_value` applied to $(P, Q)$ gives $2\sup_D \Phi(D) = \sup_{\mathcal{D}} V_{P,Q}(\mathcal{D}) = 2\,\mathrm{JS}(P, Q) - 2\log 2$, proving the first equality. Applying :eqref:`eq_gan_entropy_gap` to $(P, Q)$ and using $H(p \otimes q) = H(q \otimes p) = H(p) + H(q)$ yields the second equality. $\blacksquare$
+**Proof.** Combining Parts 2 and 3 of the Lifting Lemma with the Jensen–Shannon minimax identity $\sup_{\mathcal{D}} V_{P,Q}(\mathcal{D}) = 2\,\mathrm{JS}(P, Q) - 2\log 2$ (:numref:`sec_basic_gan`) gives $2\sup_D \Phi(D) = \sup_{\mathcal{D}} V_{P,Q}(\mathcal{D}) = 2\,\mathrm{JS}(P, Q) - 2\log 2$, proving the first equality. Applying the entropy-gap identity $\mathrm{JS}(P, Q) = H(\tfrac{1}{2}(P + Q)) - \tfrac{1}{2}(H(P) + H(Q))$ (:numref:`sec_basic_gan`) and using $H(p \otimes q) = H(q \otimes p) = H(p) + H(q)$ yields the second equality. $\blacksquare$
 
 Substituting $D^\star = \lambda$ directly into :eqref:`eq_gan_rp` also yields the explicit expectation form:
 
@@ -175,7 +175,7 @@ d_{\mathrm{Rp}}(p, q)
 $$
 :eqlabel:`eq_gan_rp_explicit`
 
-and the mutual-information identity :eqref:`eq_gan_entropy_gap` on the pair space shows that for a randomly ordered pair $(a_1, a_2)$ with ordering label $y \in \{0, 1\}$,
+and the mutual-information identity $\mathrm{JS}(P, Q) = I((a_1, a_2); y)$ (:numref:`sec_basic_gan`) on the pair space shows that for a randomly ordered pair $(a_1, a_2)$ with ordering label $y \in \{0, 1\}$,
 
 $$
 \begin{aligned}
@@ -308,12 +308,12 @@ for n in (2, 3):
           f'n^n - n! = {n**n - math.factorial(n)}')
 ```
 
-Crucially, the enumeration shows that while the fixed-coupling loss $\mathcal{E}_{\mathrm{diag}}$ has zero collision minima, the all-pairs loss $\mathcal{E}_{\mathrm{all}}$ has all $n^n - n!$ collision minima—just like $\mathcal{E}_{\mathrm{GAN}}$! Because standard minibatch training resamples independent real and generated minibatches at every step, its expected objective over random pairings is $\mathcal{E}_{\mathrm{all}}$, not $\mathcal{E}_{\mathrm{diag}}$ (Exercise :exref:`ex_relativistic-random-repairing`). Thus, the landscape theorem of :citet:`Sun.Fang.Schwing.2020` applies only to a fixed one-to-one coupling, and any mode-coverage benefit of minibatch RpGAN must be tested empirically (:numref:`sec_gan_convergence`).
+Crucially, the enumeration shows that while the fixed-coupling loss $\mathcal{E}_{\mathrm{diag}}$ has zero collision minima, the all-pairs loss $\mathcal{E}_{\mathrm{all}}$ has all $n^n - n!$ collision minima—just like $\mathcal{E}_{\mathrm{GAN}}$. Because standard minibatch training resamples independent real and generated minibatches at every step, its expected objective over random pairings is $\mathcal{E}_{\mathrm{all}}$, not $\mathcal{E}_{\mathrm{diag}}$ (Exercise :exref:`ex_relativistic-random-repairing`). Thus, the landscape theorem of :citet:`Sun.Fang.Schwing.2020` applies only to a fixed one-to-one coupling, and any mode-coverage benefit of minibatch RpGAN must be tested empirically (:numref:`sec_gan_convergence`).
 
 ### Saturating versus Non-Saturating Pairing in Training
 :label:`subsec_gan_rp_trained`
 
-Both the saturating generator loss ($\Phi$) and the non-saturating generator loss (`rpgan_loss_G`) share the global minimum $q = p$. When $p$ and $q$ already overlap—as on the 3-mode Gaussian mixture testbed of :numref:`subsec_gan_objectives_testbed`—both variants converge to within a few thousandths of a nat:
+Both the saturating generator loss ($\Phi$) and the non-saturating generator loss (`rpgan_loss_G`) share the global minimum $q = p$. When $p$ and $q$ already overlap, as on the 3-mode Gaussian mixture benchmark of :numref:`subsec_gan_objectives_testbed`, both variants converge to within a few thousandths of a nat:
 
 ```{.python .input #relativistic-pairing-on-the-mixture-testbed}
 %%tab pytorch, jax
@@ -356,11 +356,7 @@ From $\theta_0 = 6$, the saturating pairing generator has a median gradient belo
 
 ## Summary
 
-- The relativistic pairing objective (RpGAN) maximizes the Bradley–Terry log-likelihood $\Phi(D) = \mathbb{E}_{x \sim p, x' \sim q}[\log \sigma(D(x) - D(x'))]$ of ranking a real sample above a generated sample.
-- Its optimal critic is still the log density ratio $D^\star(x) = \lambda(x) = \log(p(x)/q(x))$, now determined only up to an additive constant.
-- By lifting the pair $(a_1, a_2)$ to the product space $\mathcal{X} \times \mathcal{X}$, the calibrated optimal value $d_{\mathrm{Rp}}(p, q) = \sup_D \Phi(D) + \log 2$ equals $\mathrm{JS}(p \otimes q, q \otimes p) = 2\,\mathrm{JS}(p, q) - I(a_1; a_2)$, which satisfies $\mathrm{JS}(p, q) \leq d_{\mathrm{Rp}}(p, q) \leq \min(2\,\mathrm{JS}(p, q), \log 2)$.
-- While a fixed one-to-one coupling $\mathcal{E}_{\mathrm{diag}}$ eliminates discrete mode-dropping collision minima at the best-response critic, random minibatch re-pairing averages back to the all-pairs objective $\mathcal{E}_{\mathrm{all}}$, which retains those collision minima.
-- Far from the data, the saturating rank weight $w_{\textrm{Rp}}(x') = \mathbb{E}_{x \sim p}[\sigma(D(x') - D(x))]$ vanishes; the non-saturating weight $1 - w_{\textrm{Rp}}(x')$ stays near $1$ and preserves the generator gradient.
+The relativistic pairing objective (RpGAN) maximizes the Bradley–Terry log-likelihood $\Phi(D) = \mathbb{E}_{x \sim p, x' \sim q}[\log \sigma(D(x) - D(x'))]$ of ranking a real sample above a generated sample, recovering the log density ratio $D^\star(x) = \lambda(x) = \log(p(x)/q(x))$ up to an additive constant. Lifting $(a_1, a_2)$ to the product space $\mathcal{X} \times \mathcal{X}$ shows that the calibrated optimal value $d_{\mathrm{Rp}}(p, q) = \sup_D \Phi(D) + \log 2$ equals $\mathrm{JS}(p \otimes q, q \otimes p) = 2\,\mathrm{JS}(p, q) - I(a_1; a_2)$, which satisfies $\mathrm{JS}(p, q) \leq d_{\mathrm{Rp}}(p, q) \leq \min(2\,\mathrm{JS}(p, q), \log 2)$. Although a permanent one-to-one coupling $\mathcal{E}_{\mathrm{diag}}$ eliminates discrete mode-dropping collision minima at the best-response critic, independent minibatch resampling averages back to the all-pairs objective $\mathcal{E}_{\mathrm{all}}$ and retains those minima. Finally, when generated samples lie far from the data, the saturating rank weight $w_{\textrm{Rp}}(x') = \mathbb{E}_{x \sim p}[\sigma(D(x') - D(x))]$ vanishes, whereas the non-saturating weight $1 - w_{\textrm{Rp}}(x')$ stays near $1$ and preserves the generator gradient.
 
 ## Exercises
 
@@ -411,7 +407,7 @@ Relativistic Objectives and Pairwise Ranking<br>**Bradley–Terry pairing critic
 ::: {.slide title="From Absolute Thresholds to Pairwise Ranking"}
 [Motivation]{.kicker}
 
-A single-sample discriminator scores each observation $x$ against a fixed zero threshold ($D(x) \gtrless 0$), whereas pairwise preference models—such as Bradley–Terry reward models in RLHF—predict which of two candidates is better from their score difference:
+A single-sample discriminator scores each observation $x$ against a fixed zero threshold ($D(x) \gtrless 0$), whereas pairwise preference models, such as Bradley–Terry reward models in RLHF, predict which of two candidates is better from their score difference:
 
 ::: {.cols .vc}
 ::: {.col}
@@ -563,8 +559,8 @@ Under fixed pairing $\mathcal{E}_{\mathrm{diag}}$, draw a directed arrow from ea
 
 @!relativistic-paired-landscapes-1
 
-- When both generated points collide on $x_1$ (`[0, 0]`) and $x'_2$ steps off toward $x_2$ (`[0, 0.1]`), both $\mathcal{E}_{\mathrm{GAN}}$ and $\mathcal{E}_{\mathrm{all}}$ strictly **increase** (from $-0.562$ and $-0.440$ to $-0.382$ and $-0.220$), trapping $x'_2$ at the collision.
-- Under fixed pairing $\mathcal{E}_{\mathrm{diag}}$, the self-loop $1 \to 1$ stays tied at $-\log 2$ while the acyclic edge $2 \to x'_2$ stays at $0$, so the loss remains **completely flat** at $-0.5\log 2 \approx -0.347$ all the way to $x_2$!
+- When both generated points collide on $x_1$ (`[0, 0]`) and $x'_2$ steps off toward $x_2$ (`[0, 0.1]`), both $\mathcal{E}_{\mathrm{GAN}}$ and $\mathcal{E}_{\mathrm{all}}$ strictly **increase** (from $-0.477$ and $-0.347$ to $-0.347$ and $-0.173$), trapping $x'_2$ at the collision.
+- Under fixed pairing $\mathcal{E}_{\mathrm{diag}}$, the self-loop $1 \to 1$ stays tied at $-\log 2$ while the acyclic edge $2 \to x'_2$ stays at $0$, so the loss remains **completely flat** at $-0.5\log 2 \approx -0.347$ all the way to $x_2$.
 :::
 
 ::: {.slide title="Enumerating Suboptimal Collision Minima"}
@@ -583,8 +579,8 @@ Counting, over all assignments in $\{0, \ldots, n-1\}^n$ ($n = 2, 3$), the colli
 ::: {.cols .vc}
 ::: {.col}
 - **What Sun et al. (2020) proved:** The fixed one-to-one coupling objective $\mathcal{E}_{\mathrm{diag}}$ has **$0$** suboptimal collision local minima ($0$ vs. $n^n - n!$), because any colliding point $x'_i$ not on a directed cycle can move toward $x_i$ along a flat plateau.
-- **What happens under minibatch re-pairing:** Drawing fresh independent minibatches from $p$ and $q$ at every step averages over random pairings, evaluating the **all-pairs expectation** $\mathcal{E}_{\mathrm{all}} = d_{\mathrm{Rp}}(\hat{p}, \hat{q}) - \log 2$ (which retains all $n^n - n!$ collision minima!).
-- **Takeaway:** In §{sec_gan_convergence}, our $2 \times 2$ experiment on 25 Gaussians confirms that $R_1 + R_2$ gradient penalties—not pairing alone—drive mode coverage.
+- **What happens under minibatch re-pairing:** Drawing fresh independent minibatches from $p$ and $q$ at every step averages over random pairings, evaluating the **all-pairs expectation** $\mathcal{E}_{\mathrm{all}} = d_{\mathrm{Rp}}(\hat{p}, \hat{q}) - \log 2$ (which retains all $n^n - n!$ collision minima).
+- **Takeaway:** In §{sec_gan_convergence}, our $2 \times 2$ experiment on 25 Gaussians confirms that $R_1 + R_2$ gradient penalties, rather than pairing alone, drive mode coverage.
 :::
 
 ::: {.col .fig}
@@ -596,7 +592,7 @@ Counting, over all assignments in $\{0, \ldots, n-1\}^n$ ($n = 2, 3$), the colli
 ::: {.slide title="Saturating vs. Non-Saturating Pairing Near Data"}
 [Overlapping Mixture Benchmark]{.kicker}
 
-When $p$ and $q$ already overlap—as on the 3-component 2D Gaussian mixture testbed ($\mathrm{JS}(p, q_0) = 0.529$ nats)—both the saturating pairing generator loss ($\min_G \Phi(D)$, weight $w_{\textrm{Rp}}$) and the non-saturating pairing loss (`rpgan_loss_G`, weight $1 - w_{\textrm{Rp}}$) converge to within a few thousandths of a nat:
+When $p$ and $q$ already overlap, as on the 3-component 2D Gaussian mixture benchmark ($\mathrm{JS}(p, q_0) = 0.529$ nats), both the saturating pairing generator loss ($\min_G \Phi(D)$, weight $w_{\textrm{Rp}}$) and the non-saturating pairing loss (`rpgan_loss_G`, weight $1 - w_{\textrm{Rp}}$) converge to within a few thousandths of a nat:
 
 @!relativistic-pairing-on-the-mixture-testbed
 

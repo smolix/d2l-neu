@@ -136,7 +136,7 @@ J_\gamma = \begin{pmatrix} 0 & \ell'(0) \\ -\ell'(0) & -\gamma \end{pmatrix},
 $$
 :eqlabel:`eq_gan_dirac_pen`
 
-For every $\gamma > 0$, both eigenvalues have strictly negative real part ($\operatorname{Re}(\nu_{1,2}) < 0$), so the equilibrium $(0, 0)$ is locally exponentially stable! The characteristic polynomial $\nu^2 + \gamma\nu + \ell'(0)^2 = 0$ is identical to that of a damped harmonic oscillator (:numref:`subsec_mdl-ode-linearization`) with three regimes:
+For every $\gamma > 0$, both eigenvalues have strictly negative real part ($\operatorname{Re}(\nu_{1,2}) < 0$), so the equilibrium $(0, 0)$ is locally exponentially stable. The characteristic polynomial $\nu^2 + \gamma\nu + \ell'(0)^2 = 0$ is identical to that of a damped harmonic oscillator (:numref:`subsec_mdl-ode-linearization`) with three regimes:
 
 1. *Underdamped* ($\gamma < 2\ell'(0)$): complex-conjugate eigenvalues with real part $-\gamma/2$; trajectories spiral inward (converging under simultaneous Euler steps when $h < \gamma / \ell'(0)^2$, Exercise :exref:`ex_convergence-discrete-simultaneous-update-dirac`).
 2. *Critically damped* ($\gamma = 2\ell'(0)$, i.e., $\gamma = 1$ for the logistic loss): repeated real eigenvalue $\nu = -\ell'(0)$, yielding the fastest non-oscillatory decay.
@@ -652,14 +652,11 @@ for col, stat in enumerate(['on-mode fraction', 'critic loss']):
         print(f'  {name:28}', ' '.join(f'{v:4.2f}' for v in trace[:, col]))
 ```
 
-In the penalized runs, the critic loss sits near its equilibrium value ($2\log 2 \approx 1.39$ for `NS`, $\log 2 \approx 0.69$ for `pairing`) from the very first checkpoint—even when only 1–3% of generated samples lie on a mode—because the gradient penalty keeps $D(x)$ small everywhere. An equilibrium critic loss indicates a flat critic, not necessarily a converged generator.
+In the penalized runs, the critic loss sits near its equilibrium value ($2\log 2 \approx 1.39$ for `NS`, $\log 2 \approx 0.69$ for `pairing`) from the very first checkpoint, even when only 1–3% of generated samples lie on a mode, because the gradient penalty keeps $D(x)$ small everywhere. An equilibrium critic loss indicates a flat critic, not necessarily a converged generator.
 
 ## Summary
 
-- On the two-parameter Dirac-GAN ($p = \delta_0, q_\theta = \delta_\theta, D_\psi(x) = \psi x$), continuous-time gradient flow orbits on circles of constant radius, simultaneous discrete steps spiral outward, and alternating discrete steps orbit within a bounded band.
-- Adding the zero-centered gradient penalties $R_1 = \frac{\gamma}{2}\mathbb{E}_p[\|\nabla_x D(x)\|^2]$ and $R_2 = \frac{\gamma}{2}\mathbb{E}_q[\|\nabla_{x'} D(x')\|^2]$ shifts the Jacobian eigenvalues into the open left half-plane ($\operatorname{Re}(\nu_{1,2}) < 0$) for any $\gamma > 0$, making the equilibrium locally exponentially stable.
-- Near equilibrium, $R_1 + R_2$ acts as a low-pass filter on $p - q$ with cutoff length scale $2\sqrt{\gamma}$ (for the logistic loss), transitioning from $2\,\mathrm{JS}(p, q)$ at large scales to the squared dual Sobolev norm $\|p - q\|_{\dot H^{-1}(m)}^2$ at small scales.
-- On the 25-Gaussian grid, $R_1 + R_2$ ($\gamma = 1$) damps critic steepness by three orders of magnitude and ensures reliable mode coverage across both classic and relativistic pairing losses.
+On the two-parameter Dirac-GAN ($p = \delta_0, q_\theta = \delta_\theta, D_\psi(x) = \psi x$), continuous-time gradient flow orbits on circles of constant radius, simultaneous discrete steps spiral outward, and alternating discrete steps remain trapped in a bounded band. Subtracting the zero-centered gradient penalties $R_1 = \frac{\gamma}{2}\mathbb{E}_p[\|\nabla_x D(x)\|^2]$ and $R_2 = \frac{\gamma}{2}\mathbb{E}_q[\|\nabla_{x'} D(x')\|^2]$ shifts the Jacobian eigenvalues into the open left half-plane ($\operatorname{Re}(\nu_{1,2}) < 0$) for every $\gamma > 0$, rendering the equilibrium locally exponentially stable. Near equilibrium, $R_1 + R_2$ acts as a spatial low-pass filter on $p - q$ with cutoff length scale $2\sqrt{\gamma}$ under the logistic loss, interpolating between $2\,\mathrm{JS}(p, q)$ at large scales and the squared dual Sobolev norm $\|p - q\|_{\dot H^{-1}(m)}^2$ at fine scales. Empirically, on the 25-Gaussian grid, $R_1 + R_2$ at $\gamma = 1$ damps critic steepness by three orders of magnitude and yields full mode coverage under both classic logistic and relativistic pairing objectives.
 
 ## Exercises
 
@@ -716,7 +713,7 @@ Minimax Game Dynamics and Gradient Penalties<br>**the Dirac-GAN · rotational ve
 ::: {.cols .vc}
 ::: {.col}
 - **Static optimum vs. coupled dynamics:** Sections §{num:sec_basic_gan}–§{num:sec_gan_relativistic} assumed $D$ sits at $D^\star$, but in practice both players take incremental gradient steps that shift each other's objective.
-- **Minimal counterexample (Mescheder et al., 2018):** Even on a two-parameter minimax game with a unique equilibrium at $(0, 0)$, taking $300$ simultaneous gradient steps ($h = 0.2$) from $(1, 1)$ **doubles** the distance to $(0, 0)$ from $1.41$ to $2.87$!
+- **Minimal counterexample (Mescheder et al., 2018):** Even on a two-parameter minimax game with a unique equilibrium at $(0, 0)$, taking $300$ simultaneous gradient steps ($h = 0.2$) from $(1, 1)$ **doubles** the distance to $(0, 0)$ from $1.41$ to $2.87$.
 - **Key question:** How do zero-centered penalties ($R_1, R_2$) make the equilibrium locally exponentially stable?
 :::
 
@@ -884,7 +881,7 @@ $$\sup_D V_\gamma(D) - 2\ell(0) \approx \frac{\ell'(0)^2}{4}\Big\langle p - q,\;
 ::: {.slide title="Implementing Differentiable R₁ + R₂ Penalties"}
 [Higher-Order Autograd]{.kicker}
 
-Because each sample's critic score $D(x_i)$ depends only on row $x_i$ (provided batch normalization is omitted!), differentiating the sum $\sum_i D(x_i)$ with respect to the input batch $x$ computes every sample's input gradient $\nabla_{x_i} D(x_i)$ in a single backward pass:
+Because each sample's critic score $D(x_i)$ depends only on row $x_i$ (provided batch normalization is omitted), differentiating the sum $\sum_i D(x_i)$ with respect to the input batch $x$ computes every sample's input gradient $\nabla_{x_i} D(x_i)$ in a single backward pass:
 
 @convergence-the-loss-in-code-2
 
@@ -909,7 +906,7 @@ R3GAN (Huang et al., 2024) pairs the relativistic pairing loss (`rpgan_loss_D`, 
 @convergence-the-loss-in-code-1[15-]
 :::
 
-::: {.slide title="Mode-Coverage Testbed: 25 Gaussians on a 5×5 Grid"}
+::: {.slide title="Mode-Coverage Benchmark: 25 Gaussians on a 5×5 Grid"}
 [Experimental Setup]{.kicker}
 
 ::: {.cols .vc}
@@ -953,7 +950,7 @@ Comparing the on-mode sample fraction against the critic loss across all $8$ che
 @!convergence-mode-coverage-on-25-gaussians-6
 
 ::: {.d2l-note .warn}
-**Why an equilibrium critic loss does not certify convergence:** In every penalized run, the critic loss sits at its exact equilibrium value ($2\log 2 \approx 1.38$ for `NS`; $\log 2 \approx 0.69$ for `pairing`) from the very first checkpoint at step $1{,}250$—when only **$1\text{--}3\%$** of generated samples lie on a mode! Because $R_1 + R_2$ forces $D(x)$ to remain nearly flat everywhere, an equilibrium critic loss only confirms that the critic is damped, never that $q$ matches $p$.
+**Why an equilibrium critic loss does not certify convergence:** In every penalized run, the critic loss sits at its exact equilibrium value ($2\log 2 \approx 1.38$ for `NS`; $\log 2 \approx 0.69$ for `pairing`) from the very first checkpoint at step $1{,}250$—when only **$1\text{--}3\%$** of generated samples lie on a mode. Because $R_1 + R_2$ forces $D(x)$ to remain nearly flat everywhere, an equilibrium critic loss only confirms that the critic is damped, never that $q$ matches $p$.
 :::
 :::
 

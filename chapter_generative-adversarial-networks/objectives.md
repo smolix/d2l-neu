@@ -3,7 +3,7 @@
 
 Most GAN implementations offer several interchangeable training objectives: non-saturating logistic loss, least squares (LSGAN), hinge loss, and Wasserstein loss. :numref:`sec_basic_gan` analyzed the logistic objective, showing that its optimal discriminator recovers the log density ratio $\lambda(x) = \log(p(x)/q(x))$ and its minimax value is the Jensen–Shannon divergence—a quantity that saturates once the supports of $p$ and $q$ cease to overlap. What divergences do the other objectives measure? And when generated samples lie far from the data, does a vanishing gradient stem from the loss function, the critic architecture, or the underlying divergence?
 
-Every objective in this family modifies either the payoff functions applied to the critic's scores or the function class $\mathcal{T}$ over which the critic optimizes. Unconstrained critics paired with classification losses evaluate $f$-divergences, which depend only on the pointwise density ratio $p(x)/q(x)$. Constraining the critic to a smooth function class with linear payoffs instead yields *integral probability metrics* (IPMs), such as Maximum Mean Discrepancy (MMD) and the Wasserstein-1 distance ($W_1$), which remain sensitive to spatial distances even when supports are disjoint. Below, we derive both families and compare their behavior on separated 1D Gaussians and a 2D Gaussian mixture.
+Every objective in this family modifies either the scoring functions applied to the critic's outputs or the function class $\mathcal{T}$ over which the critic optimizes. Unconstrained critics paired with classification losses evaluate $f$-divergences, which depend only on the pointwise density ratio $p(x)/q(x)$. Constraining the critic to a smooth function class with linear payoffs instead yields *integral probability metrics* (IPMs), such as Maximum Mean Discrepancy (MMD) and the Wasserstein-1 distance ($W_1$), which remain sensitive to spatial distances even when supports are disjoint. Below, we derive both families and compare their behavior on separated 1D Gaussians and a 2D Gaussian mixture.
 
 ```{.python .input #objectives-setup}
 %%tab jax
@@ -351,7 +351,7 @@ Without a constraint on $\mathcal{F}$, scaling $T$ by an arbitrary positive cons
 
 ### Maximum Mean Discrepancy (MMD)
 
-Given a positive-definite kernel $k(x, x')$—such as the Gaussian RBF kernel $k(x, x') = \exp(-\|x - x'\|^2/(2s^2))$ with bandwidth $s$—choosing $\mathcal{F}$ to be the unit ball of the reproducing kernel Hilbert space (RKHS) associated with $k$ yields the *Maximum Mean Discrepancy* :cite:`Gretton.Borgwardt.Rasch.ea.2012` (:numref:`sec_mdl-ipm-mmd`), whose squared value has a closed form in terms of pairwise kernel expectations:
+Given a positive-definite kernel $k(x, x')$, such as the Gaussian RBF kernel $k(x, x') = \exp(-\|x - x'\|^2/(2s^2))$ with bandwidth $s$, choosing $\mathcal{F}$ to be the unit ball of the reproducing kernel Hilbert space (RKHS) associated with $k$ yields the *Maximum Mean Discrepancy* :cite:`Gretton.Borgwardt.Rasch.ea.2012` (:numref:`sec_mdl-ipm-mmd`), whose squared value has a closed form in terms of pairwise kernel expectations:
 
 $$
 \begin{aligned}
@@ -654,7 +654,7 @@ The results clarify how practical neural critics differ from unconstrained theor
 - **Saturating vs. non-saturating logistic:** As in :numref:`sec_basic_gan`, the saturating generator gradient is tiny ($\sim 0.01$) and $\theta$ barely moves from $6.0$ to $5.76$, whereas the non-saturating generator receives a strong gradient ($\sim 3$) and reaches the target before step 400.
 - **Hinge critic:** Although the theoretical optimal hinge critic $\operatorname{sign} \lambda$ has zero slope inside both clouds, a finite ReLU MLP interpolates smoothly across the gap with slope $1.1\text{--}1.7$, driving the generator to the target by steps $700\text{--}950$.
 - **Median-bandwidth MMD:** Besides the saturating arm, this is the only one that has not arrived by step 1,500, where $\theta \approx 1.3$. The generator is slow here, but it has not stalled. Because the median heuristic keeps the bandwidth comparable to the separation, the gradient never vanishes. At $\sim 0.2$ it is about six times smaller than the slope of the $W_1$ critics in the next item, and plain gradient steps of size $0.01$ need correspondingly longer.
-- **Two-sided vs. one-sided WGAN-GP:** Both $W_1$ arms pull the generator inward at slope $\approx 1.26$ (minimizing $-ad + 10(a-1)^2$ gives $a = 1 + d/20$) and arrive near step 500. After arrival, however, every two-sided `W1 + GP` run overshoots heavily (`farthest` $> 1$, up to $> 7$), whereas every one-sided run stays within $0.06$ of the origin! Why? Once $\theta$ crosses $0$, the critic must reverse its slope from negative to positive. Because the two-sided penalty $(|T'| - 1)^2$ penalizes a flat critic ($T' = 0$) by $\gamma$, it creates a potential barrier at zero slope that traps the critic on the old slope sign ($1 - d/20$) or causes all ReLU units to die, as confirmed by inspecting the critic slopes and active ReLU counts at step 1,500 below:
+- **Two-sided vs. one-sided WGAN-GP:** Both $W_1$ arms pull the generator inward at slope $\approx 1.26$ (minimizing $-ad + 10(a-1)^2$ gives $a = 1 + d/20$) and arrive near step 500. After arrival, however, every two-sided `W1 + GP` run overshoots heavily (`farthest` $> 1$, up to $> 7$), whereas every one-sided run stays within $0.06$ of the origin. Why? Once $\theta$ crosses $0$, the critic must reverse its slope from negative to positive. Because the two-sided penalty $(|T'| - 1)^2$ penalizes a flat critic ($T' = 0$) by $\gamma$, it creates a potential barrier at zero slope that traps the critic on the old slope sign ($1 - d/20$) or causes all ReLU units to die, as confirmed by inspecting the critic slopes and active ReLU counts at step 1,500 below:
 
 ```{.python .input #objectives-separated-start-w1-critics}
 %%tab pytorch
@@ -853,10 +853,7 @@ All five objectives reduce $\mathrm{JS}(p, q_t)$ from $0.53$ nats to a few thous
 
 ## Summary
 
-- Every single-sample adversarial objective is a supremum of expected payoffs over a critic class $\mathcal{T}$ (:eqref:`eq_gan_template`), making it convex in the distribution $q$ though nonconvex in the generator parameters $\theta$.
-- With an unconstrained critic, symmetric margin classification losses evaluate the $f$-divergence given by their Bayes-risk gap $\Delta_\ell(p, q)$ (:numref:`tab_gan_loss_divergences`), and their optimal critic outputs a monotone link of the log density ratio $\lambda = \log(p/q)$. The Fenchel–Young variational bound (:eqref:`eq_gan_fgan_bound`) extends this to general asymmetric $f$-divergences.
-- Linear payoffs over a constrained function class $\mathcal{F}$ define integral probability metrics (IPMs): Maximum Mean Discrepancy ($\mathrm{MMD}$) over an RKHS unit ball and Wasserstein-1 ($W_1$) over 1-Lipschitz functions.
-- When supports are separated, $f$-divergences saturate whereas $W_1$ maintains unit slope and $\mathrm{MMD}^2$ maintains a gradient over distances comparable to the kernel bandwidth. In practice, finite neural critics interpolate smoothly across gaps and provide a usable gradient whenever paired with a non-saturating generator loss.
+Every single-sample adversarial objective takes a supremum of expected payoffs over a critic class $\mathcal{T}$ (:eqref:`eq_gan_template`), making it convex in the distribution $q$ even though it remains nonconvex in the generator parameters $\theta$. With an unconstrained critic, symmetric margin classification losses evaluate the $f$-divergence determined by their Bayes-risk gap $\Delta_\ell(p, q)$ (:numref:`tab_gan_loss_divergences`), with optimal critics outputting monotone links of $\lambda = \log(p/q)$, while the Fenchel–Young variational bound (:eqref:`eq_gan_fgan_bound`) extends this duality to asymmetric $f$-divergences. Replacing nonlinear payoffs with linear expectations over a constrained function class $\mathcal{F}$ instead defines integral probability metrics, notably Maximum Mean Discrepancy over an RKHS unit ball and Wasserstein-1 over 1-Lipschitz functions. When supports separate, $f$-divergences saturate whereas $W_1$ maintains unit slope and $\mathrm{MMD}^2$ provides informative gradients up to the kernel bandwidth; in practice, finite neural critics interpolate smoothly across gaps whenever paired with a non-saturating generator loss.
 
 ## Exercises
 
@@ -868,7 +865,7 @@ All five objectives reduce $\mathrm{JS}(p, q_t)$ from $0.53$ nats to a few thous
 
 1. **Jensen–Shannon convex conjugate.** Twice the Jensen–Shannon divergence corresponds to the divergence function $f(u) = u \log u - (u + 1) \log \frac{u + 1}{2}$.
     1. Derive its convex conjugate $f^*(t) = -\log(2 - e^t)$ with domain $t < \log 2$.
-    1. Show that under the reparameterization $T(x) = \log(2 \sigma(D(x)))$, the optimal critic $T^\star = f'(\rho)$ corresponds to $D^\star = \lambda$, and the variational bound :eqref:`eq_gan_fgan_bound` becomes $2 \log 2 + V(D)$, where $V(D)$ is the classic GAN objective :eqref:`eq_gan_V`.
+    1. Show that under the reparameterization $T(x) = \log(2 \sigma(D(x)))$, the optimal critic $T^\star = f'(\rho)$ corresponds to $D^\star = \lambda$, and the variational bound :eqref:`eq_gan_fgan_bound` becomes $2 \log 2 + V(D)$, where $V(D)$ is the classic log-loss GAN objective of :numref:`sec_basic_gan`.
    :exlabel:`ex_objectives-variational-bound-eqref-eq`
 
 1. [code] **Generator weights and critic lag on the Gaussian mixture.** ● Use `train_toy` and the five objectives of :numref:`subsec_gan_objectives_testbed`.
@@ -1008,7 +1005,7 @@ $$D_f(p \,\|\, q) \ge \mathbb{E}_{x \sim p}\big[T(x)\big] - \mathbb{E}_{x' \sim 
 :::
 
 ::: {.slide title="Empirical Verification of Critic Link Functions"}
-[2D Gaussian Mixture Testbed]{.kicker}
+[2D Gaussian Mixture Benchmark]{.kicker}
 
 We train fresh 3-layer leaky-ReLU MLP critics ($2 \to 64 \to 64 \to 1$) for $3{,}000$ steps against a fixed 3-component 2D Gaussian mixture $q$ ($\mathrm{JS}(p, q) = 0.033$ nats) where $\lambda(x) = \log(p(x)/q(x))$ is known in closed form:
 
@@ -1144,7 +1141,7 @@ Both $W_1$ arms pull the generator to $|\theta| < 0.5$ near step $500$, yet ever
 
 @!objectives-separated-start-w1-critics
 
-- **The zero-slope barrier:** Once $\theta$ crosses $0$, the critic must reverse its slope $D'$ from negative to positive. Because the two-sided penalty $\gamma(|D'| - 1)^2$ charges $\gamma$ at $D' = 0$, the critic either remains trapped on its old slope sign (pushing $\theta$ outward!) or kills all hidden ReLU units (`active = 0`).
+- **The zero-slope barrier:** Once $\theta$ crosses $0$, the critic must reverse its slope $D'$ from negative to positive. Because the two-sided penalty $\gamma(|D'| - 1)^2$ charges $\gamma$ at $D' = 0$, the critic either remains trapped on its old slope sign (pushing $\theta$ outward) or kills all hidden ReLU units (`active = 0`).
 - **One-sided remedy:** Penalizing $\gamma\max(0, |D'| - 1)^2$ charges nothing when $|D'| \le 1$, allowing the critic slope to pass freely through zero as $q$ reaches $p$.
 :::
 

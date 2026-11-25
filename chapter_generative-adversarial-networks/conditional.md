@@ -36,7 +36,7 @@ from d2l import jax as d2l
 
 ### The Optimal Conditional Critic
 
-Let data–condition pairs $(x, c) \sim p(x, c)$ be drawn from the joint data distribution, where $c$ may be a discrete class label, a text embedding, or an image. To match the condition marginal $p(c)$, we sample $c \sim p(c)$ from the real data and generate $x' = G(z, c) \sim q(\cdot \mid c)$, inducing the generated joint distribution $q(x, c) = p(c)\,q(x \mid c)$. The conditional log-loss objective applies :eqref:`eq_gan_V` to the pairs $(x, c)$:
+Let data–condition pairs $(x, c) \sim p(x, c)$ be drawn from the joint data distribution, where $c$ may be a discrete class label, a text embedding, or an image. To match the condition marginal $p(c)$, we sample $c \sim p(c)$ from the real data and generate $x' = G(z, c) \sim q(\cdot \mid c)$, inducing the generated joint distribution $q(x, c) = p(c)\,q(x \mid c)$. The conditional log-loss objective applies the classic binary log-loss formulation (:numref:`sec_basic_gan`) to the pairs $(x, c)$:
 
 $$
 \begin{aligned}
@@ -167,7 +167,7 @@ $$
 $$
 :eqlabel:`eq_gan_cond_bayes`
 
-The first term measures *class alignment* (the log ratio of the real and generated class posteriors at $x$), while the second measures *unconditional sample realism*. If we model both class posteriors as softmax classifiers over a shared feature representation $\phi(x)$—$p(c \mid x) \propto \exp(u_c^\top \phi(x))$ and $q(c \mid x) \propto \exp(w_c^\top \phi(x))$—their log ratio is $(u_c - w_c)^\top \phi(x)$ plus a $c$-independent log-partition difference. Absorbing the log-partition difference and $\log(p(x)/q(x))$ into a single scalar head $\psi_0(x)$ and setting $e_c = u_c - w_c$ yields the *projection discriminator* of :citet:`Miyato.Koyama.2018` (Exercise :exref:`ex_conditional-projection-derivation-modeled-both`; compare with the auxiliary classifier GAN in Exercise :exref:`ex_conditional-auxiliary-classifier-bias`):
+The first term measures *class alignment* (the log ratio of the real and generated class posteriors at $x$), while the second measures *unconditional sample realism*. If we model both class posteriors as softmax classifiers over a shared feature representation $\phi(x)$, namely $p(c \mid x) \propto \exp(u_c^\top \phi(x))$ and $q(c \mid x) \propto \exp(w_c^\top \phi(x))$, their log ratio is $(u_c - w_c)^\top \phi(x)$ plus a $c$-independent log-partition difference. Absorbing the log-partition difference and $\log(p(x)/q(x))$ into a single scalar head $\psi_0(x)$ and setting $e_c = u_c - w_c$ yields the *projection discriminator* of :citet:`Miyato.Koyama.2018` (Exercise :exref:`ex_conditional-projection-derivation-modeled-both`; compare with the auxiliary classifier GAN in Exercise :exref:`ex_conditional-auxiliary-classifier-bias`):
 
 $$
 D(x, c) \;=\; e_c^\top \phi(x) + \psi_0(x).
@@ -567,13 +567,11 @@ for name, (f, p) in sets.items():
           f'{prec:10.2f}{rec:8.2f}')
 ```
 
-As predicted in :numref:`tab_gan_cond_failures`, the nearest-centroid prototypes achieve near-perfect alignment (about $0.9$, higher than random real images!) and precision (about $0.97$), but suffer from severely degraded recall (under $0.4$ vs. about $0.85$) and worse FD (about $3$ vs. $0.43$) because their feature covariance is artificially contracted. BigGAN's *truncation trick* deliberately trades recall for higher precision and alignment by truncating the latent distribution $z$ toward zero (Exercise :exref:`ex_conditional-biggan-s-truncation-trick`).
+As predicted in :numref:`tab_gan_cond_failures`, the nearest-centroid prototypes achieve near-perfect alignment (about $0.9$, higher than random real images) and precision (about $0.97$), but suffer from severely degraded recall (under $0.4$ vs. about $0.85$) and worse FD (about $3$ vs. $0.43$) because their feature covariance is artificially contracted. BigGAN's *truncation trick* deliberately trades recall for higher precision and alignment by truncating the latent distribution $z$ toward zero (Exercise :exref:`ex_conditional-biggan-s-truncation-trick`).
 
 ## Summary
 
-- Conditioning both the generator $G(z, c)$ and critic $D(x, c)$ on $c \sim p(c)$ yields the optimal critic $D^\star(x, c) = \log(p(x \mid c)/q(x \mid c))$ and minimizes the expected conditional divergence $\mathbb{E}_{c \sim p(c)}[2\,\mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))] - 2\log 2$.
-- Applying Bayes' rule decomposes $D^\star(x, c)$ into a class-alignment term $\log(p(c \mid x)/q(c \mid x))$ and an unconditional realism term $\log(p(x)/q(x))$, motivating the projection discriminator head $D(x, c) = e_c^\top \phi(x) + \psi_0(x)$ :cite:`Miyato.Koyama.2018`.
-- Evaluating conditional generators requires separating class alignment (via an independent referee classifier), sample fidelity (per-class precision), and within-class diversity (per-class recall and feature distances): a generator that emits only canonical class prototypes inflates alignment and precision while collapsing recall.
+Conditioning both the generator $G(z, c)$ and critic $D(x, c)$ on $c \sim p(c)$ yields the optimal slice-wise critic $D^\star(x, c) = \log(p(x \mid c)/q(x \mid c))$ and minimizes the expected conditional divergence $\mathbb{E}_{c \sim p(c)}[2\,\mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))] - 2\log 2$. Applying Bayes' rule decomposes $D^\star(x, c)$ into a class-alignment term $\log(p(c \mid x)/q(c \mid x))$ and an unconditional realism term $\log(p(x)/q(x))$, motivating the projection discriminator head $D(x, c) = e_c^\top \phi(x) + \psi_0(x)$ :cite:`Miyato.Koyama.2018`. Evaluating a conditional generator requires separating condition alignment (via an independent referee classifier), sample fidelity (per-class precision), and within-class diversity (per-class recall and feature distances). Without a recall metric, a generator that emits only canonical class prototypes can achieve high classifier alignment and high precision while collapsing intra-class diversity.
 
 ## Exercises
 
@@ -634,7 +632,7 @@ Unconditional generators draw random samples from the marginal image distributio
 ::: {.cols .vc}
 ::: {.col}
 - **Marginal matching $\neq$ conditional alignment:** Suppose a 10-class CIFAR-10 generator produces realistic images but shifts every label cyclically: $q(x \mid c) = p(x \mid c + 1 \bmod 10)$.
-- Because all $10$ classes have equal prior $p(c) = \frac{1}{10}$, its marginal distribution $q(x) = \sum_c p(c)q(x \mid c) = p(x)$ matches the data **perfectly** ($\mathrm{JS}(p(x), q(x)) = 0$), even though every class request returns the wrong object!
+- Because all $10$ classes have equal prior $p(c) = \frac{1}{10}$, its marginal distribution $q(x) = \sum_c p(c)q(x \mid c) = p(x)$ matches the data **perfectly** ($\mathrm{JS}(p(x), q(x)) = 0$), even though every class request returns the wrong object.
 - **Solution (Mirza & Osindero, 2014):** Feed the condition $c$ to **both** the generator $G(z, c)$ and the discriminator $D(x, c)$.
 :::
 
@@ -770,7 +768,7 @@ We train `CondGenerator` and `ProjectionCritic` on $50{,}000$ CIFAR-10 images ($
 @!conditional-training-with-the-chapter-s-loss-3
 
 - **Same-class pairing loss:** $-\mathbb{E}_{c}[\log \sigma(D(x, c) - D(x', c))]$ stabilizes near $0.52$ (below $\log 2 \approx 0.69$), with held-out same-class ranking accuracy settling around $0.80$.
-- **Per-class shift invariance:** Because comparisons occur only within each class $c$, shifting $D(x, c) \mapsto D(x, c) + \zeta_c$ by an arbitrary class-dependent constant $\zeta_c$ leaves the pairing loss unchanged!
+- **Per-class shift invariance:** Because comparisons occur only within each class $c$, shifting $D(x, c) \mapsto D(x, c) + \zeta_c$ by an arbitrary class-dependent constant $\zeta_c$ leaves the pairing loss unchanged.
 :::
 
 ::: {.col .fig}
@@ -792,9 +790,9 @@ Generating $9$ random latent draws for each of the $10$ requested CIFAR-10 class
 
 ::: {.cols .vc}
 ::: {.col}
-- **Axis 1 — Wrong class ($q(\cdot \mid c) = p(\cdot \mid c')$):** Detected immediately by an independent **referee classifier**, whereas marginal FD and $\mathrm{MMD}^2$ are completely blind if the marginal mixture matches!
-- **Axis 2 — Poor sample fidelity (blur/artifacts):** Detected by **marginal FD** and **per-class $K$-NN precision**.
-- **Axis 3 — Low intra-class diversity (prototype collapse):** Referee accuracy and precision actually *reward* canonical prototypes; **per-class $K$-NN recall** is required to catch mode dropping within class $c$.
+- **Axis 1: Wrong class ($q(\cdot \mid c) = p(\cdot \mid c')$):** Detected immediately by an independent **referee classifier**, whereas marginal FD and $\mathrm{MMD}^2$ are completely blind if the marginal mixture matches.
+- **Axis 2: Poor sample fidelity (blur/artifacts):** Detected by **marginal FD** and **per-class $K$-NN precision**.
+- **Axis 3: Low intra-class diversity (prototype collapse):** Referee accuracy and precision actually *reward* canonical prototypes; **per-class $K$-NN recall** is required to catch mode dropping within class $c$.
 :::
 
 ::: {.col .fig .big}
@@ -813,7 +811,7 @@ We train our 3-block CIFAR-10 classifier `FeatureCNN` (with horizontal flips and
 @!conditional-measuring-condition-alignment-1
 
 - **Close match to real photographs:** Mean class alignment across the $10$ classes is **$0.72\text{--}0.74$**, only $4\text{--}6$ percentage points below the referee's accuracy on real CIFAR-10 test images ($0.78$).
-- Both real and generated images find *cat* ($0.58\text{--}0.60$) hardest and *automobile/ship/truck* ($\ge 0.80$) easiest.
+- Both real and generated images find *cat* ($0.51\text{--}0.58$) hardest and *automobile/ship/truck* ($\ge 0.79$) easiest.
 :::
 
 ::: {.col}
@@ -851,7 +849,7 @@ To prove that high classifier alignment and high precision can mask a collapse i
 @!conditional-a-prototype-baseline
 
 ::: {.d2l-note .warn}
-**The prototype paradox:** Selecting only the $100$ most canonical real images per class boosts **class alignment** to $\approx 0.9$ (beating random real images at $\approx 0.8$!) and **precision** to $\approx 0.97$, while collapsing **recall** from $\approx 0.85 \to \approx 0.37$ and worsening **FD** sevenfold ($0.43 \to \approx 3$). BigGAN's *truncation trick* deliberately exploits this trade-off by truncating $z \in [-\tau, \tau]$.
+**The prototype paradox:** Selecting only the $100$ most canonical real images per class boosts **class alignment** to $\approx 0.9$ (beating random real images at $\approx 0.8$) and **precision** to $\approx 0.97$, while collapsing **recall** from $\approx 0.85 \to \approx 0.37$ and worsening **FD** sevenfold ($0.43 \to \approx 3$). BigGAN's *truncation trick* deliberately exploits this trade-off by truncating $z \in [-\tau, \tau]$.
 :::
 :::
 
@@ -879,7 +877,7 @@ Test your understanding of conditional GAN architectures and evaluation:
 ::: {.d2l-note .fragment .fade-up}
 **Answer:**
 
-3. By Bayes' rule, $D^\star(x, c) - D^\star(x, c')$ $= \log \frac{p(c \mid x)}{p(c' \mid x)} - \log \frac{q(c \mid x)}{q(c' \mid x)}$. As $q(\cdot \mid c) \to p(\cdot \mid c)$, the generated posterior matches the true posterior and $D^\star(x, c) \to 0$ for every class $c$!
+3. By Bayes' rule, $D^\star(x, c) - D^\star(x, c')$ $= \log \frac{p(c \mid x)}{p(c' \mid x)} - \log \frac{q(c \mid x)}{q(c' \mid x)}$. As $q(\cdot \mid c) \to p(\cdot \mid c)$, the generated posterior matches the true posterior and $D^\star(x, c) \to 0$ for every class $c$.
 :::
 :::
 
@@ -892,6 +890,6 @@ Test your understanding of conditional GAN architectures and evaluation:
 | **Feature Modulation Layer** | $\mathrm{Modulate}(h, c) = a(c) \odot h + b(c)$ | Init $a = \mathbf{1}, b = \mathbf{0}$ (identity); sparse row grads | Injects class/caption/timestep at every generator block |
 | **Projection Critic Head** | $D(x, c) = e_c^\top \phi(x) + \psi_0(x)$, $\;e_c = u_c - w_c$ | Derived from $\log\frac{p(c \mid x)}{q(c \mid x)} + \log\frac{p(x)}{q(x)}$ | Unbiased conditional critic (avoids AC-GAN entropy bias) |
 | **Same-Class RpGAN Pairing** | $-\mathbb{E}_c[\log\sigma(D(x, c) - D(x', c))]$ | Invariant to per-class shifts $D(x, c) + \zeta_c$ | Monitor held-out within-class pair accuracy $\hat{P}(D(x,c) > D(x',c))$ |
-| **Referee Alignment & Precision** | $\hat{P}(\text{referee}(G(z, c)) = c)$ & 3-NN real-ball coverage | Blind to intra-class collapse (rewards prototypes!) | Measures class obedience and per-sample realism |
+| **Referee Alignment & Precision** | $\hat{P}(\text{referee}(G(z, c)) = c)$ & 3-NN real-ball coverage | Blind to intra-class collapse (rewards prototypes) | Measures class obedience and per-sample realism |
 | **Per-Class 3-NN Recall & FD** | Fraction of real class-$c$ test set in generated balls | Sensitive to sample set size $n$ | Detects intra-class mode dropping and prototype collapse |
 :::

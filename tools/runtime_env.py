@@ -32,6 +32,10 @@ CPU_ONLY_NOTEBOOKS = {
     # passes device='cpu'); "cuda" and "GPU" appear only in its regeneration
     # path, which runs through the part-runner, not the scheduler.
     "chapter_lm-data/dedup.ipynb",
+    # 21.6: a normal build fits and solves on the CPU and reads its decode
+    # rates from a committed file; "GPU" appears in its labels and in the
+    # regeneration path (decode-rates, run by tools/lm_regen.py on a card).
+    "chapter_lm-pretraining/budgets.ipynb",
 }
 
 # (framework, notebook) pairs listed in CPU_ONLY_NOTEBOOKS that nevertheless
@@ -562,6 +566,12 @@ NOTEBOOK_ENV = {
     # reads). The 16K-token prompts use d2l.lc_tokenizer, whose raised
     # model_max_length leaves Transformers nothing to warn about.
     ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+        "OMP_NUM_THREADS": "8",
+    },
+    # 21.6: the Hub's X-HF-Warning on the Qwen3 config reads; the bootstrap
+    # refits run on the notebook's 8 threads.
+    ("pytorch", "chapter_lm-pretraining/budgets.ipynb"): {
         "HF_HUB_VERBOSITY": "error",
         "OMP_NUM_THREADS": "8",
     },

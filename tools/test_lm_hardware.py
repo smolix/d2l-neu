@@ -1299,6 +1299,26 @@ class TestServingModel(unittest.TestCase):
         self.assertAlmostEqual(slow.L_crit() * 2, m.L_crit())
 
 
+class TestArchConfig(unittest.TestCase):
+    def test_reference_arch_accepted(self):
+        """Chapter 21's Arch reads like its Transformers configuration
+        (lib review finding 4: it raised AttributeError)."""
+        chip = committed_specs().loc['RTX 4090']
+        arch = d2l.r2_config('r2').arch
+        m = d2l.ServingModel(arch, chip)
+        L, d, H, H_kv, d_h, f, V, _ = d2l._arch_fields(arch)
+        norms = 2 * d_h + 2 * d
+        attn = 2 * d * d_h * (H + H_kv)
+        self.assertEqual(m.n_params()[0],
+                         V * d + d + L * (attn + norms + 3 * d * f))
+        self.assertEqual(m.kv_bytes_per_token(), 2 * L * H_kv * d_h * 2)
+        t = d2l.TrainStepModel(arch, chip)
+        self.assertEqual(t.N, m.n_params()[0])
+        self.assertEqual(t.flops_per_token(4096), d2l.flops_per_token(
+            arch, T=4096, causal_half=True) + 2 * V * d)
+        self.assertIs(d2l._hw_cfg(m.cfg), m.cfg)
+
+
 class TestTrainStepModel(unittest.TestCase):
     def test_state_and_mfu(self):
         chip = committed_specs().loc['RTX 4090']

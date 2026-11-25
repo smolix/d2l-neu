@@ -274,6 +274,7 @@ def sim_collective(topo, algo, S, chunks):  #@save
     passes both ports at once and arrives topo['alpha'] s later. 'ring':
     2 (G - 1) steps of one S / G segment; 'tree': each half of S, cut into
     chunks, is reduced up one of the two trees and broadcast down it."""
+    import heapq, itertools  # not in the d2l library preamble
     G, alpha, beta = topo['G'], topo['alpha'], topo['beta']
     Msg = collections.namedtuple('Msg', 'src dst nbytes chunk tag')
     tick, events, free, waiting = itertools.count(), [], {}, {}
@@ -509,6 +510,7 @@ def hier_allreduce(tensor, intra_group, inter_group):  #@save
     may use different backends: a CUDA tensor crosses a gloo group through
     a pinned host copy. tensor.numel() must be a multiple of the size of
     intra_group."""
+    from torch import distributed as dist  # not in the d2l preamble
     flat = tensor.view(-1)
     shard = flat.new_empty(flat.numel() // dist.get_world_size(intra_group))
     dist.reduce_scatter_tensor(shard, flat, group=intra_group)

@@ -109,7 +109,8 @@ class ServingModel:  #@save
     replaces the datasheet's FLOP/s and bandwidth by measured ones."""
     def __init__(self, cfg, chip, calib=None, dtype_bytes=2, kv_bytes=2,
                  mem_util=0.9, kv_bytes_override=None, n_chips=1):
-        self.cfg, self.calib, self.n_chips = cfg, dict(calib or {}), n_chips
+        self.cfg, self.calib = d2l._hw_cfg(cfg), dict(calib or {})
+        self.n_chips = n_chips
         self.dtype_bytes, self.kv_bytes = dtype_bytes, kv_bytes
         self.kv_override = kv_bytes_override
         P, beta = d2l.hw_rates(chip, calib, dtype_bytes)  # FLOP/s, byte/s
@@ -281,7 +282,7 @@ class TrainStepModel:  #@save
     loss_bytes = 40  # per logit: about ten fp32 passes over the logits
 
     def __init__(self, cfg, chip, calib=None, recipe='bf16_pure'):
-        self.cfg, self.chip, self.recipe = cfg, chip, recipe
+        self.cfg, self.chip, self.recipe = d2l._hw_cfg(cfg), chip, recipe
         self.serving = d2l.ServingModel(cfg, chip, calib)  # counts, rates
         self.N = self.serving.n_params()[0]
 

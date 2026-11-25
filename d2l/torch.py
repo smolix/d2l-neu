@@ -13434,7 +13434,8 @@ class ServingModel:
     Defined in :numref:`sec_lm_workload_hardware`"""
     def __init__(self, cfg, chip, calib=None, dtype_bytes=2, kv_bytes=2,
                  mem_util=0.9, kv_bytes_override=None, n_chips=1):
-        self.cfg, self.calib, self.n_chips = cfg, dict(calib or {}), n_chips
+        self.cfg, self.calib = d2l._hw_cfg(cfg), dict(calib or {})
+        self.n_chips = n_chips
         self.dtype_bytes, self.kv_bytes = dtype_bytes, kv_bytes
         self.kv_override = kv_bytes_override
         P, beta = d2l.hw_rates(chip, calib, dtype_bytes)  # FLOP/s, byte/s
@@ -13614,7 +13615,7 @@ class TrainStepModel:
     loss_bytes = 40  # per logit: about ten fp32 passes over the logits
 
     def __init__(self, cfg, chip, calib=None, recipe='bf16_pure'):
-        self.cfg, self.chip, self.recipe = cfg, chip, recipe
+        self.cfg, self.chip, self.recipe = d2l._hw_cfg(cfg), chip, recipe
         self.serving = d2l.ServingModel(cfg, chip, calib)  # counts, rates
         self.N = self.serving.n_params()[0]
 
@@ -14091,6 +14092,7 @@ def sim_collective(topo, algo, S, chunks):
     chunks, is reduced up one of the two trees and broadcast down it.
 
     Defined in :numref:`sec_lm_collectives`"""
+    import heapq, itertools  # not in the d2l library preamble
     G, alpha, beta = topo['G'], topo['alpha'], topo['beta']
     Msg = collections.namedtuple('Msg', 'src dst nbytes chunk tag')
     tick, events, free, waiting = itertools.count(), [], {}, {}
@@ -14157,6 +14159,7 @@ def hier_allreduce(tensor, intra_group, inter_group):
     intra_group.
 
     Defined in :numref:`sec_lm_collectives`"""
+    from torch import distributed as dist  # not in the d2l preamble
     flat = tensor.view(-1)
     shard = flat.new_empty(flat.numel() // dist.get_world_size(intra_group))
     dist.reduce_scatter_tensor(shard, flat, group=intra_group)
@@ -29701,6 +29704,9 @@ def decode_rates(models, batches, ctx, new_tokens):
             columns=_DECODE_COLUMNS), d2l._label_of(res))
     return d2l._show_label(res)
 
+def _short(model):
+    return model.split('/')[-1]
+
 def fmt_power(x, digits=1, tex=False):
     """x as '10^9' or '7×10^11' at digits significant digits (tex=True:
     '10^{9}', '7\\times10^{11}' for math text); 0 as '0'.
@@ -31593,6 +31599,20 @@ d2l.HW_CONFIG_LOGS[('box-workloads', 't2')] = 'a100-workloads'
 d2l.HW_CONFIG_LOGS[('box-moe', 't2pair')] = 't2pair-moe'
 d2l._HW_TIERS['t2pair'] = 'T2pair'
 
+def _hw_cfg(cfg):
+    """cfg, or an Arch as an HWShape with the Transformers names that
+    ServingModel and TrainStepModel read (dense, no MoE).
+
+    Defined in :numref:`sec_lm_workload_hardware`"""
+    if 'L' not in getattr(cfg, '_fields', ()):
+        return cfg
+    L, d, H, H_kv, d_h, f, V, tie = d2l._arch_fields(cfg)
+    return d2l.HWShape(
+        num_hidden_layers=L, hidden_size=d, num_attention_heads=H,
+        num_key_value_heads=H_kv, head_dim=d_h, intermediate_size=f,
+        vocab_size=V, tie_word_embeddings=tie, num_experts=0,
+        max_position_embeddings=cfg.T)
+
 _HW_PROMPTS = (256, 512, 1024, 2048, 4096, 8192, 16384)
 
 _HW_SMALL_STEPS = ((1, 512), (1, 1024), (1, 2048))
@@ -31961,7 +31981,7 @@ def _cut_chip(spec):
         chip['mem_gb'] = spec['mem_gb']
     return chip
 
-def _short(model_id):
+def _model_short(model_id):
     return model_id.split('/')[-1]
 
 def _grid_models(spec):
@@ -32073,13 +32093,13 @@ def _show_grid(grid):
     parts = []
     for model_id, g in grid.groupby('model', sort=False):
         counts = g.workload.value_counts()
-        parts.append(_short(model_id) + ' ' + ', '.join(
+        parts.append(_model_short(model_id) + ' ' + ', '.join(
             f'{counts.get(w, 0)} {n}' for w, n in names.items()))
     print(textwrap.fill('points measured: ' + '; '.join(parts), 79,
                         subsequent_indent='  '))
     cut = {}
     for model_id, b, L in grid.attrs.get('cut', []):
-        cut.setdefault(_short(model_id), []).append(f'({b}, {L:,})')
+        cut.setdefault(_model_short(model_id), []).append(f'({b}, {L:,})')
     text = '; '.join(f'{m} ' + ' '.join(p) for m, p in cut.items())
     print(textwrap.fill('cut by capacity, (b, L): ' + (text or 'none'), 79,
                         subsequent_indent='  '))
@@ -32088,7 +32108,7 @@ def _show_grid(grid):
         g = grid[(grid.workload == 'decode') & (grid.model == e.model)
                  & (grid.b == 1) & (grid.L == e.L)]
         if len(g):
-            ratios.append(f'{_short(e.model)} {e.ms / g.ms.iloc[0]:.0f}x')
+            ratios.append(f'{_model_short(e.model)} {e.ms / g.ms.iloc[0]:.0f}x')
     if ratios:
         L = int(grid[grid.workload == 'eager'].L.iloc[0])
         print(textwrap.fill(f'eager decode at b = 1, L = {L:,} (no CUDA '
@@ -32097,7 +32117,7 @@ def _show_grid(grid):
     if 'floor_ms' in grid:
         floors = grid.dropna(subset=['floor_ms']).groupby(
             ['model', 'workload'], sort=False).floor_ms
-        parts = [f'{_short(m)} {w} {lo:.0f}-{hi:.0f} ms' for (m, w), lo, hi
+        parts = [f'{_model_short(m)} {w} {lo:.0f}-{hi:.0f} ms' for (m, w), lo, hi
                  in zip(floors.min().index, floors.min(), floors.max())]
         print(textwrap.fill('launch floor of the eager steps (narrow twin): '
                             + ', '.join(parts), 79, subsequent_indent='  '))
@@ -32130,7 +32150,7 @@ def _grid_live(r, same):
         row = r.loc[i]
         layers = None if row.workload != 'train' else int(row.n_layers)
         model = hw_random_model(row.model, layers)
-        b, L, name = int(row.b), int(row.L), _short(row.model)
+        b, L, name = int(row.b), int(row.L), _model_short(row.model)
         if row.workload == 'decode':
             live = d2l.hw_decode_bench(model, b, L, steps=16)
             label = f'{name} decode b={b}, L={L:,}'
@@ -32196,7 +32216,7 @@ def _show_control(r, model_id, b, L):
     random = (t.ms['random'] + t.ms['random again']) / 2
     diff, noise = t.ms['real'] - random, _control_noise(t)
     same = 'the same' if t.kernels.nunique() == 1 else 'different'
-    print(f'{_short(model_id)}, b = {b}, L = {L:,}: random '
+    print(f'{_model_short(model_id)}, b = {b}, L = {L:,}: random '
           f'{t.ms["random"]:.2f} ms, real {t.ms["real"]:.2f}, random again '
           f'{t.ms["random again"]:.2f}')
     print(f'real minus random {diff:+.3f} ms ({diff / random:+.1%}), noise '
@@ -32210,15 +32230,15 @@ def _control_live(r, same, model_id, b, L):
     Defined in :numref:`sec_lm_workload_hardware`"""
     if r.peak_gib.max() + 1 > _hw_card_gib():
         model_id, b, L = d2l.HW_WORKLOAD_CONFIGS['t1']['control']
-        r = hw_box_log('box-workloads', f'control-{_short(model_id)}')
+        r = hw_box_log('box-workloads', f'control-{_model_short(model_id)}')
         if r.peak_gib.max() + 1 > _hw_card_gib():
             return 'not run (the card is too small)'
     try:
         new = _control_compute(model_id, b, L, cached_only=True)
     except OSError:
-        return f'not run ({_short(model_id)} weights not in the Hub cache)'
+        return f'not run ({_model_short(model_id)} weights not in the Hub cache)'
     t, new = r.set_index('arm'), new.set_index('arm')
-    return f'{_short(model_id)} ' + _hw_agreement(
+    return f'{_model_short(model_id)} ' + _hw_agreement(
         [(w, t.ms[w], new.ms[w], t.mad[w] / t.ms[w]) for w in _HW_ARMS],
         same, 'ms')
 
@@ -32232,7 +32252,7 @@ def hw_weight_control(model_id, b, L):
         return _control_live(r, same, model_id, b, L)
     return _hw_result(
         'box-workloads', lambda: _control_compute(model_id, b, L),
-        dict(model=model_id, b=b, L=L), entry=f'control-{_short(model_id)}',
+        dict(model=model_id, b=b, L=L), entry=f'control-{_model_short(model_id)}',
         live_check=live, show=lambda r: _show_control(r, model_id, b, L),
         live_label='weights')
 
@@ -32369,7 +32389,7 @@ def _show_ladder_fit(errors, extra, n_cal, within):
         free, set_ = h[~np.asarray(floor, bool)], h[np.asarray(floor, bool)]
         ok = [int((free[m].abs() <= within).sum()) for m in ('M0', 'M3')]
         ok_floor = int((set_.M3.abs() <= within).sum())
-        parts.append(f'{_short(model_id)} {ok[0]} / {ok[1]} of {len(free)}'
+        parts.append(f'{_model_short(model_id)} {ok[0]} / {ok[1]} of {len(free)}'
                      + (f' (and {len(set_)} set by the launch floor, '
                         f'{ok_floor} within)' if len(set_) else ''))
     print(textwrap.fill(f'held-out points within {within:.0%}, M0 / M3: '
@@ -32398,7 +32418,7 @@ def _show_depth(points, chip, calibs):
                          f'layer + {icpt:.0f} ms; {cfg.num_hidden_layers} '
                          f'layers {full:.2f} s (M3 {m3:.2f} s)')
         lo, hi = int(t.n_layers.min()), int(t.n_layers.max())
-        print(f'{_short(model_id)} training, {lo}-{hi} layers, a straight '
+        print(f'{_model_short(model_id)} training, {lo}-{hi} layers, a straight '
               f'line to within {resid:.1f} ms:')
         print('\n'.join(lines))
 
@@ -36488,10 +36508,6 @@ def regen_net_finish(folder):
         table.attrs['proc_us'] = [d2l._hw_read(p)[0][col].tolist()
                                   for p in procs]
         d2l._hw_write(path, table, meta)
-
-import heapq
-import itertools
-from torch import distributed as dist
 
 d2l.HW_ARTIFACTS['box-coll'] = ('lm-hw-buildbox-coll-v1', 'tar')
 

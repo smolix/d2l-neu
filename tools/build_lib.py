@@ -470,10 +470,40 @@ def add_docstring_labels(blocks):
     return result
 
 
+def _string_body_lines(code):
+    """Indices of the lines of `code` that lie inside a multi-line string
+    literal after its opening line (a driver script held in a triple-quoted
+    string). Such lines define nothing in the library, so the name scanners
+    skip them; without this, a column-0 `k = ...` inside a script string
+    became a bogus shard that unrelated notebooks then depended on. Code
+    that does not parse is scanned line by line as before."""
+    try:  # magic lines become blank, so line numbers still align
+        tree = ast.parse('\n'.join(
+            '' if line.lstrip().startswith('%') else line
+            for line in code.split('\n')))
+    except SyntaxError:
+        return set()
+    inside = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Constant, ast.JoinedStr)) and (
+                isinstance(node, ast.JoinedStr) or isinstance(node.value, str)):
+            inside.update(range(node.lineno, node.end_lineno))
+    return inside
+
+
+def _code_lines(code):
+    """The lines of `code`, with those inside string literals left out."""
+    lines = code.split('\n')
+    if '\'\'\'' not in code and '"""' not in code:
+        return lines
+    skip = _string_body_lines(code)
+    return [line for i, line in enumerate(lines) if i not in skip]
+
+
 def _block_defined_names(code):
     """Return the top-level names a block defines (class/def/assignment)."""
     names = set()
-    for line in code.split('\n'):
+    for line in _code_lines(code):
         m = re.match(rf'(class|{DEF})\s+(\w+)', line.lstrip())
         if m:
             names.add(m.group(2))
@@ -495,7 +525,7 @@ def _block_shard_names(code):
     under both.
     """
     names = []
-    for line in code.split('\n'):
+    for line in _code_lines(code):
         m = (re.match(rf'(?:class|{DEF})\s+(\w+)', line)
              or re.match(r'(\w+)\s*(?::[^=]*)?=(?!=)', line))
         if m and m.group(1) not in names:

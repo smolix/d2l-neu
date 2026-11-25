@@ -25,19 +25,6 @@ configurations; the simulator's topology; the all-to-all's closed form
 <!-- Not rendered; it sets the "Defined in" suffix of the docstrings. -->
 :label:`sec_lm_collectives`
 
-## Imports
-
-The page's simulator and hierarchical all-reduce use these modules; the
-page imports them in its own imports cell, and the library needs them too.
-
-```{.python .input #collectives-lib-imports}
-%%tab pytorch
-#@save
-import heapq
-import itertools
-from torch import distributed as dist
-```
-
 ## Registries
 
 ```{.python .input #collectives-lib-entries}

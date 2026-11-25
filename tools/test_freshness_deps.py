@@ -95,6 +95,27 @@ def test_shard_names():
           'every module-level def/class/assignment gets a shard, in order')
     check(build_lib._block_shard_names('class A(d2l.Module):\n    x = 1\n')
           == ['A'], 'class attributes are not module-level names')
+    check(build_lib._block_shard_names(DRIVER_STRING) == ['_SWEEP', 'run'],
+          'column-0 lines inside a triple-quoted driver script name nothing')
+    check(build_lib._block_defined_names(DRIVER_STRING) == {'_SWEEP', 'run'},
+          'defined names skip string bodies too (docstrings, scripts)')
+    check(build_lib._block_shard_names('%%tab pytorch\n' + DRIVER_STRING)
+          == ['_SWEEP', 'run'], 'a cell magic does not shift the string lines')
+
+
+DRIVER_STRING = '''\
+_SWEEP = r"""
+import torch
+k = torch.cuda.device_count()
+def sync():
+    pass
+"""
+
+def run(script=_SWEEP):
+    """Run the sweep.
+g = 'not a name either'"""
+    return script
+'''
 
 
 TRAINER_SHARD = '''\

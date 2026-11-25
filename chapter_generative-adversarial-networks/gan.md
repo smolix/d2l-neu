@@ -1,7 +1,7 @@
 # Generative Adversarial Networks
 :label:`sec_basic_gan`
 
-:citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` introduced *generative adversarial networks* (GANs) by pairing a generator network with a binary classifier—called the *discriminator* or *critic*—that learns to distinguish real data from generated samples, much like the domain classifier used for covariate-shift correction in :numref:`subsec_covariate-shift-correction`.
+:citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` introduced *generative adversarial networks* (GANs) by pairing a generator network with a binary classifier, called the *discriminator* or *critic*, that learns to distinguish real data from generated samples, much like the domain classifier used for covariate-shift correction in :numref:`subsec_covariate-shift-correction`.
 
 Two fundamental questions arise immediately:
 
@@ -122,7 +122,7 @@ That is, $\mathrm{JS}(p, q)$ equals the mutual information $I(x; y)$ between a s
 ### Disjoint Supports and Vanishing Gradients
 :label:`subsec_gan_disjoint_supports`
 
-Because $\mathrm{JS}(p, q)$ saturates at $\log 2$, the minimax objective becomes constant whenever the supports of $p$ and $q$ do not overlap. For instance, if $p = \delta_0$ and $q_\theta = \delta_\theta$ are point masses on $\mathbb{R}$, then $\mathrm{JS}(p, q_\theta) = \log 2$ for every $\theta \neq 0$, yielding zero gradient with respect to $\theta$ no matter how close $\theta$ is to $0$. Even when supports overlap in their tails—such as $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$—$\mathrm{JS}(p, q)$ equals $0.11$, $0.34$, and $0.63$ nats at $\mu = 1, 2, 4$, and at $\mu = 8$ it lies within $10^{-4}$ of $\log 2 \approx 0.6931$. :numref:`fig_gan_js_saturation` shows the whole curve: it is flat long before the two Gaussians stop overlapping in any formal sense.
+Because $\mathrm{JS}(p, q)$ saturates at $\log 2$, the minimax objective becomes constant whenever the supports of $p$ and $q$ do not overlap. For instance, if $p = \delta_0$ and $q_\theta = \delta_\theta$ are point masses on $\mathbb{R}$, then $\mathrm{JS}(p, q_\theta) = \log 2$ for every $\theta \neq 0$, yielding zero gradient with respect to $\theta$ no matter how close $\theta$ is to $0$. Even when supports overlap in their tails, as for $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$, $\mathrm{JS}(p, q)$ equals $0.11$, $0.34$, and $0.63$ nats at $\mu = 1, 2, 4$, and at $\mu = 8$ it lies within $10^{-4}$ of $\log 2 \approx 0.6931$. :numref:`fig_gan_js_saturation` shows the whole curve: it is flat long before the two Gaussians stop overlapping in any formal sense.
 
 ![The Jensen–Shannon divergence between $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ as a function of the shift $\mu$. The divergence reaches its ceiling $\log 2$ within a few standard deviations. Beyond that the curve is flat, and a flat curve gives the generator no gradient.](../img/mdl-gan-js-saturation.svg)
 :label:`fig_gan_js_saturation`
@@ -204,7 +204,7 @@ Inspecting $2\,D_{\textrm{KL}}(m \,\|\, p)$ reveals an asymmetry in how errors a
 ### Mode Dropping
 :label:`subsec_gan_mode_dropping`
 
-When a generator covers only a subset of the modes of a multimodal distribution $p$, it exhibits *mode dropping* (or *mode collapse*). Suppose $p$ is an equal mixture of two disjoint modes and $q$ matches one mode perfectly while omitting the other. On the covered mode, $p = q/2$, so $D_{\textrm{KL}}(q \,\|\, p) = \log 2 \approx 0.69$ nats, $\mathrm{JS}(p, q) \approx 0.22$ nats, and $2\,D_{\textrm{KL}}(m \,\|\, p) \approx 0.26$ nats. Dropping half of the data distribution costs only a quarter of a nat! By contrast, maximum likelihood minimizes the forward KL divergence $D_{\textrm{KL}}(p \,\|\, q)$, which is infinite whenever any part of $p$ is assigned zero density.
+When a generator covers only a subset of the modes of a multimodal distribution $p$, it exhibits *mode dropping* (or *mode collapse*). Suppose $p$ is an equal mixture of two disjoint modes and $q$ matches one mode perfectly while omitting the other. On the covered mode, $p = q/2$, so $D_{\textrm{KL}}(q \,\|\, p) = \log 2 \approx 0.69$ nats, $\mathrm{JS}(p, q) \approx 0.22$ nats, and $2\,D_{\textrm{KL}}(m \,\|\, p) \approx 0.26$ nats. Dropping half of the data distribution costs only a quarter of a nat. By contrast, maximum likelihood minimizes the forward KL divergence $D_{\textrm{KL}}(p \,\|\, q)$, which is infinite whenever any part of $p$ is assigned zero density.
 
 Worse still, at the optimal discriminator response $D^\star(x) = \log(p(x)/q(x)) = -\log 2$ on the covered mode, $D^\star$ is constant across the support of $q$, so $\nabla_\theta D^\star(G(z)) = 0$: the local gradient on the covered mode vanishes and provides no signal pointing toward the missing mode. Even with an imperfect discriminator that assigns, say, $D = 3$ to generated samples on the covered mode and $D = 5$ to real samples on the uncovered mode, each generated sample is weighted only against the fixed zero threshold via $\sigma(-3) \approx 0.05$, and the higher scores on the uncovered real mode never enter the generator update. :numref:`sec_gan_relativistic` examines whether comparing generated scores directly against real scores helps address this.
 
@@ -256,7 +256,7 @@ def update_D(X, Z, net_D, net_G, optimizer_D):
     return loss_D
 ```
 
-Next, `update_G` performs one generator step minimizing the non-saturating loss $-\mathbb{E}[\log \sigma(D(G(z)))]$—implemented as binary cross-entropy on the recomputed discriminator scores `net_D(net_G(Z))` with target label $1$—which equals $\log 2 \approx 0.693$ per sample when $D = 0$:
+Next, `update_G` performs one generator step minimizing the non-saturating loss $-\mathbb{E}[\log \sigma(D(G(z)))]$, implemented as binary cross-entropy on the recomputed discriminator scores `net_D(net_G(Z))` with target label $1$, which equals $\log 2 \approx 0.693$ per sample when $D = 0$:
 
 ```{.python .input #gan-the-update-rules-2}
 %%tab pytorch
@@ -831,9 +831,7 @@ The generated images capture recognizable garment silhouettes (shirts, trousers,
 
 ## Summary
 
-- A GAN trains an implicit generator $x' = G(z)$ without an explicit likelihood by pairing it with a discriminator (or critic) $D$ trained to separate real data $x \sim p$ from generated samples $x' \sim q$.
-- Under the binary log loss, the optimal discriminator logit is the log density ratio $D^\star(x) = \lambda(x) = \log(p(x)/q(x))$, and the optimal value function is $\max_D V(D) = 2\,\mathrm{JS}(p, q) - 2\log 2$, where $\mathrm{JS}(p, q) = I(x; y) \in [0, \log 2]$ is the mutual information between a sample from the mixture $m = (p+q)/2$ and its source label.
-- When $D(x') \ll 0$, the literal minimax (saturating) generator gradient weight $w_{\textrm{sat}}(x') = \sigma(D(x'))$ vanishes exponentially. The non-saturating generator loss $-\mathbb{E}[\log \sigma(D(G(z)))]$ replaces this weight with $w_{\textrm{ns}}(x') = \sigma(-D(x')) \approx 1$; against an optimal discriminator, it descends $2\,D_{\textrm{KL}}(m \,\|\, p)$, which strongly penalizes out-of-support samples but assigns only a small finite penalty to dropped modes.
+A generative adversarial network trains an implicit generator $x' = G(z)$ without an explicit likelihood by pairing it with a discriminator (or critic) $D$ that separates real data $x \sim p$ from generated samples $x' \sim q$. Under binary log loss, the optimal discriminator logit recovers the log density ratio $D^\star(x) = \lambda(x) = \log(p(x)/q(x))$, and the optimal value function reduces to $\max_D V(D) = 2\,\mathrm{JS}(p, q) - 2\log 2$, where $\mathrm{JS}(p, q) = I(x; y) \in [0, \log 2]$ is the mutual information between a sample from $m = (p + q)/2$ and its source label. When generated samples are confidently rejected ($D(x') \ll 0$), the literal minimax generator weight $w_{\textrm{sat}}(x') = \sigma(D(x'))$ vanishes exponentially, whereas the non-saturating generator loss $-\mathbb{E}[\log \sigma(D(G(z)))]$ maintains near-unit weight $w_{\textrm{ns}}(x') = \sigma(-D(x')) \approx 1$. Against an optimal discriminator, the non-saturating loss descends $2\,D_{\textrm{KL}}(m \,\|\, p)$, which heavily penalizes out-of-support samples while assigning only a bounded penalty to dropped modes.
 
 ## Exercises
 
@@ -1004,7 +1002,7 @@ $$\max_D V(D) = D_{\textrm{KL}}(p \,\|\, m) + D_{\textrm{KL}}(q \,\|\, m) - 2\lo
 $$\mathrm{JS}(p, q) = H(m) - \frac{H(p) + H(q)}{2} = I(x; y) \in [0, \log 2]$$
 
 - **Mutual information identity:** $\mathrm{JS}(p, q)$ equals the mutual information $I(x; y)$ between a draw $x \sim m$ and its binary source label $y \in \{0, 1\}$.
-- **Why $\mathrm{JS}$ saturates in high dimensions:** When $p$ and $q$ lie on disjoint low-dimensional manifolds, every sample reveals its label $y$ with certainty, freezing $\mathrm{JS}(p, q) = \log 2 \approx 0.6931$ nats with zero slope!
+- **Why $\mathrm{JS}$ saturates in high dimensions:** When $p$ and $q$ lie on disjoint low-dimensional manifolds, every sample reveals its label $y$ with certainty, freezing $\mathrm{JS}(p, q) = \log 2 \approx 0.6931$ nats with zero slope.
 :::
 
 ::: {.col .fig}
@@ -1058,7 +1056,7 @@ $$D_{\textrm{KL}}(q \,\|\, p) - 2\,\mathrm{JS}(p, q) = 2\,D_{\textrm{KL}}(m \,\|
 ::: {.col}
 - **Dropping 1 of 2 equal modes ($q = 2p$ on mode 1, $q = 0$ on mode 2):**
   - Maximum likelihood $D_{\textrm{KL}}(p \,\|\, q) = \infty$ strictly forbids dropping a mode.
-  - Non-saturating GAN charges only $2\,D_{\textrm{KL}}(m \,\|\, p) \approx 0.262$ nats (and $\mathrm{JS} \approx 0.216$ nats) to drop half the dataset!
+  - Non-saturating GAN charges only $2\,D_{\textrm{KL}}(m \,\|\, p) \approx 0.262$ nats (and $\mathrm{JS} \approx 0.216$ nats) to drop half the dataset.
 - **Zero local restoring gradient:** On the covered mode, $D^\star(x) = \log(p/2p) = -\log 2$ is constant across $\operatorname{supp}(q)$, so $\nabla_x D^\star(G(z)) = \mathbf{0}$ provides no pull toward the missing mode.
 :::
 
@@ -1116,14 +1114,14 @@ Each minibatch draws fresh latents, takes one critic step and one generator step
 @gan-training-1[15-]
 :::
 
-::: {.slide title="Testbed 1: Linear Generator on a 2D Tilted Gaussian"}
+::: {.slide title="Benchmark 1: Linear Generator on a 2D Tilted Gaussian"}
 [Closed-Form Verification]{.kicker}
 
 To test our theoretical predictions quantitatively, we generate $1{,}000$ points from $x = zA + b$ ($z \sim \mathcal{N}(0, I_2)$) so $p = \mathcal{N}(b, A^\top A)$ and train a single linear layer $G(z) = zA_q + \mu_q$:
 
 ::: {.cols .vc}
 ::: {.col}
-- **Exact closed-form Gaussian $q$:** Because $G$ is linear, $q = \mathcal{N}(\mu_q, A_q^\top A_q)$ has an exact mean and covariance at every training step—even though training never evaluates $q(x)$!
+- **Exact closed-form Gaussian $q$:** Because $G$ is linear, $q = \mathcal{N}(\mu_q, A_q^\top A_q)$ has an exact mean and covariance at every training step—even though training never evaluates $q(x)$.
 - **Nonlinear critic requirement:** Because $\Sigma_p \neq \Sigma_q$, the true log density ratio $\lambda(x) = \log(p(x)/q(x))$ is quadratic in $x$, requiring a 3-layer leaky-ReLU MLP critic ($2 \to 16 \to 16 \to 1$, slope $0.2$).
 :::
 
@@ -1141,7 +1139,7 @@ Training for $20$ epochs with batch size $8$ (`lr_D = 0.05`, `lr_G = 0.005` so t
 ::: {.cols .vc}
 ::: {.col}
 - **Equilibrium loss levels:** Critic loss $-V(D)$ rises to $2\log 2 \approx 1.386$ (random guessing), and generator loss settles to $\log 2 \approx 0.693$.
-- **Exact fit in nats:** Evaluating the closed-form multivariate Gaussian KL divergence confirms that $D_{\textrm{KL}}(q \,\|\, p)$ drops from $\sim 8.3$ nats at initialization to $\sim 0.02$ nats:
+- **Exact fit in nats:** Evaluating the closed-form multivariate Gaussian KL divergence confirms that $D_{\textrm{KL}}(q \,\|\, p)$ drops from $7.5\text{--}7.9$ nats at initialization to $0.02\text{--}0.06$ nats:
 
 @!gan-quantifying-the-fit
 :::

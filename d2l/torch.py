@@ -11337,6 +11337,520 @@ def fwedu_shards(which='100m', fetch=True, max_tokens=None):
     return d2l.TokenShards(root, 'val' if which == 'val' else 'train',
                            fetch=fetch, max_tokens=max_tokens)
 
+def doc_ids_from_eos(tokens, eos_id=0):
+    """Document index and position within the document of every token of a
+    packed window (last axis); an EOS belongs to the document it ends.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    is_eos = (tokens == eos_id).int()
+    doc_ids = torch.cumsum(is_eos, -1) - is_eos   # EOS strictly before t
+    t = torch.arange(tokens.shape[-1], device=tokens.device).expand_as(tokens)
+    starts = torch.where(doc_ids != F.pad(doc_ids, (1, 0))[..., :-1], t, 0)
+    first = torch.cummax(starts, -1).values       # where t's document starts
+    return doc_ids.to(tokens.dtype), (t - first).to(tokens.dtype)
+
+PackCtx = collections.namedtuple('PackCtx', ['doc_ids', 'pos_ids'])
+
+def doc_mask_mod(doc_ids):
+    """FlexAttention's mask predicate for packed windows.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    return lambda b, h, q, k: (doc_ids[b, q] == doc_ids[b, k]) & (k <= q)
+
+class PackedAttention(d2l.Qwen3Attention):
+    """Qwen3Attention for packed windows: given ctx (a PackCtx), a query sees
+    the earlier keys of its own document only. Backends: 'sdpa' (boolean
+    mask), 'flex' (FlexAttention block mask, CUDA), 'math' (explicit scores,
+    needed for an attention-logit softcap); 'auto' picks flex on CUDA.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    def __init__(self, num_hiddens, num_heads, num_kv_heads, *, head_dim=None,
+                 qk_norm=False, rope_theta=10000.0, norm_eps=1e-6, bias=False,
+                 rope=True, rope_inv_freq=None, rope_mscale=1.0, softcap=None,
+                 backend='auto'):
+        super().__init__(num_hiddens, num_heads, num_kv_heads,
+                         head_dim=head_dim, qk_norm=qk_norm,
+                         rope_theta=rope_theta, norm_eps=norm_eps, bias=bias,
+                         rope=rope)
+        assert backend in ('auto', 'sdpa', 'flex', 'math'), backend
+        self.softcap, self.backend = softcap, backend
+        self.set_rope(rope_inv_freq, rope_mscale)
+
+    def set_rope(self, inv_freq=None, mscale=1.0):
+        """RoPE frequencies (None: base rope_theta) and YaRN's scale m."""
+        self.rope_inv_freq = (None if inv_freq is None else
+                              torch.as_tensor(inv_freq, dtype=torch.float32))
+        self.rope_mscale = mscale
+
+    def qkv(self, X, offset=0, tables=None):
+        if self.rope and tables is None:  # positions offset, offset + 1, ...
+            tables = d2l._rope_tables(
+                torch.arange(X.shape[1], device=X.device) + offset,
+                self.head_dim, self.rope_theta, self.rope_inv_freq,
+                self.rope_mscale)
+        return super().qkv(X, offset, tables)
+
+    def forward(self, X, keys=None, values=None, mask=None, tables=None,
+                ctx=None):
+        backend = d2l._attn_backend(self, X, ctx)
+        if backend == 'causal':  # one document per row: Qwen3Attention
+            return super().forward(X, keys, values, mask, tables)
+        if mask is None:  # PackedGPT builds the mask once for all blocks
+            mask = d2l._doc_mask(ctx, backend, X.shape[1], X.device)
+        q, k, v = self.qkv(X, tables=tables)
+        gqa = self.num_kv_heads < self.num_heads
+        if backend == 'flex':
+            Y = d2l._flex_attention()(q, k, v, block_mask=mask,
+                                      enable_gqa=gqa)
+        elif backend == 'sdpa':
+            Y = F.scaled_dot_product_attention(q, k, v, attn_mask=mask,
+                                               enable_gqa=gqa)
+        else:
+            Y = d2l._math_attention(q, k, v, mask, self.softcap)
+        return self.W_o(Y.transpose(1, 2).flatten(2))
+
+class PackedGPT(d2l.Qwen3GPT):
+    """Qwen3GPT for pretraining on packed windows: forward(X, ctx) with
+    per-document positions and masks, the final hidden states for a chunked
+    loss, scaled RoPE (set_rope) and a cached step that uses it.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    def __init__(self, vocab_size, num_hiddens, num_heads, num_kv_heads,
+                 num_blks, *, head_dim=None, qk_norm=False, rope_theta=1e4,
+                 ffn_hidden=None, norm_eps=1e-6, tie_embeddings=True,
+                 max_len=4096, bias=False, pos='rope', rope_inv_freq=None,
+                 rope_mscale=1.0, softcap=None, backend='auto'):
+        assert pos in ('rope', 'learned'), pos
+        self.packed_options = dict(rope=pos == 'rope', softcap=softcap,
+                                   backend=backend)
+        super().__init__(vocab_size, num_hiddens, num_heads, num_kv_heads,
+                         num_blks, head_dim=head_dim, qk_norm=qk_norm,
+                         rope_theta=rope_theta, ffn_hidden=ffn_hidden,
+                         norm_eps=norm_eps, tie_embeddings=tie_embeddings,
+                         max_len=max_len, bias=bias)
+        self.pos, self.trained_len = pos, max_len
+        if pos == 'learned':  # an absolute table, indexed by pos_ids
+            self.pos_emb = nn.Embedding(max_len, num_hiddens)
+            nn.init.normal_(self.pos_emb.weight, std=0.02)
+        self.set_rope(rope_inv_freq, rope_mscale)
+
+    def CausalAttention(self, d, H, *, bias, rope, num_kv_heads):
+        return PackedAttention(d, H, num_kv_heads, bias=bias,
+                               **self.attn_options, **self.packed_options)
+
+    def forward(self, X, ctx=None, return_hidden=False, logits_to_keep=None):
+        pos = (ctx.pos_ids if ctx is not None
+               else torch.arange(X.shape[1], device=X.device))
+        H, tables = self.token_emb(X), None
+        if self.pos == 'learned':
+            H = H + self.pos_emb(pos.long())
+        else:  # angles of each token's position within its document
+            tables = d2l._rope_tables(pos, self.head_width, self.rope_theta,
+                                      self.rope_inv_freq, self.rope_mscale)
+        mask = d2l._packed_mask(self, ctx, X)  # once for every block
+        for blk in self.blks:
+            H = blk(H, mask, tables=tables, ctx=ctx)
+        if logits_to_keep is not None:
+            H = H[:, -logits_to_keep:]
+        H = self.norm(H)
+        W = self.lm_head.weight if hasattr(self, 'lm_head') else \
+            self.token_emb.weight
+        return (H, W) if return_hidden else F.linear(H, W)
+
+    def set_rope(self, inv_freq=None, mscale=1.0, scheme='none', scale=1.0):
+        """Use RoPE frequencies inv_freq (None: base) and YaRN's scale m in
+        every block; the model then accepts scale times its trained length."""
+        self.rope_inv_freq = (None if inv_freq is None else
+                              torch.as_tensor(inv_freq, dtype=torch.float32))
+        self.rope_mscale, self.rope_scheme, self.rope_scale = (mscale, scheme,
+                                                               scale)
+        self.max_len = round(scale * self.trained_len)
+        for blk in self.blks:
+            blk.attention.set_rope(inv_freq, mscale)
+
+    @torch.inference_mode()
+    def forward_cached(self, X, ks, vs, t, all_logits=False):
+        """Qwen3GPT.forward_cached with this model's (possibly scaled) RoPE;
+        all_logits=True returns the logits of every new position."""
+        tables = d2l._rope_tables(
+            torch.arange(t, t + X.shape[1], device=X.device), self.head_width,
+            self.rope_theta, self.rope_inv_freq, self.rope_mscale)
+        H = self.token_emb(X)
+        for i, blk in enumerate(self.blks):
+            H = H + blk.attention.forward_step(blk.norm1(H),
+                                               (ks[i], vs[i], t), tables)
+            H = H + blk.ffn(blk.norm2(H))
+        H = self.norm(H if all_logits else H[:, -1])
+        W = self.lm_head.weight if hasattr(self, 'lm_head') else \
+            self.token_emb.weight
+        return F.linear(H, W), ks, vs
+
+    def config(self):
+        """Every constructor argument and the RoPE scaling, as JSON values."""
+        return d2l._packed_config(self)
+
+    @classmethod
+    def from_arch(cls, arch, **kw):
+        """A model of the shape d2l.r2_config(...).arch gives."""
+        kw = dict(dict(head_dim=arch.d_h, ffn_hidden=arch.f,
+                       qk_norm=arch.qk_norm, rope_theta=arch.rope_base,
+                       tie_embeddings=arch.tie, max_len=arch.T), **kw)
+        return cls(arch.vocab, arch.d, arch.H, arch.H_kv, arch.L, **kw)
+
+    @classmethod
+    def adopt(cls, model, backend='auto'):
+        """A PackedGPT holding the weights of a d2l.Qwen3GPT (no copy)."""
+        with torch.device('meta'):
+            new = cls(**d2l._qwen3_shape(model), backend=backend)
+        d2l._check_same_tensors(new.state_dict(), model.state_dict())
+        new.load_state_dict(model.state_dict(), assign=True)
+        return new
+
+def token_weighted_loss(logits, labels, ignore_index=-100):
+    """Summed next-token NLL over the valid targets (fp32) and their count.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    logits = logits.flatten(0, -2)
+    sum_nll = F.cross_entropy(logits.to(torch.promote_types(
+        logits.dtype, torch.float32)), labels.flatten(),
+        ignore_index=ignore_index, reduction='sum')
+    return sum_nll, (labels != ignore_index).sum()
+
+def chunked_lm_loss(hidden, weight, labels, chunk=8192, z_loss=0.0,
+                    ignore_index=-100, *, return_nll=False):
+    """token_weighted_loss(F.linear(hidden, weight), labels), plus z_loss *
+    logsumexp^2 per valid target, computed chunk positions at a time; each
+    chunk's logits are recomputed in the backward pass instead of stored.
+    return_nll=True also returns the summed NLL without the z-loss term.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    H, y = hidden.flatten(0, -2), labels.flatten()
+
+    def piece(h, W, y):  # (loss, nll) of one chunk, from fp32 logits
+        logits = F.linear(h, W)
+        logits = logits.to(torch.promote_types(logits.dtype, torch.float32))
+        lse, valid = torch.logsumexp(logits, -1), y != ignore_index
+        nll = lse - logits.gather(-1, y.clamp(min=0)[:, None])[:, 0]
+        nll = torch.where(valid, nll, 0.0).sum()
+        z = torch.where(valid, lse ** 2, 0.0).sum()
+        return torch.stack([nll + z_loss * z, nll])
+
+    total = sum(torch.utils.checkpoint.checkpoint(
+        piece, H[i:i + chunk], weight, y[i:i + chunk], use_reentrant=False)
+        for i in range(0, len(y), chunk))
+    n_valid = (y != ignore_index).sum()
+    return (total[0], n_valid, total[1]) if return_nll else (total[0],
+                                                             n_valid)
+
+class PackedStream:
+    """Windows of seq_len + 1 tokens at offsets i * seq_len of a shard set.
+    Step s takes slice s of a permutation seeded by (seed, epoch); rank r
+    takes every world-th window of it. Targets after an EOS are -100.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    def __init__(self, shards, seq_len, global_batch, seed=0, rank=0, world=1,
+                 epoch=0, skip=()):
+        if global_batch % world:
+            raise ValueError(f'global_batch {global_batch} is not a multiple'
+                             f' of world {world}')
+        self.shards, self.seq_len, self.global_batch = (shards, seq_len,
+                                                        global_batch)
+        self.seed, self.rank, self.world, self.epoch = seed, rank, world, epoch
+        self.skipped = tuple(sorted(set(skip)))
+        self.n_seq = (shards.n_tokens - 1) // seq_len
+        self.steps_per_epoch = self.n_seq // global_batch
+        self.layout_hash, self.step = d2l._layout_hash(shards), 0
+
+    def batch(self, step):
+        idx = d2l._window_indices(self, self.physical_index(step))
+        W = torch.from_numpy(d2l._windows(self, idx[self.rank::self.world]))
+        X, Y = W[:, :-1].contiguous(), W[:, 1:].clone()
+        Y[X == self.shards.eos_id] = -100  # the next token starts a document
+        doc_ids, pos_ids = doc_ids_from_eos(X.int(), self.shards.eos_id)
+        return dict(input_ids=X, labels=Y, doc_ids=doc_ids, pos_ids=pos_ids)
+
+    def __iter__(self):
+        while True:
+            self.step += 1
+            yield self.batch(self.step - 1)
+
+    def physical_index(self, step):
+        """The step of the unskipped schedule that logical step uses."""
+        for k in self.skipped:
+            step += k <= step
+        return step
+
+    def skip(self, step):
+        """Drop physical step `step` (a bad batch); later steps move up."""
+        self.skipped = tuple(sorted(set(self.skipped) | {step}))
+
+    def state_dict(self):
+        return dict(version=1, seed=self.seed, epoch=self.epoch,
+                    step=self.step, skip=list(self.skipped),
+                    layout_hash=self.layout_hash, seq_len=self.seq_len,
+                    global_batch=self.global_batch)
+
+    def load_state_dict(self, state):
+        for key in ('layout_hash', 'seq_len', 'global_batch'):
+            if state[key] != getattr(self, key):
+                raise ValueError(f'{key} {getattr(self, key)} != '
+                                 f'{state[key]}')
+        self.seed, self.epoch, self.step = (state['seed'], state['epoch'],
+                                            state['step'])
+        self.skipped = tuple(state['skip'])
+
+Arch = collections.namedtuple('Arch',
+                              'L d H H_kv d_h f vocab T rope_base qk_norm tie')
+
+import dataclasses
+
+@dataclasses.dataclass
+class PretrainConfig:
+    """One pretraining run: the architecture, the batch (in sequences of
+    arch.T tokens), the WSD schedule, AdamW, and what the run saves.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    preset: str
+    arch: Arch
+    steps: int
+    global_batch: int
+    micro_batch: int
+    peak_lr: float
+    warmup: int
+    decay: int
+    final_lr: float = 0.0
+    betas: tuple = (0.9, 0.95)
+    eps: float = 1e-8
+    wd: float = 0.1
+    clip: float = 1.0           # None: log the gradient norm, never clip
+    z_loss: float = 1e-4
+    dtype: str = 'bf16'
+    compile: bool = True
+    ddp: bool = False
+    log_every: int = 1
+    probe_every: int = 50       # update RMS per module
+    stats_every: int = 50       # largest attention logit per layer
+    val_every: int = 250
+    val_tokens: int = 2 ** 21
+    ckpt_steps: tuple = ()      # bf16 weights after these steps
+    state_steps: tuple = ()     # full training state after these steps
+    state_every: int = 0        # and every state_every steps (last two kept)
+    branches: tuple = ()        # (from_step, decay_steps) after the main run
+    data: str = '100m'
+    data_seed: int = 0
+    seed: int = 0
+    out_dir: str = None
+
+    def accum(self, world):
+        """Micro-batches per step on each of world GPUs."""
+        if self.global_batch % (self.micro_batch * world):
+            raise ValueError(f'{self.global_batch} sequences do not split '
+                             f'into {world} x {self.micro_batch}')
+        return self.global_batch // (self.micro_batch * world)
+
+R2_ARCHS = {  # L, d, H, H_kv, f, qk_norm, T (head width 64, V = 32,768)
+    'r2': (18, 768, 12, 4, 2048, False, 4096),
+    'r2_short': (18, 768, 12, 4, 2048, False, 4096),
+    't1': (8, 384, 6, 2, 1024, False, 1024),
+    'fp8': (8, 768, 12, 4, 2048, True, 1024),
+    'ladder-25m': (8, 384, 6, 2, 1024, False, 4096),
+    'ladder-54m': (10, 576, 9, 3, 1536, False, 4096),
+    'ladder-88m': (10, 768, 12, 4, 2048, False, 4096)}
+
+R2_SCHEDULES = {  # sequences per step, steps, warmup, decay, peak LR, data
+    'r2': (128, 6000, 300, 900, 6e-4, '4b'),
+    'r2_short': (128, 2000, 100, 300, 6e-4, '4b'),
+    't1': (64, 1526, 76, 229, 1e-3, '100m'),
+    'fp8': (16, 1221, 60, 183, 1e-3, '100m'),
+    'ladder-25m': (64, 1920, 48, 288, 1e-3, '4b'),
+    'ladder-54m': (64, 4141, 104, 621, 8e-4, '4b'),
+    'ladder-88m': (64, 6721, 168, 1008, 7e-4, '4b')}
+
+def r2_config(preset='r2', **overrides):
+    """The PretrainConfig of a preset; keyword arguments replace fields.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    L, d, H, H_kv, f, qk_norm, T = R2_ARCHS[preset]
+    arch = Arch(L, d, H, H_kv, d // H, f, 32768, T, 1e4, qk_norm, True)
+    B, steps, warmup, decay, lr, data = R2_SCHEDULES[preset]
+    cfg = PretrainConfig(preset, arch, steps, B, micro_batch=16 if T < 4096
+                         else 8, peak_lr=lr, warmup=warmup, decay=decay,
+                         data=data, **d2l._preset_saves(preset))
+    return dataclasses.replace(cfg, **overrides)
+
+def flops_per_token(arch, T=None, causal_half=False):
+    """Training FLOPs per token, 6 N_mm + 12 L H d_h T, of an Arch or a
+    Transformers config (divide by 3 for a forward pass). N_mm counts the
+    matrix parameters (the head once more when untied); T=None leaves out
+    the attention scores; causal_half halves them.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    L, d, H, H_kv, d_h, f, V, tie = d2l._arch_fields(arch)
+    N_mm = L * (2 * d * H * d_h + 2 * d * H_kv * d_h + 3 * d * f) + V * d
+    N_mm += 0 if tie else V * d
+    attn = 0 if T is None else 12 * L * H * d_h * T // (2 if causal_half
+                                                        else 1)
+    return 6 * N_mm + attn
+
+def mfu(tokens_per_s, arch, peak_flops, n_gpus=1, *, T=None,
+        causal_half=False):
+    """Model FLOPs utilization: achieved training FLOP/s over the peak of
+    n_gpus; T defaults to the arch's sequence length, if it has one.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    T = T if T is not None else getattr(arch, 'T', getattr(arch, 'seq_len',
+                                                           None))
+    F_tok = flops_per_token(arch, T=T, causal_half=causal_half)
+    return tokens_per_s * F_tok / (peak_flops * n_gpus)
+
+def wsd_lr(step, total, warmup, decay, peak, final=0.0):
+    """Warmup-stable-decay: linear warmup, constant peak, linear decay to
+    final over the last decay steps.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if step < warmup:
+        return peak * (step + 1) / warmup
+    if step < total - decay:
+        return peak
+    return final + (peak - final) * (total - step) / decay
+
+def param_groups(model, wd):
+    """AdamW groups: weight decay on the matrices, none on embeddings,
+    position tables and gains.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    decay, rest = [], []
+    for name, p in model.named_parameters():
+        no_decay = p.ndim < 2 or name.split('.')[0] in ('token_emb', 'pos_emb')
+        (rest if no_decay else decay).append((name, p))
+    return [dict(params=[p for _, p in g], names=[n for n, _ in g],
+                 weight_decay=w) for g, w in ((decay, wd), (rest, 0.0))]
+
+def pretrain_step(model, optimizer, micro_batches, cfg, n_valid):
+    """One step on this rank's micro-batches; n_valid is the step's global
+    count of valid targets, so the gradient is the token-weighted mean over
+    every rank and micro-batch. Returns loss, pre-clip norm and clipped.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    world, nll = d2l._rank_world()[1], 0.0
+    for k, mb in enumerate(micro_batches):
+        ctx = d2l.PackCtx(mb['doc_ids'], mb['pos_ids'])
+        with d2l._no_sync(model, k < len(micro_batches) - 1):  # sync last
+            with torch.autocast(mb['input_ids'].device.type, torch.bfloat16,
+                                enabled=cfg.dtype == 'bf16'):
+                H, W = model(mb['input_ids'], ctx, return_hidden=True)
+                loss, _, part = d2l.chunked_lm_loss(
+                    H, W, mb['labels'], z_loss=cfg.z_loss, return_nll=True)
+            (loss * world / n_valid).backward()  # DDP averages the ranks
+        nll = nll + part.detach()
+    params = [p for g in optimizer.param_groups for p in g['params']]
+    norm = torch.nn.utils.clip_grad_norm_(params, cfg.clip or math.inf)
+    optimizer.step()
+    optimizer.zero_grad(set_to_none=True)
+    return dict(loss=d2l._all_reduce_sum(nll) / n_valid, grad_norm=norm,
+                clipped=norm > (cfg.clip or math.inf))
+
+def pretrain(model, stream, cfg, val_fn=None, hooks=(), resume=None):
+    """Train model on stream under cfg, then each of cfg.branches from its
+    saved state; one row per step (a DataFrame). resume: a state file, or
+    'auto' for the latest one in cfg.out_dir.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    run = d2l._PretrainRun(model, stream, cfg, val_fn, resume)
+    for seg in run.segments():  # the main run, then each branch
+        for step in range(seg.start, seg.total):
+            lr = wsd_lr(step, seg.total, cfg.warmup, seg.decay, cfg.peak_lr,
+                        cfg.final_lr)
+            for group in run.optimizer.param_groups:
+                group['lr'] = lr
+            t0 = time.perf_counter()
+            batch, micro, n_valid = run.batch(step)  # this rank's part
+            t1 = time.perf_counter()
+            before = run.snapshot(step)  # weights before, at probe steps
+            out = pretrain_step(run.model, run.optimizer, micro, cfg, n_valid)
+            row = dict(step=step + 1, tokens=(step + 1) * run.step_tokens,
+                       lr=lr, **out)
+            run.record(seg, row, batch, before, t1 - t0, t0)
+            for hook in hooks:
+                hook(step, run.raw, run.optimizer, batch, row)
+            if run.stopped(row):  # a non-finite loss ends the segment
+                break
+    return run.finish()
+
+LogitStats = collections.namedtuple('LogitStats', ['max_logit', 'entropy'])
+
+@torch.no_grad()
+def attn_logit_stats(model, batch, max_seqs=1, chunk=512):
+    """Largest attention logit and mean attention entropy of every head, per
+    block, on the first max_seqs sequences of batch, from explicit scores
+    (fused kernels return none); under DDP the maximum is over all ranks.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    X, ctx = d2l._probe_inputs(batch, max_seqs, model)
+    stats = {}
+    for l, (attn, Y, tables) in enumerate(d2l._attention_inputs(model, X,
+                                                                ctx)):
+        q, k, _ = attn.qkv(Y, tables=tables)
+        k = k.repeat_interleave(attn.num_heads // attn.num_kv_heads, 1)
+        m, ent = d2l._chunked_logit_stats(q, k, ctx, chunk)
+        stats[l] = LogitStats(d2l._all_reduce_max(m), ent)
+    return stats
+
+def softcap(x, c):
+    """Smoothly cap x to (-c, c).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return c * torch.tanh(x / c)
+
+def make_bad_batch(batch, kind='random', vocab=32768, seed=0):
+    """A batch shaped like batch of one-document windows: uniform random ids
+    >= 32 ('random') or one repeated id ('repeat'), targets shifted ids.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    B, T = batch['input_ids'].shape
+    g = torch.Generator().manual_seed(seed)
+    ids = (torch.randint(32, vocab, (B, T + 1), generator=g) if kind ==
+           'random' else torch.full((B, T + 1), 32 + seed % (vocab - 32)))
+    pos = torch.arange(T, dtype=torch.int32).expand(B, T).contiguous()
+    return dict(input_ids=ids[:, :-1].contiguous(), labels=ids[:, 1:].clone(),
+                doc_ids=torch.zeros_like(pos), pos_ids=pos)
+
+def lr_sensitivity(final_losses, l0):
+    """Wortsman et al.'s sensitivity: the mean over learning rates of
+    min(loss, l0) - min(losses); a non-finite loss counts as l0.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    x = torch.as_tensor(final_losses, dtype=torch.float64)
+    x = torch.where(torch.isfinite(x), x, l0).clamp(max=l0)
+    return float((x - x.min()).mean())
+
+def qk_clip_(model, stats, tau, alpha=0.5):
+    """Rescale in place the query and key rows of every head whose largest
+    logit S exceeds tau: W_q by (tau/S)^alpha, W_k by (tau/S)^(1-alpha); a
+    key head shared by a group of query heads uses the group's maximum.
+    Returns each block's per-head logit factors; {} under QK-norm.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    import warnings
+    raw = d2l._unwrap(model)
+    if raw.blks[0].attention.qk_norm:
+        warnings.warn('qk_clip_ does nothing under QK-norm')
+        return {}
+    factors = {}
+    with torch.no_grad():
+        for l, s in stats.items():
+            attn = raw.blks[l].attention
+            S = s.max_logit.to(attn.W_q.weight.device).float()
+            S_kv = S.view(attn.num_kv_heads, -1).amax(1)  # per key head
+            f_q = (tau / S).clamp(max=1) ** alpha
+            f_k = (tau / S_kv).clamp(max=1) ** (1 - alpha)
+            d_h = attn.head_dim
+            attn.W_q.weight.mul_(f_q.repeat_interleave(d_h)[:, None])
+            attn.W_k.weight.mul_(f_k.repeat_interleave(d_h)[:, None])
+            factors[l] = f_q * f_k.repeat_interleave(S.numel() //
+                                                     S_kv.numel())
+    return factors
+
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
 
@@ -20358,6 +20872,1494 @@ def _rolling_ngram_hashes(ids, n, eos=None):
         c = np.concatenate([[0], np.cumsum(np.asarray(ids) == eos)])
         valid = c[n:n + m] == c[:m]
     return h, valid
+
+PRETRAIN_SOURCES = {}  # name: (kind, Hub repository, revision, licence)
+
+d2l.PRETRAIN_SOURCES['smollm3-stage1'] = (
+    'model', 'HuggingFaceTB/SmolLM3-3B-checkpoints',
+    'd07a5a83dd011f3f084e9d2f1b47f51e524ca8d4', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['smollm3-stage2'] = (
+    'model', 'HuggingFaceTB/SmolLM3-3B-checkpoints',
+    'eebe6fccea5aa05cf48b0e630d10eeee97f92fc5', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['smollm3-stage3'] = (
+    'model', 'HuggingFaceTB/SmolLM3-3B-checkpoints',
+    '20e7817e636d6b1f63cffbee0f384721b1f4bb67', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['smollm3-lc32k'] = (
+    'model', 'HuggingFaceTB/SmolLM3-3B-checkpoints',
+    '24cc7e71eb21218315ef02c257b192cdd263b302', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['smollm3-lc64k'] = (
+    'model', 'HuggingFaceTB/SmolLM3-3B-checkpoints',
+    'd4d10f417b85b7e385c163118183748bd67a34f6', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['smollm3-mid'] = (
+    'model', 'HuggingFaceTB/SmolLM3-3B-checkpoints',
+    '0485ec16b618f88f6dbb27b23dbdecca1d6a1cdd', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['smollm3-configs'] = (
+    'dataset', 'HuggingFaceTB/smollm3-configs',
+    '8d27ec7c533ebf42931a8bf156e3a534b1ffac48', 'none stated (cited only)')
+d2l.PRETRAIN_SOURCES['pes2o'] = (
+    'dataset', 'allenai/peS2o',
+    '636a503e44a3ca1b58e01fb61eab0825cd574de0', 'odc-by')
+d2l.PRETRAIN_SOURCES['pg19'] = (
+    'dataset', 'emozilla/pg19',
+    'd2f3c93e25bc848bd62bec2aa27a6bec14f4faf4', 'apache-2.0')
+
+PRETRAIN_ARTIFACTS = {}  # load name: (DATA_HUB key, kind)
+
+PRETRAIN_JOBS = {}  # regeneration name: (driver, zero-argument kwargs)
+
+PRETRAIN_PENDING = frozenset()  # campaigns an author step declared pending
+
+PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
+    'pdp-throughput', 'pdp-mask-runs',
+    't1-runs', 'inst-t1-none', 'inst-t1-qkclip', 'inst-t1-qknorm',
+    'inst-t1-softcap', 'spike-replay', 'reference-run', 'ladder', 'inst-t2',
+    'reference-evals', 'ladder-evals',
+    'gemm-sweep', 'lowp-runs',
+    'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
+    'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2', 'smollm3-3',
+    'smollm3-4', 'smollm3-5',
+    'lc-t1', 'lc-zeroshot', 'lc-t2-pi', 'lc-t2-yarn', 'lc-t2-prog',
+    'lc-t2-evals',
+    'decode-rates')
+
+_RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
+    'pdp-throughput': 'packing-throughput',
+    'pdp-mask-runs': 'packing-mask-runs',
+    't1-runs': 't1-runs', 'inst-t1-none': 'instability-t1',
+    'inst-t1-qkclip': 'instability-t1', 'inst-t1-qknorm': 'instability-t1',
+    'inst-t1-softcap': 'instability-t1', 'spike-replay': 'spike-replay',
+    'reference-run': 'reference-run-log', 'ladder': 'ladder-logs',
+    'inst-t2': 'instability-t2', 'reference-evals': 'reference-evals',
+    'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
+    'lowp-runs': 'lowp-runs', 'cpt-t1': 'cpt-t1', 'cpt-qwen-A': 'cpt-runs',
+    'cpt-qwen-B': 'cpt-runs', 'cpt-qwen-C': 'cpt-runs',
+    'cpt-qwen-A2': 'cpt-runs', 'cpt-qwen-evals': 'cpt-runs',
+    **{f'smollm3-{i}': 'smollm3-trajectory' for i in range(6)},
+    'lc-t1': 'lc-t1', 'lc-zeroshot': 'lc-zeroshot', 'lc-t2-pi': 'lc-evals',
+    'lc-t2-yarn': 'lc-evals', 'lc-t2-prog': 'lc-evals',
+    'lc-t2-evals': 'lc-evals', 'decode-rates': 'decode-rates'}
+
+d2l.PRETRAIN_ARTIFACTS['packing-throughput'] = (
+    'lm-pdp-throughput-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['packing-mask-runs'] = (
+    'lm-pdp-mask-runs-v1', 'parquet')
+
+_ARTIFACT_EXT = {'jsonl': '.jsonl.gz', 'parquet': '.parquet',
+                 'json-table': '.json.gz', 'safetensors': '.safetensors',
+                 'tar': '.tar', 'shards': '.tar'}
+
+def _rerun_dir():
+    """Where regeneration runs write (relative to a chapter folder).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    return os.path.join('..', 'data', 'lm', 'rerun')
+
+def _next_key(key):
+    """The key a regeneration of key writes: key itself while it is not
+    registered, else the next free -vN.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if key not in d2l.DATA_HUB:
+        return key
+    stem, v = key.rsplit('-v', 1)
+    n = int(v) + 1
+    while f'{stem}-v{n}' in d2l.DATA_HUB:
+        n += 1
+    return f'{stem}-v{n}'
+
+def _regenerating():
+    """The chapter's regeneration names in D2L_RERUN; D2L_RERUN=1 (every
+    campaign of the chapter) is refused.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if os.environ.get('D2L_RERUN', '').strip() == '1':
+        raise ValueError('D2L_RERUN=1 would launch every campaign of this '
+                         'chapter; name one or more of: '
+                         + ', '.join(d2l.PRETRAIN_RERUN_NAMES))
+    return d2l.lm_rerun(d2l.PRETRAIN_RERUN_NAMES)
+
+def _jsonable(x):
+    """x as plain JSON values (tuples become lists, namedtuples dicts).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if hasattr(x, '_asdict'):
+        x = x._asdict()
+    if dataclasses.is_dataclass(x) and not isinstance(x, type):
+        x = {f.name: getattr(x, f.name) for f in dataclasses.fields(x)}
+    if isinstance(x, dict):
+        return {str(k): _jsonable(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_jsonable(v) for v in x]
+    if isinstance(x, (np.integer, np.floating, np.bool_)):
+        return x.item()
+    return x
+
+def _label_of(result):
+    if hasattr(result, 'attrs'):
+        return result.attrs.get('label', '')
+    return getattr(result, 'label', '') or ''
+
+def _with_label(result, label, meta=None):
+    """result with its label (and stored meta) set.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if hasattr(result, 'attrs'):
+        result.attrs['label'] = label
+        if meta is not None:
+            result.attrs['config'] = meta.get('config')
+        return result
+    if hasattr(result, '_replace') and 'label' in result._fields:
+        return result._replace(label=label)
+    return result
+
+def _write_result(path, kind, result, meta):
+    """Write result (a DataFrame; for json-table also a mapping or
+    namedtuple of DataFrames and plain values) with meta = {config, label},
+    through a temporary file.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    import gzip
+    tmp = f'{path}.{os.getpid()}.tmp'
+    if kind == 'parquet':
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+        table = pa.Table.from_pandas(result, preserve_index=False)
+        table = table.replace_schema_metadata(dict(
+            table.schema.metadata or {}, d2l=json.dumps(meta)))
+        pq.write_table(table, tmp)
+    elif kind == 'jsonl':
+        with gzip.open(tmp, 'wt', encoding='utf-8') as f:
+            f.write(json.dumps({'_meta': meta}) + '\n')
+            for rec in result.to_dict('records'):
+                f.write(json.dumps(_jsonable(rec)) + '\n')
+    elif kind == 'json-table':
+        parts = (result._asdict() if hasattr(result, '_asdict') else
+                 dict(result) if isinstance(result, dict) else
+                 {'table': result})
+        doc = dict(meta=meta, tables={}, values={})
+        for k, v in parts.items():
+            if isinstance(v, pd.DataFrame):
+                doc['tables'][k] = json.loads(v.to_json(orient='split',
+                                                        index=False))
+            else:
+                doc['values'][k] = _jsonable(v)
+        with gzip.open(tmp, 'wt', encoding='utf-8') as f:
+            json.dump(doc, f)
+    else:
+        raise ValueError(f'cannot write kind {kind!r}')
+    os.replace(tmp, path)
+
+def _read_result(path, kind, key=None):
+    """A stored result: a DataFrame (with attrs label and config), a
+    namedtuple of tables and values, a state dict, a folder, or shards.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    import gzip
+    if kind == 'parquet':
+        import pyarrow.parquet as pq
+        table = pq.read_table(path)
+        meta = json.loads((table.schema.metadata or {}).get(b'd2l', b'{}'))
+        return _with_label(table.to_pandas(), meta.get('label', ''), meta)
+    if kind == 'jsonl':
+        with gzip.open(path, 'rt', encoding='utf-8') as f:
+            recs = [json.loads(line) for line in f]
+        meta = recs.pop(0)['_meta'] if recs and '_meta' in recs[0] else {}
+        return _with_label(pd.DataFrame(recs), meta.get('label', ''), meta)
+    if kind == 'json-table':
+        with gzip.open(path, 'rt', encoding='utf-8') as f:
+            doc = json.load(f)
+        meta, tables = doc['meta'], {}
+        for k, t in doc['tables'].items():
+            tables[k] = _with_label(pd.DataFrame(t['data'],
+                                                 columns=t['columns']),
+                                    meta.get('label', ''), meta)
+        fields = dict(tables, **doc['values'])
+        if list(fields) == ['table']:
+            return tables['table']
+        Tables = collections.namedtuple('Tables', list(fields) + (
+            [] if 'label' in fields else ['label']))
+        return Tables(**fields, **({} if 'label' in fields else
+                                   {'label': meta.get('label', '')}))
+    if kind == 'safetensors':
+        from safetensors.torch import load_file
+        return load_file(path)
+    if kind in ('tar', 'shards'):
+        folder = os.path.join(os.path.dirname(path), 'extracted')
+        if not os.path.exists(folder):
+            d2l.extract(path, folder)
+        if kind == 'tar':
+            return folder
+        with open(os.path.join(folder, 'manifest.json')) as f:
+            split = next(iter(json.load(f)['splits']))
+        return d2l.TokenShards(folder, split)
+    raise ValueError(f'unknown kind {kind!r}')
+
+def _stored_config(result):
+    if hasattr(result, 'attrs'):
+        return result.attrs.get('config')
+    tables = [v for v in result if isinstance(v, pd.DataFrame)]
+    return tables[0].attrs.get('config') if tables else None
+
+def _config_diff(page, stored, field=''):
+    """The first field where two JSON values differ, or None.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if isinstance(page, dict) and isinstance(stored, dict):
+        for k in sorted(set(page) | set(stored)):
+            d = _config_diff(page.get(k), stored.get(k), f'{field}.{k}'
+                             if field else k)
+            if d:
+                return d
+        return None
+    if isinstance(page, list) and isinstance(stored, list) and len(
+            page) == len(stored):
+        for i, (a, b) in enumerate(zip(page, stored)):
+            d = _config_diff(a, b, f'{field}[{i}]')
+            if d:
+                return d
+        return None
+    return None if page == stored else (field, page, stored)
+
+def _check_config(result, config, key):
+    """Raise if the configuration stored with result differs from config.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    d = _config_diff(_jsonable(config), _stored_config(result))
+    if d:
+        raise ValueError(f'page configuration differs from the committed '
+                         f'run {key}: {d[0]} {d[1]!r} != {d[2]!r}')
+
+def load_artifact(name):
+    """A committed result of this chapter by its name (PRETRAIN_ARTIFACTS):
+    a table or log as a DataFrame, weights as a state dict, an archive as a
+    folder, a shard set as TokenShards. A regeneration run reads the file it
+    has just written (the next version) when there is one.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if name not in d2l.PRETRAIN_ARTIFACTS:
+        raise KeyError(f'unknown result {name!r}; one of '
+                       f'{sorted(d2l.PRETRAIN_ARTIFACTS)}')
+    key, kind = d2l.PRETRAIN_ARTIFACTS[name]
+    local = os.path.join(_rerun_dir(), _next_key(key) + _ARTIFACT_EXT[kind])
+    if _regenerating() and os.path.exists(local):
+        return _read_result(local, kind, key)
+    if key not in d2l.DATA_HUB:
+        raise KeyError(f'{name} is not committed yet')
+    with _quiet():
+        path = d2l.download_keyed(key)
+    return _read_result(path, kind, key)
+
+def _pending_result(name, fallback=None):
+    """What a pending result shows: the fallback result labelled as such, or
+    an empty table labelled '<name> pending'.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if fallback is not None:
+        try:
+            result = load_artifact(fallback)
+        except KeyError:
+            result = None
+        if result is not None:
+            return _with_label(result, 'T2 run pending; showing the T1 '
+                                       'configuration')
+    return _with_label(pd.DataFrame(), f'{name} pending')
+
+def _pretrain_result(name, compute, config, *, fallback=None):
+    """The result of regeneration name for the call's configuration:
+    computed (and written as the next version) when D2L_RERUN names it;
+    else the committed result, whose stored configuration must equal
+    config; else, in a regeneration run or for a campaign declared pending,
+    the pending result; else KeyError. compute() may return None (parts of
+    the result are still missing): the pending result, nothing written.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    assert name in d2l.PRETRAIN_RERUN_NAMES, name
+    artifact = d2l._RERUN_ARTIFACT[name]
+    key, kind = d2l.PRETRAIN_ARTIFACTS[artifact]
+    config, rerun = _jsonable(config), _regenerating()
+    path = os.path.join(_rerun_dir(), _next_key(key) + _ARTIFACT_EXT[kind])
+    if name in rerun:
+        result = compute()
+        if result is None:
+            return _pending_result(name, fallback)
+        meta = dict(config=config, label=_label_of(result))
+        d2l.lm_save_rerun(os.path.basename(path), lambda p: _write_result(
+            p, kind, result, meta), rerun_dir=_rerun_dir())
+        return _with_label(result, meta['label'], meta)
+    if key in d2l.DATA_HUB or (rerun and os.path.exists(path)):
+        result = load_artifact(artifact)
+        _check_config(result, config, key)
+        return result
+    if rerun or name in d2l.PRETRAIN_PENDING:
+        return _pending_result(name, fallback)
+    raise KeyError(f'{name} is not committed yet')
+
+def _pretrain_merged(name, parts, merge, config, *, fallback=None):
+    """A result merged from parts {regeneration name: (compute, config)},
+    each written to its own file when D2L_RERUN names it. The merge
+    (merge({part: result})) runs in a regeneration run once every part's
+    file exists, and only when D2L_RERUN names the merge step name (if not
+    None). Loading, configuration check and pending as _pretrain_result.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    artifact = d2l._RERUN_ARTIFACT[next(iter(parts))]
+    key, kind = d2l.PRETRAIN_ARTIFACTS[artifact]
+    names = set(parts) | ({name} if name else set())
+    assert names <= set(d2l.PRETRAIN_RERUN_NAMES), names
+    config, rerun = _jsonable(config), _regenerating()
+    nxt, ext = _next_key(key), _ARTIFACT_EXT[kind]
+    if key in d2l.DATA_HUB and not rerun & names:
+        result = load_artifact(artifact)
+        _check_config(result, config, key)
+        return result
+    if not rerun:
+        if name in d2l.PRETRAIN_PENDING or names & d2l.PRETRAIN_PENDING:
+            return _pending_result(name or artifact, fallback)
+        raise KeyError(f'{artifact} is not committed yet')
+    results = {}
+    for part, (compute, part_config) in parts.items():
+        path = os.path.join(_rerun_dir(), f'{nxt}.{part}{ext}')
+        meta = dict(config=_jsonable(part_config), label='')
+        if part in rerun:
+            result = compute()
+            meta['label'] = _label_of(result)
+            d2l.lm_save_rerun(os.path.basename(path), lambda p: _write_result(
+                p, kind, result, meta), rerun_dir=_rerun_dir())
+        elif os.path.exists(path):
+            result = _read_result(path, kind)
+            _check_config(result, part_config, f'{nxt}.{part}')
+        else:
+            result = None
+        results[part] = result
+    if any(r is None for r in results.values()) or (name and
+                                                    name not in rerun):
+        return _pending_result(name or artifact, fallback)
+    merged = merge(results)
+    meta = dict(config=config, label=_label_of(merged))
+    d2l.lm_save_rerun(nxt + ext, lambda p: _write_result(p, kind, merged,
+                                                         meta),
+                      rerun_dir=_rerun_dir())
+    return _with_label(merged, meta['label'], meta)
+
+import contextlib
+
+@contextlib.contextmanager
+def _quiet():
+    """Swallow what a fetch prints (download lines, progress bars), its
+    benign warnings and the Transformers/Hub logs below error; an exception
+    carries the swallowed text as a note.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    import io
+    import logging
+    import warnings
+    buf = io.StringIO()
+    loggers = [logging.getLogger(n) for n in ('transformers',
+                                              'huggingface_hub', 'datasets')]
+    levels = [lg.level for lg in loggers]
+    try:
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(
+                buf), warnings.catch_warnings():
+            for category in (FutureWarning, DeprecationWarning, UserWarning):
+                warnings.simplefilter('ignore', category)
+            for lg in loggers:
+                lg.setLevel(logging.ERROR)
+            yield buf
+    except Exception as e:
+        e.add_note('output of the failed call:\n' + buf.getvalue()[-4000:])
+        raise
+    finally:
+        for lg, level in zip(loggers, levels):
+            lg.setLevel(level)
+
+def _rope_tables(pos, head_dim, theta, inv_freq=None, mscale=1.0):
+    """Cosines and sines of the RoPE angles of positions pos, (T,) or (B, T),
+    in the layout d2l.rope broadcasts ((T, d/2) or (B, 1, T, d/2)); the
+    frequencies as qwen3_rope_tables computes them unless inv_freq is
+    given; both tables scaled by mscale (YaRN's attention scale).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if inv_freq is None:
+        inv_freq = 1.0 / float(theta) ** (torch.arange(
+            0, head_dim, 2, dtype=torch.float32, device='cpu') / head_dim)
+    angles = pos.float()[..., None] * inv_freq.to(pos.device)
+    cos, sin = torch.cos(angles), torch.sin(angles)
+    if mscale != 1.0:
+        cos, sin = cos * mscale, sin * mscale
+    if pos.dim() == 2:
+        cos, sin = cos[:, None], sin[:, None]
+    return cos, sin
+
+def _flex_available():
+    if not hasattr(_flex_available, 'ok'):
+        try:
+            from torch.nn.attention import flex_attention  # noqa: F401
+            _flex_available.ok = True
+        except ImportError:
+            _flex_available.ok = False
+    return _flex_available.ok
+
+def _attn_backend(attn, X, ctx):
+    """'causal' (one document per row, Qwen3Attention's path), or the
+    backend that applies the document mask: 'math' for a softcap.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if ctx is None and attn.softcap is None and attn.backend != 'math':
+        return 'causal'
+    if attn.softcap is not None or attn.backend == 'math':
+        return 'math'
+    if attn.backend == 'auto':
+        return 'flex' if X.is_cuda and _flex_available() else 'sdpa'
+    return attn.backend
+
+def _flex_attention():
+    """flex_attention, compiled once when called outside a compiled region
+    (inside one, the region's compiler handles it).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    from torch.nn.attention.flex_attention import flex_attention
+    if torch.compiler.is_compiling():
+        return flex_attention
+    if not hasattr(_flex_attention, 'fn'):
+        _flex_attention.fn = torch.compile(flex_attention, dynamic=False)
+    return _flex_attention.fn
+
+_FLEX_MASKS = {}  # (B, T, device): (doc_ids buffer, mask_mod)
+
+@torch.compiler.disable
+def _flex_doc_mask(doc_ids):
+    """FlexAttention block mask of packed windows. The doc_ids are copied
+    into a buffer kept per (B, T, device), so the mask predicate keeps its
+    identity across steps and nothing retraces; the mask is valid until
+    the next call with the same shape (one forward and backward).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    from torch.nn.attention.flex_attention import create_block_mask
+    B, T = doc_ids.shape
+    key = (B, T, str(doc_ids.device))
+    if key not in _FLEX_MASKS:
+        buf = torch.empty_like(doc_ids)
+        _FLEX_MASKS[key] = (buf, d2l.doc_mask_mod(buf))
+    buf, mask_mod = _FLEX_MASKS[key]
+    buf.copy_(doc_ids)
+    return create_block_mask(mask_mod, B, None, T, T, device=doc_ids.device)
+
+def _doc_mask(ctx, backend, T, device):
+    """The mask of backend: a FlexAttention block mask, or a boolean mask
+    (B, 1, T, T) of same-document and causal (causal only without ctx).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    if backend == 'flex':
+        return _flex_doc_mask(ctx.doc_ids)
+    causal = torch.ones(T, T, dtype=torch.bool, device=device).tril()
+    if ctx is None:
+        return causal
+    d = ctx.doc_ids
+    return ((d[:, :, None] == d[:, None, :]) & causal)[:, None]
+
+def _packed_mask(model, ctx, X):
+    """The mask every block of a PackedGPT uses, built once per forward.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    backend = _attn_backend(model.blks[0].attention, X, ctx)
+    return None if backend == 'causal' else _doc_mask(ctx, backend,
+                                                      X.shape[1], X.device)
+
+def _math_attention(q, k, v, mask, softcap=None):
+    """Attention from explicit fp32 scores (optionally soft-capped).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    g = q.shape[1] // k.shape[1]
+    k, v = k.repeat_interleave(g, 1), v.repeat_interleave(g, 1)
+    s = q.float() @ k.float().transpose(-2, -1) / math.sqrt(q.shape[-1])
+    if softcap is not None:
+        s = d2l.softcap(s, softcap)
+    s = s.masked_fill(~mask, float('-inf'))
+    return (torch.softmax(s, -1) @ v.float()).to(q.dtype)
+
+_PACKED_ARGS = ('vocab_size', 'num_hiddens', 'num_heads', 'num_kv_heads',
+                'num_blks', 'head_dim', 'qk_norm', 'rope_theta', 'ffn_hidden',
+                'norm_eps', 'tie_embeddings', 'max_len', 'bias', 'pos',
+                'rope_inv_freq', 'rope_mscale', 'softcap', 'backend')
+
+def _packed_config(model):
+    """PackedGPT.config(): constructor arguments (max_len as now accepted)
+    plus rope_scheme and rope_scale.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    a = model.blks[0].attention
+    inv = model.rope_inv_freq
+    return dict(
+        vocab_size=model.token_emb.num_embeddings,
+        num_hiddens=model.token_emb.embedding_dim, num_heads=a.num_heads,
+        num_kv_heads=a.num_kv_heads, num_blks=len(model.blks),
+        head_dim=a.head_dim, qk_norm=a.qk_norm,
+        rope_theta=float(model.rope_theta),
+        ffn_hidden=model.blks[0].ffn.W_1.out_features,
+        norm_eps=model.norm.eps, tie_embeddings=not hasattr(model, 'lm_head'),
+        max_len=model.max_len, bias=a.W_q.bias is not None, pos=model.pos,
+        rope_inv_freq=None if inv is None else inv.tolist(),
+        rope_mscale=model.rope_mscale, softcap=a.softcap, backend=a.backend,
+        rope_scheme=model.rope_scheme, rope_scale=model.rope_scale)
+
+def _packed_from_config(config, meta=False, **kw):
+    """The PackedGPT a config() describes (on the meta device if meta).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    args = {k: config[k] for k in _PACKED_ARGS if k in config}
+    scale = config.get('rope_scale', 1.0)
+    args['max_len'] = round(args['max_len'] / scale)  # the trained length
+    inv, m = args.pop('rope_inv_freq', None), args.pop('rope_mscale', 1.0)
+    args.update(kw)
+    with torch.device('meta') if meta else contextlib.nullcontext():
+        model = d2l.PackedGPT(**args)
+    model.set_rope(inv, m, config.get('rope_scheme', 'none'), scale)
+    return model
+
+def _qwen3_shape(model):
+    """PackedGPT's constructor arguments for the shape of a d2l.Qwen3GPT.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    a, blk = model.blks[0].attention, model.blks[0]
+    return dict(vocab_size=model.token_emb.num_embeddings,
+                num_hiddens=model.token_emb.embedding_dim,
+                num_heads=a.num_heads, num_kv_heads=a.num_kv_heads,
+                num_blks=len(model.blks), head_dim=a.head_dim,
+                qk_norm=a.qk_norm, rope_theta=model.rope_theta,
+                ffn_hidden=blk.ffn.W_1.out_features, norm_eps=model.norm.eps,
+                tie_embeddings=not hasattr(model, 'lm_head'),
+                max_len=model.max_len, bias=a.W_q.bias is not None)
+
+def _check_same_tensors(mine, theirs):
+    """Raise on the first name whose tensor is missing or differs in shape.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    for name in sorted(set(mine) | set(theirs)):
+        if name not in theirs or name not in mine:
+            side = 'source' if name not in theirs else 'PackedGPT'
+            raise ValueError(f'adopt: {name} is missing in the {side}')
+        if mine[name].shape != theirs[name].shape:
+            raise ValueError(f'adopt: {name} has shape '
+                             f'{tuple(theirs[name].shape)}, PackedGPT '
+                             f'expects {tuple(mine[name].shape)}')
+
+def _layout_hash(shards):
+    """SHA-256 over the manifest's per-file SHA-256 values, in order.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    h = hashlib.sha256()
+    for s in shards.shards:
+        for ext in d2l._SHARD_EXT:
+            h.update(s['sha256'][ext].encode())
+    return h.hexdigest()
+
+def _window_indices(stream, p):
+    """The global batch of physical step p: a slice of the permutation of
+    the window indices seeded by (seed, epoch).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    e = stream.epoch + p // stream.steps_per_epoch
+    j = p % stream.steps_per_epoch
+    cached = getattr(stream, '_perm', None)
+    if cached is None or cached[0] != (stream.seed, e):
+        rng = np.random.default_rng([stream.seed, e])
+        stream._perm = ((stream.seed, e), rng.permutation(stream.n_seq))
+    G = stream.global_batch
+    return stream._perm[1][j * G:(j + 1) * G]
+
+def _windows(stream, idx):
+    """Windows idx of seq_len + 1 tokens, as an int64 array.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    T = stream.seq_len
+    return np.stack([stream.shards.read(int(i) * T, T + 1)
+                     for i in idx]).astype(np.int64)
+
+RestartOverlap = collections.namedtuple(
+    'RestartOverlap', ['naive_match', 'naive_repeats', 'stateless_match',
+                       'stateless_repeats', 'steps'])
+
+def reseeded_restart_overlap(n_seq=10_000, batch=64, crash_step=40,
+                             steps=50, seed=0):
+    """A run that crashes at crash_step and restarts with a re-seeded
+    shuffle, against a stateless cursor: batches equal to the uninterrupted
+    run's, and windows seen twice.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    perm = np.random.default_rng([seed, 0]).permutation(n_seq)
+    after = np.random.default_rng([seed + 1, 0]).permutation(n_seq)
+    run = [perm[s * batch:(s + 1) * batch] for s in range(steps)]
+    naive = run[:crash_step] + [after[s * batch:(s + 1) * batch]
+                                for s in range(crash_step, steps)]
+    stateless = run[:crash_step] + [perm[s * batch:(s + 1) * batch]
+                                    for s in range(crash_step, steps)]
+
+    def overlap(batches):  # (batches equal to the run's, windows repeated)
+        seen = np.concatenate(batches)
+        return (int(sum(np.array_equal(a, b) for a, b in zip(run, batches))),
+                int(len(seen) - len(np.unique(seen))))
+    return RestartOverlap(*overlap(naive), *overlap(stateless), steps)
+
+def _ddp_setup():
+    """Join the process group torchrun describes: (rank, world, device).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    import torch.distributed as dist
+    rank = int(os.environ.get('RANK', 0))
+    world = int(os.environ.get('WORLD_SIZE', 1))
+    local = int(os.environ.get('LOCAL_RANK', 0))
+    cuda = torch.cuda.is_available()
+    device = torch.device('cuda', local) if cuda else torch.device('cpu')
+    if cuda:
+        torch.cuda.set_device(device)
+    if world > 1 and not dist.is_initialized():
+        dist.init_process_group('nccl' if cuda else 'gloo',
+                                device_id=device if cuda else None)
+    return rank, world, device
+
+def _rank_world():
+    import torch.distributed as dist
+    if dist.is_available() and dist.is_initialized():
+        return dist.get_rank(), dist.get_world_size()
+    return 0, 1
+
+def _all_reduce(x, op):
+    import torch.distributed as dist
+    if _rank_world()[1] == 1 or not torch.is_tensor(x):
+        return x
+    x = x.clone()
+    dist.all_reduce(x, op=getattr(dist.ReduceOp, op))
+    return x
+
+def _all_reduce_sum(x):
+    """x summed over the ranks (x itself without a process group).
+
+    Defined in :numref:`sec_lm_data_path`"""
+    return _all_reduce(x, 'SUM')
+
+def _all_reduce_max(x):
+    return _all_reduce(x, 'MAX')
+
+def _ddp_module(model):
+    m = getattr(model, '_orig_mod', model)  # under torch.compile
+    return m if isinstance(m, torch.nn.parallel.DistributedDataParallel) \
+        else None
+
+_FORCE_NO_SYNC = [False]  # the throughput probe times steps without sync
+
+def _no_sync(model, skip):
+    """DDP's no_sync() while skip (micro-batches before the last), else a
+    null context.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    ddp = _ddp_module(model)
+    if ddp is not None and (skip or _FORCE_NO_SYNC[0]):
+        return ddp.no_sync()
+    return contextlib.nullcontext()
+
+def _unwrap(model):
+    """The module inside torch.compile and DistributedDataParallel.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    model = getattr(model, '_orig_mod', model)
+    return getattr(model, 'module', model) if isinstance(
+        model, torch.nn.parallel.DistributedDataParallel) else model
+
+_T975 = (12.7062, 4.30265, 3.18245, 2.77645, 2.57058, 2.44691, 2.36462,
+         2.30600, 2.26216, 2.22814)  # Student t, 97.5% point, dof 1-10
+
+def t_interval(x, alpha=0.05):
+    """(mean, half-width) of the two-sided 1 - alpha t interval of x.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    x = np.asarray(x, dtype=np.float64)
+    n = len(x)
+    if alpha == 0.05 and 2 <= n <= 11:
+        t = _T975[n - 2]
+    else:
+        from scipy import stats
+        t = float(stats.t.ppf(1 - alpha / 2, n - 1))
+    return float(x.mean()), float(t * x.std(ddof=1) / math.sqrt(n))
+
+d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
+    'lm-r2-train-log-v1', 'jsonl')
+d2l.PRETRAIN_ARTIFACTS['reference-evals'] = ('lm-r2-evals-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['ladder-logs'] = ('lm-ladder-logs-v1', 'jsonl')
+d2l.PRETRAIN_ARTIFACTS['ladder-evals'] = ('lm-ladder-evals-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['t1-runs'] = ('lm-r2t1-log-v1', 'jsonl')
+d2l.PRETRAIN_ARTIFACTS['instability-t1'] = ('lm-r2-inst-t1-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['instability-t2'] = ('lm-r2-inst-t2-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v1', 'parquet')
+d2l.PRETRAIN_ARTIFACTS['throughput-probe'] = ('lm-r2-probe-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['val-domains'] = ('lm-fwedu-val-domains-v1', 'jsonl')
+
+d2l.PRETRAIN_JOBS['t1-runs'] = ('launch_pretrain', lambda: dict(
+    cfgs=[d2l.r2_config('t1', seed=s) for s in (0, 1, 2)], n_gpus=1))
+d2l.PRETRAIN_JOBS['reference-run'] = ('launch_pretrain', lambda: dict(
+    cfgs=d2l.r2_config('r2'), n_gpus=4))
+d2l.PRETRAIN_JOBS['ladder'] = ('launch_pretrain', lambda: dict(
+    cfgs=[d2l.r2_config(p) for p in ('ladder-25m', 'ladder-54m',
+                                     'ladder-88m')], n_gpus=4))
+
+def _preset_saves(preset):
+    """What a preset's run saves: bf16 checkpoints, pinned full states
+    (branch points and the end of the stable phase), rolling states, and
+    the branches (from_step, decay_steps) that finish 10N and 5N budgets.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    r2_ckpts = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700,
+                6000)
+    ladder = {'ladder-25m': ((816, 144), (408, 72)),
+              'ladder-54m': ((1760, 310), (880, 155)),
+              'ladder-88m': ((2857, 504), (1428, 252))}
+    _, steps, _, decay, _, _ = d2l.R2_SCHEDULES[preset]
+    if preset == 'r2':
+        return dict(ckpt_steps=r2_ckpts, state_steps=(1275, 2550, 5100),
+                    state_every=500, branches=((2550, 450), (1275, 225)))
+    if preset in ladder:
+        b = ladder[preset]
+        return dict(ckpt_steps=(steps,), state_steps=tuple(sorted(
+            f for f, _ in b)), state_every=500, branches=b)
+    if preset == 't1':
+        return dict(ckpt_steps=(steps,), state_steps=(steps - decay,))
+    return dict(ckpt_steps=(steps,), state_every=500 if steps > 1500 else 0)
+
+def _arch_fields(arch):
+    """(L, d, H, H_kv, d_h, f, V, tied) of a Transformers config (dict or
+    object; its names are read first) or of an Arch.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    get = arch.get if isinstance(arch, dict) else (
+        lambda k: getattr(arch, k, None))
+    if get('num_hidden_layers') is not None:
+        L, d, H = (get('num_hidden_layers'), get('hidden_size'),
+                   get('num_attention_heads'))
+        return (L, d, H, get('num_key_value_heads') or H,
+                get('head_dim') or d // H, get('intermediate_size'),
+                get('vocab_size'), bool(get('tie_word_embeddings')))
+    return (arch.L, arch.d, arch.H, arch.H_kv, arch.d_h, arch.f, arch.vocab,
+            arch.tie)
+
+GPU_PEAK_BF16 = {  # dense bf16 FLOP/s with fp32 accumulation, per GPU
+    'NVIDIA GeForce RTX 4090': 165e12,
+    'NVIDIA A100-SXM4-40GB': 312e12, 'NVIDIA A100-SXM4-80GB': 312e12,
+    'NVIDIA H100 80GB HBM3': 989e12}
+
+def _peak_flops(device):
+    if device.type != 'cuda':
+        return None
+    return GPU_PEAK_BF16.get(torch.cuda.get_device_name(device))
+
+def _cfg_json(cfg):
+    """A PretrainConfig as JSON values (the arch as a dict).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    out = d2l._jsonable(cfg)
+    out['arch'] = cfg.arch._asdict()
+    return out
+
+def _cfg_from_json(d):
+    d = dict(d)
+    d['arch'] = d2l.Arch(**d['arch'])
+    for k in ('betas', 'ckpt_steps', 'state_steps'):
+        d[k] = tuple(d[k])
+    d['branches'] = tuple(tuple(b) for b in d['branches'])
+    return d2l.PretrainConfig(**d)
+
+def _train_shards(cfg):
+    """The training shards of a config: '100m' (one shard) or '4b' (the
+    first 32 of the 40 shards, 3.2B tokens: the reference run's epoch).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    with d2l._quiet():
+        if cfg.data == '100m':
+            return d2l.fwedu_shards('100m')
+        if cfg.data == '4b':
+            return d2l.fwedu_shards('4b', max_tokens=3_145_728_001)
+    raise ValueError(f'unknown data {cfg.data!r}')
+
+_Segment = collections.namedtuple('_Segment', 'name start total decay')
+
+class _PretrainRun:
+    """Everything pretrain does besides the step (see the file header).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    def __init__(self, model, stream, cfg, val_fn, resume):
+        self.cfg, self.stream, self.val_fn = cfg, stream, val_fn
+        self.rank, self.world, self.device = (
+            d2l._ddp_setup() if cfg.ddp else (0, 1, next(
+                model.parameters()).device))
+        if (stream.rank, stream.world) != (self.rank, self.world):
+            raise ValueError(f'stream is rank {stream.rank} of {stream.world}'
+                             f', the run {self.rank} of {self.world}')
+        self.raw = model.to(self.device)
+        cuda = self.device.type == 'cuda'
+        self.optimizer = torch.optim.AdamW(
+            d2l.param_groups(self.raw, cfg.wd), lr=cfg.peak_lr,
+            betas=cfg.betas, eps=cfg.eps, fused=cuda)
+        net = self.raw
+        if cfg.ddp:
+            net = torch.nn.parallel.DistributedDataParallel(
+                net, device_ids=[self.device] if cuda else None,
+                gradient_as_bucket_view=True)
+        self.model = torch.compile(net) if cfg.compile else net
+        self.accum = cfg.accum(self.world)
+        self.step_tokens = cfg.global_batch * cfg.arch.T
+        self.peak = _peak_flops(self.device)
+        self.out, self.rows, self.halt = cfg.out_dir, [], False
+        self.grad_hist = collections.deque(maxlen=100)
+        self._mem_states, self._expect = {}, None
+        self.start = 0
+        path = self._resume_path(resume)
+        if path is not None:
+            self.start = self._load_state(path)
+            self._expect = self.start + 1
+        self.log_path = self._log_file(cfg.preset)
+        if self.log_path and self.rank == 0:
+            d2l._truncate_log(self.log_path, self.start)
+
+    # -- segments: the main run, then each branch from its saved state --
+    def segments(self):
+        cfg = self.cfg
+        if self.start < cfg.steps:
+            yield _Segment(cfg.preset, self.start, cfg.steps, cfg.decay)
+        for frm, dec in cfg.branches:
+            name = f'b{frm + dec}'
+            if self.halt or self._branch_done(name, frm + dec):
+                continue
+            self._load_state(self._state_source(frm))
+            self.log_path = self._log_file(name)
+            if self.log_path and self.rank == 0:
+                d2l._truncate_log(self.log_path, frm)
+            yield _Segment(name, frm, frm + dec, dec)
+
+    def batch(self, step):
+        """This rank's batch at step, its micro-batches on the device, and
+        the step's global count of valid targets (one all-reduce)."""
+        b = self.stream.batch(step)
+        cuda = self.device.type == 'cuda'
+        dev = {k: (v.pin_memory() if cuda else v).to(self.device,
+                                                      non_blocking=True)
+               for k, v in b.items()}
+        n_valid = d2l._all_reduce_sum((dev['labels'] != -100).sum())
+        m = self.cfg.micro_batch
+        micro = [{k: v[i:i + m] for k, v in dev.items()}
+                 for i in range(0, len(dev['labels']), m)]
+        assert len(micro) == self.accum, (len(micro), self.accum)
+        return dev, micro, n_valid
+
+    def snapshot(self, step):
+        """Weights before the step, at probe steps (for the update RMS)."""
+        every = self.cfg.probe_every
+        if not every or (step + 1) % every:
+            return None
+        return {n: p.detach().clone() for n, p in self.raw.named_parameters()}
+
+    def record(self, seg, row, batch, before, wait, t0):
+        """Complete row in place (one host sync), probe, validate, save."""
+        cfg, done = self.cfg, row['step']
+        for k, v in row.items():
+            if torch.is_tensor(v):
+                row[k] = v.item()
+        row['step_s'] = time.perf_counter() - t0
+        row['data_wait_s'], row['tok_s'] = wait, self.step_tokens / row[
+            'step_s']
+        row['mfu'] = (d2l.mfu(row['tok_s'], cfg.arch, self.peak, self.world)
+                      if self.peak else float('nan'))
+        row['run'], row['seed'] = seg.name, cfg.seed
+        if self._expect is not None:  # the scheduler did not restart at 0
+            assert done == self._expect, (done, self._expect)
+            self._expect = None
+        hist = sorted(self.grad_hist)
+        row['spike'] = bool(len(hist) >= 10 and row['grad_norm'] > 10 * hist[
+            len(hist) // 2])
+        self.grad_hist.append(row['grad_norm'])
+        if before is not None:
+            row.update(d2l._update_rms(self.raw, before, self.optimizer))
+        if cfg.stats_every and done % cfg.stats_every == 0:
+            for l, s in d2l.attn_logit_stats(self.raw, batch).items():
+                row[f'max_logit_{l}'] = float(s.max_logit.max())
+        last = done == seg.total
+        if self.val_fn is not None and self.rank == 0 and (
+                last or (cfg.val_every and done % cfg.val_every == 0)):
+            row['val_loss'] = self.val_fn(self.raw)
+        self.stream.step = done
+        self._save(seg, done, last or not math.isfinite(row['loss']))
+        if self.rank == 0:
+            self.rows.append(dict(row))
+            if self.log_path:
+                with open(self.log_path, 'a', encoding='utf-8') as f:
+                    f.write(json.dumps(d2l._jsonable(row)) + '\n')
+
+    def stopped(self, row):
+        """True (and no further segment) after a non-finite loss."""
+        if not math.isfinite(row['loss']):
+            self.halt = True
+        return self.halt
+
+    def finish(self):
+        if self.rank != 0:
+            return pd.DataFrame()
+        if self.out:
+            df = d2l._read_job_logs(self.out)
+        else:
+            df = pd.DataFrame(self.rows)
+        df.attrs['label'] = ''
+        return df
+
+    # -- checkpoints and states --
+    def _log_file(self, name):
+        if not self.out:
+            return None
+        os.makedirs(self.out, exist_ok=True)
+        return os.path.join(self.out, 'log.jsonl' if name == self.cfg.preset
+                            else f'log-{name}.jsonl')
+
+    def _save(self, seg, done, last):
+        cfg, main = self.cfg, seg.name == self.cfg.preset
+        if self.rank == 0 and self.out and ((main and done in cfg.ckpt_steps)
+                                            or (last and not main)):
+            name = f's{done}' if main else f'{seg.name}-s{done}'
+            d2l._save_bf16(os.path.join(self.out, 'ckpt',
+                                        name + '.safetensors'),
+                           self.raw, done)
+        pinned = done in cfg.state_steps or (main and last)
+        rolling = cfg.state_every and done % cfg.state_every == 0
+        if main and (pinned or rolling):
+            self._save_state(done, pinned)
+
+    def _save_state(self, step, pinned):
+        import torch.distributed as dist
+        rng = dict(cpu=torch.get_rng_state(), cuda=(
+            torch.cuda.get_rng_state(self.device)
+            if self.device.type == 'cuda' else None))
+        rngs = [rng]
+        if self.world > 1:
+            rngs = [None] * self.world
+            dist.all_gather_object(rngs, rng)
+        if self.rank == 0:
+            stream = dict(self.stream.state_dict(), step=step)
+            state = dict(model=self.raw.state_dict(),
+                         optim=self.optimizer.state_dict(), step=step,
+                         stream=stream, rng=rngs, cfg=_cfg_json(self.cfg))
+            if not self.out:
+                import copy
+                self._mem_states[step] = copy.deepcopy(
+                    {k: v for k, v in state.items()})
+            else:
+                d2l._write_state(self.out, step, state, pinned,
+                                 self.cfg.state_steps)
+        if self.world > 1:
+            dist.barrier()
+
+    def _load_state(self, src):
+        state = (src if isinstance(src, dict) else
+                 torch.load(src, map_location='cpu', weights_only=False))
+        self.raw.load_state_dict(state['model'])
+        self.optimizer.load_state_dict(state['optim'])
+        self.stream.load_state_dict(state['stream'])
+        rng = state['rng'][self.rank if len(state['rng']) == self.world
+                           else 0]
+        torch.set_rng_state(rng['cpu'])
+        if rng['cuda'] is not None and self.device.type == 'cuda':
+            torch.cuda.set_rng_state(rng['cuda'], self.device)
+        return state['step']
+
+    def _resume_path(self, resume):
+        if resume in (None, 'none'):
+            return None
+        if resume != 'auto':
+            return resume
+        steps = d2l._state_steps(self.out)
+        main = [s for s in steps if s <= self.cfg.steps]
+        return d2l._state_path(self.out, max(main)) if main else None
+
+    def _state_source(self, step):
+        if step in self._mem_states:
+            return self._mem_states[step]
+        if self.out and os.path.exists(d2l._state_path(self.out, step)):
+            return d2l._state_path(self.out, step)
+        raise FileNotFoundError(f'no saved state at step {step} to branch '
+                                'from (add it to state_steps)')
+
+    def _branch_done(self, name, total):
+        return bool(self.out) and os.path.exists(os.path.join(
+            self.out, 'ckpt', f'{name}-s{total}.safetensors'))
+
+def _state_path(out, step):
+    return os.path.join(out, 'state', f's{step}.pt')
+
+def _state_steps(out):
+    """Steps of the full states saved under out/state, ascending.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    folder = os.path.join(out or '', 'state')
+    if not out or not os.path.isdir(folder):
+        return []
+    return sorted(int(f[1:-3]) for f in os.listdir(folder)
+                  if f.startswith('s') and f.endswith('.pt'))
+
+def _write_state(out, step, state, pinned, pinned_steps):
+    """Write a full state through a temporary file; keep the pinned states,
+    the final one and the newest two of the rest.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    path = _state_path(out, step)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    torch.save(state, path + '.tmp')
+    os.replace(path + '.tmp', path)
+    keep = set(pinned_steps) | ({step} if pinned else set())
+    rolling = [s for s in _state_steps(out) if s not in keep]
+    for s in rolling[:-2]:
+        os.remove(_state_path(out, s))
+
+def _save_bf16(path, model, step):
+    """bf16 weights with the model's config() and step as metadata.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    from safetensors.torch import save_file
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    state = {k: v.detach().to(torch.bfloat16).contiguous().cpu()
+             for k, v in model.state_dict().items()}
+    save_file(state, path + '.tmp', metadata=dict(
+        config=json.dumps(model.config()), step=str(step)))
+    os.replace(path + '.tmp', path)
+
+def _load_bf16(path, dtype=torch.bfloat16, device='cpu'):
+    """The PackedGPT a _save_bf16 file holds, in eval mode.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    from safetensors import safe_open
+    from safetensors.torch import load_file
+    with safe_open(path, 'pt') as f:
+        config = json.loads(f.metadata()['config'])
+    model = d2l._packed_from_config(config, meta=True)
+    state = {k: v.to(dtype) for k, v in load_file(path,
+                                                  device=str(device)).items()}
+    model.load_state_dict(state, assign=True)
+    return model.eval()
+
+def _truncate_log(path, step):
+    """Keep the rows of a jsonl log up to step (a resumed run rewrites the
+    rest).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if not os.path.exists(path):
+        return
+    with open(path, encoding='utf-8') as f:
+        rows = [line for line in f if json.loads(line)['step'] <= step]
+    with open(path + '.tmp', 'w', encoding='utf-8') as f:
+        f.writelines(rows)
+    os.replace(path + '.tmp', path)
+
+def _read_job_logs(out):
+    """All rows of a job folder: the main log, then each branch's.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    files = ['log.jsonl'] + sorted(f for f in os.listdir(out)
+                                   if f.startswith('log-')
+                                   and f.endswith('.jsonl'))
+    rows = []
+    for name in files:
+        path = os.path.join(out, name)
+        if os.path.exists(path):
+            with open(path, encoding='utf-8') as f:
+                rows += [json.loads(line) for line in f]
+    return pd.DataFrame(rows)
+
+def _module_kind(name):
+    """'W_q', ..., 'W_2', 'token_emb' or 'norm' for a parameter name.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    parts = name.split('.')
+    if parts[0] in ('token_emb', 'pos_emb', 'lm_head'):
+        return parts[0]
+    return 'norm' if 'norm' in parts[-2] else parts[-2]
+
+def _update_rms(model, before, optimizer):
+    """Median over layers, per module kind, of the RMS of the step's AdamW
+    update in units of the learning rate (weight decay taken out).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    group = {id(p): g for g in optimizer.param_groups for p in g['params']}
+    kinds = collections.defaultdict(list)
+    for name, p in model.named_parameters():
+        g = group[id(p)]
+        u = (before[name] * (1 - g['lr'] * g['weight_decay']) - p.detach()
+             ) / g['lr']
+        kinds[_module_kind(name)].append(u.float().pow(2).mean().sqrt())
+    med = {k: torch.stack(v).median() for k, v in kinds.items()}
+    return {f'rms_{k}': v for k, v in zip(med, torch.stack(
+        list(med.values())).tolist())}
+
+def _val_fn(cfg, batch_size=None):
+    """Validation loss on the first cfg.val_tokens tokens of the validation
+    shard, as windows of arch.T tokens with the training targets.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    with d2l._quiet():
+        shards = d2l.fwedu_shards('val')
+    T, eos = cfg.arch.T, shards.eos_id
+    n = cfg.val_tokens // T
+    windows = np.stack([shards.read(i * T, T + 1) for i in range(n)])
+    bs = batch_size or cfg.micro_batch
+
+    def val(model):
+        dev = next(model.parameters()).device
+        total, count = 0.0, 0
+        with torch.inference_mode(), torch.autocast(
+                dev.type, torch.bfloat16, enabled=cfg.dtype == 'bf16'):
+            for i in range(0, n, bs):
+                W = torch.from_numpy(windows[i:i + bs]).long().to(dev)
+                X, Y = W[:, :-1], W[:, 1:].clone()
+                Y[X == eos] = -100
+                ctx = d2l.PackCtx(*d2l.doc_ids_from_eos(X.int(), eos))
+                H, Wt = model(X, ctx, return_hidden=True)
+                s, c = d2l.chunked_lm_loss(H, Wt, Y)
+                total, count = total + s.float(), count + c
+        return float(total / count)
+    return val
+
+def _probe_inputs(batch, max_seqs, model):
+    """Token ids and PackCtx of the first max_seqs sequences of batch, on
+    the model's device.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    dev = next(d2l._unwrap(model).parameters()).device
+    X = batch['input_ids'][:max_seqs].to(dev)
+    ctx = d2l.PackCtx(batch['doc_ids'][:max_seqs].to(dev),
+                      batch['pos_ids'][:max_seqs].to(dev))
+    return X, ctx
+
+def _attention_inputs(model, X, ctx):
+    """(attention module, its input, its RoPE tables) for every block of
+    one eager forward pass.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    raw, seen = d2l._unwrap(model), []
+
+    def grab(module, args, kwargs):
+        seen.append((module, args[0].detach(), kwargs.get('tables')))
+    hooks = [blk.attention.register_forward_pre_hook(grab, with_kwargs=True)
+             for blk in raw.blks]
+    try:
+        with torch.no_grad(), torch.autocast(X.device.type, torch.bfloat16,
+                                             enabled=X.is_cuda):
+            raw(X, ctx)
+    finally:
+        for h in hooks:
+            h.remove()
+    return seen
+
+def _chunked_logit_stats(q, k, ctx, chunk=512):
+    """Per head: the largest logit q.k / sqrt(d_h) a query gives a key it
+    may see (same document, not later), and the mean entropy of its
+    attention, from fp32 scores, chunk queries at a time.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    B, H, T, d_h = q.shape
+    q, k = q.float(), k.float()
+    mx = torch.full((H,), -math.inf, device=q.device)
+    ent = torch.zeros(H, device=q.device)
+    j = torch.arange(T, device=q.device)
+    for a in range(0, T, chunk):
+        s = q[:, :, a:a + chunk] @ k.transpose(-2, -1) / math.sqrt(d_h)
+        i = torch.arange(a, min(a + chunk, T), device=q.device)
+        ok = j[None, :] <= i[:, None]
+        if ctx is not None:
+            d = ctx.doc_ids
+            ok = ok & (d[:, i, None] == d[:, None, :])[:, None]
+        s = s.masked_fill(~ok, -math.inf)
+        mx = torch.maximum(mx, s.amax((0, 2, 3)))
+        p = torch.softmax(s, -1)
+        ent += -(p * torch.log(p.clamp_min(1e-30))).sum(-1).sum((0, 2))
+    return mx, ent / (B * T)
+
+_RUN_NAMES = {  # presets of one launch_pretrain call: its regeneration name
+    ('t1',): 't1-runs', ('r2',): 'reference-run',
+    ('ladder-25m', 'ladder-54m', 'ladder-88m'): 'ladder'}
+
+def launch_pretrain(cfgs, n_gpus=4):
+    """The logs of pretraining runs (one config or a list: seeds, ladder
+    sizes) as one DataFrame with columns run and seed: the committed result
+    of this call's configuration, or, under D2L_RERUN, its runs launched
+    with torchrun on n_gpus GPUs (tools/lm_pretrain.py, one job folder per
+    run, resumable).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    cfgs = [cfgs] if isinstance(cfgs, d2l.PretrainConfig) else list(cfgs)
+    presets = tuple(sorted({c.preset for c in cfgs}))
+    if presets not in _RUN_NAMES:
+        raise ValueError(f'no committed run for presets {presets}')
+    name = _RUN_NAMES[presets]
+    config = dict(n_gpus=n_gpus, runs=[_cfg_json(c) for c in cfgs])
+    log = d2l._pretrain_result(
+        name, lambda: _launch_jobs(cfgs, n_gpus), config,
+        fallback=None if name == 't1-runs' else 't1-runs')
+    if log.attrs.get('label', '').startswith('T2 run pending'):
+        label = log.attrs['label']
+        log = log[log['seed'] == 0].reset_index(drop=True)
+        log.attrs['label'] = label
+    return log
+
+def _job_root():
+    return os.path.abspath(os.path.join('..', 'data', 'lm', 'rerun', 'ch21'))
+
+def _launch_jobs(cfgs, n_gpus, max_restarts=3):
+    """Run every config's job that is not done (D2L_PRETRAIN_ONLY limits
+    this process to one preset or job); the merged logs once all are done,
+    else None.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    import subprocess
+    import sys
+    only = os.environ.get('D2L_PRETRAIN_ONLY')
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(d2l.__file__)))
+    for cfg in cfgs:  # extract the manifests before any rank starts
+        _train_shards(cfg)
+    logs, world = [], max(1, min(n_gpus, torch.cuda.device_count()))
+    for cfg in cfgs:
+        job = os.path.join(_job_root(), f'{cfg.preset}-s{cfg.seed}')
+        done = os.path.join(job, 'DONE')
+        if not os.path.exists(done) and (not only or only in (
+                cfg.preset, os.path.basename(job))):
+            os.makedirs(job, exist_ok=True)
+            with open(os.path.join(job, 'config.json'), 'w') as f:
+                json.dump(_cfg_json(dataclasses.replace(
+                    cfg, out_dir=job, ddp=world > 1)), f, indent=1)
+            cmd = [sys.executable, '-m', 'torch.distributed.run',
+                   '--standalone', f'--nproc-per-node={world}',
+                   os.path.join(repo, 'tools', 'lm_pretrain.py'), '--config',
+                   os.path.join(job, 'config.json'), '--resume', 'auto']
+            for attempt in range(max_restarts + 1):
+                with open(os.path.join(job, 'train.log'), 'a') as out:
+                    rc = subprocess.call(cmd, cwd=repo, stdout=out,
+                                         stderr=subprocess.STDOUT)
+                if rc in (0, 3) or os.path.exists(done):
+                    break
+            if rc == 3:
+                raise FloatingPointError(f'{job}: non-finite loss')
+            if not os.path.exists(done):
+                raise RuntimeError(f'{job}: failed {max_restarts + 1} times '
+                                   f'(exit {rc}); see train.log')
+        if os.path.exists(done):
+            logs.append(_read_job_logs(job))
+    if len(logs) < len(cfgs):
+        return None
+    df = pd.concat(logs, ignore_index=True)
+    df.attrs['label'] = ''
+    return df
+
+def probe_throughput(cfg, micro_batches=(8, 4, 2), warmup=5, steps=20,
+                     out=None):
+    """The D1 probe: for each micro-batch size, compile time, median step
+    time (IQR), tokens/s, MFU, peak memory per rank, the all-reduce share
+    (steps without gradient sync), validation and checkpoint times, and
+    the initial loss and gradient norm. One dict per micro-batch size.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    import tempfile
+    rows = []
+    rank, world, device = d2l._ddp_setup() if cfg.ddp else (0, 1, torch.device(
+        'cuda' if torch.cuda.is_available() else 'cpu'))
+    shards = _train_shards(cfg)
+    for m in micro_batches:
+        c = dataclasses.replace(cfg, micro_batch=m, val_every=0, ckpt_steps=(),
+                                state_steps=(), state_every=0, branches=(),
+                                out_dir=None, probe_every=0, stats_every=0)
+        row = dict(preset=cfg.preset, gpus=world, micro=m)
+        try:
+            row.update(_probe_one(c, shards, rank, world, device, warmup,
+                                  steps))
+        except torch.OutOfMemoryError:
+            row['status'] = 'oom'
+        rows.append(row)
+        torch._dynamo.reset()
+        d2l.lm_free()
+    if rank == 0 and out:
+        with tempfile.TemporaryDirectory(dir=out) as tmp:
+            rows.append(_probe_io(cfg, tmp, device))
+        d2l.write_jsonl(os.path.join(
+            out, f'probe-{cfg.preset}-g{world}.jsonl'), rows)
+    return rows
+
+def _probe_one(cfg, shards, rank, world, device, warmup, steps):
+    torch.manual_seed(cfg.seed)
+    model = d2l.PackedGPT.from_arch(cfg.arch).to(device)
+    stream = d2l.PackedStream(shards, cfg.arch.T, cfg.global_batch,
+                              seed=cfg.data_seed, rank=rank, world=world)
+    run = _PretrainRun(model, stream, cfg, None, None)
+    torch.cuda.reset_peak_memory_stats(device)
+
+    def timed(step):
+        for g in run.optimizer.param_groups:
+            g['lr'] = d2l.wsd_lr(step, cfg.steps, cfg.warmup, cfg.decay,
+                                 cfg.peak_lr)
+        torch.cuda.synchronize(device)
+        t = time.perf_counter()
+        _, micro, n = run.batch(step)
+        out = d2l.pretrain_step(run.model, run.optimizer, micro, cfg, n)
+        loss, norm = out['loss'].item(), out['grad_norm'].item()
+        torch.cuda.synchronize(device)
+        return time.perf_counter() - t, loss, norm
+    t0, loss0, norm0 = timed(0)
+    for s in range(1, warmup):
+        timed(s)
+    ts = np.array([timed(warmup + s)[0] for s in range(steps)])
+    d2l._FORCE_NO_SYNC[0] = world > 1
+    try:
+        t_ns = np.median([timed(warmup + steps + s)[0]
+                          for s in range(steps // 2)]) if world > 1 else None
+    finally:
+        d2l._FORCE_NO_SYNC[0] = False
+    gib = 2 ** 30
+    mem = torch.tensor([torch.cuda.max_memory_allocated(device) / gib,
+                        torch.cuda.max_memory_reserved(device) / gib],
+                       device=device)
+    mem = d2l._all_reduce_max(mem).tolist()
+    step_s = float(np.median(ts))
+    tok_s = cfg.global_batch * cfg.arch.T / step_s
+    peak = _peak_flops(device)
+    return dict(accum=cfg.accum(world), first_step_s=t0, step_s=step_s,
+                step_iqr_s=float(np.subtract(*np.percentile(ts, [75, 25]))),
+                tok_s=tok_s, mfu=d2l.mfu(tok_s, cfg.arch, peak, world)
+                if peak else None, peak_alloc_gib=mem[0],
+                peak_reserved_gib=mem[1],
+                allreduce_share=None if t_ns is None else (step_s - t_ns)
+                / step_s, init_loss=loss0, init_grad_norm=norm0, status='ok')
+
+def _probe_io(cfg, tmp, device):
+    """Seconds for one validation pass and for the two checkpoint kinds.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    torch.manual_seed(0)
+    model = d2l.PackedGPT.from_arch(cfg.arch).to(device)
+    opt = torch.optim.AdamW(d2l.param_groups(model, cfg.wd), lr=1e-4,
+                            fused=device.type == 'cuda')
+    for p in model.parameters():
+        p.grad = torch.zeros_like(p)
+    opt.step()
+    val = _val_fn(cfg)
+    t = time.perf_counter()
+    val_loss = val(model)
+    t_val = time.perf_counter() - t
+    t = time.perf_counter()
+    _save_bf16(os.path.join(tmp, 'ckpt.safetensors'), model, 0)
+    t_bf16 = time.perf_counter() - t
+    t = time.perf_counter()
+    _write_state(tmp, 0, dict(model=model.state_dict(),
+                              optim=opt.state_dict()), True, ())
+    t_state = time.perf_counter() - t
+    return dict(preset=cfg.preset, io=True, val_s=t_val, val_loss=val_loss,
+                ckpt_bf16_s=t_bf16, state_s=t_state)
+
+REFERENCE_STEPS = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700,
+                   6000)
+
+def _reference_key(preset, step):
+    if preset == 'r2':
+        step = 6000 if step is None else step
+        if step not in REFERENCE_STEPS:
+            raise ValueError(f'step is one of {REFERENCE_STEPS}')
+        return f'lm-r2-s{step}-v1'
+    if preset == 't1':
+        if step not in (None, 1526):
+            raise ValueError('the t1 checkpoint is step 1526')
+        return 'lm-r2t1-s1526-v1'
+    if preset in ('r2-16k-pi', 'r2-16k-yarn'):
+        return f'lm-{preset}-v1'
+    raise ValueError(f'unknown preset {preset!r}')
+
+def load_reference_model(step=None, dtype=torch.bfloat16, device='cpu',
+                         preset='r2'):
+    """A committed checkpoint of the reference run (preset 'r2', steps
+    REFERENCE_STEPS, default 6000), of the t1 run ('t1'), or of a 16K arm
+    ('r2-16k-pi', 'r2-16k-yarn'), as a PackedGPT in eval mode. Its
+    tokenizer is d2l.r2_tokenizer().
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    key = _reference_key(preset, step)
+    local = os.path.join(d2l._rerun_dir(), d2l._next_key(key)
+                         + '.safetensors')
+    if d2l._regenerating() and os.path.exists(local):
+        path = local
+    elif key in d2l.DATA_HUB:
+        with d2l._quiet():
+            path = d2l.download_keyed(key)
+    else:
+        raise KeyError('reference checkpoints not committed yet')
+    return _load_bf16(path, dtype, device)
+
+def packed_to_hf(model):
+    """A Transformers LlamaForCausalLM with the weights of a PackedGPT
+    without QK-norm (RoPE pairs moved back to Llama's split halves).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    import transformers
+    c = model.config()
+    if c['qk_norm'] or c['softcap'] or c['pos'] != 'rope':
+        raise ValueError('Llama has no QK-norm, softcap or learned positions')
+    hf_cfg = transformers.LlamaConfig(
+        vocab_size=c['vocab_size'], hidden_size=c['num_hiddens'],
+        intermediate_size=c['ffn_hidden'], num_hidden_layers=c['num_blks'],
+        num_attention_heads=c['num_heads'],
+        num_key_value_heads=c['num_kv_heads'], head_dim=c['head_dim'],
+        rms_norm_eps=c['norm_eps'], rope_theta=c['rope_theta'],
+        max_position_embeddings=c['max_len'],
+        tie_word_embeddings=c['tie_embeddings'], attention_bias=False,
+        mlp_bias=False, bos_token_id=None, eos_token_id=0, pad_token_id=1)
+    d_h = c['head_dim']
+    inv = torch.argsort(d2l.qwen3_rope_permutation(d_h))
+
+    def unpermute(W):
+        return W.unflatten(0, (-1, d_h))[:, inv].flatten(0, 1)
+    names = {'token_emb': 'model.embed_tokens', 'norm': 'model.norm',
+             'lm_head': 'lm_head'}
+    layer = {'norm1': 'input_layernorm', 'norm2': 'post_attention_layernorm',
+             'attention.W_q': 'self_attn.q_proj',
+             'attention.W_k': 'self_attn.k_proj',
+             'attention.W_v': 'self_attn.v_proj',
+             'attention.W_o': 'self_attn.o_proj', 'ffn.W_g': 'mlp.gate_proj',
+             'ffn.W_1': 'mlp.up_proj', 'ffn.W_2': 'mlp.down_proj'}
+    state = {}
+    for k, v in model.state_dict().items():
+        mod = k[:-len('.weight')]
+        if mod in names:
+            state[names[mod] + '.weight'] = v
+            continue
+        _, i, rest = mod.split('.', 2)
+        if rest in ('attention.W_q', 'attention.W_k'):
+            v = unpermute(v)
+        state[f'model.layers.{i}.{layer[rest]}.weight'] = v
+    hf = transformers.LlamaForCausalLM(hf_cfg)  # (its RoPE buffer is built)
+    missing, unexpected = hf.load_state_dict(state, strict=False)
+    if unexpected or set(missing) - {'lm_head.weight'}:
+        raise ValueError(f'packed_to_hf: {missing} {unexpected}')
+    return hf.to(next(model.parameters()).dtype).eval()
+
+d2l.PRETRAIN_ARTIFACTS['gemm-sweep'] = (
+    'lm-fp8-gemm-sweep-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['lowp-runs'] = (
+    'lm-lowp-runs-v1', 'jsonl')
+
+d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'] = (
+    'lm-cpt-qwen-manifest-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['cpt-t1'] = (
+    'lm-cpt-t1-v1', 'jsonl')
+d2l.PRETRAIN_ARTIFACTS['cpt-runs'] = (
+    'lm-cpt-runs-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['smollm3-trajectory'] = (
+    'lm-smollm3-trajectory-v1', 'json-table')
+
+d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'] = (  # the zero-shot part
+    'lm-lc-evals-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['lc-t1'] = (
+    'lm-lc-t1-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['lc-evals'] = (
+    'lm-lc-evals-v1', 'json-table')
+
+d2l.PRETRAIN_ARTIFACTS['decode-rates'] = (
+    'lm-decode-rates-v1', 'json-table')
 
 
 ones_like = torch.ones_like

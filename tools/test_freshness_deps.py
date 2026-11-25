@@ -76,6 +76,16 @@ WIKI_URL: str = 'https://example.org'
 '''
 
 
+def stub_other_frameworks(shard_root):
+    """One placeholder shard per framework the fixture does not build:
+    scan_d2l_usage refuses to run while any framework has no shards (an
+    unbuilt library), and these fixtures build the PyTorch library only."""
+    for fw in ('tensorflow', 'jax', 'mxnet'):
+        d = Path(shard_root) / fw
+        d.mkdir(parents=True, exist_ok=True)
+        (d / '_preamble.py').write_text('import os\n')
+
+
 def test_shard_names():
     print('shard naming (build_lib._block_shard_names)')
     check(build_lib._block_shard_names(PLOT_BLOCK) == ['plot'],
@@ -128,6 +138,7 @@ def test_closure_end_to_end(tmp):
     (ch / 'nb.md').write_text(
         '# Fixture\n\n```{.python .input #nb-1}\n%%tab pytorch\n'
         'trainer = d2l.Trainer(max_epochs=1)\n```\n')
+    stub_other_frameworks(tmp / 'd2l' / '_blocks')
     r = subprocess.run(
         [sys.executable, str(TOOLS / 'scan_d2l_usage.py'), '--source', str(tmp),
          '--output-dir', str(tmp / '_notebooks'),
@@ -289,6 +300,7 @@ def test_data_hub_key_shards(tmp):
             f'{line}\n```\n')
 
     def scan_deps():
+        stub_other_frameworks(tmp / 'd2l' / '_blocks')
         r = subprocess.run(
             [sys.executable, str(TOOLS / 'scan_d2l_usage.py'),
              '--source', str(src), '--output-dir', '_notebooks',
@@ -345,6 +357,86 @@ def test_data_hub_key_shards(tmp):
           f'editing the beta entry stales only its user: {sorted(changed)}')
 
 
+PRETRAIN_SRC = (
+    '# Pretraining\n\n'
+    '```{.python .input #p-1}\n#@save\n'
+    "d2l.PRETRAIN_ARTIFACTS['x'] = ('k-v1', 'jsonl')\n```\n\n"
+    '```{.python .input #p-2}\n#@save\n'
+    "d2l.DATA_HUB['k-v1'] = (d2l.DATA_URL + 'k-v1.jsonl.gz', '1' * 40)\n"
+    '```\n\n'
+    '```{.python .input #p-3}\n#@save\n'
+    "d2l.PRETRAIN_ARTIFACTS['y'] = ('j-v1', 'parquet')\n```\n\n"
+    '```{.python .input #p-4}\n#@save\n'
+    "d2l.DATA_HUB['j-v1'] = (d2l.DATA_URL + 'j-v1.parquet', '2' * 40)\n"
+    '```\n\n'
+    '```{.python .input #p-5}\n'
+    'def load_artifact(name):  #@save\n'
+    '    key, kind = d2l.PRETRAIN_ARTIFACTS[name]\n'
+    '    return d2l.download(key)\n\n'
+    'def download(name):  #@save\n'
+    '    return DATA_HUB[name]\n```\n')
+
+
+def test_pretrain_artifact_shards(tmp):
+    print('per-name PRETRAIN_ARTIFACTS shards (chapter 21)')
+    check('PRETRAIN_ARTIFACTS' in build_lib.KEYED_REGISTRIES,
+          'PRETRAIN_ARTIFACTS is a keyed registry')
+    src = tmp / 'src'
+    (src / 'chapter_p').mkdir(parents=True)
+    (src / 'chapter_p' / 'lib.md').write_text(PRETRAIN_SRC)
+    (src / 'chapter_p' / 'nb_x.md').write_text(
+        '# X\n\n```{.python .input #nb-x-1}\n%%tab pytorch\n'
+        "log = d2l.load_artifact('x')\n```\n")
+    lib = tmp / 'd2l' / 'torch.py'
+    lib.parent.mkdir(parents=True)
+    lib.write_text('DATA_HUB = dict()\nPRETRAIN_ARTIFACTS = dict()\n')
+    files = ['chapter_p/lib.md']
+
+    def build():
+        build_lib.build_library(src, lib, 'pytorch', {'lib_name': 'torch'},
+                                files)
+    build()
+    shards = tmp / 'd2l' / '_blocks' / 'pytorch'
+    names = {p.stem for p in shards.glob('*.py')}
+    check({'PRETRAIN_ARTIFACTS.x', 'PRETRAIN_ARTIFACTS.y', 'DATA_HUB.k-v1',
+           'DATA_HUB.j-v1'} <= names and 'PRETRAIN_ARTIFACTS' not in names,
+          f'one shard per name and key: {sorted(names)}')
+    pre = (shards / '_preamble.py').read_bytes()
+
+    def scan_deps():
+        stub_other_frameworks(tmp / 'd2l' / '_blocks')
+        r = subprocess.run(
+            [sys.executable, str(TOOLS / 'scan_d2l_usage.py'),
+             '--source', str(src), '--output-dir', '_notebooks',
+             '--shard-dir', 'd2l/_blocks'],
+            cwd=tmp, capture_output=True, text=True)
+        check(r.returncode == 0, f'scanner runs ({r.stderr.strip()[-200:]})')
+        d = tmp / '_notebooks' / 'pytorch' / 'chapter_p' / 'nb_x.d'
+        return ({Path(t).name[:-3] for t in d.read_text().split()
+                 if '_blocks' in t}, d2l_lib_fingerprint(tmp, d))
+    deps, fp = scan_deps()
+    reg = {n for n in deps if n.startswith(('DATA_HUB', 'PRETRAIN_'))}
+    check(reg == {'PRETRAIN_ARTIFACTS.x', 'DATA_HUB.k-v1'},
+          f"load_artifact('x') depends on its entry and its key only: "
+          f'{sorted(reg)}')
+    (src / 'chapter_p' / 'more.md').write_text(
+        '# More\n\n```{.python .input #m-1}\n#@save\n'
+        "d2l.PRETRAIN_ARTIFACTS['z'] = ('z-v1', 'jsonl')\n```\n\n"
+        '```{.python .input #m-2}\n#@save\n'
+        "d2l.DATA_HUB['z-v1'] = (d2l.DATA_URL + 'z-v1.jsonl.gz', '3' * 40)\n"
+        '```\n')
+    files.append('chapter_p/more.md')
+    build()
+    check((shards / '_preamble.py').read_bytes() == pre,
+          'new entries leave the _preamble shard byte-identical')
+    deps2, fp2 = scan_deps()
+    check(fp2 == fp, 'an unrelated entry stales nothing')
+    (src / 'chapter_p' / 'lib.md').write_text(
+        PRETRAIN_SRC.replace("'1' * 40", "'4' * 40"))
+    build()
+    check(scan_deps()[1] != fp, 're-registering its key stales the notebook')
+
+
 def test_unmanifested_notebook(tmp):
     print('notebook with code cells but no manifest (audit_outputs)')
     ch = 'chapter_fixture'
@@ -388,6 +480,7 @@ def main():
         test_closure_end_to_end(tmp / 'closure')
         test_build_lib_extra_shards(tmp / 'buildlib')
         test_data_hub_key_shards(tmp / 'registry')
+        test_pretrain_artifact_shards(tmp / 'pretrain')
         test_unmanifested_notebook(tmp / 'audit')
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

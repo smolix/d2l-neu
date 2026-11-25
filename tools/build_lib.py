@@ -74,6 +74,16 @@ LIB_ONLY_FILES = [
     'chapter_lm-data/crawl-lib.md',
     'chapter_lm-data/mixtures-lib.md',
     'chapter_lm-data/tokenizers-lib.md',
+    # Chapter 21: the chapter's registries and load-or-regenerate plumbing,
+    # the packed-attention and stream internals (21.1), the run behind
+    # pretrain, its jobs and checkpoint readers (21.2), and each later
+    # section's registry entries and drivers (21.3-21.6).
+    'chapter_lm-pretraining/data-path-lib.md',
+    'chapter_lm-pretraining/reference-model-lib.md',
+    'chapter_lm-pretraining/low-precision-lib.md',
+    'chapter_lm-pretraining/continued-pretraining-lib.md',
+    'chapter_lm-pretraining/long-context-lib.md',
+    'chapter_lm-pretraining/budgets-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a
@@ -701,7 +711,10 @@ d2l = sys.modules[__name__]
 # a library shard it reaches; see scan_d2l_usage.py), so registering a new
 # dataset stales nothing. Every other registry (`HF_REVISIONS[...] = ...`)
 # keeps one shard per container.
-KEYED_REGISTRIES = ('DATA_HUB',)
+# PRETRAIN_ARTIFACTS (chapter 21: load name -> DATA_HUB key) is keyed too, so
+# a page literal reaches one entry and, through its key literal, one DATA_HUB
+# shard.
+KEYED_REGISTRIES = ('DATA_HUB', 'PRETRAIN_ARTIFACTS')
 
 _SAFE_KEY = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]*')
 

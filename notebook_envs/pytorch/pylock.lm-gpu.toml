@@ -1038,6 +1038,12 @@ version = "2.11.0+cu128"
 wheels = [{ url = "https://download-r2.pytorch.org/whl/cu128/torch-2.11.0%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl", upload-time = 2026-04-27T17:42:06Z, hashes = { sha256 = "d252cf975fb18c94a85336323ad425f473df56dab35a44b00399bd70c7a3b997" } }]
 
 [[packages]]
+name = "torchao"
+version = "0.17.0+cu128"
+marker = "platform_machine == 'x86_64' and sys_platform == 'linux'"
+wheels = [{ url = "https://download.pytorch.org/whl/cu128/torchao-0.17.0%2Bcu128-cp310-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", upload-time = 2026-03-30T20:39:48Z, hashes = { sha256 = "ceea15b9b14d1fc20029a89dddcc4dd2d9aeef9a749c8c9f8437ffb81aa443aa" } }]
+
+[[packages]]
 name = "torchvision"
 version = "0.26.0+cu128"
 wheels = [{ url = "https://download-r2.pytorch.org/whl/cu128/torchvision-0.26.0%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl", upload-time = 2026-03-23T15:36:22Z, hashes = { sha256 = "ccf26b4b659cfce6f2208cb8326071d51c70219a34856dfdf468d1e19af52c0d" } }]

@@ -1,0 +1,531 @@
+#!/usr/bin/env python3
+"""CPU tests for sec_lm_reference_model (chapter_lm-pretraining/
+reference-model.md and reference-model-lib.md) and the chapter's
+load-or-regenerate plumbing (data-path-lib.md): `wsd_lr` (fixture, 1e-9);
+`param_groups` (name sets, r2's decayed count 113,246,208 on the meta
+device); `flops_per_token` against the formula for every preset (exact
+ints), r2 = 1,509,949,440, the Transformers-config path on an offline
+Qwen3-0.6B-Base config (6 N_mm = 3,575,906,304, F(T=2,048) =
+4,985,192,448), `causal_half`, `T=None`; `mfu` arithmetic; `r2_config`
+overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
+`_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
+chapter's 34 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
+vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
+(losses 1e-6) and a branch from a saved state; `attn_logit_stats` against
+the explicit softmax input; the `qk_clip_` contract; `softcap`;
+`make_bad_batch`; `lr_sensitivity`; `_pretrain_result` and
+`_pretrain_merged` with a temporary registry (regenerate with the config
+stored, load, configuration mismatch, absent in a normal run, pending,
+two regeneration names with other calls in the same process, D2L_RERUN=1
+refused); `t_interval` against `scipy.stats.t` (dof 1-10, 1e-4);
+`packed_to_hf` against `LlamaForCausalLM` (fp32 1e-5);
+`load_reference_model` before the checkpoints are registered; a 2-process
+gloo DDP `pretrain` equal to one process at the same global batch (1e-5).
+"""
+import contextlib
+import io
+import math
+import os
+import sys
+import tempfile
+import unittest
+import warnings
+from unittest import mock
+
+import numpy as np
+import pandas as pd
+import torch
+
+from d2l import torch as d2l
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import test_lm_data_path as dp  # noqa: E402
+
+torch.set_num_threads(min(8, torch.get_num_threads()))
+
+RERUN_NAMES = (
+    'pdp-throughput', 'pdp-mask-runs', 't1-runs', 'inst-t1-none',
+    'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'spike-replay',
+    'reference-run', 'ladder', 'inst-t2', 'reference-evals', 'ladder-evals',
+    'gemm-sweep', 'lowp-runs', 'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B',
+    'cpt-qwen-C', 'cpt-qwen-A2', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1',
+    'smollm3-2', 'smollm3-3', 'smollm3-4', 'smollm3-5', 'lc-t1',
+    'lc-zeroshot', 'lc-t2-pi', 'lc-t2-yarn', 'lc-t2-prog', 'lc-t2-evals',
+    'decode-rates')
+
+TOY = d2l.Arch(L=2, d=32, H=4, H_kv=2, d_h=8, f=64, vocab=512, T=32,
+               rope_base=1e4, qk_norm=False, tie=True)
+
+
+def toy_config(**kw):
+    args = dict(preset='toy', arch=TOY, steps=30, global_batch=8,
+                micro_batch=8, peak_lr=3e-3, warmup=3, decay=6, dtype='fp32',
+                compile=False, probe_every=0, stats_every=0, val_every=0,
+                z_loss=1e-4)
+    args.update(kw)
+    return d2l.PretrainConfig(**args)
+
+
+def toy_model(seed=0):
+    torch.manual_seed(seed)
+    return d2l.PackedGPT.from_arch(TOY, backend='sdpa')
+
+
+class ScheduleTest(unittest.TestCase):
+    def test_wsd_fixture(self):
+        lr = [d2l.wsd_lr(s, 10, 2, 4, 1.0, 0.1) for s in range(10)]
+        ref = [0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 0.1 + 0.9 * 4 / 4,
+               0.1 + 0.9 * 3 / 4, 0.1 + 0.9 * 2 / 4, 0.1 + 0.9 * 1 / 4]
+        for a, b in zip(lr, ref):
+            self.assertLess(abs(a - b), 1e-9)
+
+    def test_param_groups(self):
+        m = toy_model()
+        decay, rest = d2l.param_groups(m, 0.1)
+        self.assertEqual((decay['weight_decay'], rest['weight_decay']),
+                         (0.1, 0.0))
+        self.assertIn('blks.0.attention.W_q.weight', decay['names'])
+        self.assertIn('token_emb.weight', rest['names'])
+        self.assertIn('blks.0.norm1.weight', rest['names'])
+        self.assertEqual(len(decay['names']) + len(rest['names']),
+                         len(list(m.parameters())))
+        with torch.device('meta'):
+            r2 = d2l.PackedGPT.from_arch(d2l.r2_config().arch)
+        decay, _ = d2l.param_groups(r2, 0.1)
+        self.assertEqual(sum(p.numel() for p in decay['params']),
+                         113_246_208)
+
+
+class FlopsTest(unittest.TestCase):
+    def test_presets(self):
+        for preset in d2l.R2_ARCHS:
+            a = d2l.r2_config(preset).arch
+            N = a.L * (2 * a.d * a.H * a.d_h + 2 * a.d * a.H_kv * a.d_h
+                       + 3 * a.d * a.f) + a.vocab * a.d
+            F = 6 * N + 12 * a.L * a.H * a.d_h * a.T
+            self.assertEqual(d2l.flops_per_token(a, T=a.T), F, preset)
+            self.assertEqual(d2l.flops_per_token(a), 6 * N)
+            self.assertEqual(d2l.flops_per_token(a, T=a.T, causal_half=True),
+                             6 * N + 6 * a.L * a.H * a.d_h * a.T)
+            self.assertIsInstance(d2l.flops_per_token(a, T=a.T), int)
+        self.assertEqual(d2l.flops_per_token(d2l.r2_config().arch, T=4096),
+                         1_509_949_440)
+
+    def test_hf_config(self):
+        import transformers
+        cfg = transformers.Qwen3Config(
+            vocab_size=151936, hidden_size=1024, intermediate_size=3072,
+            num_hidden_layers=28, num_attention_heads=16,
+            num_key_value_heads=8, head_dim=128, tie_word_embeddings=True)
+        self.assertEqual(d2l.flops_per_token(cfg), 3_575_906_304)
+        self.assertEqual(d2l.flops_per_token(cfg, T=2048), 4_985_192_448)
+        self.assertEqual(d2l.flops_per_token(cfg.to_dict(), T=2048),
+                         4_985_192_448)
+
+    def test_mfu(self):
+        a = d2l.r2_config().arch
+        F = d2l.flops_per_token(a, T=a.T)
+        self.assertAlmostEqual(d2l.mfu(1e5, a, 165e12, 4),
+                               1e5 * F / (4 * 165e12))
+        self.assertAlmostEqual(
+            d2l.mfu(1e5, a, 165e12, causal_half=True),
+            1e5 * d2l.flops_per_token(a, T=a.T, causal_half=True) / 165e12)
+        self.assertAlmostEqual(d2l.mfu(1e5, a, 1e12, T=1024),
+                               1e5 * d2l.flops_per_token(a, T=1024) / 1e12)
+
+
+class ConfigTest(unittest.TestCase):
+    def test_overrides(self):
+        c = d2l.r2_config('t1', seed=1, clip=None)
+        self.assertEqual((c.seed, c.clip, c.preset), (1, None, 't1'))
+        self.assertEqual(c.arch.T, 1024)
+        self.assertEqual(c.micro_batch, 16)
+        self.assertEqual(c.accum(1), 4)
+        with self.assertRaises(TypeError):
+            d2l.r2_config('r2', no_such_field=1)
+        with self.assertRaises(ValueError):
+            d2l.r2_config('r2', micro_batch=7).accum(1)
+        r2 = d2l.r2_config()
+        self.assertEqual((r2.steps, r2.global_batch, r2.micro_batch,
+                          r2.accum(4)), (6000, 128, 8, 4))
+        self.assertEqual(r2.branches, ((2550, 450), (1275, 225)))
+        self.assertIn(5100, r2.state_steps)
+
+    def test_names(self):
+        self.assertEqual(d2l.PRETRAIN_RERUN_NAMES, RERUN_NAMES)
+        names = set(RERUN_NAMES)
+        self.assertLessEqual(set(d2l._RUN_NAMES.values()), names)
+        self.assertLessEqual(set(d2l.PRETRAIN_JOBS), names)
+        self.assertEqual(set(d2l._RERUN_ARTIFACT), names)
+        self.assertLessEqual(set(d2l._RERUN_ARTIFACT.values()),
+                             set(d2l.PRETRAIN_ARTIFACTS))
+        for name, (driver, kwargs) in d2l.PRETRAIN_JOBS.items():
+            self.assertTrue(callable(getattr(d2l, driver)), name)
+            kwargs()  # builds without error
+        for key, kind in d2l.PRETRAIN_ARTIFACTS.values():
+            self.assertRegex(key, r'^lm-[a-z0-9.-]+-v\d+$')
+            self.assertIn(kind, d2l._ARTIFACT_EXT)
+
+    def test_cfg_json_round_trip(self):
+        c = d2l.r2_config('ladder-54m', seed=2)
+        self.assertEqual(d2l._cfg_from_json(d2l._cfg_json(c)), c)
+
+    def test_load_reference_model_unregistered(self):
+        with self.assertRaises(KeyError) as cm:
+            d2l.load_reference_model()
+        self.assertIn('reference checkpoints not committed yet',
+                      str(cm.exception))
+
+
+class PretrainTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.shards = dp.fixture_shards(os.path.join(cls.tmp.name, 'set'),
+                                       n_docs=600)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def stream(self, **kw):
+        return d2l.PackedStream(self.shards, TOY.T, 8, seed=1, **kw)
+
+    def run_toy(self, cfg, resume=None, seed=0):
+        with contextlib.redirect_stdout(io.StringIO()):
+            return d2l.pretrain(toy_model(seed), self.stream(), cfg,
+                                resume=resume)
+
+    def test_accumulation(self):
+        a = self.run_toy(toy_config(micro_batch=8))
+        b = self.run_toy(toy_config(micro_batch=2))
+        self.assertEqual(len(a), 30)
+        self.assertEqual(a['step'].tolist(), list(range(1, 31)))
+        self.assertLess(np.abs(a['loss'] - b['loss']).max(), 1e-5)
+        self.assertLess(a['loss'].iloc[-1], a['loss'].iloc[0])
+        self.assertTrue({'lr', 'grad_norm', 'clipped', 'tok_s', 'mfu',
+                         'run', 'seed', 'spike'} <= set(a.columns))
+
+    def test_resume_and_branch(self):
+        with tempfile.TemporaryDirectory() as out:
+            full = self.run_toy(toy_config(steps=40, decay=8,
+                                           out_dir=os.path.join(out, 'a')))
+            part = toy_config(steps=40, decay=8, state_steps=(20,),
+                              out_dir=os.path.join(out, 'b'))
+            first = d2l.pretrain(toy_model(), self.stream(), part,
+                                 hooks=[self.stop_at(20)])
+            self.assertEqual(first['step'].max(), 20)
+            self.assertEqual(d2l._state_steps(part.out_dir), [20])
+            resumed = self.run_toy(part, resume='auto', seed=5)
+            self.assertEqual(resumed['step'].tolist(), list(range(1, 41)))
+            self.assertLess(np.abs(resumed['loss'].values
+                                   - full['loss'].values).max(), 1e-6)
+            # a branch from step 20 with 6 decay steps
+            br = toy_config(steps=30, decay=6, state_steps=(20,), ckpt_steps=(30,),
+                            branches=((20, 6),),
+                            out_dir=os.path.join(out, 'c'))
+            log = self.run_toy(br)
+            self.assertEqual(sorted(set(log['run'])), ['b26', 'toy'])
+            b = log[log['run'] == 'b26']
+            self.assertEqual(b['step'].tolist(), list(range(21, 27)))
+            self.assertAlmostEqual(b['lr'].iloc[-1], 3e-3 / 6)
+            self.assertTrue(os.path.exists(os.path.join(
+                br.out_dir, 'ckpt', 'b26-s26.safetensors')))
+            self.assertTrue(os.path.exists(os.path.join(
+                br.out_dir, 'ckpt', 's30.safetensors')))
+            m = d2l._load_bf16(os.path.join(br.out_dir, 'ckpt',
+                                            's30.safetensors'),
+                               dtype=torch.float32)
+            self.assertEqual(m.config()['num_blks'], 2)
+
+    @staticmethod
+    def stop_at(n):
+        class Stop:
+            def __call__(self, step, model, opt, batch, row):
+                if row['step'] == n:
+                    row['loss'] = float('nan')  # stopped() ends the run
+        return Stop()
+
+    def test_probes(self):
+        cfg = toy_config(steps=4, probe_every=2, stats_every=2)
+        log = self.run_toy(cfg)
+        self.assertIn('rms_W_q', log.columns)
+        self.assertIn('max_logit_0', log.columns)
+        self.assertTrue(log['rms_W_q'].iloc[[1, 3]].notna().all())
+
+    def test_attn_logit_stats(self):
+        m = toy_model().eval()
+        b = self.stream().batch(0)
+        stats = d2l.attn_logit_stats(m, b, max_seqs=2, chunk=7)
+        X, ctx = b['input_ids'][:2], d2l.PackCtx(b['doc_ids'][:2],
+                                                 b['pos_ids'][:2])
+        seen = d2l._attention_inputs(m, X, ctx)
+        for l, (attn, Y, tables) in enumerate(seen):
+            q, k, _ = attn.qkv(Y, tables=tables)
+            k = k.repeat_interleave(2, 1)
+            s = q @ k.transpose(-2, -1) / math.sqrt(attn.head_dim)
+            d = ctx.doc_ids
+            T = X.shape[1]
+            ok = (torch.ones(T, T, dtype=torch.bool).tril()
+                  & (d[:, :, None] == d[:, None, :]))[:, None]
+            s = s.masked_fill(~ok, -math.inf)
+            self.assertLess((stats[l].max_logit - s.amax((0, 2, 3))).abs()
+                            .max(), 1e-5)
+            p = torch.softmax(s, -1)
+            ent = -(p * torch.log(p.clamp_min(1e-30))).sum(-1).mean((0, 2))
+            self.assertLess((stats[l].entropy - ent).abs().max(), 1e-5)
+
+    def test_qk_clip(self):
+        # one block: clipping a block changes the inputs of the next ones
+        torch.manual_seed(0)
+        m = d2l.PackedGPT.from_arch(TOY._replace(L=1), backend='sdpa').eval()
+        b = self.stream().batch(0)
+        with torch.no_grad():
+            for blk in m.blks:  # large logits in some heads
+                blk.attention.W_q.weight[:8] *= 6
+                blk.attention.W_k.weight[:8] *= 3
+        stats = d2l.attn_logit_stats(m, b)
+        tau = float(min(s.max_logit.max() for s in stats.values())) * 0.6
+        before = {n: p.clone() for n, p in m.named_parameters()}
+        d2l.qk_clip_(m, stats, tau)
+        after = d2l.attn_logit_stats(m, b)
+        for l in stats:
+            S, S2 = stats[l].max_logit, after[l].max_logit
+            hit = S > tau
+            self.assertTrue(hit.any())
+            # a clipped head's maximum is tau when its key head is not
+            # shared with a larger one; never above tau
+            self.assertTrue((S2[hit] <= tau * (1 + 1e-5)).all())
+            own = hit & (S == S.view(2, -1).amax(1).repeat_interleave(2))
+            self.assertLess(((S2[own] - tau).abs() / tau).max(), 1e-5)
+            q = m.blks[l].attention.W_q.weight.view(4, 8, -1)
+            q0 = before[f'blks.{l}.attention.W_q.weight'].view(4, 8, -1)
+            self.assertTrue(torch.equal(q[~hit], q0[~hit]))
+        again = {n: p.clone() for n, p in m.named_parameters()}
+        d2l.qk_clip_(m, after, tau * (1 + 1e-4))
+        for n, p in m.named_parameters():
+            self.assertTrue(torch.equal(p, again[n]), n)
+        torch.manual_seed(0)
+        qn = d2l.PackedGPT.from_arch(TOY._replace(qk_norm=True))
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            self.assertEqual(d2l.qk_clip_(qn, stats, tau), {})
+        self.assertTrue(w)
+
+    def test_small_functions(self):
+        x = torch.linspace(-100, 100, 101)
+        y = d2l.softcap(x, 30.0)
+        self.assertTrue((y.abs() < 30).all())
+        self.assertLess((d2l.softcap(torch.tensor(0.1), 30.0) - 0.1).abs(),
+                        1e-5)
+        b = self.stream().batch(0)
+        for kind in ('random', 'repeat'):
+            bad = d2l.make_bad_batch(b, kind, vocab=512, seed=1)
+            self.assertEqual(bad['input_ids'].shape, b['input_ids'].shape)
+            self.assertTrue(torch.equal(bad['labels'][:, :-1],
+                                        bad['input_ids'][:, 1:]))
+            self.assertTrue((bad['input_ids'] >= 32).all())
+            self.assertTrue((bad['doc_ids'] == 0).all())
+        self.assertEqual(len(set(d2l.make_bad_batch(b, 'repeat')[
+            'input_ids'].flatten().tolist())), 1)
+        self.assertAlmostEqual(d2l.lr_sensitivity(
+            [3.0, 2.5, float('nan'), 4.5], 4.0), (0.5 + 0 + 1.5 + 1.5) / 4)
+
+    def test_t_interval(self):
+        from scipy import stats
+        rng = np.random.default_rng(0)
+        for n in range(2, 12):
+            x = rng.normal(size=n)
+            m, h = d2l.t_interval(x)
+            ref = stats.t.ppf(0.975, n - 1) * x.std(ddof=1) / math.sqrt(n)
+            self.assertAlmostEqual(m, x.mean())
+            self.assertLess(abs(h - ref), 1e-4)
+        m, h = d2l.t_interval(rng.normal(size=20), alpha=0.1)
+        self.assertGreater(h, 0)
+
+    def test_packed_to_hf(self):
+        torch.manual_seed(0)
+        m = d2l.PackedGPT.from_arch(TOY._replace(H=4, H_kv=2)).eval()
+        hf = d2l.packed_to_hf(m)
+        X = torch.randint(0, 512, (2, 20))
+        with torch.no_grad():
+            ref = m(X)
+            out = hf(X).logits
+        self.assertLess((ref - out).abs().max(), 1e-5)
+
+
+def _ddp_worker(rank, world, shard_dir, out, port):
+    os.environ.update(RANK=str(rank), WORLD_SIZE=str(world),
+                      LOCAL_RANK=str(rank), MASTER_ADDR='127.0.0.1',
+                      MASTER_PORT=str(port))
+    torch.set_num_threads(2)
+    shards = d2l.TokenShards(shard_dir)
+    stream = d2l.PackedStream(shards, TOY.T, 8, seed=1, rank=rank,
+                              world=world)
+    cfg = toy_config(steps=10, ddp=True, micro_batch=2)
+    log = d2l.pretrain(toy_model(), stream, cfg)
+    if rank == 0:
+        log.to_json(out)
+    import torch.distributed as dist
+    dist.destroy_process_group()
+
+
+class DDPTest(unittest.TestCase):
+    def test_two_process_gloo(self):
+        import torch.multiprocessing as mp
+        with tempfile.TemporaryDirectory() as d:
+            shard_dir = os.path.join(d, 'set')
+            shards = dp.fixture_shards(shard_dir, n_docs=600)
+            stream = d2l.PackedStream(shards, TOY.T, 8, seed=1)
+            ref = d2l.pretrain(toy_model(), stream,
+                               toy_config(steps=10, micro_batch=4))
+            out = os.path.join(d, 'log.json')
+            env = dict(os.environ)
+            os.environ['CUDA_VISIBLE_DEVICES'] = ''  # gloo on the CPU
+            try:
+                mp.start_processes(_ddp_worker, args=(2, shard_dir, out,
+                                                      29500 + os.getpid()
+                                                      % 1000),
+                                   nprocs=2, start_method='spawn')
+            finally:
+                os.environ.clear()
+                os.environ.update(env)
+            log = pd.read_json(out)
+        self.assertLess(np.abs(log['loss'].values - ref['loss'].values)
+                        .max(), 1e-5)
+
+
+class ResultTest(unittest.TestCase):
+    """_pretrain_result and _pretrain_merged with a temporary registry."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        chapter = os.path.join(self.tmp.name, 'chapter')
+        os.makedirs(chapter)
+        self.cwd = os.getcwd()
+        os.chdir(chapter)
+        self.patches = [
+            mock.patch.object(d2l, 'DATA_HUB', dict(d2l.DATA_HUB)),
+            mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset()),
+            mock.patch.dict(os.environ, {'D2L_RERUN': ''})]
+        for p in self.patches:
+            p.start()
+        self.calls = 0
+
+    def tearDown(self):
+        for p in reversed(self.patches):
+            p.stop()
+        os.chdir(self.cwd)
+        self.tmp.cleanup()
+
+    def compute(self):
+        self.calls += 1
+        df = pd.DataFrame(dict(T=[1024, 4096], tok_s=[1.5e5, 1.2e5]))
+        df.attrs['label'] = 't1 preset'
+        return df
+
+    def result(self, config=None, **kw):
+        with contextlib.redirect_stdout(io.StringIO()):
+            return d2l._pretrain_result('pdp-throughput', self.compute,
+                                        config or dict(T=[1024, 4096]), **kw)
+
+    def register(self):
+        path = os.path.join('..', 'data', 'lm', 'rerun',
+                            'lm-pdp-throughput-v1.parquet')
+        d2l.DATA_HUB['lm-pdp-throughput-v1'] = ('url', 'sha1')
+        return mock.patch.object(d2l, 'download_keyed', lambda key: path)
+
+    def test_regenerate_then_load(self):
+        os.environ['D2L_RERUN'] = 'pdp-throughput'
+        df = self.result()
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(df.attrs['label'], 't1 preset')
+        path = '../data/lm/rerun/lm-pdp-throughput-v1.parquet'
+        self.assertTrue(os.path.exists(path))
+        os.environ['D2L_RERUN'] = ''
+        with self.register():
+            df = self.result()
+            self.assertEqual(self.calls, 1)
+            self.assertEqual(df['T'].tolist(), [1024, 4096])
+            self.assertEqual(df.attrs['label'], 't1 preset')
+            self.assertEqual(df.attrs['config'], dict(T=[1024, 4096]))
+            with self.assertRaises(ValueError) as cm:
+                self.result(dict(T=[1024, 8192]))
+            self.assertIn('page configuration differs from the committed run '
+                          'lm-pdp-throughput-v1: T[1] 8192 != 4096',
+                          str(cm.exception))
+            # a regeneration of a registered key writes the next version
+            os.environ['D2L_RERUN'] = 'pdp-throughput'
+            self.result()
+            self.assertTrue(os.path.exists(
+                '../data/lm/rerun/lm-pdp-throughput-v2.parquet'))
+
+    def test_absent_and_pending(self):
+        with self.assertRaises(KeyError):
+            self.result()
+        with mock.patch.object(d2l, 'PRETRAIN_PENDING',
+                               frozenset({'pdp-throughput'})):
+            df = self.result()
+        self.assertEqual(df.attrs['label'], 'pdp-throughput pending')
+        os.environ['D2L_RERUN'] = 't1-runs,ladder'
+        df = self.result()  # another name in the same process: no error
+        self.assertEqual(self.calls, 0)
+        self.assertEqual(df.attrs['label'], 'pdp-throughput pending')
+        os.environ['D2L_RERUN'] = '1'
+        with self.assertRaises(ValueError) as cm:
+            self.result()
+        self.assertIn('t1-runs', str(cm.exception))
+
+    def test_compute_incomplete(self):
+        os.environ['D2L_RERUN'] = 'pdp-throughput'
+        with contextlib.redirect_stdout(io.StringIO()):
+            df = d2l._pretrain_result('pdp-throughput', lambda: None, {})
+        self.assertEqual(df.attrs['label'], 'pdp-throughput pending')
+        self.assertFalse(os.path.exists('../data/lm/rerun'))
+
+    def test_json_table_and_jsonl(self):
+        for kind in ('json-table', 'jsonl'):
+            path = os.path.join(self.tmp.name, 'x.' + kind)
+            df = self.compute()
+            if kind == 'json-table':
+                import collections
+                R = collections.namedtuple('R', 'table extra label')
+                d2l._write_result(path, kind, R(df, 3, 'lbl'),
+                                  dict(config={'a': 1}, label='lbl'))
+                r = d2l._read_result(path, kind)
+                self.assertEqual((r.extra, r.label), (3, 'lbl'))
+                self.assertEqual(r.table['T'].tolist(), [1024, 4096])
+                self.assertEqual(d2l._stored_config(r), {'a': 1})
+            else:
+                d2l._write_result(path, kind, df, dict(config={'a': 1},
+                                                       label='lbl'))
+                r = d2l._read_result(path, kind)
+                self.assertEqual(r['tok_s'].tolist(), [1.5e5, 1.2e5])
+                self.assertEqual(r.attrs['config'], {'a': 1})
+
+    def test_merged(self):
+        parts = {n: (self.compute, dict(arm=n)) for n in (
+            'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2')}
+
+        def merge(results):
+            return pd.concat(results.values(), ignore_index=True)
+
+        def call():
+            with contextlib.redirect_stdout(io.StringIO()):
+                return d2l._pretrain_merged('cpt-qwen-evals', parts, merge,
+                                            dict(arms=4))
+        os.environ['D2L_RERUN'] = 'cpt-qwen-A,cpt-qwen-B'
+        self.assertEqual(call().attrs['label'], 'cpt-qwen-evals pending')
+        self.assertEqual(self.calls, 2)
+        os.environ['D2L_RERUN'] = 'cpt-qwen-C,cpt-qwen-A2,cpt-qwen-evals'
+        df = call()
+        self.assertEqual(self.calls, 4)
+        self.assertEqual(len(df), 8)
+        self.assertTrue(os.path.exists('../data/lm/rerun/lm-cpt-runs-v1'
+                                       '.json.gz'))
+        os.environ['D2L_RERUN'] = ''
+        with self.assertRaises(KeyError):
+            call()
+
+
+if __name__ == '__main__':
+    unittest.main()

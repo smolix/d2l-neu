@@ -757,12 +757,15 @@ def _nccl_tests_env(env=None):
     return env
 
 #@save
-def hw_run(cmd, timeout_s, env=None):
+def hw_run(cmd, timeout_s, env=None, record=False):
     """Run a command (a list) with a timeout and return an HWRun record.
     On timeout the whole process group is killed and the record says why
     (refused='timeout after N s'); a missing binary or a non-zero exit is
     a refusal too. In a regeneration run a refusal raises instead (a
-    timeout fails the run). env adds variables to the current ones."""
+    timeout fails the run), unless record=True: a configuration the tool
+    may refuse (a forced NCCL algorithm or protocol) is then a result, and
+    its refusal record is returned. env adds variables to the current
+    ones."""
     t = time.time()
     try:
         proc = subprocess.Popen(
@@ -783,7 +786,7 @@ def hw_run(cmd, timeout_s, env=None):
             refused = f'timeout after {timeout_s:g} s'
         run = HWRun(list(cmd), proc.returncode, out, err,
                     round(time.time() - t, 2), refused)
-    if run.refused and _hw_regenerating():
+    if run.refused and not record and _hw_regenerating():
         raise RuntimeError(f'{os.path.basename(str(cmd[0]))}: {run.refused}'
                            f'\n{run.stderr[-2000:]}')
     return run

@@ -8,8 +8,9 @@ raises instead in a regeneration run; `hw_bin` finds a tool in D2L_HW_BIN;
 median of the per-process values, the packed tar, refusal to overwrite).
 the driver's finish hook runs after the combine; the torch.distributed
 fallback sweep of sec_lm_server_paths on a 2-rank gloo group under its own
-timeout; the gloo loopback table of sec_lm_networks. Later steps add
-`hier_allreduce` on a 4-rank gloo group (chapter spec part 1.9).
+timeout; the gloo loopback table of sec_lm_networks; sec_lm_collectives'
+`hier_allreduce` on four gloo CPU processes (two pairs, two groups) against
+a CPU sum, and its benchmark script's timing rows.
 """
 import os
 import stat
@@ -59,6 +60,9 @@ class TestRun(unittest.TestCase):
         with mock.patch.dict(os.environ, {'D2L_RERUN': 'box-p2p'}):
             with self.assertRaisesRegex(RuntimeError, 'exit status 3'):
                 d2l.hw_run(['sh', '-c', 'exit 3'], 5)
+            # a forced configuration the tool may refuse is a result
+            run = d2l.hw_run(['sh', '-c', 'exit 3'], 5, record=True)
+            self.assertEqual(run.refused, 'exit status 3')
 
     def test_env(self):
         run = d2l.hw_run(['sh', '-c', 'echo $D2L_TEST_X'], 5,
@@ -147,6 +151,21 @@ class TestTorchrunSweep(unittest.TestCase):
         x = d2l._fit_tcp(t)
         self.assertGreater(x['alpha'], 0)
         self.assertGreater(x['beta'], 0)
+
+
+class TestHierAllreduce(unittest.TestCase):
+    def test_cpu(self):
+        """The page's hier_allreduce through hier_vs_flat's script in cpu
+        mode: the check against the CPU sum and one timing row per
+        variant."""
+        rows, check, run = d2l._hier_run(
+            'cpu', [2**12], 2, 1, 2**12, [[0, 1], [2, 3]], [[0, 2], [1, 3]],
+            300)
+        self.assertIsNone(run.refused, run.stderr[-2000:])
+        self.assertTrue(check['ok'], check)
+        self.assertLess(check['max_rel_err'], 1e-5)
+        self.assertEqual([r['variant'] for r in rows], list(d2l._HIER_ROWS))
+        self.assertTrue(all(r['us'] > 0 for r in rows))
 
 
 class TestRegenCLI(unittest.TestCase):

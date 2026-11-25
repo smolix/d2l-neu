@@ -34,6 +34,11 @@ sweeps of known parameters, the pending campaign path, alpha_beta.json's
 records (links, transports, no NaN) and box_alpha_beta (a tie needs a
 path), the two-regime fits and their intervals over processes, the D2
 pattern flows and times, the medians per relation class, the scrubber.
+Section 22.7: the closed forms (D1 to D3) and the simulator (ring exact, the
+tree an upper bound within 2% far above the crossover), NCCL's double
+binary tree, the INFO digest on a sample, the forced-pair fits and the
+measured and predicted crossover, the tuner check in noise units, the
+opening's symptoms, alpha_beta.json's records, the hierarchical display.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -2828,6 +2833,246 @@ class TestNetworks(unittest.TestCase):
             t, _ = d2l._hw_read(os.path.join(tmp, 'tcp.json.gz'))
             x = d2l._fit_tcp(t)
             self.assertLess(x['alpha_lo'], x['alpha_hi'])
+
+
+NCCL_INFO_SAMPLE = """\
+box:1:1 [0] NCCL INFO NCCL version 2.28.9+cuda12.9
+box:1:1 [0] NCCL INFO comm 0x5 rank 0 nRanks 4 nNodes 1 localRanks 4 localRank 0 MNNVL 0
+box:1:1 [0] NCCL INFO Channel 00/02 :    0   1   2   3
+box:1:1 [0] NCCL INFO Channel 01/02 :    0   1   2   3
+box:1:1 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] 1/-1/-1->0->-1
+box:1:1 [1] NCCL INFO Trees [0] 2/-1/-1->1->0 [1] 2/-1/-1->1->0
+box:1:1 [2] NCCL INFO Trees [0] 3/-1/-1->2->1 [1] 3/-1/-1->2->1
+box:1:1 [3] NCCL INFO Trees [0] -1/-1/-1->3->2 [1] -1/-1/-1->3->2
+box:1:1 [0] NCCL INFO Channel 00/0 : 0[0] -> 1[1] via SHM/direct/direct
+box:1:1 [3] NCCL INFO Channel 00/0 : 3[3] -> 0[0] via SHM/direct/direct
+box:1:1 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels
+box:1:1 [0] NCCL INFO Algorithm   |   Tree      |   Ring
+box:1:1 [0] NCCL INFO Protocol    | LL LL128 Simple | LL LL128 Simple
+box:1:1 [0] NCCL INFO AllReduce   | 20.1/4.0 0.0/0.0 60.0/9.5 | 15.2/3.1 0.0/0.0 40.3/8.7
+box:1:1 [0] NCCL INFO AllReduce: 8 Bytes -> Algo 1 proto 0 time 15.2
+box:1:1 [0] NCCL INFO AllReduce: 65536 Bytes -> Algo RING proto LL time 20.0
+box:1:1 [0] NCCL INFO AllReduce: 268435456 Bytes -> Algo 1 proto 2 time 1.2
+"""
+
+
+def synthetic_pairs(params, dropped=None, g=4, seed=0, procs=3):
+    """A forced-pair table (nccl_algo_proto_sweeps' layout) of
+    t = alpha + phi S / beta per pair ({name: (alpha, beta busbw)}), with
+    per-process times in attrs['proc_us']; dropped: {name: reason}."""
+    dropped, phi = dropped or {}, d2l.nccl_busbw_factor('all_reduce', g)
+    frames = []
+    for i, (name, (alpha, beta)) in enumerate(params.items()):
+        x = synthetic_sweep('all_reduce', g, 'all', alpha, beta / phi,
+                            seed=seed + i, noise=0.002)
+        x = x.assign(algo=name, proto='default' if name == 'default'
+                     else name.split('/')[1], status='', used='')
+        frames.append(x)
+    for name, reason in dropped.items():
+        x = frames[0].copy().assign(algo=name, proto=name.split('/')[1],
+                                    status=reason)
+        x[['oop_us', 'oop_algbw', 'oop_busbw']] = np.nan
+        frames.append(x)
+    out = pd.concat(frames, ignore_index=True)
+    rng = np.random.default_rng(seed)
+    out.attrs.update(dropped=dict(dropped), alpha_below=2**16,
+                     plateau_from=2**22, proc_us=[
+                         (out.oop_us * (1 + 0.003 * rng.standard_normal(
+                             len(out)))).tolist() for _ in range(procs)])
+    return out
+
+
+class TestCollectives(unittest.TestCase):
+    """Section 22.7: the closed forms against the simulator, NCCL's double
+    binary tree, the INFO digest, the forced-pair fits, the crossover and
+    the tuner check, the symptoms, the alpha_beta.json records."""
+
+    def test_closed_forms(self):
+        G, alpha, beta, d = 16, 10e-6, 25e9, 4
+        S = G * alpha * beta * (G - 1 - d)  # D1
+        self.assertAlmostEqual(S / 1e6, 44, places=0)
+        self.assertAlmostEqual(
+            d2l.ring_allreduce_time(S, G, alpha, beta),
+            d2l.tree_allreduce_time(S, G, 1, alpha, alpha, beta))
+        # D2: the hierarchical speedup tends to g
+        flat = d2l.ring_allreduce_time(1e9, 8 * 10**4, alpha, beta)
+        hier = d2l.hier_allreduce_time(1e9, 10**4, 8, alpha, 1e4 * beta,
+                                       alpha, beta, rails=8)
+        self.assertAlmostEqual(flat / hier, 8, delta=0.1)
+        # D3: in-network halves the ring's bandwidth term asymptotically
+        self.assertAlmostEqual(
+            d2l.ring_allreduce_time(1e12, 1000, 0, beta)
+            / d2l.sharp_allreduce_time(1e12, 0, beta), 2, delta=0.01)
+        # the all-to-all on one node is the intra term alone
+        self.assertEqual(d2l.a2a_inter_node_time(1e6, 1, 8, 1, 1, 0, 1e9),
+                         7 * 1e6 / 8 / 1e9)
+
+    def test_double_binary_tree(self):
+        for G in (2, 3, 4, 7, 8, 16, 33):
+            t0, t1 = d2l.double_binary_tree(G)
+            for t in (t0, t1):
+                self.assertEqual(sorted(t), list(range(G)))
+                self.assertEqual(sum(p is None for p in t.values()), 1)
+                kids = collections_counter(t)
+                self.assertLessEqual(max(kids.values(), default=0), 2)
+                for r in t:  # every rank reaches the root
+                    seen, x = set(), r
+                    while t[x] is not None:
+                        self.assertNotIn(x, seen)
+                        seen.add(x)
+                        x = t[x]
+            leaf0 = {r for r in t0 if r not in collections_counter(t0)}
+            leaf1 = {r for r in t1 if r not in collections_counter(t1)}
+            self.assertEqual({r for r in range(G) if r % 2}, leaf0 - {0})
+            if G % 2 == 0:  # a leaf of one tree is interior in the other
+                self.assertFalse(leaf0 & leaf1)
+            # each rank sends at most S / 2 up each tree: 2 S in all
+            sends = [(t0[r] is not None) + (t1[r] is not None)
+                     + collections_counter(t0)[r] + collections_counter(t1)[r]
+                     for r in range(G)]
+            self.assertLessEqual(max(sends) / 2, 2)
+
+    def test_simulator(self):
+        alpha, beta = 10e-6, 25e9
+        for G in (4, 8):
+            topo = d2l.sim_topology(G, alpha, beta)
+            d = math.ceil(math.log2(G))
+            S_star = G * alpha * beta * (G - 1 - d)
+            for f in (0.01, 1, 100):
+                S = f * S_star
+                ring = d2l.sim_collective(topo, 'ring', S, 1)
+                self.assertAlmostEqual(
+                    ring / d2l.ring_allreduce_time(S, G, alpha, beta), 1,
+                    places=9)
+                tree = d2l.sim_collective(topo, 'tree', S, 200)
+                model = d2l.tree_allreduce_time(S, G, 1, alpha, alpha, beta)
+                self.assertLess(tree / model, 1.02)  # an upper bound
+                if f == 100:
+                    self.assertAlmostEqual(tree / model, 1, delta=0.02)
+        with self.assertRaises(ValueError):
+            d2l.sim_topology(1, alpha, beta)
+
+    def test_parse_info(self):
+        d = d2l._parse_info(NCCL_INFO_SAMPLE)
+        self.assertEqual((d['version'], d['n_ranks'], d['n_nodes']),
+                         ('2.28.9', 4, 1))
+        self.assertEqual(d['transports'], ['SHM/direct/direct'])
+        self.assertEqual(d['channels'], 2)
+        self.assertEqual(d['rings'][1], [0, 1, 2, 3])
+        self.assertEqual(d['trees'][0], {0: -1, 1: 0, 2: 1, 3: 2})
+        self.assertEqual(d['tuner'][('Ring', 'Simple')], (40.3, 8.7))
+        self.assertEqual(d['tuner'][('Tree', 'LL128')], (0.0, 0.0))
+        self.assertEqual(d['choices'], {8: 'Ring/LL', 65536: 'Ring/LL',
+                                        268435456: 'Ring/Simple'})
+        self.assertEqual(d2l._ranges(d['choices']),
+                         'Ring/LL up to 64 KiB, Ring/Simple from 256 MiB')
+        self.assertEqual(d2l._chain(d['trees'][0]),
+                         '3 -> 2 -> 1 -> 0 (a chain to the root)')
+        lines, _ = lines_of(self, d2l._show_info, d)
+        self.assertLessEqual(len(lines), 8)
+        text = '\n'.join(lines)
+        self.assertIn('disabled: Ring/LL128, Tree/LL128', text)
+        self.assertIn('SHM/direct/direct', text)
+        # the digest survives storage (string keys) and still displays
+        stored = d2l._hw_decode(json.loads(json.dumps(d2l._hw_encode(dict(
+            d, tuner={f'{a}/{p}': v for (a, p), v in d['tuner'].items()})))))
+        self.assertEqual(lines_of(self, d2l._show_info, stored)[0], lines)
+        lines, _ = lines_of(self, d2l._show_info, dict(version=None,
+                                                       label='x pending'))
+        self.assertEqual(lines, ['x pending'])
+
+    def params(self):
+        return {'default': (20e-6, 9e9), 'Ring/LL': (15e-6, 3e9),
+                'Ring/Simple': (40e-6, 9e9), 'Tree/LL': (18e-6, 2.5e9)}
+
+    def test_fit_pairs(self):
+        pairs = synthetic_pairs(self.params(), {'Ring/LL128': 'refused'})
+        fits = d2l.fit_pairs(pairs)
+        self.assertEqual(len(fits), 4)
+        self.assertNotIn(('Ring', 'LL128'), fits.index)
+        for name, (alpha, beta) in self.params().items():
+            key = ('default',) * 2 if name == 'default' else tuple(
+                name.split('/'))
+            self.assertAlmostEqual(fits.loc[key].alpha / alpha, 1, delta=0.05)
+            self.assertAlmostEqual(fits.loc[key].beta / beta, 1, delta=0.05)
+            self.assertTrue(fits.loc[key].beta_lo < fits.loc[key].beta_hi)
+        x = fits.attrs['crossover']
+        phi = d2l.nccl_busbw_factor('all_reduce', 4)
+        exact = 25e-6 / (phi * (1 / 3e9 - 1 / 9e9))
+        self.assertAlmostEqual(x['predicted'] / exact, 1, delta=0.1)
+        self.assertAlmostEqual(x['measured'] / exact, 1, delta=0.15)
+        lines, _ = lines_of(self, d2l.show_pair_fits, fits)
+        self.assertLessEqual(len(lines), 9)
+        self.assertIn('Ring/Simple overtakes Ring/LL', lines[-1])
+        self.assertAlmostEqual(d2l.pair_time(pairs, 'Ring/LL', 8),
+                               15e-6, delta=1e-6)
+        lines, _ = lines_of(self, d2l._show_pairs, pairs)
+        self.assertEqual(lines, ['dropped (refused): Ring/LL128'])
+        pending = d2l.fit_pairs(d2l.CampaignPending(
+            'cluster-nccl', 'C-T4', 'two 8 x A100 nodes with RDMA'))
+        self.assertTrue(pending.empty)
+        self.assertIn('C-T4 not run yet', pending.attrs['status'])
+
+    def test_crossing(self):
+        s = 2.0 ** np.arange(10)
+        x = d2l._crossing(s, 1 + s, 10 + s / 2)  # equal at s = 18
+        self.assertAlmostEqual(x, 18, delta=3)
+        self.assertTrue(np.isnan(d2l._crossing(s, s, 2 * s)))
+
+    def test_tuner_regret(self):
+        params = self.params()
+        lines, out = lines_of(self, d2l.tuner_regret, synthetic_pairs(params))
+        self.assertEqual(len(lines), 2)
+        big = out[out['size'] == 2**28].iloc[0]
+        self.assertAlmostEqual(big.excess, 0, delta=0.02)  # default = Simple
+        small = out[out['size'] == 8].iloc[0]
+        self.assertEqual(small.best, 'Ring/LL')
+        self.assertGreater(small.units, 3)  # 20 us against 15 us
+        self.assertIn('at 8 B', lines[0])
+
+    def test_symptoms(self):
+        pairs = synthetic_pairs(self.params())
+        ab = dict(alpha=20e-6, beta=9e9)
+        lines, _ = lines_of(self, d2l.coll_symptoms, {'pairs': pairs}, ab)
+        self.assertEqual(len(lines), 2)
+        self.assertIn('4 KiB all-reduce on 4 GPUs', lines[0])
+        self.assertIn('best forced pair Ring/Simple', lines[1])
+        lines, _ = lines_of(self, d2l.coll_symptoms,
+                            d2l._hw_pending('box-coll'), ab)
+        self.assertEqual(lines, ['box-coll pending'])
+
+    def test_records(self):
+        fits = d2l.fit_pairs(synthetic_pairs(self.params()))
+        info = d2l._parse_info(NCCL_INFO_SAMPLE)
+        recs = d2l._coll_records(fits, info)
+        self.assertEqual(len(recs), 4)
+        default = [r for r in recs if r['algo'] is None]
+        self.assertEqual(len(default), 1)
+        self.assertIsNone(default[0]['proto'])
+        self.assertEqual({r['link'] for r in recs}, {'pcie_host_staged'})
+        self.assertEqual({r['transport'] for r in recs}, {'shm'})
+        self.assertEqual({(r['algo'], r['proto']) for r in recs if r['algo']},
+                         {('Ring', 'LL'), ('Ring', 'Simple'), ('Tree', 'LL')})
+        json.dumps(recs, allow_nan=False)
+
+    def test_hier_display(self):
+        rows = [dict(variant=v, size=s, us=u * s / 2**24, mad_us=1.0)
+                for s in (2**24, 2**28)
+                for v, u in zip(d2l._HIER_ROWS, (9e4, 2e4, 3e4, 1e4, 2e4))]
+        r = pd.DataFrame(rows)
+        with mock.patch.object(d2l, '_hier_predict', return_value=None):
+            lines, _ = lines_of(self, d2l._show_hier, r)
+        self.assertLessEqual(len(lines), 8)
+        self.assertIn('hierarchical 3.0x faster than flat gloo', lines[-1])
+
+    def test_campaign_config_refused(self):
+        with self.assertRaisesRegex(ValueError, 'campaign launcher'):
+            d2l.nccl_algo_proto_sweeps('t4')
+
+
+def collections_counter(tree):
+    """Children per rank of a {rank: parent} tree."""
+    return d2l.collections.Counter(p for p in tree.values() if p is not None)
 
 
 if __name__ == '__main__':

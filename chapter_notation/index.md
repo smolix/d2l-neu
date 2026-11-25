@@ -3,7 +3,7 @@
 
 Clear, consistent notation makes it much easier to connect mathematical ideas to code across a book that spans linear algebra, calculus, probability, optimization, and modern neural architectures. Throughout this book, we adhere to a uniform typographic hierarchy: lowercase italic letters ($x$) denote scalars, bold lowercase letters ($\mathbf{x}$) denote vectors, bold uppercase letters ($\mathbf{X}$) denote matrices, sans-serif uppercase letters ($\mathsf{X}$) denote higher-order tensors, calligraphic letters ($\mathcal{X}$) denote sets, and uppercase italic letters ($X$) denote random variables.
 
-In the reference lists below, the indefinite article *"a"* indicates a general typographic convention---for example, "$x$: a scalar" means that lowercase italic letters generally represent scalars---whereas the definite article *"the"* indicates a symbol with a specific fixed meaning, such as "$\mathbb{R}$: the set of real numbers".
+In the reference lists below, the indefinite article *"a"* indicates a general typographic convention (for example, "$x$: a scalar" means that lowercase italic letters generally represent scalars), whereas the definite article *"the"* indicates a symbol with a specific fixed meaning, such as "$\mathbb{R}$: the set of real numbers".
 
 Because the alphabet is finite, a few standard letters carry more than one meaning across subfields. In every case, the syntactic form and context of the symbol disambiguate it: for example, the sigmoid function $\sigma(\cdot)$ takes a parenthesized argument, a standard deviation $\sigma_X$ carries a random variable as a subscript, a singular value $\sigma_i(\mathbf{X})$ is indexed and applied to a matrix, and the noise schedule $\sigma_t$ of a diffusion model is indexed by time $t$. We note potential ambiguities explicitly below. Chapters that introduce a larger domain-specific vocabulary also open with a dedicated notation table, including optimization (:numref:`tab_mdl-opt-notation`), information theory (:numref:`tab_mdl-it-notation`), dynamics (:numref:`tab_mdl-dyn-notation`), reinforcement learning (:numref:`tab_rl_notation`), generative adversarial networks (:numref:`tab_gan_notation`), and diffusion models (:numref:`tab_diffusion-notation`). The final sections of this chapter summarize the core notation for several advanced topics.
 
@@ -82,7 +82,9 @@ Because the alphabet is finite, a few standard letters carry more than one meani
 * $\frac{dy}{dx}$, $f'(x)$: the derivative of $y$ with respect to $x$, and the derivative of $f$ evaluated at $x$
 * $\frac{\partial y}{\partial x}$: the partial derivative of $y$ with respect to $x$
 * $\nabla_{\mathbf{x}} y$: the gradient of scalar $y$ with respect to vector $\mathbf{x}$
+* $\mathbf{J}$, $\frac{\partial \mathbf{f}}{\partial \mathbf{x}}$: the Jacobian matrix of vector-valued function $\mathbf{f}$ with respect to $\mathbf{x}$
 * $\nabla^2 f$: the Hessian matrix of $f$, containing its second-order partial derivatives
+* $\nabla \cdot \mathbf{f}$, $\Delta f$: the divergence of vector field $\mathbf{f}$ and the Laplacian of scalar function $f$
 * $\int_a^b f(x) \,dx$: the definite integral of $f$ from $a$ to $b$ with respect to $x$
 * $\int f(x) \,dx$: the indefinite integral (antiderivative) of $f$ with respect to $x$
 
@@ -106,7 +108,8 @@ Because the alphabet is finite, a few standard letters carry more than one meani
 * $\boldsymbol{\Sigma}$: a covariance matrix
 * $\rho(X, Y)$: the Pearson correlation coefficient between $X$ and $Y$, equal to $\frac{\textrm{Cov}(X, Y)}{\sigma_X \sigma_Y}$
 * $\mathcal{N}(\mu, \sigma^2)$: the univariate Gaussian (normal) distribution with mean $\mu$ and variance $\sigma^2$; $\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ denotes its multivariate form
-* $H(X)$: the Shannon entropy (or differential entropy) of random variable $X$
+* $H(X)$, $h(X)$: the Shannon entropy of a discrete random variable $X$, and the differential entropy of a continuous random variable $X$
+* $I(X; Y)$: the mutual information between random variables $X$ and $Y$
 * $D_{\textrm{KL}}(P\|Q)$: the Kullback–Leibler (KL) divergence (relative entropy) from distribution $P$ to distribution $Q$
 
 
@@ -199,7 +202,7 @@ These symbols belong to :numref:`chap_gans`; :numref:`tab_gan_notation` lists ev
 
 ## Diffusion Models
 
-These symbols belong to :numref:`chap_diffusion` and match the conventions of the dynamics appendix (:numref:`tab_mdl-dyn-notation`). Throughout this book, we use a single unified time direction: clean data reside at $t = 0$, pure noise resides at $t = 1$, and generative samplers integrate backward from $t = 1$ down to $t = 0$. (Note that some flow-matching papers reverse this convention; see :numref:`sec_diffusion-gaussian-paths`.) The chapter collects its symbols, with the notations papers use for them, in :numref:`tab_diffusion-notation`.
+These symbols belong to :numref:`chap_diffusion` and match the conventions of :numref:`chap_mdl-dynamics` (:numref:`tab_mdl-dyn-notation`). Throughout this book, we use a single unified time direction: clean data reside at $t = 0$, pure noise resides at $t = 1$, and generative samplers integrate backward from $t = 1$ down to $t = 0$. (Note that some flow-matching papers reverse this convention; see :numref:`sec_diffusion-gaussian-paths`.) The chapter collects its symbols, with the notations papers use for them, in :numref:`tab_diffusion-notation`.
 
 * $\mathbf{x}_0$, $\boldsymbol{\epsilon}$: a clean data point and an independent standard Gaussian noise vector, $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$
 * $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol{\epsilon}$: the noisy state at time $t \in [0, 1]$ along a Gaussian probability path

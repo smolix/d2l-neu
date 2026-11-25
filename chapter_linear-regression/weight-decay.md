@@ -11,11 +11,11 @@ In :numref:`sec_generalization_basics`, we controlled model complexity in the bl
 To see the core pathology in its simplest two-feature form, imagine predicting room temperature from two noisy thermometers placed side by side, $x_1$ and $x_2$, each reading the true temperature plus a tiny independent noise wiggle. Consider two linear models whose weights sum to $2$:
 
 - **Model A** sets $\mathbf{w} = (1, 1)^\top$, averaging the two sensors and cutting the sensor noise variance in half.
-- **Model B** sets $\mathbf{w} = (501, -499)^\top$. Whenever the two thermometers agree, $501 x_1 - 499 x_2 = 2 x_1$ gives the exact same average—yet any tiny discrepancy $x_1 - x_2$ between the two sensors gets amplified by $500$!
+- **Model B** sets $\mathbf{w} = (501, -499)^\top$. Whenever the two thermometers agree, $501 x_1 - 499 x_2 = 2 x_1$ gives the same average, yet any tiny discrepancy $x_1 - x_2$ between the two sensors gets amplified by $500$.
 
-On a tiny training sample where $x_1 - x_2$ happened by chance to correlate slightly with the label noise, unregularized least squares will happily choose $(501, -499)^\top$ to shave a sliver off the training error, only to fail catastrophically on new readings. How can we keep all $d$ features in the model while preventing the weights from blowing up along poorly determined directions?
+On a small training sample where $x_1 - x_2$ happened by chance to correlate slightly with the label noise, unregularized least squares will choose $(501, -499)^\top$ to shave a sliver off the training error, only to fail badly on new readings. How can we keep all $d$ features in the model while preventing the weights from blowing up along poorly determined directions?
 
-The classic remedy—known as *ridge regression* or *Tikhonov regularization* in statistics :cite:`Hoerl.Kennard.1970,tikhonov1977solutions` and *weight decay* in deep learning—adds a smooth penalty on the squared Euclidean norm $\|\mathbf{w}\|_2^2$ directly to the loss function. In this section, we derive weight decay from four complementary perspectives (penalized optimization, per-step multiplicative decay in SGD, Bayesian Gaussian priors, and spectral shrinkage along eigenvectors of $\mathbf{X}^\top\mathbf{X}$) and implement it both from scratch and concisely in all four frameworks.
+The classic remedy, known as *ridge regression* or *Tikhonov regularization* in statistics :cite:`Hoerl.Kennard.1970,tikhonov1977solutions` and *weight decay* in deep learning, adds a smooth penalty on the squared Euclidean norm $\|\mathbf{w}\|_2^2$ directly to the loss function. In this section, we derive weight decay from four complementary perspectives (penalized optimization, per-step multiplicative decay in SGD, Bayesian Gaussian priors, and spectral shrinkage along eigenvectors of $\mathbf{X}^\top\mathbf{X}$) and implement it both from scratch and concisely in all four frameworks.
 
 ```{.python .input #weight-decay}
 %%tab mxnet
@@ -70,9 +70,9 @@ Once again, the factor of $\frac{1}{2}$ cancels the $2$ when we differentiate $\
 
 1. **Trade-off via $\lambda$:** Setting $\lambda = 0$ recovers unregularized least squares; increasing $\lambda$ places a steeper tax on large weights, pulling $\mathbf{w}$ toward $\mathbf{0}$ (and driving $\mathbf{w} \to \mathbf{0}$ as $\lambda \to \infty$).
 2. **Why we leave the bias $b$ unpenalized:** The bias $b$ simply shifts the average output level to match the mean of the target $y$; shrinking $b$ toward zero would bias every prediction toward zero if $y$ were measured in, say, Kelvin instead of Celsius, without reducing the model's sensitivity to input perturbations at all.
-3. **Feature scaling matters:** Because $\sum_j w_j^2$ sums raw squared coefficients across coordinates, re-expressing one feature in millimeters instead of meters divides its weight $w_j$ by $1{,}000$ and cuts its penalty contribution by $10^6$! In practice, one standardizes features to comparable scales (zero mean, unit variance) before applying an isotropic $\|\mathbf{w}\|_2^2$ penalty.
+3. **Feature scaling matters:** Because $\sum_j w_j^2$ sums raw squared coefficients across coordinates, re-expressing one feature in millimeters instead of meters divides its weight $w_j$ by $1{,}000$ and cuts its penalty contribution by $10^6$. In practice, one standardizes features to comparable scales (zero mean, unit variance) before applying an isotropic $\|\mathbf{w}\|_2^2$ penalty.
 
-Why penalize the squared $\ell_2$ norm cleanly rather than some other power? In our two-thermometer example, $(1, 1)^\top$ has $\|\mathbf{w}\|_2^2 = 2$, whereas $(501, -499)^\top$ has $\|\mathbf{w}\|_2^2 = 500{,}002$—so even a tiny $\lambda > 0$ overwhelmingly prefers averaging the two sensors over subtracting them!
+Why penalize the squared $\ell_2$ norm? In our two-thermometer example, $(1, 1)^\top$ has $\|\mathbf{w}\|_2^2 = 2$, whereas $(501, -499)^\top$ has $\|\mathbf{w}\|_2^2 = 500{,}002$, so even a tiny $\lambda > 0$ strongly prefers averaging the two sensors over subtracting them.
 
 ### Weight Decay in the Gradient Step
 
@@ -81,11 +81,11 @@ How does the penalty $\frac{\lambda}{2}\|\mathbf{w}\|_2^2$ change our minibatch 
 $$\mathbf{w} \leftarrow \mathbf{w} - \eta \left(\frac{\partial L}{\partial \mathbf{w}} + \lambda \mathbf{w}\right) = (1 - \eta \lambda) \mathbf{w} - \eta \frac{\partial L}{\partial \mathbf{w}}.$$
 :eqlabel:`eq_wd-update`
 
-Look at the first term on the right: **before taking the usual data-driven gradient step $-\eta\,\partial L / \partial \mathbf{w}$, we multiply the weight vector by $(1 - \eta\lambda) < 1$, shrinking ("decaying") it slightly toward zero on every single update!** That multiplicative shrinkage factor $(1 - \eta\lambda)$ is why deep learning practitioners universally call $\ell_2$ regularization *weight decay*. (For plain SGD, adding $\frac{\lambda}{2}\|\mathbf{w}\|_2^2$ to the loss and decaying weights by $(1 - \eta\lambda)$ are algebraically identical; for adaptive optimizers like Adam in :numref:`chap_optimization`, decoupling multiplicative weight decay into *AdamW* makes an important difference.)
+Look at the first term on the right: **before taking the usual data-driven gradient step $-\eta\,\partial L / \partial \mathbf{w}$, we multiply the weight vector by $(1 - \eta\lambda) < 1$, shrinking ("decaying") it slightly toward zero on every update.** That multiplicative shrinkage factor $(1 - \eta\lambda)$ is why deep learning practitioners call $\ell_2$ regularization *weight decay*. (For plain SGD, adding $\frac{\lambda}{2}\|\mathbf{w}\|_2^2$ to the loss and decaying weights by $(1 - \eta\lambda)$ are algebraically identical; for adaptive optimizers like Adam in :numref:`chap_optimization`, decoupling multiplicative weight decay into *AdamW* makes an important difference.)
 
 ### The $\ell_1$ Penalty and Sparsity
 
-What if we replaced the squared $\ell_2$ norm $\|\mathbf{w}\|_2^2 = \sum_j w_j^2$ with the $\ell_1$ norm $\|\mathbf{w}\|_1 = \sum_j |w_j|$—a method known in statistics as the *Lasso* :cite:`Tibshirani.1996`? Comparing the geometry of their constraint sets (:numref:`fig_ridge_geometry`) reveals a striking difference. Minimizing the data loss $L(\mathbf{w})$ subject to $\|\mathbf{w}\|_2^2 \leq r^2$ searches inside a smooth round disk (or sphere in $\mathbb{R}^d$), where the elliptical loss contours almost always touch the boundary at a point where *every* coordinate $w_j$ is small but nonzero. Minimizing $L(\mathbf{w})$ subject to $\|\mathbf{w}\|_1 \leq r$, by contrast, searches inside a sharp-cornered diamond (cross-polytope) whose vertices lie directly on the coordinate axes! Elliptical loss contours frequently collide with one of those sharp corners first, setting many coordinates $w_j$ to *exact zero* and performing automatic feature selection (*sparsity*).
+What if we replaced the squared $\ell_2$ norm $\|\mathbf{w}\|_2^2 = \sum_j w_j^2$ with the $\ell_1$ norm $\|\mathbf{w}\|_1 = \sum_j |w_j|$, a method known in statistics as the *Lasso* :cite:`Tibshirani.1996`? Comparing the geometry of their constraint sets (:numref:`fig_ridge_geometry`) reveals a striking difference. Minimizing the data loss $L(\mathbf{w})$ subject to $\|\mathbf{w}\|_2^2 \leq r^2$ searches inside a smooth round disk (or sphere in $\mathbb{R}^d$), where the elliptical loss contours almost always touch the boundary at a point where *every* coordinate $w_j$ is small but nonzero. Minimizing $L(\mathbf{w})$ subject to $\|\mathbf{w}\|_1 \leq r$, by contrast, searches inside a sharp-cornered diamond (cross-polytope) whose vertices lie directly on the coordinate axes. Elliptical loss contours frequently collide with one of those sharp corners first, setting many coordinates $w_j$ to *exact zero* and performing automatic feature selection (*sparsity*).
 
 ![Constraint geometry of $\ell_2$ ridge regression (left) vs. $\ell_1$ Lasso regression (right). Elliptical contours of the data loss $L(\mathbf{w})$ expanding from the unregularized minimum $\hat{\mathbf{w}}$ typically meet the smooth $\ell_2$ circle away from the axes (keeping both weights nonzero), whereas they often hit a sharp corner of the $\ell_1$ diamond right on an axis (setting $w_2 = 0$).](../img/mdl-linreg-ridge-geometry.svg)
 :label:`fig_ridge_geometry`
@@ -98,7 +98,7 @@ By Bayes' theorem, the *posterior density* $p(\mathbf{w} \mid \mathbf{X}, \mathb
 
 $$\frac{1}{2\sigma^2} \sum_{i=1}^n \left(y^{(i)} - \mathbf{w}^\top \mathbf{x}^{(i)} - b\right)^2 + \frac{1}{2\tau^2} \|\mathbf{w}\|_2^2.$$
 
-Dividing through by $n / \sigma^2$ recovers our exact weight-decay objective :eqref:`eq_wd-objective` with $\lambda = \sigma^2 / (n\tau^2)$! Notice how sensible that ratio is: stronger prior belief that weights are small (smaller $\tau^2$) or noisier observations (larger $\sigma^2$) calls for stronger regularization $\lambda$, whereas as the sample size $n \to \infty$, the penalty $\lambda = \sigma^2 / (n\tau^2) \to 0$ because abundant data eventually speak for themselves.
+Dividing through by $n / \sigma^2$ recovers our weight-decay objective :eqref:`eq_wd-objective` with $\lambda = \sigma^2 / (n\tau^2)$. Notice how sensible that ratio is: stronger prior belief that weights are small (smaller $\tau^2$) or noisier observations (larger $\sigma^2$) calls for stronger regularization $\lambda$, whereas as the sample size $n \to \infty$, the penalty $\lambda = \sigma^2 / (n\tau^2) \to 0$ because abundant data eventually speak for themselves.
 
 ## Weight Decay from Scratch
 
@@ -116,9 +116,7 @@ data = d2l.SyntheticRegressionData(w=d2l.ones(200) * tau, b=0.05,
 ```
 
 Before training anything, let us set two benchmarks for the validation loss.
-By :eqref:`eq_linreg-scratch-expected-loss`, the expected loss equals half
-the squared distance from the true parameters plus the irreducible noise
-floor $\sigma^2/2$. A trivial constant model that ignores all 200 inputs and
+For independent standard normal inputs $\mathbf{x} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_d)$ and noise $\epsilon \sim \mathcal{N}(0, \sigma^2)$, the expected loss at $(\mathbf{w}, b^*)$ equals $\frac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|_2^2 + \frac{1}{2}\sigma^2$ (:numref:`sec_linear_scratch`). A trivial constant model that ignores all 200 inputs and
 predicts $b^*$ everywhere therefore incurs an expected loss of
 $\frac{1}{2}(\|\mathbf{w}^*\|^2 + \sigma^2) = \frac{1}{2}(2 + 1) = 1.5$,
 while the oracle parameters $(\mathbf{w}^*, b^*)$ achieve
@@ -224,15 +222,15 @@ print(f'validation loss {val_losses[-1]:.3f} (lowest {min(val_losses):.3f}, '
       f'epoch {val_losses.index(min(val_losses)) + 1}), norm of w {norm:.2f}')
 ```
 
-The training loss plunges to roughly 0.2–0.3—far below the irreducible
-noise floor of 0.5 achieved by the true parameters—confirming that the model
+The training loss plunges to roughly 0.2–0.3, far below the irreducible
+noise floor of 0.5 achieved by the true parameters, confirming that the model
 is memorizing noise in its 300 training labels. Meanwhile, the validation
 loss hits a minimum of 0.8–1.0 after just two or three epochs and then
 climbs steadily, typically finishing between 1.1 and 1.9. After 50 epochs,
 this 200-weight model has given back much of its early gain and often does
-no better than—and sometimes worse than—the trivial constant $b^*$ at 1.5:
+no better than (and sometimes worse than) the trivial constant $b^*$ at 1.5:
 a textbook display of overfitting. Why does validation loss bottom out so early, after only 30
-to 45 gradient steps? We will uncover the exact reason once we examine which
+to 45 gradient steps? We will uncover the reason once we examine which
 directions in weight space gradient descent learns first.
 
 Next, we turn on weight decay. Rather than guessing $\lambda$ blindly, we
@@ -251,23 +249,18 @@ print(f'validation loss {val_losses[-1]:.3f}, norm of w {norm:.2f}')
 
 Now the training curve tracks the penalized objective, which stays safely
 above 0.5: the penalty keeps the model from chasing noise in the training
-labels. Validation loss settles at roughly 0.75–1.05 and stays flat—well below the
-1.5 baseline of the constant predictor—while the weight norm shrinks from
+labels. Validation loss settles at roughly 0.75–1.05 and stays flat, well below the
+1.5 baseline of the constant predictor, while the weight norm shrinks from
 roughly 2 to about 1.2, actually *shorter* than the true norm
 $\|\mathbf{w}^*\| \approx 1.4$. Even though the regularized weights are
 shrunk below the true length, they generalize dramatically better than the
 unregularized weights.
 
-Compare the two runs:
-
-- **Without weight decay ($\lambda = 0$):** Training loss drops well below the $0.5$ noise floor as the 200 weights memorize noise in the 300 training labels, while validation loss climbs back up from its early minimum of $0.8$–$1.0$.
-- **With weight decay ($\lambda = \frac{1}{3}$):** The penalty keeps $\|\mathbf{w}\|_2$ near $1.2$, preventing the weights from chasing that noise; training loss stays above $0.5$ while validation loss stays flat near the best value the unpenalized run ever reached.
-
-Let us be honest about what we actually gained here. Compared with the
+Let us be honest about what we gained here. Compared with the
 unpenalized model trained for all 50 epochs, weight decay slashes the
 validation loss by a quarter to a half. Compared with that same unpenalized
-model stopped at its best epoch, however, the gain is negligible: both
-reach roughly 0.9. The practical difference is stability. Because weight
+model stopped at its best epoch, however, the gain is small: both
+reach roughly 0.8–1.0. The practical difference is stability. Because weight
 decay changes the objective itself, its solution stays good no matter how
 long we train, whereas the unpenalized run must be halted at a sweet spot
 that the training loss alone gives no hint of. To understand *why* both
@@ -295,7 +288,7 @@ $$
 $$
 :eqlabel:`eq_wd-ridge-normal`
 
-Notice the immediate algebraic miracle: even when $\mathbf{X}^\top\mathbf{X}$ is singular (as it is whenever there are fewer examples than features: with $n = 20$ and $d = 200$, $\mathbf{X}^\top\mathbf{X}$ has 180 zero eigenvalues, exercise :exref:`ex_weight-decay-more-weights`), adding $n\lambda\mathbf{I}$ for any $\lambda > 0$ shifts every eigenvalue upward by $n\lambda > 0$, making $\mathbf{X}^\top\mathbf{X} + n\lambda\mathbf{I}$ strictly positive definite and invertible!
+Notice the immediate algebraic consequence: even when $\mathbf{X}^\top\mathbf{X}$ is singular (as it is whenever there are fewer examples than features: with $n = 20$ and $d = 200$, $\mathbf{X}^\top\mathbf{X}$ has 180 zero eigenvalues, exercise :exref:`ex_weight-decay-more-weights`), adding $n\lambda\mathbf{I}$ for any $\lambda > 0$ shifts every eigenvalue upward by $n\lambda > 0$, making $\mathbf{X}^\top\mathbf{X} + n\lambda\mathbf{I}$ strictly positive definite and invertible.
 
 ### Shrinkage Factors
 
@@ -317,15 +310,15 @@ $$\frac{\mu_j}{\mu_j + \lambda} \in [0, 1).$$
 ![The ridge shrinkage factor $\mu / (\mu + \lambda)$ along an eigenvector with eigenvalue $\mu$, against the regularization constant $\lambda$ (log scale). A direction well determined by the data is kept nearly untouched while $\lambda \ll \mu$ and is strongly shrunk toward zero once $\lambda \gg \mu$; the factor is $\frac{1}{2}$ at $\lambda = \mu$ (dots). Directions with $\mu = 0$ are set to zero for every $\lambda > 0$ (dashed).](../img/mdl-linreg-ridge-shrinkage.svg)
 :label:`fig_ridge_shrinkage`
 
-Here lies the whole secret of ridge regression: **weight decay is not uniform shrinkage—it is variance-adaptive directional filtering!**
+Here lies the secret of ridge regression: **weight decay is not uniform shrinkage; it is variance-adaptive directional filtering.**
 
 - Along **well-determined directions** where the data vary richly ($\mu_j \gg \lambda$), the slope is tightly pinned down by observations, and the shrinkage factor $\mu_j / (\mu_j + \lambda) \approx 1$ leaves the least-squares estimate nearly untouched.
-- Along **poorly determined directions** where the data barely vary ($\mu_j \ll \lambda$)—such as the difference $x_1 - x_2$ between our two almost-identical thermometers—unregularized least squares divides noise by a tiny $\mu_j$ and explodes (with coefficient variance $\sigma^2 / (n \mu_j)$), whereas ridge regression multiplies by $\mu_j / (\mu_j + \lambda) \approx \mu_j / \lambda \ll 1$ and quashes the noisy component!
+- Along **poorly determined directions** where the data barely vary ($\mu_j \ll \lambda$), such as the difference $x_1 - x_2$ between our two almost-identical thermometers, unregularized least squares divides noise by a tiny $\mu_j$ and blows up (with coefficient variance $\sigma^2 / (n \mu_j)$), whereas ridge regression multiplies by $\mu_j / (\mu_j + \lambda) \approx \mu_j / \lambda \ll 1$ and damps the noisy component.
 - Along **unobserved null-space directions** ($\mu_j = 0$), ridge regression sets the weight component identically to $0$.
 
 ### The Directions Our Data Determine
 
-Let us verify this spectral picture directly on our $d = 200$ dataset `data`! First, we compute the eigenvalues $\mu_j$ of $\mathbf{S} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$ for the 300 training inputs (uncentered, which scarcely alters the spectrum) along with the shrinkage factors at $\lambda = \frac{1}{3}$. As in :numref:`sec_linear-algebra`, `eigh` returns the eigenvalues in ascending order with the eigenvectors as the columns of its second output. We also count how many eigenvalues fall below $\lambda$—the poorly determined directions where ridge removes more than half of the least-squares coordinate:
+Let us verify this spectral picture on our $d = 200$ dataset `data`. First, we compute the eigenvalues $\mu_j$ of $\mathbf{S} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$ for the 300 training inputs (uncentered, which scarcely alters the spectrum) along with the shrinkage factors at $\lambda = \frac{1}{3}$. As in :numref:`sec_linear-algebra`, `eigh` returns the eigenvalues in ascending order with the eigenvectors as the columns of its second output. We also count how many eigenvalues fall below $\lambda$, marking the poorly determined directions where ridge removes more than half of the least-squares coordinate:
 
 ```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
 %%tab pytorch
@@ -397,8 +390,7 @@ $\sigma/\sqrt{n\mu_j}$: about 0.06 when $\mu_j = 1$, but a whopping 0.3
 when $\mu_j = 0.04$. Since the true coordinates are only around
 $\|\mathbf{w}^*\|/\sqrt{200} = 0.1$ in magnitude, least squares along the
 smallest-eigenvalue directions is swamped by noise. Meanwhile, validation
-inputs are isotropic standard normal, so they weight every direction
-equally: by :eqref:`eq_linreg-scratch-expected-loss`, an error $c_j$ along
+inputs are isotropic standard normal, so orthogonal invariance of $\|\mathbf{w} - \mathbf{w}^*\|_2^2 = \sum_j c_j^2$ means that an error $c_j$ along
 $\mathbf{v}_j$ inflates the expected validation loss by $c_j^2/2$,
 regardless of $\mu_j$. Let us verify this directly by projecting the
 parameter error $\mathbf{w} - \mathbf{w}^*$ of both trained models onto the
@@ -448,7 +440,7 @@ for name, model in (('lambda = 0', model_0), ('lambda = 1/3', model_lambd)):
 
 The breakdown tells the whole story. Without regularization, roughly one
 quarter of the eigenvectors account for more than half of the total squared
-parameter error—typically between 0.8 and 2.2, versus only about 0.5 across
+parameter error: typically between 0.8 and 2.2, versus only about 0.5 across
 all the remaining directions combined. Turning on weight decay slashes that
 poorly determined error by a factor of two to six while trimming the rest
 modestly, leaving roughly 0.3 to 0.5 in each group. Even along the
@@ -456,8 +448,8 @@ better-determined directions, label noise is nontrivial relative to the
 true coordinates, so shrinking them by 0.5–0.9 still discards more noise
 than signal. As a quick sanity check, half the total squared parameter
 error plus $\sigma^2/2 = 0.5$ roughly matches the validation loss we
-observed for both runs. In effect, weight decay performed here—across some
-fifty ill-conditioned directions simultaneously—the exact same surgery it
+observed for both runs. In effect, weight decay performed across some
+fifty ill-conditioned directions simultaneously the same selective damping it
 performs on the difference direction $x_1 - x_2$ of our two thermometers.
 
 This spectral lens also solves the mystery we left hanging earlier: why did
@@ -647,20 +639,18 @@ In everyday practice, enabling weight decay is as simple as passing this
 single optimizer hyperparameter. Outside synthetic benchmarks we rarely
 know the noise level $\sigma$ or prior scale $\tau$ in advance, so
 $\lambda$ is typically tuned on validation data across candidate runs. Keep
-in mind that our clean norm-based story applies directly to linear models,
+in mind that our norm-based story applies directly to linear models,
 whose weights are the slopes of the function itself. For nonlinear
-functions, measuring complexity rigorously is far subtler—frameworks such
+functions, measuring complexity rigorously is subtler: frameworks such
 as reproducing kernel Hilbert spaces (RKHS) extend norm penalties to
 nonlinear functions, though classical kernel methods scale poorly to
-massive datasets. Even so, applying weight decay uniformly to the weights
-of all layers remains one of the most reliable and widely used heuristics
+massive datasets. Even so, applying weight decay to the weights
+of neural network layers remains one of the most reliable regularizers
 in modern deep learning.
 
 ## Summary
 
-- **$\ell_2$ penalty and weight decay:** Adding $\frac{\lambda}{2}\|\mathbf{w}\|_2^2$ to the training loss (while leaving the bias $b$ unpenalized) is equivalent in SGD to multiplying $\mathbf{w}$ by $(1 - \eta\lambda)$ before each gradient step, and corresponds to MAP estimation under a zero-mean isotropic Gaussian prior on $\mathbf{w}$.
-- **$\ell_2$ vs. $\ell_1$ geometry:** The smooth spherical level sets of $\|\mathbf{w}\|_2^2$ keep all coordinates small but nonzero, whereas the sharp axis-aligned corners of the $\ell_1$ diamond $\|\mathbf{w}\|_1$ drive many coordinates to exact zero (sparsity).
-- **Spectral shrinkage:** In the eigenbasis of $\mathbf{S} = \frac{1}{n}\mathbf{X}^\top\mathbf{X}$, ridge regression multiplies each component $\mathbf{v}_j^\top\hat{\mathbf{w}}_0$ by $\mu_j / (\mu_j + \lambda)$—preserving directions well determined by the data ($\mu_j \gg \lambda$), strongly damping noisy collinear directions ($\mu_j \ll \lambda$), and zeroing out unobserved null-space directions ($\mu_j = 0$).
+Adding a squared $\ell_2$ penalty $\frac{\lambda}{2}\|\mathbf{w}\|_2^2$ to the training objective (while leaving the bias $b$ unpenalized) keeps high-dimensional models from amplifying noise along nearly collinear feature combinations. In minibatch SGD, this penalty multiplies $\mathbf{w}$ by $(1 - \eta\lambda)$ before each gradient step—hence the name *weight decay*—and corresponds to maximum a posteriori estimation under an isotropic Gaussian prior $w_j \sim \mathcal{N}(0, \tau^2)$ with $\lambda = \sigma^2/(n\tau^2)$. Whereas the sharp corners of an $\ell_1$ penalty drive weights to exact zero, the smooth $\ell_2$ penalty acts as a directional filter in the eigenbasis of $\frac{1}{n}\mathbf{X}^\top\mathbf{X}$: multiplying each least-squares component by $\mu_j/(\mu_j + \lambda)$ preserves directions well determined by the data ($\mu_j \gg \lambda$), strongly damps noisy directions ($\mu_j \ll \lambda$), and zeroes unobserved null-space directions ($\mu_j = 0$).
 
 ## Exercises
 
@@ -818,7 +808,7 @@ Weight Decay & Spectral Regularization<br>
 ::: {.cols .vc}
 ::: {.col}
 - **Model A ($\mathbf{w} = (1, 1)^\top$):** Averages two sensors $x_1 \approx x_2$ with $\|\mathbf{w}\|_2^2 = 2$, cutting sensor noise variance in half.
-- **Model B ($\mathbf{w} = (501, -499)^\top$):** Has $\|\mathbf{w}\|_2^2 = 500{,}002$; fits tiny noise in $x_1 - x_2$ and amplifies a $2^\circ$ sensor drift by $+1{,}000$!
+- **Model B ($\mathbf{w} = (501, -499)^\top$):** Has $\|\mathbf{w}\|_2^2 = 500{,}002$; fits tiny noise in $x_1 - x_2$ and amplifies a $2^\circ$ sensor drift by $+1{,}000$.
 - **Continuous capacity control:** Penalizing $\|\mathbf{w}\|_2^2$ keeps all $d$ features while continuously damping poorly determined directions.
 :::
 
@@ -870,7 +860,7 @@ By Lagrangian duality, minimizing $L(\mathbf{w}) + \frac{\lambda}{2}\|\mathbf{w}
 ::: {.cols .vc}
 ::: {.col}
 - **$\ell_2$ Ridge (smooth disk $\|\mathbf{w}\|_2 \leq r$):** Expanding elliptical contours of $L(\mathbf{w})$ centered at $\hat{\mathbf{w}}$ meet the smooth circle tangentially away from the axes, keeping all coordinates nonzero and preferring $(1, 1)^\top$ over $(2, 0)^\top$.
-- **$\ell_1$ Lasso (sharp diamond $\|\mathbf{w}\|_1 \leq r$):** The $\ell_1$ ball $\sum_j |w_j| \leq r$ has sharp corners sitting directly on the coordinate axes! Loss contours frequently hit a corner first, setting $w_1 = 0$ (**sparsity** / feature selection).
+- **$\ell_1$ Lasso (sharp diamond $\|\mathbf{w}\|_1 \leq r$):** The $\ell_1$ ball $\sum_j |w_j| \leq r$ has sharp corners sitting directly on the coordinate axes; loss contours frequently hit a corner first, setting $w_1 = 0$ (**sparsity** / feature selection).
 :::
 
 ::: {.col .fig .big}
@@ -924,7 +914,7 @@ For $\sigma = 1.0, n = 300, \tau = 0.1$, the Gaussian prior formula prescribes $
 
 @!weight-decay-training-with-and-without-the-penalty-2
 
-- **Without penalty ($\lambda = 0$):** Training loss drops to $\sim 0.25$ (far below the $0.50$ noise floor!), while validation loss climbs to $1.1$–$1.9$—no better than the trivial constant predictor at $1.50$!
+- **Without penalty ($\lambda = 0$):** Training loss drops to $\sim 0.25$ (far below the $0.50$ noise floor), while validation loss climbs to $1.1$–$1.9$, no better than the trivial constant predictor at $1.50$.
 - **With penalty ($\lambda = 1/3$):** Validation loss stabilizes at $0.8$–$1.0$ and $\|\hat{\mathbf{w}}\|_2 \approx 1.2$ stays compact.
 :::
 
@@ -975,7 +965,7 @@ $$\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} = \frac{\mu_j}{\mu_j + \lambda}\b
 
 @!weight-decay-the-directions-our-data-determine-1
 
-- **Surgical noise removal:** Roughly $k \approx 55$ eigenvalues fall below $\lambda = 1/3$ ($\operatorname{df} \approx 127$); turning on $\lambda = 1/3$ slashes squared error in those noisy directions by $2\times$–$6\times$.
+- **Selective noise removal:** Roughly $k \approx 55$ eigenvalues fall below $\lambda = 1/3$ ($\operatorname{df} \approx 127$); turning on $\lambda = 1/3$ slashes squared error in those noisy directions by $2\times$–$6\times$.
 :::
 
 ::: {.col .fig}
@@ -1046,7 +1036,7 @@ Work out these three questions:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. Shrinking $\mathbf{w}^*$ by $20\%$ yields $\frac{1}{2}\|(0.8 - 1)\mathbf{w}^*\|_2^2 + 0.5 = \frac{1}{2}(0.04)(2.0) + 0.5 = 0.54$—only $0.04$ above the oracle floor $0.50$, whereas unregularized noise-fitting cost $> 0.70$!
+1. Shrinking $\mathbf{w}^*$ by $20\%$ yields $\frac{1}{2}\|(0.8 - 1)\mathbf{w}^*\|_2^2 + 0.5 = \frac{1}{2}(0.04)(2.0) + 0.5 = 0.54$: only $0.04$ above the oracle floor $0.50$, whereas unregularized noise-fitting cost $> 0.70$.
 2. $\operatorname{df}(0.5) = 5 \cdot \frac{2.0}{2.0 + 0.5} + 3 \cdot \frac{0.5}{0.5 + 0.5} + 2 \cdot \frac{0}{0 + 0.5} = 5(0.8) + 3(0.5) + 0 = 5.5$ effective parameters out of $10$.
 3. The **decoupled update** (`AdamW`) shrinks every weight by the uniform factor $(1 - \eta\lambda)$; the coupled update shrinks coordinate $j$ by $(1 - \eta a_j \lambda)$, under-decaying coordinates with large historical gradients ($a_j \ll 1$).
 :::

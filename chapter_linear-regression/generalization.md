@@ -8,7 +8,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 Imagine two college students, Ellie and Irene, preparing for a statistics final exam by practicing on past exams. Ellie memorizes every past question and its exact numerical answer word for word; scored on those practice exams, she gets 100%. Irene instead works to understand the underlying concepts and formulas; she gets 92% on the practice questions because of occasional arithmetic slips, yet when the real final exam arrives with brand-new problems, Irene scores 90% while Ellie flounders.
 
-Machine learning models face the exact same divide. Our ultimate goal is never simply to score well on the finite *training set* we already have; it is to make accurate predictions on unseen examples drawn from the broader population—a property called *generalization*. In our synthetic linear regression earlier, we fitted 3 parameters to 1,000 examples, so memorization was impossible and training loss tracked validation loss closely. Once a model class becomes rich enough to bend around individual data points, however, driving training error to zero can actually make predictions on new data *worse*. In this section, we formalize the distinction between training error and generalization error, demonstrate *underfitting* and *overfitting* through polynomial curve fitting, unpack the *bias--variance decomposition*, and introduce *validation sets* and *$K$-fold cross-validation* for principled model selection.
+Machine learning models face the same divide. Our ultimate goal is never simply to score well on the finite *training set* we already have; it is to make accurate predictions on unseen examples drawn from the broader population, a property called *generalization*. In our synthetic linear regression earlier, we fitted 3 parameters to 1,000 examples, so memorization was impossible and training loss tracked validation loss closely. Once a model class becomes rich enough to bend around individual data points, however, driving training error to zero can make predictions on new data *worse*. In this section, we formalize the distinction between training error and generalization error, demonstrate *underfitting* and *overfitting* through polynomial curve fitting, unpack the *bias--variance decomposition*, and introduce *validation sets* and *$K$-fold cross-validation* for principled model selection.
 
 ```{.python .input #generalization-polynomial-curve-fitting-1}
 %%tab pytorch
@@ -64,9 +64,9 @@ By contrast, the *generalization error* (or *true risk* / *population risk*) is 
 $$R[f] = \mathbb{E}_{(\mathbf{x}, y) \sim P}\Big[l\big(\mathbf{x}, y, f(\mathbf{x})\big)\Big] = \int l\big(\mathbf{x}, y, f(\mathbf{x})\big)\, dP(\mathbf{x}, y).$$
 :eqlabel:`eq_true-risk`
 
-We want to find a function $f$ that minimizes the true risk $R[f]$, yet we never have direct access to the distribution $P$—we only observe the finite sample $\mathcal{D}$, so our training algorithm minimizes $R_{\textrm{emp}}[f]$ instead (*empirical risk minimization*).
+We want to find a function $f$ that minimizes the true risk $R[f]$, yet we never have direct access to the distribution $P$: we only observe the finite sample $\mathcal{D}$, so our training algorithm minimizes $R_{\textrm{emp}}[f]$ instead (*empirical risk minimization*).
 
-Why can $R_{\textrm{emp}}[\hat{f}]$ underestimate $R[\hat{f}]$ so severely? If we picked a *fixed* function $f$ in advance—before looking at $\mathcal{D}$—then by the law of large numbers, $R_{\textrm{emp}}[f]$ would be an unbiased estimate of $R[f]$ with fluctuations of order $1/\sqrt{n}$. However, our trained model $\hat{f}$ is *not* fixed independent of $\mathcal{D}$: it was specifically selected from an entire model class $\mathcal{F}$ to minimize error *on $\mathcal{D}$*! Whenever $\mathcal{F}$ is flexible enough to latch onto accidental noise quirks in $\mathcal{D}$, the training error $R_{\textrm{emp}}[\hat{f}]$ becomes optimistically biased downward relative to the true risk $R[\hat{f}]$ (Exercise :exref:`ex_generalization-optimism`). To measure $R[\hat{f}]$ honestly, we must evaluate $\hat{f}$ on an independent held-out *test set* (or *validation set*) $\mathcal{D}'$ that played no role in fitting its parameters.
+Why can $R_{\textrm{emp}}[\hat{f}]$ underestimate $R[\hat{f}]$ so severely? If we picked a *fixed* function $f$ in advance, before looking at $\mathcal{D}$, then by the law of large numbers $R_{\textrm{emp}}[f]$ would be an unbiased estimate of $R[f]$ with fluctuations of order $1/\sqrt{n}$. However, our trained model $\hat{f}$ is *not* fixed independent of $\mathcal{D}$: it was specifically selected from an entire model class $\mathcal{F}$ to minimize error on $\mathcal{D}$. Whenever $\mathcal{F}$ is flexible enough to latch onto accidental noise quirks in $\mathcal{D}$, the training error $R_{\textrm{emp}}[\hat{f}]$ becomes optimistically biased downward relative to the true risk $R[\hat{f}]$ (Exercise :exref:`ex_generalization-optimism`). To measure $R[\hat{f}]$ honestly, we must evaluate $\hat{f}$ on an independent held-out *test set* (or *validation set*) $\mathcal{D}'$ that played no role in fitting its parameters.
 
 ## Underfitting and Overfitting
 
@@ -78,7 +78,7 @@ Comparing training error against validation error diagnoses two opposite failure
 ### Polynomial Curve Fitting
 :label:`subsec_polynomial-curve-fitting`
 
-We can watch underfitting, balanced fitting, and catastrophic overfitting unfold without ever leaving linear regression! Suppose a scalar input $x$ is drawn uniformly from $[-1, 1]$ and the true label is generated by a smooth curve plus Gaussian noise,
+We can watch underfitting, balanced fitting, and catastrophic overfitting unfold without leaving linear regression. Suppose a scalar input $x$ is drawn uniformly from $[-1, 1]$ and the true label is generated by a smooth curve plus Gaussian noise,
 
 $$y = f^*(x) + \epsilon, \qquad f^*(x) = 5 + 1.2x - 3.4x^2 + 5.6x^3, \qquad \epsilon \sim \mathcal{N}(0, \sigma^2),$$
 
@@ -88,7 +88,7 @@ To fit a curved function using linear regression, we map the scalar input $x$ to
 
 $$\hat{y} = \sum_{j=0}^k w_j x^j$$
 
-is nonlinear in $x$, yet **completely linear in the weights $\mathbf{w} = (w_0, \ldots, w_k)^\top$**! Thus we can fit any degree-$k$ polynomial on $n$ training points by constructing the Vandermonde design matrix $\mathbf{X} \in \mathbb{R}^{n \times (k+1)}$ with entries $X_{ij} = (x^{(i)})^j$ and calling `lstsq` (just as we did in :numref:`subsec_linear-regression-analytic-solution`). Let us generate $n = 20$ training points and $1{,}000$ test points (enough to estimate test error accurately), and then compare three degrees: $k = 1$ (a straight line), $k = 3$ (a cubic), and $k = 19$ (a degree-19 polynomial with $20$ parameters for $20$ points):
+is nonlinear in $x$, yet **linear in the weights $\mathbf{w} = (w_0, \ldots, w_k)^\top$**. Thus we can fit any degree-$k$ polynomial on $n$ training points by constructing the Vandermonde design matrix $\mathbf{X} \in \mathbb{R}^{n \times (k+1)}$ with entries $X_{ij} = (x^{(i)})^j$ and calling `lstsq` (just as we did in :numref:`subsec_linear-regression-analytic-solution`). Let us generate $n = 20$ training points and $1{,}000$ test points (enough to estimate test error accurately), and then compare three degrees: $k = 1$ (a straight line), $k = 3$ (a cubic), and $k = 19$ (a degree-19 polynomial with $20$ parameters for $20$ points):
 
 ```{.python .input #generalization-polynomial-curve-fitting-2}
 def target(x):
@@ -144,7 +144,7 @@ supervised learning:
 
 - **Degree $k = 1$ (underfitting):** A straight line cannot bend to follow the S-shaped cubic; it misses training and test points alike.
 - **Degree $k = 3$ (well matched):** A cubic has exactly the flexibility of $f^*$; its fit is nearly indistinguishable from the true curve.
-- **Degree $k = 19$ (overfitting):** With $k + 1 = 20$ parameters and $n = 20$ distinct training points, the polynomial has enough degrees of freedom to interpolate every single training point (Exercise :exref:`ex_generalization-exact-polynomial`). Between the data points, however, the curve oscillates, sending the test error soaring by orders of magnitude!
+- **Degree $k = 19$ (overfitting):** With $k + 1 = 20$ parameters and $n = 20$ distinct training points, the polynomial has enough degrees of freedom to interpolate every single training point (Exercise :exref:`ex_generalization-exact-polynomial`). Between the data points, however, the curve oscillates wildly, sending the test error soaring by orders of magnitude.
 
 What happens to the learned weights $w_j$ themselves when the polynomial overfits? Let us print the training error, the test error, and the largest weight magnitude $\max_j |\hat{w}_j|$ for each of the three degrees:
 
@@ -157,13 +157,13 @@ for d in (1, 3, 19):
 ```
 
 Although exact numbers vary slightly with each random draw, the contrast is
-dramatic. Degree $1$ suffers massive errors on both splits (a test MSE above $1$,
-over $100\times$ the $\sigma^2 = 0.01$ noise floor). Degree $3$ pushes both
+dramatic. Degree $1$ suffers large errors on both splits (a test MSE around $2$,
+roughly $200\times$ the $\sigma^2 = 0.01$ noise floor). Degree $3$ pushes both
 training and test errors right down to the $\sigma^2 = 0.01$ floor, with its
-largest weight right near the true leading coefficient $5.6$. Degree $19$ drives
+largest weight sitting near the true leading coefficient $5.6$. Degree $19$ drives
 training error far below the noise floor—essentially to zero—while its test error
-explodes by many orders of magnitude! Look at its weights to see the mechanism:
-degree $19$ relies on astronomically large positive and negative coefficients that
+explodes by many orders of magnitude. Look at its weights to see the mechanism:
+degree $19$ relies on huge positive and negative coefficients that
 delicately cancel at the $20$ training inputs and blow up everywhere else.
 
 Sweeping across every degree from $1$ to $19$ maps out the full transition on a
@@ -179,9 +179,7 @@ d2l.plot(degrees, [train_err, test_err], xlabel='polynomial degree',
          yscale='log', ylim=(1e-4, 1e3))
 ```
 
-As $k$ increases, the training error decreases monotonically—because adding $x^{k+1}$ only enlarges the subspace of functions available to least squares—plunging far below $\sigma^2$ by $k = 19$. The test error, by contrast, traces a classic **U-shaped curve**: it drops steeply to its minimum at $k = 3$ (or a nearby degree) as underfitting disappears, and then climbs by orders of magnitude as extra powers of $x$ fit the random noise in our 20 training points.
-
-For $k = 3$, the weights stay modest (the largest sits near the true leading coefficient $5.6$). By $k = 19$, however, the largest coefficient grows into the millions or beyond! Because $x^{10}$ and $x^{12}$ look almost identical on $[-1, 1]$, the least-squares fit cancels giant positive multiples of one against giant negative multiples of the other to thread the 20 noisy points—a hallmark instability that we will cure directly with weight decay in :numref:`sec_weight_decay`.
+As $k$ increases, the training error decreases monotonically (since adding $x^{k+1}$ only enlarges the subspace of functions available to least squares), plunging far below $\sigma^2$ by $k = 19$. The test error, by contrast, traces a classic **U-shaped curve**: it drops steeply to its minimum at $k = 3$ (or a nearby degree) as underfitting disappears, and then climbs by orders of magnitude as extra powers of $x$ fit the random noise in our 20 training points. Because $x^{17}$ and $x^{19}$ look almost identical on $[-1, 1]$, the high-degree fit cancels giant positive multiples of one against giant negative multiples of the other to thread the 20 noisy points, an instability that we cure directly with weight decay in :numref:`sec_weight_decay`.
 
 ### Bias and Variance
 
@@ -221,11 +219,11 @@ d2l.plt.legend(['bias$^2$', 'variance', r'noise $\sigma^2$',
 ```
 
 Look how cleanly the curves explain the U-shape of test error: squared bias is
-huge at degrees $1$ and $2$, then collapses to zero at degree $3$ (the first
+large at degrees $1$ and $2$, then collapses to zero at degree $3$ (the first
 family rich enough to contain the cubic). Variance, meanwhile, climbs with every
-added degree—starting around $\sigma^2(d+1)/n$ (the noise variance scaled by
+added degree, starting around $\sigma^2(k+1)/n$ (the noise variance scaled by
 parameters per example; see exercise :exref:`ex_generalization-optimism`) and
-eventually exploding orders of magnitude past the noise floor. Underfitting is
+eventually rising orders of magnitude past the noise floor. Underfitting is
 error dominated by *bias*; overfitting is error dominated by *variance*. The
 idealized trade-off shown in :numref:`fig_capacity_vs_error` recurs across
 classical statistics and machine learning: training error drops steadily with
@@ -238,7 +236,7 @@ complexity, while test error reaches its minimum at an intermediate sweet spot
 
 ### Model Complexity
 
-As :numref:`fig_capacity_vs_error` summarizes schematically, increasing model complexity (capacity) reduces bias while increasing variance. The optimal generalization performance sits at the sweet spot where the sum of squared bias and variance reaches its minimum. In classical parametric models, complexity is governed by the number of parameters $d$ and the magnitude of the weights $\|\mathbf{w}\|$; in deep learning (:numref:`sec_generalization_deep`), we will see how regularization, architecture design, and dataset scale reshape this curve.
+As :numref:`fig_capacity_vs_error` summarizes schematically, increasing model complexity (capacity) reduces bias while increasing variance. The optimal generalization performance sits at the sweet spot where the sum of squared bias and variance reaches its minimum. In classical parametric models, complexity is governed by the number of parameters $p$ and the magnitude of the weights $\|\mathbf{w}\|$; in deep learning (:numref:`sec_generalization_deep`), we will see how regularization, architecture design, and dataset scale reshape this curve.
 
 ### Dataset Size
 
@@ -253,23 +251,18 @@ for n in (20, 50, 100, 1000):
 ```
 
 Look at the contrast. Growing the dataset rescues the overfitting degree-19
-polynomial dramatically—its test error plunges by orders of magnitude by
+polynomial dramatically: its test error plunges by orders of magnitude by
 $n = 100$, and by $n = 1{,}000$ it matches the true cubic. Meanwhile, the
 underfitting straight line barely budges (its test error remains stuck around
 $2$): collecting more data shrinks *variance*, but it can never cure
-*bias*. As a classical rule of thumb, model complexity should scale alongside
-dataset size rather than racing ahead of it—one big reason deep learning surged
-only once massive digital datasets became commonplace (though deep networks will
-add fascinating twists to this rule in :numref:`sec_generalization_deep`).
-
-With $n = 20$ points, the degree-$19$ polynomial has one weight per point and memorizes the noise; at $n = 50$ its test error still varies wildly from one draw to the next; and by $n = 1{,}000$ it is as accurate as the cubic. A model is never "too complex" in a vacuum—it is only too complex *relative to the amount of signal and data available to constrain it*.
+*bias*. A model is never "too complex" in isolation; it is only too complex *relative to the signal and data available to constrain it*. That scaling principle is one major reason deep learning surged once massive digital datasets became commonplace, though deep networks will add important twists to the classical curve in :numref:`sec_generalization_deep`.
 
 ## Model Selection
 :label:`subsec_generalization-model-selection`
 
 ### Validation Sets
 
-In our synthetic experiment we knew $f^*(x)$ and generated 1,000 test points at will. In a real problem, how should we choose hyperparameters—such as the polynomial degree $k$, the learning rate $\eta$, or the weight decay strength $\lambda$?
+In our synthetic experiment we knew $f^*(x)$ and generated 1,000 test points at will. In a real problem, how should we choose hyperparameters, such as the polynomial degree $k$, the learning rate $\eta$, or the weight decay strength $\lambda$?
 
 We can never choose hyperparameters by minimizing training error, because training error always favors the most complex, memorization-prone model ($k = 19$). Nor should we tune hyperparameters by repeatedly consulting the final *test set*, which would leak test-set noise into our design choices (:numref:`chap_classification_generalization`). Instead, we partition our available data into three disjoint splits:
 
@@ -284,7 +277,7 @@ When a dataset is small (say, $n = 20$ or $n = 100$ clinical records), carving o
 ![In $K$-fold cross-validation ($K = 5$ shown), the dataset is partitioned into $K$ folds; each round holds out one fold for validation (orange) and trains on the remaining $K - 1$ folds.](../img/mdl-mlp-kfold.svg)
 :label:`fig_kfold_cv`
 
-Folds must come from a *random* permutation, because real datasets often arrive sorted, and with folds of only four points a single split is noisy. So `kfold_splits` below draws ten independent random partitions into $K = 5$ folds (*repeated* cross-validation), and `cv_error` averages the validation error of the degree-$d$ fit over all of their folds:
+Folds must come from a *random* permutation, because real datasets often arrive sorted, and with folds of only four points a single split is noisy. So `kfold_splits` below draws ten independent random partitions into $K = 5$ folds (*repeated* cross-validation), and `cv_error` averages the validation error of a polynomial fit over all of their folds:
 
 ```{.python .input #generalization-cross-validation-1}
 def kfold_splits(rng, n, K=5, repeats=10):
@@ -297,8 +290,8 @@ def cv_error(x, y, d, splits):
                         x[f], y[f]) for folds in splits for f in folds])
 ```
 
-Let us select the polynomial degree using strictly the $20$ training examples—evaluating
-every degree on the exact same folds for a fair comparison—and check how closely
+Let us select the polynomial degree using strictly the $20$ training examples, evaluating
+every degree on the same folds for a fair comparison, and check how closely
 that choice matches the true test-set optimum (which cross-validation never sees):
 
 ```{.python .input #generalization-cross-validation-2}
@@ -320,7 +313,7 @@ d2l.plt.legend(['test', '5-fold cross-validation'], ncol=2, frameon=False,
 ```
 
 Without ever glancing at the test set, repeated 5-fold cross-validation reliably
-locates the bottom of the test-error bowl—usually selecting degree $3$, or
+locates the bottom of the test-error bowl, usually selecting degree $3$ or
 occasionally a nearby degree whose test error is nearly indistinguishable.
 Near the minimum, the two
 curves track within a small factor, with cross-validation naturally a bit noisier
@@ -329,7 +322,7 @@ curves shoot up by orders of magnitude. Cross-validation has a reason to rise
 even earlier than the test error: each fold trains on only $16$ points rather
 than $20$, so degree $15$ already interpolates all $16$ training points, and any
 validation point near the edges of $[-1, 1]$ falls outside the fitted range
-where high-degree polynomials explode! With a single draw of $20$ points,
+where high-degree polynomials explode. With a single draw of $20$ points,
 however, either curve may be the first to rise.
 
 How should we pick $K$? Because every fold trains on only a fraction
@@ -368,24 +361,21 @@ for name, e in est.items():
 ```
 
 On average, leave-one-out lands close to the test error, within about a tenth
-of it. Both 5-fold estimates sit above the leave-one-out estimate, which is the
-pessimistic bias of training on 16 points instead of 19. Leave-one-out also
-varies the least from one training set to the next, so here the folklore that
+of it. Both 5-fold estimates sit above the leave-one-out estimate, reflecting the
+pessimistic bias of training on 16 points instead of 19. Among the three cross-validation estimates, leave-one-out also
+has the smallest standard deviation across the 500 draws, so here the folklore that
 it is the noisier estimate does not hold. Repeating the 5-fold split ten times
 narrows its spread, but not down to that of leave-one-out: much of the spread
 comes from the luck of which 20 points were drawn, not from how they were
 split. For least squares, then, leave-one-out is both cheap and
-the most accurate of the three. For the networks of later chapters, where a
+the most accurate of the three; for the networks of later chapters, where a
 single fit takes minutes or hours, a coarse split remains the practical choice.
 
-Using only the 20 training examples, 5-fold cross-validation cleanly rejects both the underfitted degrees ($k \leq 2$) and the wildly overfitted high-degree polynomials, picking $k = 3$ or a nearby degree; retraining on all 20 points yields a smooth fit whose test error sits near the $\sigma^2 = 0.01$ noise floor.
+Selecting a discrete polynomial degree worked here because our features came in a natural hierarchy $1, x, x^2, \ldots, x^k$. What should we do when a dataset arrives with hundreds of unordered features and no obvious way to drop columns one by one? In :numref:`sec_weight_decay`, we replace discrete feature selection with a continuous penalty on the weight norm.
 
 ## Summary
 
-- **Empirical vs. population risk:** Training minimizes empirical risk $R_{\textrm{emp}}[f]$ on a finite sample $\mathcal{D}$, whereas deployment performance is governed by true population risk $R[f] = \mathbb{E}[l(f(\mathbf{x}), y)]$. Because training selects $f$ to fit $\mathcal{D}$, $R_{\textrm{emp}}[\hat{f}]$ is optimistically biased downward.
-- **Underfitting, overfitting, and bias--variance:** Expected test error decomposes into $\textrm{bias}^2 + \textrm{variance} + \sigma^2$. Rigid models underfit (high bias, low variance); overly flexible models on small datasets overfit (low bias, high variance), producing a U-shaped validation curve.
-- **Dataset scale:** Increasing training sample size $n$ shrinks estimation variance as $1/n$, allowing richer model classes to generalize cleanly.
-- **Model selection:** Hyperparameters must never be chosen by training error or on the final test set; instead, use a dedicated validation split or, when data are scarce, $K$-fold cross-validation.
+Supervised learning minimizes empirical risk $R_{\textrm{emp}}[f]$ on a finite training sample while aiming for low population risk $R[f] = \mathbb{E}[l(f(\mathbf{x}), y)]$ on unseen data. Because optimization chooses $\hat{f}$ specifically to fit the training set, $R_{\textrm{emp}}[\hat{f}]$ is optimistically biased downward whenever the model class is flexible enough to absorb label noise. Expected squared test error decomposes into squared bias, estimation variance, and irreducible noise $\sigma^2$: rigid models underfit with high bias, overly flexible models on small samples overfit with high variance, and collecting more training data shrinks variance as $1/n$ without reducing bias. Because training error always favors memorization and repeated queries contaminate the final test set, hyperparameters must be chosen on a held-out validation split or via $K$-fold cross-validation.
 
 ## Exercises
 
@@ -471,11 +461,14 @@ Using only the 20 training examples, 5-fold cross-validation cleanly rejects bot
    all $n$ examples, let $\hat{y}^{(-i)}$ be the prediction at
    $\mathbf{x}^{(i)}$ of the fit that omits example $i$, and let
    $h_i = \mathbf{x}^{(i)\top}\mathbf{A}^{-1}\mathbf{x}^{(i)}$. Use the
-   Sherman--Morrison identity (:eqref:`eq_mdl-sherman-morrison`, with
-   $\mathbf{w} = -\mathbf{u}$)
+   Sherman--Morrison identity (:numref:`sec_mdl-linear-maps`)
+
    $$(\mathbf{A} - \mathbf{u}\mathbf{u}^\top)^{-1} = \mathbf{A}^{-1} + \frac{\mathbf{A}^{-1}\mathbf{u}\mathbf{u}^\top\mathbf{A}^{-1}}{1 - \mathbf{u}^\top\mathbf{A}^{-1}\mathbf{u}}$$
+
    with $\mathbf{u} = \mathbf{x}^{(i)}$ to show that
+
    $$y^{(i)} - \hat{y}^{(-i)} = \frac{y^{(i)} - \hat{y}^{(i)}}{1 - h_i}.$$
+
    State what leave-one-out cross-validation then costs for least
    squares compared with a single fit.
    :exlabel:`ex_generalization-leave-one-out-shortcut`
@@ -545,7 +538,7 @@ $$R_{\textrm{emp}}[f] = \frac{1}{n} \sum_{i=1}^n l\bigl(f(\mathbf{x}^{(i)}), y^{
 $$\mathbb{E}\bigl[R_{\textrm{emp}}\bigr] = \sigma^2\Bigl(1 - \frac{p}{n}\Bigr), \qquad \mathbb{E}\bigl[R_{\textrm{in-sample}}\bigr] = \sigma^2\Bigl(1 + \frac{p}{n}\Bigr)$$
 
 - **Selection bias of optimization:** Because $\hat{f}$ is chosen to minimize loss *on $\mathcal{D}$*, each fitted parameter absorbs $\sigma^2/n$ of training noise.
-- **Exact interpolation at $p = n = 20$:** Expected training MSE vanishes ($\sigma^2(1 - 20/20) = 0$) even when fitting pure noise!
+- **Exact interpolation at $p = n = 20$:** Expected training MSE vanishes ($\sigma^2(1 - 20/20) = 0$) even when fitting pure noise.
 :::
 
 ::: {.col .fig}

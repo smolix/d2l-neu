@@ -205,12 +205,12 @@ The fixed rule with $\epsilon = 0.1$ finds the best arm in almost every run
 but never stops exploring. A random pull falls short of the best arm by the
 average gap, $0.90 - 0.487 = 0.41$, where $0.487$ is the mean of the ten
 $\mu_a$. Exploration alone therefore costs $0.1 \times 0.41 \approx 0.04$ per
-pull, about $83$ of its median regret of about $100$, and this cost does not
+pull, about $83$ of its median regret of $106$, and this cost does not
 shrink: the regret of a fixed $\epsilon$ grows linearly in $t$.
 
 The annealed rule makes about $112$ random pulls in $2000$ rounds: twenty at
 the start and about $20 \ln(2000/20) \approx 92$ afterwards. At $0.41$ each,
-they cost $46$, close to its median regret of about $50$. Nearly all of its
+they cost $46$, matching its median regret of $46$. Nearly all of its
 regret is spent on exploration, and the greedy pulls in between go to the best
 arm. Since the number of random pulls up to round $t$ grows like $20 \ln t$,
 so does the regret: an $\epsilon_t$ proportional to $1/t$ gives logarithmic
@@ -929,8 +929,8 @@ Comparing pure greedy, constant $\epsilon = 0.1$, and harmonic annealing $\epsil
 
 @!qlearning-regret-and-the-linear-tax
 
-- **Constant $\epsilon = 0.1$ pays a linear tax:** A random pull loses the average gap $0.90 - 0.487 = 0.413$, costing $0.1 \times 0.413 \approx 0.041$ per pull ($\approx 83$ of its $100$ median regret) forever.
-- **Harmonic $\epsilon_t = 20/t$ achieves $O(\ln t)$ regret:** Makes only $20 + 20\ln(2000/20) \approx 112$ random pulls total ($\approx 46$ exploration cost, median regret $52$), though its constant $20$ must be tuned to $\Delta_{\min}^{-2}$.
+- **Constant $\epsilon = 0.1$ pays a linear tax:** A random pull loses the average gap $0.90 - 0.487 = 0.413$, costing $0.1 \times 0.413 \approx 0.041$ per pull ($\approx 83$ of its $106$ median regret) forever.
+- **Harmonic $\epsilon_t = 20/t$ achieves $O(\ln t)$ regret:** Makes only $20 + 20\ln(2000/20) \approx 112$ random pulls total ($\approx 46$ exploration cost, median regret $46$), though its constant $20$ must be tuned to $\Delta_{\min}^{-2}$.
 :::
 
 ::: {.slide title="Optimism Under Uncertainty: Upper Confidence Bounds"}
@@ -985,7 +985,7 @@ $$\mu_a \mid (w_a, n_a) \sim \mathrm{Beta}(1 + w_a,\; 1 + n_a - w_a)$$
 ::: {.col}
 Plotting cumulative regret on logarithmic axes separates linear-regret rules (slope $1$) from logarithmic-regret rules (bending flat):
 
-- **Three-fold improvement:** UCB ($\kappa = 0.5$) and Thompson sampling finish with median regret $32$–$37$, roughly one-third of fixed $\epsilon = 0.1$ ($100$) and below annealed $\epsilon_t = 20/t$ ($52$).
+- **Three-fold improvement:** UCB ($\kappa = 0.5$) and Thompson sampling finish with median regret $30$–$38$, roughly one-third of fixed $\epsilon = 0.1$ ($106$) and below annealed $\epsilon_t = 20/t$ ($46$).
 :::
 
 ::: {.col}
@@ -1001,8 +1001,8 @@ Sweeping $\kappa \in \{0.15, 0.50, \sqrt{2}\}$ across 40 runs explains why theor
 
 @!exploration-optimism-ucb-and-thompson-sampling-1
 
-- **Why UCB1 ($\kappa = \sqrt{2}$) costs $6\times$ more here:** UCB pulls arm $a$ until $\kappa\sqrt{\log t / n(a)} \approx \Delta_a$, so $n(a) \propto \kappa^2 \log t / \Delta_a^2$; Hoeffding bounds the worst-case Bernoulli variance $1/4$, whereas our best arm has variance $0.9 \times 0.1 = 0.09$.
-- **Why $\kappa = 0.15$ is dangerous:** Although its median regret is $11$, an unlucky start traps $10\%$ of runs on a suboptimal arm (max regret $618$); Thompson sampling adapts automatically without tuning $\kappa$.
+- **Why UCB1 ($\kappa = \sqrt{2}$) costs $5\times$ more here:** UCB pulls arm $a$ until $\kappa\sqrt{\log t / n(a)} \approx \Delta_a$, so $n(a) \propto \kappa^2 \log t / \Delta_a^2$; Hoeffding bounds the worst-case Bernoulli variance $1/4$, whereas our best arm has variance $0.9 \times 0.1 = 0.09$.
+- **Why $\kappa = 0.15$ is dangerous:** Although its median regret is $8$, an unlucky start traps slow runs on a suboptimal arm (max regret $709$); Thompson sampling adapts automatically without tuning $\kappa$.
 :::
 
 ::: {.slide title="The Lai-Robbins Information-Theoretic Lower Bound"}
@@ -1049,7 +1049,7 @@ Initializing all table entries optimistically to $Q_0(s, a) = 1.0$ (an upper bou
 On stochastic MDPs, a single visit cannot identify $P(\cdot \mid s, a)$, while on small deterministic grids even random tie-breaking covers most pairs:
 
 - **Count-based UCB bonuses:** Adding $c / \sqrt{n(s, a)}$ to rewards in Bellman backups drives the agent toward under-visited pairs, achieving $\tilde{O}(\sqrt{T})$ regret (Jin et al., 2018).
-- **Calm FrozenLake coverage:** Because the goal is only 6 moves away, greedy tie-breaking tries $91\%$ of live pairs and solves the calm lake in $20/20$ seeds while winning $90\%$ of training episodes.
+- **Calm FrozenLake coverage:** Because the goal is only 6 moves away, greedy tie-breaking tries $93\%$ of live pairs and solves the calm lake in $19/20$ seeds while winning $60\%$ of training episodes.
 :::
 
 ::: {.col}

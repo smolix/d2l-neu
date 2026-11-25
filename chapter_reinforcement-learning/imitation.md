@@ -800,7 +800,7 @@ Comparing the clone's disagreement rate $1 - \pi_{\textrm{bc}}(\pi^*(s) \mid s)$
 @!imitation-what-the-reduction-quietly-assumes-2
 
 - **Zero generalization gap on $d^{\pi^*}$:** The clone errs $18.2\%$ on its 18 training pairs and $18.2\%$ on 100 fresh expert episodes, so cloning 1, 10, or 100 expert episodes produces the exact same $66.0\%$ table.
-- **Higher error on $d^{\pi_{\textrm{bc}}}$:** Weighted by its own state occupancy, the clone's error jumps to **$22.2\%$** because its own mistakes carry it into unvisited cells where its error rate is $75\%$.
+- **Higher error on $d^{\pi_{\textrm{bc}}}$:** Weighted by its own state occupancy, the clone's error jumps to **$21.6\%$** because its own mistakes carry it into unvisited cells where its error rate is $75\%$.
 :::
 
 ::: {.slide title="Distribution Shift vs. Missing Expert Coverage"}
@@ -810,7 +810,7 @@ On *slippery* ice, the expert itself slips into different cells across episodes,
 
 @!imitation-distribution-shift-between-training-and-deployment-1
 
-- **Missing coverage vanishes with $n$:** On slippery ice, $1$ expert episode misses critical cells $34.0\%$ of the time, $3$ episodes fail $1.5\%$ of the time, and $10$ episodes cover the expert's reachable states completely ($0.0\%$ failures).
+- **Missing coverage vanishes with $n$:** On slippery ice, $1$ expert episode misses critical cells $32.0\%$ of the time, $3$ episodes fail $1.5\%$ of the time, and $10$ episodes cover the expert's reachable states completely ($0.0\%$ failures).
 - **Distribution shift persists for all $n$:** Even with infinite expert data ($n \to \infty$), states outside the expert's support ($d^{\pi^*}(s) = 0$) never receive labels.
 :::
 
@@ -838,7 +838,7 @@ On a $T$-step chain (expert earns $1$ per step, imitators err with $\varepsilon 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Cloned imitator:** Earns step-$t$ reward with probability $(1-\varepsilon)^t$, losing **$17.07$** rewards at $T = 64$ (tracking $\varepsilon T(T+1)/2 = 20.80$).
+- **Cloned imitator:** Earns step-$t$ reward with probability $(1-\varepsilon)^t$, losing **$17.03$** rewards at $T = 64$ (tracking $\varepsilon T(T+1)/2 = 20.80$).
 - **Recovering imitator:** Returns to the path after a 1-step penalty ($u = 1$), losing exactly $\varepsilon T = \mathbf{0.64}$ rewards—a **$27\times$ reduction**.
 :::
 

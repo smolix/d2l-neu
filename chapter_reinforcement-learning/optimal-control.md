@@ -5,7 +5,7 @@ Dynamic programming (:numref:`sec_valueiter`) solved the slippery lake by sweepi
 
 Control theory solved this problem in continuous state and action spaces long before deep reinforcement learning, starting from an algebraic observation due to :citet:`Kalman.1960`. When the transition dynamics are linear in the state and control, and the one-step cost is quadratic in both, Bellman's backward dynamic programming preserves the quadratic form of the value function at every step. Instead of a table of $100^d$ entries, the exact value function $V_t(\mathbf{x}) = \mathbf{x}^\top \mathbf{P}_t \mathbf{x}$ is parameterized by a symmetric $d \times d$ matrix $\mathbf{P}_t$ with $d(d+1)/2$ independent numbers. The Bellman backup reduces to the *Riccati recursion*, and the optimal policy is a linear state-feedback law $\mathbf{u}_t^* = -\mathbf{K}_t \mathbf{x}_t$: the *Linear-Quadratic Regulator* (LQR) :cite:`Kalman.1960,Anderson.Moore.2007`.
 
-Most physical systems are nonlinear, and actuators saturate. Two ideas extend LQR to nonlinear continuous control and form the backbone of modern trajectory optimization and robotics :cite:`Tedrake.2023,Bertsekas.2025`. First, *iterative LQR* (iLQR) :cite:`Li.Todorov.2004` repeatedly linearizes the nonlinear dynamics and quadratizes the cost around a candidate trajectory, solving a time-varying LQR problem in the backward pass to improve the trajectory in the forward pass. Second, *Model Predictive Control* (MPC) :cite:`Rawlings.Mayne.Diehl.2017` turns finite-horizon trajectory optimization into a closed-loop policy: at every step $t$, it re-solves the control problem over a receding lookahead horizon from the current measured state $\mathbf{x}_t$, applies only the first control $\mathbf{u}_{t|t}^*$, and re-plans at step $t+1$. This section develops all three tools—LQR, iLQR, and receding-horizon MPC—and shows where local linear feedback suffices, where nonlinear energy pumping is required, and how MPC sets the stage for planning with learned neural dynamics in :numref:`sec_model_based`.
+Most physical systems are nonlinear, and actuators saturate. Two ideas extend LQR to nonlinear continuous control and form the backbone of modern trajectory optimization and robotics :cite:`Tedrake.2023,Bertsekas.2025`. First, *iterative LQR* (iLQR) :cite:`Li.Todorov.2004` repeatedly linearizes the nonlinear dynamics and quadratizes the cost around a candidate trajectory, solving a time-varying LQR problem in the backward pass to improve the trajectory in the forward pass. Second, *Model Predictive Control* (MPC) :cite:`Rawlings.Mayne.Diehl.2017` turns finite-horizon trajectory optimization into a closed-loop policy: at every step $t$, it re-solves the control problem over a receding lookahead horizon from the current measured state $\mathbf{x}_t$, applies only the first control $\mathbf{u}_{t|t}^*$, and re-plans at step $t+1$. This section develops LQR, iLQR, and receding-horizon MPC, showing where local linear feedback suffices, where nonlinear energy pumping is required, and how MPC sets the stage for planning with learned neural dynamics in :numref:`sec_model_based`.
 
 ```{.python .input #optimal-control-imports}
 %%tab pytorch
@@ -193,7 +193,7 @@ print(f'closed-loop eigenvalues: {eigs_closed[0]:.4f}, {eigs_closed[1]:.4f}')
 
 At the upright fixed point, the open-loop Jacobian $\mathbf{A}$ has an unstable eigenvalue $\lambda_1 = 1.2133 > 1$: any small tilt grows exponentially at over $21\%$ per step, as seen in the phase portrait of :numref:`sec_mdl-odes-solvers`. Solving the Riccati recursion with `Pendulum-v1`'s cost matrices $\mathbf{Q} = \textrm{diag}(1, 0.1)$ and $\mathbf{R} = [[0.001]]$ produces the feedback gain $\mathbf{K}_\infty = [19.693, 5.263]$, which pulls both closed-loop eigenvalues inside the unit circle ($\lambda_1 = 0.8537, \lambda_2 = 0.2467$).
 
-### Where Local Linearization Fails: Torque Saturation and the Basin of Attraction
+### Torque Saturation and the Basin of Attraction
 
 How far from the top can this linear controller catch the pendulum when the motor torque is clipped to $[-2, 2]$? The gravitational torque pulling the pendulum down is $\frac{1}{2}mgl\sin\vartheta = 5\sin\vartheta$, whereas the motor supplies at most $|u| = 2$. Once $|\vartheta| > \arcsin(2/5) \approx 0.412\text{ rad}$ ($23.6^\circ$), gravity exceeds the peak holding torque of the motor. We test the clipped LQR policy $u_t = \textrm{clip}(-\mathbf{K}_\infty \mathbf{x}_t, -2, 2)$ on the full nonlinear pendulum from five starting angles $\vartheta_0$ at rest:
 
@@ -586,7 +586,7 @@ Sweeping the control penalty $R \in \{0.01, 0.10, 1.00\}$ from initial position 
 :::
 
 ::: {.slide title="The Pendulum-v1 Continuous-Control Benchmark"}
-[Our Running Nonlinear Control Testbed]{.kicker}
+[Nonlinear Control Benchmark]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
@@ -754,7 +754,7 @@ Test your intuition on Riccati backups, torque saturation, and receding-horizon 
 **Answers:**
 
 1. A 10-bin grid requires $10^{36}$ cells, whereas $\mathbf{P}_t \in \mathbb{R}^{36 \times 36}$ has only $d(d+1)/2 = 36 \times 37 / 2 = 666$ unique numbers.
-2. $\mathbf{K}_t$ does not change at all! In $\mathbb{E}[(\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u} + \mathbf{w})^\top\mathbf{P}_{t+1}(\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u} + \mathbf{w})]$, the linear cross term in $\mathbf{w}$ vanishes and $\mathbb{E}[\mathbf{w}^\top\mathbf{P}_{t+1}\mathbf{w}] = \textrm{tr}(\mathbf{P}_{t+1}\boldsymbol{\Sigma})$ adds only a constant independent of $\mathbf{u}$.
+2. $\mathbf{K}_t$ does not change at all. In $\mathbb{E}[(\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u} + \mathbf{w})^\top\mathbf{P}_{t+1}(\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u} + \mathbf{w})]$, the linear cross term in $\mathbf{w}$ vanishes and $\mathbb{E}[\mathbf{w}^\top\mathbf{P}_{t+1}\mathbf{w}] = \textrm{tr}(\mathbf{P}_{t+1}\boldsymbol{\Sigma})$ adds only a constant independent of $\mathbf{u}$.
 3. The $+0.5\text{ rad/s}$ push kept the rod inside the local linear tube around the nominal trajectory, whereas $+2.2\text{ rad/s}$ knocked it back down where torque saturates and a brand-new multi-swing energy pump (re-planned by MPC) is required.
 :::
 :::

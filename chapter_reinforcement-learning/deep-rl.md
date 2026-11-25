@@ -242,7 +242,7 @@ The update that results is not the gradient of the objective $J(\theta)$. With $
 
 $$\hat{g} = \frac{1}{N} \sum_{t} \tilde{w}_t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t), \qquad \tilde{w} = \mathrm{standardize}\big(y - \hat{V}(s)\big).$$
 
-Four things separate $\hat{g}$ from $\nabla_\theta J$. The factor $\gamma^t$ is dropped, so the score at a late step counts as much as at an early one; this is the estimator :eqref:`eq_rtg` of :numref:`sec_baselines`, which in general is not the gradient of any objective :cite:`Nota.Thomas.2020`. The targets $y_t$ of a truncated episode contain $\hat{V}(s_T)$, so the critic's error at the cut enters the weights as bias. The centering uses the batch's own mean, which depends weakly on the sampled actions. Dividing by $N$ and by the batch's standard deviation rescales each batch by its own data, after which Adam takes a step of roughly fixed size. No stochastic-approximation theorem applies to this combination directly, so the evidence that the loop works comes from runs, not from a convergence proof.
+Four things separate $\hat{g}$ from $\nabla_\theta J$. The factor $\gamma^t$ is dropped, so the score at a late step counts as much as at an early one; this is the reward-to-go estimator of :numref:`sec_baselines`, which in general is not the gradient of any objective :cite:`Nota.Thomas.2020`. The targets $y_t$ of a truncated episode contain $\hat{V}(s_T)$, so the critic's error at the cut enters the weights as bias. The centering uses the batch's own mean, which depends weakly on the sampled actions. Dividing by $N$ and by the batch's standard deviation rescales each batch by its own data, after which Adam takes a step of roughly fixed size. No stochastic-approximation theorem applies to this combination directly, so the evidence that the loop works comes from runs, not from a convergence proof.
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-3}
 %%tab pytorch, jax
@@ -973,7 +973,7 @@ $$\nabla_\mu\,\mathbb{E}_{a \sim \mathcal{N}(\mu, \sigma^2)}\big[Q(a)\big] = \un
 
 @!deep-rl-score-function-versus-pathwise-gradients
 
-- **20× lower variance and shift invariance:** On $Q(a) = -(a-1)^2$ at $\mu = 0, \sigma = 0.5$, the pathwise estimator has variance $1.00$ vs. $21.75$ for the score function, and is completely invariant to adding $+10$ to $Q(a)$ (which bloats score-function variance to $282$).
+- **20× lower variance and shift invariance:** On $Q(a) = -(a-1)^2$ at $\mu = 0, \sigma = 0.5$, the pathwise estimator has variance $1.00$ vs. $21.5$ for the score function (exact: $21.75$), and is completely invariant to adding $+10$ to $Q(a)$ (which bloats score-function variance to $281$).
 :::
 
 ::: {.slide title="Information Flow: Score Function vs. Pathwise Critic"}
@@ -994,7 +994,7 @@ Applying a single plain-SGD step to raise $\hat{V}_w(s_0)$ at one state $s_0 \in
 
 @!deep-rl-generalization-couples-states-measured
 
-- **Local generalization vs. far-field drift:** The 10 nearest states in $\mathbb{R}^4$ rise by $+0.43$ ($>80\%$ of $s_0$'s move), whereas the 10 farthest states drop by $-0.07$ ($81$ of $255$ states move *down*), while the lookup table moves $+0.50$ at $s_0$ and $0.000000$ everywhere else.
+- **Local generalization vs. far-field drift:** The 10 nearest states in $\mathbb{R}^4$ rise by $+0.43$ to $+0.49$ (nearly $90\%$ of $s_0$'s $+0.49$ to $+0.55$ move), whereas the 10 farthest states drift slightly negative ($-0.01$ to $-0.06$, with $6$–$15$ of $255$ states moving *down*), while the lookup table moves $+0.50$ at $s_0$ and $0.000000$ everywhere else.
 :::
 
 ::: {.slide title="Visualizing Table Isolation vs. Network Coupling"}

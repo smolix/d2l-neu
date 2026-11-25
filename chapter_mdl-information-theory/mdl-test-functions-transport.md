@@ -406,7 +406,7 @@ points per sample, the crossing fluctuates by a tenth or two across runs). The
 printed gap matches the unbiased estimate from the previous cell to within
 about $0.001$, with the small discrepancy coming from the self-pairs.
 
-The tails of the witness plot tell an even more important story than the
+The tails of the witness plot reveal something even more important than the
 crossing. To shrink the gap $\mathbb{E}_P[g] - \mathbb{E}_Q[g]$, a generative
 model must push each of its samples uphill along $g$, so the slope of the
 witness at a model sample is the gradient signal that sample receives. Between
@@ -1046,7 +1046,7 @@ Test Functions and Optimal Transport<br>**integral probability metrics · kernel
 ::: {.col}
 Compare overlapping shifted Gaussians $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(d, 1)$ separated by $d = 8$ standard deviations:
 
-- **Smooth tails do not rescue JS, TV, or local MMD:** By $d = 8$, $\textrm{JS} \approx \log 2$ and $\textrm{TV} \approx 1$ have saturated, collapsing $\partial\textrm{JS}/\partial d$, $\partial\textrm{TV}/\partial d$, and $\partial\textrm{MMD}^2/\partial d$ ($\ell = 1$) to $\sim 10^{-4}$!
+- **Smooth tails do not rescue JS, TV, or local MMD:** By $d = 8$, $\textrm{JS} \approx \log 2$ and $\textrm{TV} \approx 1$ have saturated, collapsing $\partial\textrm{JS}/\partial d$, $\partial\textrm{TV}/\partial d$, and $\partial\textrm{MMD}^2/\partial d$ ($\ell = 1$) to $\sim 10^{-4}$.
 - **Wasserstein-1 ($W_1$) stays steady:** Maintains unit slope $\partial W_1/\partial d = 1.00$ at every distance $d$ without needing an explicit model density $q(x)$.
 :::
 
@@ -1087,7 +1087,7 @@ $$\textrm{IPM}_{\mathcal{G}}(P, Q) = \sup_{g \in \mathcal{G}}\Big(\mathbb{E}_{x 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Failure 1 ($\mathcal{G}$ too rich / spiky):** For $|g(x)| \le \tfrac12$, two independent $N$-samples from $\mathcal{N}(0, 1)$ share no points almost surely, so $g(x) = \mathbf{1}_{x \in \{X_i\}} - \tfrac12$ gives empirical $\textrm{TV}(\hat{P}_N, \hat{Q}_N) = 1.00$ even when $P = Q$!
+- **Failure 1 ($\mathcal{G}$ too rich / spiky):** For $|g(x)| \le \tfrac12$, two independent $N$-samples from $\mathcal{N}(0, 1)$ share no points almost surely, so $g(x) = \mathbf{1}_{x \in \{X_i\}} - \tfrac12$ gives empirical $\textrm{TV}(\hat{P}_N, \hat{Q}_N) = 1.00$ even when $P = Q$.
 - **Failure 2 ($\mathcal{G}$ bounded in height):** Any class with $|g(x)| \le M$ caps the gap at $2M$, saturating with zero gradient on distant modes.
 - **1-Lipschitz resolution:** Bounded slope $|\nabla g| \le 1$ prevents sample memorization *and* grows linearly with distance $d$.
 :::
@@ -1164,7 +1164,7 @@ Which test function $g^\star \in \mathcal{G}$ attains the maximum gap in $\textr
 - **Closed-form witness function:** By Cauchy–Schwarz, $\mathbf{w}^\star \propto \mathbf{m}_P - \mathbf{m}_Q$, so the optimal auditor (the **witness**) is:
   $$g^\star(x) \propto \mathbb{E}_{X \sim P}[k(x, X)] - \mathbb{E}_{Y \sim Q}[k(x, Y)]$$
 - **Sign crossing:** Positive where $P$ dominates and negative where $Q$ dominates (crossing $0$ at $x = 0.25$ for $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(0.5, 1)$).
-- **Vanishing tail gradients:** A generator pushes samples uphill along $\nabla g^\star(y)$, but beyond a few length scales $\ell$ in the tails, $g^\star(x)$ flattens to $0$!
+- **Vanishing tail gradients:** A generator pushes samples uphill along $\nabla g^\star(y)$, but beyond a few length scales $\ell$ in the tails, $g^\star(x)$ flattens to $0$.
 :::
 
 ::: {.col .fig}
@@ -1260,7 +1260,7 @@ $$\min_{\boldsymbol{\gamma} \in \Pi(\mathbf{p}, \mathbf{q})} \sum_{i,j=1}^N \gam
 
 - **Lagrangian diagonal-scaling solution:** Introducing multipliers $\xi_i$ for row sums $\sum_j \gamma_{ij} = p_i$ and $\zeta_j$ for column sums $\sum_i \gamma_{ij} = q_j$ and setting $\frac{\partial \mathcal{L}}{\partial \gamma_{ij}} = C_{ij} + \varepsilon \log \gamma_{ij} - \xi_i - \zeta_j = 0$ yields:
   $$\gamma_{ij} = e^{\xi_i/\varepsilon} e^{-C_{ij}/\varepsilon} e^{\zeta_j/\varepsilon} \iff \boldsymbol{\gamma}_\varepsilon = \textrm{diag}(\mathbf{a})\,\mathbf{K}\,\textrm{diag}(\mathbf{b}), \qquad K_{ij} = e^{-C_{ij}/\varepsilon}$$
-- The optimal regularized coupling is simply the elementwise **Gibbs kernel** $\mathbf{K} = e^{-\mathbf{C}/\varepsilon}$ rescaled by positive row and column vectors $\mathbf{a}, \mathbf{b} > \mathbf{0}$!
+- The optimal regularized coupling is simply the elementwise **Gibbs kernel** $\mathbf{K} = e^{-\mathbf{C}/\varepsilon}$ rescaled by positive row and column vectors $\mathbf{a}, \mathbf{b} > \mathbf{0}$.
 :::
 
 ::: {.slide title="Sinkhorn Matrix Scaling and the ε Trade-Off"}

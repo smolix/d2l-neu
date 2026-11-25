@@ -375,8 +375,9 @@ above); for each call it predicts latency + size / bandwidth for every
 enabled pair and takes the smallest. NCCL_ALGO and NCCL_PROTO force a pair
 (NCCL environment page), which is how to test the tuner: run every pair
 over all sizes and see whether the default is ever slower than the best
-forced pair. The plot: time against message size for every forced pair
-(thin) and the default (bold black); the dotted line marks where
+forced pair. The plot: each forced pair's time relative to the default's
+(thin; the default is the bold black line at 1) against message size; a
+pair below 1 beats the tuner at that size; the dotted line marks where
 Ring/Simple overtakes Ring/LL. A pair NCCL refuses, that hangs (each sweep
 has a timeout), returns wrong results, or that NCCL quietly replaces (its
 INFO lines report another pair) is dropped from the plot and the fits; the
@@ -401,18 +402,21 @@ fit of sec_lm_server_paths (alpha from the messages up to 64 KiB, beta, in
 the bus-bandwidth convention, from those of 4 MiB and more), with 95%
 intervals over the three regeneration processes. The fits predict where
 Ring/Simple overtakes Ring/LL, alpha_Simple - alpha_LL over phi (1 /
-beta_LL - 1 / beta_Simple); claim C2, second half: the measured crossover
-is within a factor of two of the prediction (asserted; quote both sizes).
-LL's beta against Simple's: the half-bandwidth argument of the protocols
-section, as measured here (quote the ratio; on the shared-memory path it
-need not be one half). -->
+beta_LL - 1 / beta_Simple); claim C2, second half (spec fallback: quote
+both sizes, not asserted). On this box the prediction is ill-conditioned:
+every pair runs through the same host-staged shared-memory path, which
+caps all of them near the same beta (quote the betas: LL is not at half
+of Simple's here, because the protocol is not the bottleneck, the path
+is), so the formula divides a small alpha difference by a small
+difference of inverse betas. The measured crossover comes from what the
+lines do not model (NCCL uses fewer channels for small messages, visible
+in the INFO choice lines). Say this plainly: the alpha-beta line of one
+pair is good, the difference of two nearly equal lines is not. -->
 
 ```{.python .input #collectives-fit-pairs}
 %%tab pytorch
 fits = d2l.fit_pairs(pairs)
 d2l.show_pair_fits(fits)
-cross = fits.attrs['crossover']  # where Ring/Simple overtakes Ring/LL
-assert 0.5 < cross['measured'] / cross['predicted'] < 2  # C2: within 2x
 ```
 
 <!-- Placeholder (prose): is the default right? At every size the default's

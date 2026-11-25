@@ -154,9 +154,9 @@ def _nccl_name(word, names):
 def _tuner_table(text, func='AllReduce'):
     """The tuner's latency (us) and bandwidth (GB/s) of func per
     (algorithm, protocol) from the INFO lines of NCCL_DEBUG_SUBSYS=TUNING
-    (a row of algorithms, a row of protocols under them, a row of
-    'latency/bandwidth' cells per function): {('Ring', 'LL'): (lat, bw),
-    ...}; {} when the table is absent."""
+    (rows of algorithms, a row of protocols under the first, a row of
+    'latency/bandwidth' cells per function under each row of algorithms):
+    {('Ring', 'LL'): (lat, bw), ...}; {} when the table is absent."""
     algos, protos, out = [], [], {}
     for line in text.splitlines():
         cells = [c.strip() for c in line.split('|')]
@@ -166,12 +166,13 @@ def _tuner_table(text, func='AllReduce'):
             algos = [_nccl_name(w, _NCCL_ALGOS) for w in words]
         elif head == 'Protocol':
             protos = [_nccl_name(w, _NCCL_PROTOS) for w in words]
-        elif head == func and algos and len(protos) >= len(algos):
-            per = len(protos) // len(algos)
+        elif head == func and algos and protos:
+            per = len(set(protos))  # protocols per algorithm
             nums = re.findall(r'(-?[\d.]+)\s*/\s*(-?[\d.]+)',
                               '|'.join(cells[1:]))
-            for i, (p, (lat, bw)) in enumerate(zip(protos, nums)):
-                out[(algos[i // per], p)] = (float(lat), float(bw))
+            for i, (lat, bw) in enumerate(nums[:per * len(algos)]):
+                out[(algos[i // per], protos[i % len(protos)])] = (
+                    float(lat), float(bw))
     return out
 
 #@save
@@ -444,32 +445,35 @@ def _show_pairs(r):
 
 #@save
 def _pairs_live(r, same):
-    """Re-time the default, Ring/LL and Ring/Simple on all cards (g = 2
-    with two or three cards, then uncompared): one line."""
+    """Re-time the full sweeps of the default, Ring/LL and Ring/Simple on
+    all cards and compare three sizes (with two or three cards: g = 2, then
+    each pair's bus bandwidth at the largest size, uncompared): one
+    line."""
     n = torch.cuda.device_count()
     if n < 2:
         return 'needs two GPUs: the committed box run is shown'
     spec = _HW_COLL['box']
     g = spec['g'] if n >= spec['g'] else 2
     compare = same and g == int(r.g.iloc[0])
-    pts, live_sizes = [], _HW_COLL_LIVE['sizes']
+    pts, busbw, top = [], [], _HW_COLL_LIVE['sizes'][-1]
     for algo, proto in _HW_COLL_LIVE['pairs']:
         name = _pair_name(algo, proto)
         if name in r.attrs.get('dropped', {}):
             continue
         df = _pair_sweep(tuple(range(g)), algo, proto, spec,
-                         _HW_COLL_LIVE['timeout_s'],
-                         (live_sizes[0], live_sizes[-1]))
+                         _HW_COLL_LIVE['timeout_s'])  # the full sweep
         if df.attrs['refused']:
             return f"{name}: {df.attrs['refused']}; committed run shown"
-        for s in live_sizes:
+        t = lambda s: float(df.oop_us[df['size'] == s].iloc[0])
+        phi = d2l.nccl_busbw_factor('all_reduce', g)
+        busbw.append(f'{name} {phi * top / t(top) / 1e3:.1f}')  # GB/s
+        for s in _HW_COLL_LIVE['sizes']:
             i = d2l._row(r, algo=name, size=s)
-            live = float(df.oop_us[df['size'] == s].iloc[0])
             pts.append((f'{name} {d2l._hw_bytes(s)}', float(r.oop_us.iloc[i]),
-                        live, d2l._spread(r, 'oop_us', i, 0.05)))
+                        t(s), d2l._spread(r, 'oop_us', i, 0.05)))
     if not compare:
-        return (f'g = {g}: ' + ', '.join(f'{p[0]} {d2l._hw_sig(p[2])}'
-                                          for p in pts) + ' us')
+        return (f'{g} GPUs, busbw at {d2l._hw_bytes(top)} (GB/s):\n  '
+                + ', '.join(busbw))
     return d2l._hw_agreement(pts, same, 'us')
 
 #@save
@@ -527,26 +531,27 @@ def pair_time(pairs, pair, size):
 
 #@save
 def plot_algo_crossover(pairs, small='Ring/LL', large='Ring/Simple'):
-    """Time of one all-reduce against message size: each kept forced pair
-    thin, NCCL's default bold black; a dotted line at the measured
-    crossover of small and large."""
+    """Time of one all-reduce of each kept forced pair relative to NCCL's
+    default (bold black at 1) against message size; a dotted line at the
+    measured crossover of small and large."""
     kept = _kept(pairs)
-    if not kept:
+    if 'default' not in kept:
         print(pairs.attrs.get('label', 'no forced pairs'))
         return
-    names = [n for n in kept if n != 'default'] + ['default']
-    d2l.plot([kept[n][0] for n in names], [kept[n][1] * 1e6 for n in names],
-             xlabel='message size (bytes)', ylabel='time (us)',
-             legend=names, xscale='log', yscale='log', figsize=(5, 3),
-             legend_loc='outside',
-             fmts=[f'C{i}-' for i in range(len(names) - 1)] + ['k-'])
+    s, base = kept['default']
+    names = [n for n in kept if n != 'default']
+    rel = [np.interp(s, *kept[n]) / base for n in names]
+    d2l.plot([s] * (len(names) + 1), rel + [np.ones_like(s)],
+             xlabel='message size (bytes)',
+             ylabel="time / NCCL default's", legend=names + ['default'],
+             xscale='log', figsize=(5, 3), legend_loc='outside',
+             fmts=[f'C{i}-' for i in range(len(names))] + ['k-'])
     ax = d2l.plt.gca()
     for line in ax.get_lines():
         line.set_linewidth(1.0)
-    ax.get_lines()[len(names) - 1].set_linewidth(2.5)
+    ax.get_lines()[len(names)].set_linewidth(2.5)
     if small in kept and large in kept:
-        s, t1 = kept[small]
-        x = _crossing(s, t1, kept[large][1])
+        x = _crossing(kept[small][0], kept[small][1], kept[large][1])
         if np.isfinite(x):
             ax.axvline(x, color='k', linestyle=':', linewidth=1)
 
@@ -652,7 +657,7 @@ def tuner_regret(pairs, k=3, floor=0.02):
     out['units'] = (out.default_s - out.best_s) / noise
     i = int(out.units.idxmax())
     print(f'largest excess of the default: {out.excess[i]:.0%} '
-          f'({out.units[i]:.1f} noise units) at '
+          f'({out.units[i]:.1f} units) at '
           f'{d2l._hw_bytes(int(out["size"][i]))} over {out.best[i]}')
     n_proc = len(forced[names[0]])
     print(f'within {k} units at {int((out.units <= k).sum())} of '
@@ -901,9 +906,9 @@ def _show_hier(r, sizes=(2**24, 2**28)):
 def _check_line(rec, where):
     if rec is None:
         return f'{where}: correctness check not run'
-    verdict = 'equals' if rec['ok'] else 'DIFFERS FROM'
-    return (f"{where}: hier_allreduce {verdict} the CPU sum (rtol 1e-5; "
-            f"largest error {rec['max_rel_err']:.0e})")
+    verdict = '=' if rec['ok'] else 'DIFFERS FROM'
+    return (f"{where}: hier_allreduce {verdict} CPU sum (rtol 1e-5, "
+            f"max error {rec['max_rel_err']:.0e})")
 
 #@save
 def hier_vs_flat(config='box'):
@@ -913,8 +918,8 @@ def hier_vs_flat(config='box'):
     four GPUs: a long table variant, size, us, mad_us (committed in
     box-coll) and model_us, the closed forms' prediction from the earlier
     sections' fits (NaN while they are absent). A normal run re-times 64
-    MiB on four GPUs and checks hier_allreduce against a CPU sum (on four CPU gloo processes without
-    four GPUs)."""
+    MiB on four GPUs and checks hier_allreduce against a CPU sum (on four
+    CPU gloo processes without four GPUs)."""
     spec, checks = _HW_COLL[config], []
     def live(r, same):
         rows, check, run = _hier_run(
@@ -945,13 +950,13 @@ def hier_vs_flat(config='box'):
     if four:
         print(_check_line(checks[0] if checks else None, 'live, 4 GPUs'))
     else:
-        print('needs four GPUs: the committed box run is shown')
+        print('needs four GPUs: committed run shown; the check runs on the '
+              'CPU (gloo)')
         with d2l._quiet():
             _, check, _ = _hier_run('cpu', [], 1, 0, spec['check_bytes'],
                                     spec['intra'], spec['inter'],
                                     _HW_COLL_LIVE['timeout_s'])
-        print(_check_line(check, '4 CPU processes (gloo, not a datacenter '
-                          'network)'))
+        print(_check_line(check, '4 CPU processes'))
     return r
 ```
 

@@ -2848,8 +2848,8 @@ box:1:1 [0] NCCL INFO Channel 00/0 : 0[0] -> 1[1] via SHM/direct/direct
 box:1:1 [3] NCCL INFO Channel 00/0 : 3[3] -> 0[0] via SHM/direct/direct
 box:1:1 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels
 box:1:1 [0] NCCL INFO Algorithm   |   Tree      |   Ring
-box:1:1 [0] NCCL INFO Protocol    | LL LL128 Simple | LL LL128 Simple
-box:1:1 [0] NCCL INFO AllReduce   | 20.1/4.0 0.0/0.0 60.0/9.5 | 15.2/3.1 0.0/0.0 40.3/8.7
+box:1:1 [0] NCCL INFO Protocol    | LL | LL128 | Simple | LL | LL128 | Simple
+box:1:1 [0] NCCL INFO AllReduce   | 20.1/ 4.0 | 0.0/ 0.0 | 60.0/ 9.5 | 15.2/ 3.1 | 0.0/ 0.0 | 40.3/ 8.7
 box:1:1 [0] NCCL INFO AllReduce: 8 Bytes -> Algo 1 proto 0 time 15.2
 box:1:1 [0] NCCL INFO AllReduce: 65536 Bytes -> Algo RING proto LL time 20.0
 box:1:1 [0] NCCL INFO AllReduce: 268435456 Bytes -> Algo 1 proto 2 time 1.2
@@ -2981,6 +2981,26 @@ class TestCollectives(unittest.TestCase):
                                                        label='x pending'))
         self.assertEqual(lines, ['x pending'])
 
+    def test_parse_info_box(self):
+        """The box's own INFO lines (NCCL 2.28.9, 4 x RTX 4090, SHM)."""
+        d = d2l._parse_info(sample('box_nccl_info_g4.txt'))
+        self.assertEqual((d['version'], d['n_ranks'], d['n_nodes'],
+                          d['channels']), ('2.28.9', 4, 1, 4))
+        self.assertEqual(d['transports'], ['SHM/direct/direct'])
+        self.assertEqual(d['rings'], {c: [0, 1, 2, 3] for c in range(4)})
+        self.assertEqual(d['trees'][3], {0: -1, 1: 0, 2: 1, 3: 2})
+        self.assertEqual(d['tuner'][('Ring', 'Simple')], (42.6, 16.0))
+        self.assertEqual(d['tuner'][('Tree', 'LL')], (12.8, 2.9))
+        self.assertEqual(d['tuner'][('Ring', 'LL128')][1], 0.0)  # disabled
+        self.assertEqual(d['tuner'][('NVLS', 'Simple')], (0.0, 0.0))
+        self.assertEqual(d['tuner'][('PAT', 'LL')], (0.0, 0.0))
+        self.assertEqual(len(d['tuner']), 21)  # 7 algorithms x 3
+        self.assertEqual(d['choices'][8], 'Ring/LL')
+        self.assertEqual(d['choices'][2**27], 'Ring/Simple')
+        lines, _ = lines_of(self, d2l._show_info, d)
+        self.assertLessEqual(len(lines), 8)
+        self.assertIn('disabled: Ring/LL128, Tree/LL128', '\n'.join(lines))
+
     def params(self):
         return {'default': (20e-6, 9e9), 'Ring/LL': (15e-6, 3e9),
                 'Ring/Simple': (40e-6, 9e9), 'Tree/LL': (18e-6, 2.5e9)}
@@ -3008,10 +3028,41 @@ class TestCollectives(unittest.TestCase):
                                15e-6, delta=1e-6)
         lines, _ = lines_of(self, d2l._show_pairs, pairs)
         self.assertEqual(lines, ['dropped (refused): Ring/LL128'])
+        d2l.plot_algo_crossover(pairs)  # relative to the default
+        ys = [l.get_ydata() for l in d2l.plt.gca().get_lines()[:4]]
+        self.assertTrue(np.allclose(ys[3], 1))  # the default's own line
+        self.assertLess(ys[0][0], 1)  # Ring/LL beats the default at 8 B
+        d2l.plt.close('all')
         pending = d2l.fit_pairs(d2l.CampaignPending(
             'cluster-nccl', 'C-T4', 'two 8 x A100 nodes with RDMA'))
         self.assertTrue(pending.empty)
         self.assertIn('C-T4 not run yet', pending.attrs['status'])
+
+    def test_pairs_live(self):
+        """The forced-pair live line: compared on four cards, each pair's
+        bus bandwidth at 256 MiB on two (uncompared)."""
+        pairs = synthetic_pairs(self.params())
+        def sweep(gpus, algo, proto, spec, timeout_s=None, sizes=None):
+            name = d2l._pair_name(algo, proto)
+            x = pairs[pairs.algo == name].reset_index(drop=True)
+            if len(gpus) == 2:  # twice as fast
+                x = x.assign(oop_us=x.oop_us / 2)
+            x.attrs['refused'] = None
+            return x
+        with mock.patch.object(d2l, '_pair_sweep', side_effect=sweep):
+            with mock.patch.object(torch.cuda, 'device_count',
+                                   return_value=4):
+                line = d2l._pairs_live(pairs, True)
+            self.assertIn('9 points, largest difference 0%', line)
+            with mock.patch.object(torch.cuda, 'device_count',
+                                   return_value=2):
+                line = d2l._pairs_live(pairs, True)
+        head, values = line.split('\n')
+        self.assertEqual(head, '2 GPUs, busbw at 256 MiB (GB/s):')
+        self.assertIn('Ring/LL 4.0', values)  # 2 S / (t_4 / 2), phi_4 = 1.5
+        self.assertLessEqual(len(values), 79)
+        with mock.patch.object(torch.cuda, 'device_count', return_value=1):
+            self.assertIn('needs two GPUs', d2l._pairs_live(pairs, True))
 
     def test_crossing(self):
         s = 2.0 ** np.arange(10)
@@ -3029,6 +3080,7 @@ class TestCollectives(unittest.TestCase):
         self.assertEqual(small.best, 'Ring/LL')
         self.assertGreater(small.units, 3)  # 20 us against 15 us
         self.assertIn('at 8 B', lines[0])
+        self.assertIn('units) at', lines[0])
 
     def test_symptoms(self):
         pairs = synthetic_pairs(self.params())

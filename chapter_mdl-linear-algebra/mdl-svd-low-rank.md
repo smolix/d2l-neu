@@ -9,8 +9,8 @@ of another, and a data matrix has one row per example and one column per feature
 Neither is applied repeatedly to its own output, and neither needs to be square.
 Even when a matrix *is* square, eigenvalues can still let us down. The shear
 $\mathbf{T}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$ is
-*defective*—it has only a single eigenvector direction where the plane needs
-two—and in :numref:`sec_mdl-spectra-in-practice` we met a matrix whose sixth power
+*defective*, having only a single eigenvector direction where the plane needs
+two, and in :numref:`sec_mdl-spectra-in-practice` we met a matrix whose sixth power
 stretches a vector ten-fold even though both of its eigenvalues are smaller than 1. We need a
 factorization that exists for *every* matrix, measures stretching directly, and
 tells us how few numbers are needed to approximate a large matrix well.
@@ -19,7 +19,7 @@ A concrete photograph makes that last requirement easy to appreciate. A grayscal
 picture of a cat, $400\times500$ pixels, is simply a matrix of 200,000 numbers.
 Like any matrix, it can be written as a sum of rank-one pieces, each formed by
 the outer product of a single column and a single row. Remarkably, just twenty
-well-chosen pieces—18,020 numbers, or 9% of the original data—reproduce the
+well-chosen pieces (18,020 numbers, or 9% of the original data) reproduce the
 photograph with a relative error of only 8% (:numref:`fig_mdl-la-eckart-young`).
 Which twenty pieces achieve this, and could any other twenty do better? That same
 question arises across deep learning: it tells us how many parameters a
@@ -99,8 +99,8 @@ $(-1,1)$, with half-lengths 3 and 1. Remarkably, a *non-symmetric* matrix also
 maps the unit circle to an ellipse (or flattens it to a line segment if the
 matrix is singular), as we will prove shortly. The difference is that the
 orthogonal input directions landing on the axes of this ellipse are no longer the
-axes themselves. Instead, there are two orthonormal frames—one for the input
-space and one for the output space—and the singular value decomposition names
+axes themselves. Instead, there are two orthonormal frames, one for the input
+space and one for the output space, and the singular value decomposition names
 both.
 
 **Theorem (singular value decomposition).** *Every real $m\times n$ matrix
@@ -121,7 +121,7 @@ singular vectors*, the columns $\mathbf{u}_i$ of $\mathbf{U}$ are the *left
 singular vectors*, and the diagonal entries $\sigma_i$ are the *singular
 values*.
 
-In geometric terms, *every* matrix—regardless of its shape—is simply an
+In geometric terms, *every* matrix, regardless of its shape, is simply an
 orthogonal transformation, followed by a diagonal stretch, followed by a second
 orthogonal transformation. Writing $\mathbf{A}\mathbf{V}=\mathbf{U}\boldsymbol{\Sigma}$
 and reading off column $i$ makes the action explicit one direction at a time:
@@ -173,8 +173,8 @@ $\mathbf{A}=\mathbf{U}_r\boldsymbol{\Sigma}_r\mathbf{V}_r^\top$, where
 $\mathbf{U}_r\in\mathbb{R}^{m\times r}$ and
 $\mathbf{V}_r\in\mathbb{R}^{n\times r}$ hold the first $r$ singular vectors and
 $\boldsymbol{\Sigma}_r=\operatorname{diag}(\sigma_1,\ldots,\sigma_r)$. Between
-the full and compact forms sits the *thin SVD*—the default reduced form that
-numerical libraries return on request—which keeps $\min(m,n)$ columns in
+the full and compact forms sits the *thin SVD*, the default reduced form that
+numerical libraries return on request, which keeps $\min(m,n)$ columns in
 $\mathbf{U}$ and $\mathbf{V}$ and still records any zero singular values when
 $r<\min(m,n)$. For a $3\times2$ matrix of rank 2, the full factors have shapes
 $3\times3$, $3\times2$, and $2\times2$, whereas the thin factors have shapes
@@ -916,7 +916,7 @@ $$
 
 Projecting onto the top $k$ principal directions is therefore identical to
 taking the rank-$k$ truncated SVD of the centered data. By Eckart--Young in the
-Frobenius norm, no other projection—indeed, no other rank-$k$ matrix at all—can
+Frobenius norm, no other projection, and indeed no other rank-$k$ matrix at all, can
 reconstruct the centered points with smaller squared error. The discarded
 variance $\sum_{i>k}\sigma_i^2/n$ equals the mean squared reconstruction error,
 and the explained-variance ratio is simply the energy ratio
@@ -1109,8 +1109,8 @@ $\mathbf{K}=\left(\begin{smallmatrix}1&1\\1&1.0001\end{smallmatrix}\right)$
 and $\mathbf{b}=(2,2.0001)$. Its exact solution is $\mathbf{x}=(1,1)$. Now
 nudge $b_2$ by just $10^{-4}$, to $2.0002$: the solution jumps all the way to
 $(0,2)$. A perturbation of roughly three parts in $10^5$ in the data has
-completely changed the answer. The singular values of $\mathbf{K}$—roughly
-$2.00005$ and $5\times10^{-5}$—tell us why.
+completely changed the answer. The singular values of $\mathbf{K}$, roughly
+$2.00005$ and $5\times10^{-5}$, tell us why.
 
 The *condition number* of a matrix $\mathbf{A}$ of rank $r$ is the ratio of its
 largest to its smallest nonzero singular value,
@@ -1394,7 +1394,7 @@ with a tuned quintic polynomial that trades exact convergence to 1 for speed
 
 Our third question asks how much a linear layer can stretch its input, and the
 largest singular value answers it directly. More broadly, the full singular
-spectrum tells us whether a matrix is genuinely close to low rank. Modern
+spectrum tells us whether a matrix is truly close to low rank. Modern
 training recipes therefore bound, inspect, and approximate singular values
 without ever paying for a full SVD.
 
@@ -1464,8 +1464,8 @@ along with a power-iteration refinement for slowly decaying spectra, and
 context of randomized sketching.
 
 Finally, keep three limits of the SVD in mind. First, a full SVD costs
-$O(mn\min(m,n))$ operations—roughly $4096^3\approx7\times10^{10}$ for a single
-$4096\times4096$ weight matrix—which is why practical algorithms like
+$O(mn\min(m,n))$ operations (roughly $4096^3\approx7\times10^{10}$ for a single
+$4096\times4096$ weight matrix), which is why practical algorithms like
 Newton--Schulz and randomized range finders rely solely on matrix products.
 Second, low rank is a property of the data, never a free guarantee, as the
 Gaussian matrix just demonstrated. Third, the SVD captures only *linear*

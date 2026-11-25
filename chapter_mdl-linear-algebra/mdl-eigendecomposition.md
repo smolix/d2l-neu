@@ -32,7 +32,7 @@ how fast does the distribution converge? PageRank asks the very same question
 of the entire web.
 
 The key is to rewrite the starting vector in the coordinates of a few special
-directions—the eigenvectors—along which the matrix acts simply as
+directions, the eigenvectors, along which the matrix acts simply as
 multiplication by a number. In those coordinates, each component evolves on its
 own as a scalar power $\lambda^k$.
 
@@ -957,8 +957,8 @@ direction, and a saddle when signs are mixed.
 :label:`fig_mdl-la-psd`
 
 We can see the rank condition for Gram matrices directly in their eigenvalues.
-Below we compare a tall matrix $\mathbf{X}$ with independent columns—whose
-$\mathbf X^\top\mathbf X$ should be PD—against one whose second column is twice
+Below we compare a tall matrix $\mathbf{X}$ with independent columns, whose
+$\mathbf X^\top\mathbf X$ should be PD, against one whose second column is twice
 the first, which should yield a PSD matrix with a zero eigenvalue.
 
 ```{.python .input #eigendecomposition-psd-gram}
@@ -1009,7 +1009,7 @@ preserves the norm ($\|\mathbf y\|=\|\mathbf x\|=1$) and turns
 weighted average of the eigenvalues with non-negative weights $y_i^2$ summing
 to $1$. Every average lies between its smallest and largest values, so
 $\lambda_n\le R(\mathbf x)\le\lambda_1$. Putting all the weight onto a single
-coordinate—at $\mathbf x=\mathbf v_1$ or $\mathbf x=\mathbf v_n$—attains the
+coordinate, at $\mathbf x=\mathbf v_1$ or $\mathbf x=\mathbf v_n$, attains the
 two bounds. $\blacksquare$
 
 For our running symmetric matrix $\mathbf S$, this tells us that $R(\mathbf x)$
@@ -1049,7 +1049,7 @@ $\lambda_{\max}/\lambda_{\min}$ is the condition number of $\mathbf A$, which
 
 When we look for structure in high-dimensional data, we inspect the largest
 eigenvalues of the sample covariance matrix. To judge which eigenvalues are
-genuinely large, however, we first need a baseline: what do the eigenvalues
+truly large, however, we first need a baseline: what do the eigenvalues
 look like when the data contain no structure at all? Suppose we draw $n$
 samples of pure noise in $d$ dimensions, with independent coordinates of mean
 $0$ and variance $1$ (so the true covariance is $\mathbf I$), and stack them as

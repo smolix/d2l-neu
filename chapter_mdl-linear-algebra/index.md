@@ -1,60 +1,51 @@
 # Linear Algebra
 :label:`chap_mdl-linear-algebra`
 
-Every neural network in this book is built out of matrix products. A linear
+Every neural network in this book is built out of matrix products: a linear
 layer multiplies its input by a weight matrix, attention multiplies queries by
 keys, and a recurrent network multiplies its hidden state by the same matrix at
-every step. In :numref:`sec_linear-algebra`, we learned how to compute these
-products without pausing to ask what a matrix actually *does* to the vectors it
-acts on. This chapter takes up that question, proofs included. It is optional
-reading, so nothing in the main text depends on it, yet understanding the
-geometry behind these products changes how you read almost every model in the
-book.
+every step. In :numref:`sec_linear-algebra`, we computed these products without
+asking what a matrix actually *does* to the vectors it acts on. This optional
+chapter takes up that geometric question, proofs included; nothing in the main
+text depends on it, yet seeing the geometry behind matrix products changes how
+you read almost every model in the book.
 
-Consider a Fashion-MNIST image, represented as a list of 784 numbers, passing
-through a layer that maps it to 256 features. How similar are two images? How
-much information does the layer discard? And what happens to a signal if we
-feed it through the same linear map fifty times in a row? We cannot draw a
-picture in 784 dimensions, so our answers have to come from algebra that
-carries the familiar geometry of the plane into any dimension.
+Consider a 784-pixel Fashion-MNIST image mapped to 256 features. How similar
+are two images, how much information does the layer discard, and what happens
+if we apply the same linear map fifty times in a row? Because we cannot draw in
+784 dimensions, our answers come from algebra that carries plane geometry into
+any dimension.
 
-The central idea of linear algebra is remarkably simple: a complicated matrix
-becomes transparent once you view it along the right directions. Around 1810,
-Gauss fitted the orbit of the asteroid Pallas to more observations than
-unknowns using least squares, a problem our first section solves and our last
-revisits. In orthonormal axes, lengths and angles reduce to dot products. Along
-its eigenvectors, a matrix acts simply by scaling each direction by a single
-number. With a pair of singular bases, *any* matrix breaks down into a list of
-independent stretches. These same geometric ideas explain why attention divides
-its scores by $\sqrt{d}$ (:numref:`sec_attention-scoring-functions`), when the
-gradients of a recurrent network explode (:numref:`sec_bptt`), and what a
-low-rank fine-tuning adapter can and cannot represent.
+A complicated matrix becomes transparent once viewed along the right
+directions. Around 1810, Gauss fitted the orbit of the asteroid Pallas to more
+observations than unknowns via least squares, a problem our first section
+solves and our last revisits. In orthonormal axes, lengths and angles reduce to
+dot products; along eigenvectors, a square matrix scales each direction by a
+single scalar; and in a pair of singular bases, *any* matrix decomposes into
+independent stretches. These ideas explain why attention divides scores by
+$\sqrt{d}$ (:numref:`sec_attention-scoring-functions`), when recurrent
+gradients explode (:numref:`sec_bptt`), and what a low-rank adapter can
+represent.
 
-The chapter moves in two stages. First, we study what happens when a matrix is
-applied once: :numref:`sec_mdl-geometry-linear-algebraic-ops` extends lengths,
-angles, and projections to arbitrary dimensions, and
-:numref:`sec_mdl-linear-maps` asks which inputs a matrix collapses to zero and
-when its action can be undone. Next, we choose coordinates tailored to the
-matrix itself: eigenvectors for a square matrix applied repeatedly
-(:numref:`sec_mdl-eigendecompositions`), the subtler behavior that eigenvalues
-alone miss (:numref:`sec_mdl-spectra-in-practice`), and singular vectors for
-matrices of any shape (:numref:`sec_mdl-svd-low-rank`). If you remember only
-three results from this chapter, let them be these: projection onto a subspace
-yields the closest point, every symmetric matrix has an orthonormal basis of
-eigenvectors (the spectral theorem), and a truncated singular value
-decomposition gives the best approximation of its rank. Along the way, two
-small examples will keep us honest: the running matrix
-$\mathbf{A}=\left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$,
-whose eigenvalues are complex, and the shear
-$\mathbf{T}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, which
-does not have enough eigenvectors to span the plane.
+The chapter moves in two stages. First, we apply a matrix once:
+:numref:`sec_mdl-geometry-linear-algebraic-ops` extends lengths, angles, and
+orthogonal projections (giving the closest point in a subspace), while
+:numref:`sec_mdl-linear-maps` tracks which directions collapse to zero and when
+a map is invertible. Next, we choose coordinates tailored to the matrix:
+eigenvectors and the spectral theorem for symmetric matrices
+(:numref:`sec_mdl-eigendecompositions`), non-normal behavior that eigenvalues
+alone miss (:numref:`sec_mdl-spectra-in-practice`), and singular vectors with
+optimal low-rank truncation for any shape (:numref:`sec_mdl-svd-low-rank`). Two
+small matrices keep us honest throughout:
+$\mathbf{A}=\left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$, with
+complex eigenvalues, and the shear
+$\mathbf{T}=\left(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right)$, whose
+eigenvectors fail to span the plane.
 
-On a first reading, feel free to skim the $n$-dimensional determinant and, in
-:numref:`sec_mdl-spectra-in-practice`, the discussions of Gershgorin discs,
-PageRank, and pseudospectra. Throughout, we work in real finite-dimensional
-spaces, bringing in complex numbers only when eigenvalues force our hand. How
-numerical libraries actually compute eigenvalues and solve large systems is
-left to :numref:`sec_mdl-linear-algebra-further-reading`.
+On a first reading, feel free to skim $n$-dimensional determinants and the
+discussions of Gershgorin discs, PageRank, and pseudospectra in
+:numref:`sec_mdl-spectra-in-practice`. Numerical eigensolvers and linear
+solvers are surveyed in :numref:`sec_mdl-linear-algebra-further-reading`.
 
 ```toc
 :maxdepth: 2
@@ -98,8 +89,8 @@ Linear Algebra: Geometry, Spectra, and Low-Rank Structure<br>**projections · li
 
 ::: {.cols .vc}
 ::: {.col}
-- **Stage 1 — Standard Coordinates (§§{sec_mdl-geometry-linear-algebraic-ops}–§{num:sec_mdl-linear-maps}):** Measure similarity, project onto subspaces ($\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$, $\mathbf{A} = \mathbf{Q}\mathbf{R}$), and track surviving vs. collapsed dimensions ($\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$, $\det\mathbf{A}$).
-- **Stage 2 — Matrix-Tailored Coordinates (§§{sec_mdl-eigendecompositions}–§{num:sec_mdl-svd-low-rank}):** Diagonalize repeated square maps ($\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$), analyze power iteration and non-normal growth, and factor any $m \times n$ matrix via SVD ($\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$).
+- **Stage 1: Standard Coordinates (§§{sec_mdl-geometry-linear-algebraic-ops}–§{num:sec_mdl-linear-maps}):** Measure similarity, project onto subspaces ($\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$, $\mathbf{A} = \mathbf{Q}\mathbf{R}$), and track surviving vs. collapsed dimensions ($\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$, $\det\mathbf{A}$).
+- **Stage 2: Matrix-Tailored Coordinates (§§{sec_mdl-eigendecompositions}–§{num:sec_mdl-svd-low-rank}):** Diagonalize repeated square maps ($\mathbf{A} = \mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1}$), analyze power iteration and non-normal growth, and factor any $m \times n$ matrix via SVD ($\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$).
 :::
 
 ::: {.col .fig .big}

@@ -7,7 +7,7 @@ We begin by building and training the causal stack from the ground up. :numref:`
 
 Not every task is causal text generation. :numref:`sec_transformer` contrasts causal decoders with bidirectional encoders trained via masked language modeling :cite:`Devlin.Chang.Lee.ea.2018` and sequence-to-sequence encoder--decoders coupled by cross-attention, including fixed-size latent bottlenecks :cite:`Jaegle.Gimeno.Brock.ea.2021`. :numref:`sec_vision-transformer` then applies the bidirectional encoder directly to images by projecting non-overlapping pixel patches into token embeddings :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`, comparing learned 2D positional structure and data efficiency against a parameter-matched ResNet.
 
-Finally, we turn to scaling and conditional computation. :numref:`sec_scaling-laws` counts parameters ($N \approx 12 L d^2$) and training FLOPs ($C \approx 6 N D$), fits power-law IsoFLOP curves :cite:`kaplan2020scaling,hoffmann2022training`, and explains why lifetime inference cost pushes modern pretraining toward smaller models trained far past the Chinchilla token-per-parameter ratio. :numref:`sec_moe` decouples stored parameter capacity from per-token FLOPs by replacing the dense feed-forward network with a bank of routed experts :cite:`Shazeer.Mirhoseini.Maziarz.ea.2017,fedus2022switch`, comparing auxiliary-loss balancing against loss-free router bias control :cite:`Wang.Gao.Zeng.ea.2024`, and :numref:`sec_transformers-further-reading` surveys extensions across normalization placement, latent attention, and speculative decoding.
+Finally, we turn to scaling and conditional computation. :numref:`sec_scaling-laws` counts parameters ($N \approx 12 L d^2$) and training FLOPs ($C \approx 6 N D$), trains a 15-model grid, uses the published Chinchilla power-law fits :cite:`kaplan2020scaling,hoffmann2022training` to draw IsoFLOP curves and the compute-optimal split, and explains why lifetime inference cost pushes modern pretraining toward smaller models trained far past the Chinchilla token-per-parameter ratio. :numref:`sec_moe` decouples stored parameter capacity from per-token FLOPs by replacing the dense feed-forward network with a bank of routed experts :cite:`Shazeer.Mirhoseini.Maziarz.ea.2017,fedus2022switch`, comparing auxiliary-loss balancing against loss-free router bias control :cite:`Wang.Gao.Zeng.ea.2024`, and :numref:`sec_transformers-further-reading` surveys extensions across normalization placement, latent attention, and speculative decoding.
 
 ```toc
 :maxdepth: 2
@@ -69,7 +69,7 @@ Transformers: From One Block to Frontier Architectures<br>**residual stream · p
 ::: {.cols .vc}
 ::: {.col}
 - Every architectural mechanism in this chapter is verified on reproducible models that train or profile on a single GPU in minutes:
-- **End-to-end validation:** From 32-layer initialization audits and byte-level WikiText-103 pretraining to RTX 4090 roofline profiling, 15-model IsoFLOP fits, and 8-expert MoE routing.
+- **End-to-end validation:** From 32-layer initialization audits and byte-level WikiText-103 pretraining to RTX 4090 roofline profiling, a 15-model scaling grid, and 8-expert MoE routing.
 :::
 
 ::: {.col .fig .big}

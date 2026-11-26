@@ -1039,7 +1039,7 @@ Notice that a **causal mask** breaks permutation symmetry even without position 
 - Vaswani et al. (2017) populate row $i$ of $\mathbf{P} \in \mathbb{R}^{n \times d}$ with sines and cosines at $d/2$ geometrically spaced frequencies $\omega_m = 10000^{-2m/d}$:
   $$p_{i, 2m} = \sin(i\,\omega_m)$$
   $$p_{i, 2m+1} = \cos(i\,\omega_m)$$
-- **Geometric Wavelengths:** Periods $2\pi / \omega_m$ progress from $2\pi \approx 6.28$ tokens ($m = 0$) to $2\pi \times 10^4 \approx 62{,}832$ tokens ($m = d/2 - 1$).
+- **Geometric Wavelengths:** Periods $2\pi / \omega_m$ progress from $2\pi \approx 6.28$ tokens ($m = 0$) toward $2\pi \times 10^4$ tokens (about $35{,}000$ at $m = d/2 - 1$ for $d = 32$).
 :::
 
 ::: {.col .fig}
@@ -1131,7 +1131,7 @@ $$(\mathbf{R}_i \mathbf{q})^\top (\mathbf{R}_j \mathbf{k}) = \mathbf{q}^\top (\m
 ::: {.cols .vc}
 ::: {.col}
 - `rope` splits even (`0::2`) and odd (`1::2`) coordinates, applies the $2 \times 2$ rotation using `float32` angles cast to `x.dtype`, and interleaves the pairs back.
-- Shifting all $32$ positions by $1$, $17$, or $480$ changes RoPE scores by at most `float32` round-off ($\sim 10^{-6}$), whereas additive sinusoidal scores change by $2.7$.
+- Shifting all $32$ positions by $1$, $17$, or $480$ changes RoPE scores only by `float32` round-off ($\sim 10^{-6}$ to $10^{-5}$), whereas additive sinusoidal scores change by $2.7$.
 :::
 
 ::: {.col .fig}

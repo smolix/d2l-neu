@@ -1184,7 +1184,7 @@ Normalizing our kernel profiles to milliseconds per $8{,}192$ tokens accounts fo
 
 @!fast-transformer-account
 
-- **Why the final step runs at $\sim 50\%$ MFU ($11.5\text{--}12\text{ ms}$ vs. $5.7\text{ ms}$ ideal):**
+- **Why the final step runs at $\sim 45\text{--}50\%$ MFU ($11.4\text{--}12.5\text{ ms}$ vs. $5.7\text{ ms}$ ideal):**
   - **Matrix products ($\sim 7\text{ ms}$):** Run at **$> 80\%$ of the $5.7\text{ ms}$ hardware peak** while performing $> 99\%$ of all arithmetic.
   - **Bandwidth-bound kernels ($\sim 5\text{ ms}$):** Norms, SwiGLU, RoPE, casts, and AdamW perform $< 1\%$ of the FLOPs but consume **$\sim 40\%$ of the step time** moving bytes through DRAM.
 :::

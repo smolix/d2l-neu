@@ -113,7 +113,7 @@ Attention Mechanisms: Differentiable Content-Based Retrieval<br>**queries, keys 
 
 ::: {.cols .vc}
 ::: {.col}
-- **1. Order Blindness:** A weighted sum $\sum_i \alpha_i \mathbf{v}_i$ is permutation equivariant and ignores word order, requiring absolute tables, **RoPE**, or **ALiBi** (**§{sec_positional-information}**).
+- **1. Order Blindness:** A weighted sum $\sum_i \alpha_i \mathbf{v}_i$ is permutation invariant and ignores word order, requiring absolute tables, **RoPE**, or **ALiBi** (**§{sec_positional-information}**).
 - **2. Quadratic Cost:** Scoring all pairs of $n$ tokens costs $\Theta(n^2 d)$ FLOPs and $O(n^2)$ naive memory ($64\text{ GiB}$ at $n=128\text{K}$), motivating **FlashAttention** (**§{sec_attention-at-scale}**), windows, and **linear attention** (**§{sec_windowed-linear-attention}**).
 - **3. Mechanistic Opacity:** Attention weights show *where* a head looks, not *what* function it computes across the residual stream via **QK/OV circuits** (**§{sec_what-attention-computes}**).
 :::

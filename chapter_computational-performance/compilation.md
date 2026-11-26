@@ -425,8 +425,8 @@ Fusion cannot merge matrix multiplications, and when the remaining kernels are
 short, per-kernel host launches dominate step time. Consider a stack of 60
 bias-free linear layers of width 256 with $\tanh$ activations on a batch of 64
 examples (120 operations per call). Each layer performs only $8.4 \times 10^6$
-FLOPs and moves 384 KiB (< 0.5 µs on the roofline, and ~1–3 µs of actual
-device execution above the hardware kernel-start floor), whereas eager
+FLOPs and moves 384 KiB (< 0.5 µs on the roofline, and ~4–5 µs of actual
+device execution, at ~1–3 µs per kernel above the hardware kernel-start floor), whereas eager
 execution pays $h$ per operation ($120\,h$ in total).
 
 To eliminate per-kernel host dispatch, NVIDIA GPUs support *CUDA graphs*: the
@@ -907,8 +907,8 @@ $$n^* \;=\; \frac{t_{\textrm{compile}}}{t_{\textrm{eager}} - t_{\textrm{compiled
 
 Operator fusion cannot merge consecutive matrix multiplications. Consider a 60-layer network of $256 \times 256$ linear layers and $\tanh$ activations on batch $B = 64$ ($120$ operations per forward call):
 
-- **Device work per layer ($< 2\,\mu\text{s}$):** Each layer performs $2 \cdot 64 \cdot 256^2 = 8.4 \times 10^6\text{ FLOPs}$ and moves $384\text{ KiB}$ ($< 0.5\,\mu\text{s}$ on the roofline, or $\sim 1\text{--}2\,\mu\text{s}$ above the hardware kernel-start floor).
-- **Host launch cost ($120\,h$):** Launching even $60$ fused kernels one by one from Python costs $60 \times 13\,\mu\text{s} \approx 0.8\text{ ms}$ of CPU dispatch vs. $\sim 0.15\text{ ms}$ of GPU work, leaving the GPU idle $> 80\%$ of the time.
+- **Device work per layer ($\sim 4\text{--}5\,\mu\text{s}$):** Each layer performs $2 \cdot 64 \cdot 256^2 = 8.4 \times 10^6\text{ FLOPs}$ and moves $384\text{ KiB}$ ($< 0.5\,\mu\text{s}$ on the roofline, but $\sim 1\text{--}3\,\mu\text{s}$ per kernel above the hardware kernel-start floor, with $2\text{--}3$ kernels per layer).
+- **Host launch cost ($120\,h$):** Launching its $120\text{--}180$ kernels one by one from Python costs $\gtrsim 2\text{ ms}$ of host time vs. $\sim 0.3\text{ ms}$ of GPU work, leaving the GPU idle $\sim 85\%$ of the time.
 :::
 
 ::: {.slide title="CUDA Graphs: Record Once, Replay in One Host Launch"}

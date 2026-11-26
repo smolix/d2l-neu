@@ -769,7 +769,7 @@ Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\math
 
 - We sweep SGD with momentum ($\beta = 0.9$) across $\eta \in \{0.1, 0.3, 0.5, 1.0\}$ and Adam across $\eta \in \{3{\times}10^{-4}, 10^{-3}, 3{\times}10^{-3}, 10^{-2}, 3{\times}10^{-2}\}$ over $3$ seeds ($2{,}000$ steps on `TinyLM`):
   - **100× nominal scale shift:** SGD's best rate is $\eta = 0.3$, whereas Adam's is $\eta = 3 \times 10^{-3}$ ($\approx 0.1 \times \frac{0.3}{\text{scale}}$).
-  - **Graceful high-LR degradation:** SGD diverges to `inf` at $\eta = 0.5$ (less than $2\times$ above its optimum), whereas Adam remains finite even at $\eta = 3 \times 10^{-2}$ ($10\times$ above its optimum) because its step length is bounded by $\eta$.
+  - **Graceful high-LR degradation:** SGD mostly diverges to `inf` at $\eta = 0.5$ (less than $2\times$ above its optimum), whereas Adam remains finite even at $\eta = 3 \times 10^{-2}$ ($10\times$ above its optimum) because its step length is bounded by $\eta$.
 
 @!adam-the-race-on-the-language-model-2
 :::
@@ -781,8 +781,8 @@ Each trainable parameter tensor keeps a step counter $t$ and two buffers $(\math
 ::: {.col}
 - Comparing the $3$ runs at each optimizer's best learning rate shows three decisive advantages for Adam on `TinyLM`:
   1. **Convergence speed:** Reaches $1.8$ nats in **$650\text{--}775$ steps** vs. $1{,}125\text{--}1{,}550+$ steps for SGD+momentum.
-  2. **Usable LR window (within $+0.15$ nats):** **$10\times$ range** ($10^{-3}$ to $10^{-2}$) vs. a single fragile grid point ($0.3$) for SGD.
-  3. **Spike resilience:** Worst single-step loss rise is $<0.20$ nats under Adam vs. $>0.4\text{--}1.0$ nats under SGD.
+  2. **Usable LR window (within $+0.15$ nats):** **$10\times$ range** ($10^{-3}$ to $10^{-2}$) vs. one or two grid points ($0.1$--$0.3$) for SGD.
+  3. **Spike resilience:** Worst single-step loss rise stays at about $0.2$ nats under Adam in every run vs. up to $1\text{--}1.7$ nats under SGD.
 :::
 
 ::: {.col .fig}

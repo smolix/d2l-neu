@@ -377,7 +377,7 @@ d2l.plot(list(range(1, 6)), list(curves.values())[:3], 'grid distance',
          'mean cosine similarity', legend=list(curves)[:3])
 ```
 
-After ten epochs the answer is: barely. Only adjacent patches (distance 1) come out slightly more similar than random vectors, with a mean cosine similarity below 0.1 against about $-0.03$ for random vectors; beyond that the learned curve stays flat near zero, and what training added to the initial noise turns positive again at distance 5, where the two patches sit on opposite borders of the image. The 2D sinusoidal code, by contrast, falls from about $0.75$ at distance 1 to well below zero. The clear 2D structure that :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` find in ViT position embeddings emerges from far longer training on far larger datasets.
+After ten epochs the answer is: barely. Adjacent patches (distance 1) and patches on opposite borders (distance 5) come out slightly more similar than random vectors (about $+0.05$ against $-0.03$); in between, the learned curve sits slightly below zero, and what training added to the initial noise is largest at distance 5. The 2D sinusoidal code, by contrast, falls from about $0.75$ at distance 1 to well below zero. The clear 2D structure that :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` find in ViT position embeddings emerges from far longer training on far larger datasets.
 
 ## Comparison with a Parameter-Matched Convolutional Network
 :label:`subsec_vit-cnn-baseline`
@@ -616,7 +616,7 @@ $$\mathbf{H} = \mathbf{X} + \mathrm{MHA}\bigl(\mathrm{LN}_1(\mathbf{X})\bigr), \
 @vision-transformer-the-vision-transformer-block-1
 
 ::: {.d2l-note}
-Why does ViT use `LayerNorm` and `GELU` rather than `RMSNorm` and `SwiGLU`? Only for historical fidelity to the 2020 ViT paper—modern vision backbones (such as SigLIP 2, DINOv2, and AIMv2) adopt `RMSNorm`, `SwiGLU`, and 2D `RoPE` just like LLMs.
+Why does ViT use `LayerNorm` and `GELU` rather than `RMSNorm` and `SwiGLU`? Only for historical fidelity to the 2020 ViT paper—modern vision backbones adopt LLM components: AIMv2 uses `RMSNorm` and `SwiGLU`, and DINOv3 uses 2D `RoPE`.
 :::
 :::
 
@@ -667,7 +667,7 @@ Global average pooling across the $m$ patch outputs (`X[:, 1:].mean(axis=1)`) wo
 ::: {.col}
 - **Learned 1D Table (Original ViT):** Free vector $\mathbf{p}_k \in \mathbb{R}^d$ for each raster index $k \in \{0, \dots, m\}$; must discover 2D grid topology from data.
 - **2D Sinusoidal Code:** Concatenates $d/2$-dim row code $\mathbf{s}_r$ and $d/2$-dim column code $\mathbf{s}_c$.
-- **2D Axial RoPE:** Rotates half of query/key channels by row $r$ and half by column $c$ (used in DINOv2 / SigLIP 2).
+- **2D Axial RoPE:** Rotates half of query/key channels by row $r$ and half by column $c$ (used in DINOv3).
 :::
 
 ::: {.col .fig .big}
@@ -721,7 +721,7 @@ We test how strongly the trained `ViT` depends on 2D spatial layout by permuting
 [Probing Position Geometry]{.kicker}
 
 - **Cosine similarity by Chebyshev grid distance $k = \max(|r - r'|, |c - c'|)$:** We compare the trained $36 \times 512$ position table against a hard-coded 2D sinusoidal grid and random vectors.
-- **Faint local structure after 10 epochs:** Only adjacent patches ($k = 1$) show positive excess similarity ($+0.05$ vs. $-0.03$ for random noise), whereas the 2D sinusoidal code drops sharply from $+0.76$ to $-0.46$.
+- **Faint local structure after 10 epochs:** Only $k = 1$ and $k = 5$ (opposite borders) show positive excess similarity ($\approx +0.05$ vs. $-0.03$ for random noise), whereas the 2D sinusoidal code drops sharply from $+0.76$ to $-0.46$.
 - **Why?** Discovering full 2D grid topology from 1D raster IDs requires large datasets and hundreds of epochs (Dosovitskiy et al., 2021).
 :::
 
@@ -751,7 +751,7 @@ We test how strongly the trained `ViT` depends on 2D spatial layout by permuting
 
 ::: {.cols .vc}
 ::: {.col}
-- **Consistent 5-point CNN advantage:** Across independent runs (seed spread $\le 0.1\%$), `CompactResNet` reaches **$\approx 94\%$** validation accuracy versus **$\approx 89\%$** for `ViT`.
+- **Consistent 5-point CNN advantage:** Across two runs each (seed spread at most about half a point), `CompactResNet` reaches **$\approx 94\%$** validation accuracy versus **$\approx 89\%$** for `ViT`.
 - **Faster early convergence:** Built-in 2D locality and translation equivariance give the CNN a lead of several points at epoch 1 that persists through epoch 10.
 :::
 

@@ -465,7 +465,7 @@ With 500 warmup steps the sublayer outputs stay smaller than the stream, and the
 ### Comparing Against a Matched Recurrent Baseline
 :label:`subsec_gpt-rnn-baseline`
 
-How does our 6-block `GPT` compare against the recurrent language model (`d2l.RNNLM`, :numref:`sec_rnn-scratch`) given the **same parameter count** ($d_{\textrm{rnn}} = 1920$, $\approx 4.7\textrm{M}$ parameters) and training steps? We sweep the RNN learning rate across $\{10^{-3}, 2\times 10^{-3}, 4\times 10^{-3}\}$ and compare validation loss as a function of window position $t \in \{1, \dots, 128\}$ (`loss_by_position`):
+How does our 6-block `GPT` compare against the recurrent language model (`d2l.RNNLM`, :numref:`sec_rnn-scratch`) given the **same parameter count** ($d_{\textrm{rnn}} = 1920$, $\approx 4.7\textrm{M}$ parameters) and training steps? We sweep the RNN learning rate across $\{10^{-3}, 2\times 10^{-3}, 4\times 10^{-3}\}$ and compare validation loss as a function of window position $t \in \{0, \dots, 127\}$ (`loss_by_position`):
 
 ```{.python .input #gpt-against-a-recurrent-network-1}
 %%tab pytorch
@@ -528,7 +528,7 @@ for name, net, ms in (('GPT', model, np.mean(times['swiglu'])),
           + f'; {ms:.1f} ms per training step')
 ```
 
-At position $t = 1$ (where only a single byte of context is available), `GPT` and `RNNLM` start at nearly the same loss. As more prefix context becomes available ($t \to 128$), the Transformer's validation loss drops more steeply than the RNN's because self-attention reads any prior byte in $O(1)$ hops rather than compressing history through $t$ sequential recurrent steps.
+At position $t = 0$ (where only a single byte of context is available), `GPT` and `RNNLM` start at nearly the same loss. As more prefix context becomes available ($t \to 127$), the Transformer's validation loss drops more steeply than the RNN's because self-attention reads any prior byte in $O(1)$ hops rather than compressing history through $t$ sequential recurrent steps.
 
 ## Sampling from the Model
 :label:`subsec_gpt-sampling`

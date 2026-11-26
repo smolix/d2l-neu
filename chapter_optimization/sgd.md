@@ -580,7 +580,7 @@ Real data loaders do not draw minibatches with replacement; they randomly permut
 ::: {.col}
 - Every optimizer update pays fixed Python dispatch, autograd graph, and kernel-launch overhead plus weight memory reads independent of $b$.
 - On the $1{,}500$-example airfoil dataset at fixed $\eta / b = 0.005$:
-  - $b = 1$ ($1{,}500$ updates/epoch) and $b = 100$ ($15$ updates/epoch) both take comparable sub-millisecond time *per update*, making $b = 100$ **$50\text{--}100\times$ faster per epoch**.
+  - $b = 1$ ($1{,}500$ updates/epoch) and $b = 100$ ($15$ updates/epoch) both take about a millisecond *per update*, making $b = 100$ **$50\text{--}100\times$ faster per epoch**.
 :::
 
 ::: {.col .fig}

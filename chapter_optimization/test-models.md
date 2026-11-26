@@ -776,7 +776,7 @@ The census lists every parameter tensor with its shape and size, then the three 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Controlled sweep & loop (`lr_sweep`, `train_steps`):** Clones shared seed-0 initial weights across a log-spaced $\eta$ grid and runs $T = 2{,}000$ minibatches.
+- **Controlled sweep & loop (`lr_sweep`, `train_steps`):** Clones one shared random initialization across a log-spaced $\eta$ grid and runs $T = 2{,}000$ minibatches.
 - **Smoothed trajectory metrics (`final_loss`, `steps_to_reach`):** Averages the last $k = 100$ step losses and finds the first $25$-step block reaching a target threshold.
 - **Held-out evaluation (`lm_perplexity`, `evaluate_accuracy`):** Scores $1.1\text{M}$ validation bytes or $10{,}000$ test images in eval mode.
 :::
@@ -860,7 +860,7 @@ The census lists every parameter tensor with its shape and size, then the three 
 ::: {.cols .vc}
 ::: {.col}
 - **Why fixed-$\eta$ comparisons fail:** Plain SGD multiplies raw gradients ($\eta^\star \approx 0.5$), whereas AdamW normalizes step lengths ($\eta^\star \approx 3 \times 10^{-3}$).
-- **Nuisance hyperparameter tuning (Godbole et al., 2023):** Sweep $\eta$ independently on a log-spaced grid for every optimizer arm from shared seed-0 weights.
+- **Nuisance hyperparameter tuning (Godbole et al., 2023):** Sweep $\eta$ independently on a log-spaced grid for every optimizer arm from shared initial weights.
 - **Report both peak and width:** Extract the tuned score at $\eta^\star$ *and* the usable LR range finishing within $+0.15$ nats of $\eta^\star$.
 :::
 

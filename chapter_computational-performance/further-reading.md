@@ -194,7 +194,7 @@ takes $2(k-1)$ sequential hops. Tree algorithms scale their hop count as
 $\log_2 k$, and NCCL pairs two complementary binary trees so that every device
 is a leaf in one and an internal node in the other. When $k$ is a power of
 two, recursive halving and doubling achieves the ring's byte volume in
-$\log_2 k$ steps :cite:`Thakur.Rabenseifner.Gropp.2005`.
+$2\log_2 k$ steps :cite:`Thakur.Rabenseifner.Gropp.2005`.
 
 ### Parameter Servers and Asynchronous Updates
 

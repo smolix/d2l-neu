@@ -1032,7 +1032,7 @@ Attention Scoring Functions, Scaled Dot-Product, and Masking<br>**dot-product vs
 ::: {.col}
 - **Experimental Setup:** $2{,}048$ standard normal queries attend over $m = 64$ standard normal keys across widths $d \in \{4, \ldots, 512\}$.
 - **Scaled Invariance:** With $1/\sqrt{d}$, weight entropy stays flat near $\log 64 - \frac{1}{2} \approx 3.66$ nats (an effective pool of $\approx 39$ keys) across all widths.
-- **Unscaled Collapse:** Without $1/\sqrt{d}$, entropy plunges to $0.21$ nats by $d = 512$, becoming nearly one-hot before a single gradient update.
+- **Unscaled Collapse:** Without $1/\sqrt{d}$, entropy plunges to $\approx 0.2$ nats by $d = 512$, becoming nearly one-hot before a single gradient update.
 :::
 
 ::: {.col .fig}
@@ -1218,7 +1218,7 @@ Can gradient descent discover a word reordering from output supervision alone? I
 ::: {.cols .vc}
 ::: {.col}
 - After $100$ Adam steps minimizing negative log-likelihood on random sequences, all three runs reach $100\%$ test accuracy and place more than $99\%$ of their weight on $\pi(j)$ on average:
-- Even when source tokens repeat (`c`, `o`), the learned key projection routes each query cleanly to $\pi(j)$, visible as the off-diagonal crossing in rows 3 and 4.
+- Even when source tokens repeat, the learned key projection routes each query cleanly to $\pi(j)$, visible as the off-diagonal swap at positions $3$ and $4$ (counting from $0$).
 :::
 
 ::: {.col .fig}

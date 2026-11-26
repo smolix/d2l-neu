@@ -380,8 +380,8 @@ because memory traffic sets the time, transcendental arithmetic (`sin`,
 In eager execution, chaining elementwise operations compounds this memory
 traffic. The tanh approximation to GELU below (`gelu_ish`) chains 8
 elementwise operations. Six unary operations each read and write one tensor
-(12 tensors), and two binary operations (`x + 0.04 * x**3` and the outer
-product with `x`) each read two tensors and write one (6 tensors), moving 18
+(12 tensors), and two binary operations (`x + 0.04 * x**3` and the final
+multiplication by `0.5 * x`) each read two tensors and write one (6 tensors), moving 18
 tensors of 256 MiB in total—$9\times$ the bytes of a single addition.
 
 ```{.python .input #performance-model-three-regimes-2}
@@ -710,8 +710,8 @@ The three `gemm` lines aggregate the five large matrix products, and
 `multi_tensor_apply_kernel` is the batched SGD update at the predicted 0.4 ms.
 
 Notice that an unfused optimizer update takes a fixed time independent of
-batch size: at batch size 128, the five products shrink eightfold to ~0.07 ms
-each, leaving the 0.4 ms update larger than all five products combined.
+batch size: at batch size 128, the five products shrink to ~0.07 ms
+each (they turn bandwidth-bound), leaving the 0.4 ms update larger than all five products combined.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1036,7 +1036,7 @@ Six unary ops move $6 \times 2 = 12$ tensors and two binary ops move $2 \times 3
 ::: {.col}
 - Sweeping square `bfloat16` products from $n = 256$ to $8192$ tests whether compute saturation begins at the paper threshold $n \approx 500$ ($I = n/3 = 164$).
 - At $n = 4096$ and $8192$, measured throughput approaches the $165\text{ TFLOP/s}$ roof.
-- For $n \le 1024$, however, throughput falls far below the bandwidth line and climbs with a **log–log slope of $3$**—the signature of a constant time per call while FLOPs scale as $2n^3$.
+- At small $n$, however, throughput falls far below the roofline and climbs with a **log–log slope of $3$**—the signature of a constant time per call while FLOPs scale as $2n^3$.
 :::
 
 ::: {.col .fig}

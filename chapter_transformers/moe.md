@@ -538,7 +538,7 @@ The MoE model starts behind the dense model, overtakes it within the first 2,000
 
 Recent frontier MoE families (:numref:`tab_moe-experts`) refine the coarse 8-expert Top-2 recipe of Mixtral 8x7B in two ways (:numref:`fig_moe-fine-grained`):
 
-1. **Fine-grained expert segmentation:** Splitting each full-width expert into $m$ narrower experts of width $w / m$ while scaling total experts to $m E \in [128, 256]$ and active experts to $m k \in [4, 8]$ leaves both stored and active parameter counts unchanged, while expanding the number of distinct active expert combinations from $\binom{8}{2} = 28$ to $\binom{256}{8} \approx 4 \times 10^{14}$.
+1. **Fine-grained expert segmentation:** Splitting each of $E$ full-width experts into $m$ experts of width $w / m$ and routing each token to $m k$ of the $m E$ leaves both stored and active parameter counts unchanged while expanding the number of distinct active expert combinations, for example from $\binom{16}{2} = 120$ to $\binom{64}{8} \approx 4.4 \times 10^9$ at $m = 4$. Released models go further, with $128$–$256$ experts of which $4$–$8$ are active, which also lowers the active fraction.
 2. **Shared experts** :cite:`Dai.Deng.Zhao.ea.2024`: Dedicating $E_{\textrm{shared}} \ge 1$ narrow experts that execute on *every* token without routing lets shared experts absorb common grammatical and formatting transformations so routed experts can specialize without redundancy.
 
 ![Three ways to spend the same expert parameters. Each box is an expert, its width proportional to its size, and the highlighted experts are the ones selected for one token. Top: 16 experts, of which a token uses 2. Middle: the same parameters as 64 experts of a quarter width, of which a token uses 8. Bottom: one of the narrow experts becomes a shared expert that every token uses, and each token selects 7 of the other 63. All three rows store and use the same number of parameters per token.](../img/mdl-transformers-moe-fine.svg)
@@ -771,7 +771,7 @@ We train a 2-block, 8-expert Top-1 byte-level GPT ($d = 128, \gamma = 1.25$) for
 @!moe-three-runs-one-budget-3
 
 - **Unbalanced & Initial Skew:** Both `initialization` and `no balancing` send $2.4\text{--}3.9\times$ the even share ($30\%\text{--}49\%$ of all tokens) to the single busiest expert and drop **$20\%\text{--}36\%$** of assignments.
-- **Both Remedies Cure Collapse:** Both `auxiliary loss` ($\alpha = 0.01$) and `bias controller` ($\eta_b = 0.01$) hold peak expert load to $1.1\text{--}1.4\times$ the ideal share, cut drops to $\le 1\%$, and improve validation loss by **$\sim 0.10\text{--}0.15\text{ nats/byte}$**.
+- **Both Remedies Cure Collapse:** Both `auxiliary loss` ($\alpha = 0.01$) and `bias controller` ($\eta_b = 0.01$) hold the busiest expert below $2\times$ the ideal share, drop at most a few percent of assignments, and lower validation loss by roughly **$0.1\text{--}0.25\text{ nats/byte}$**.
 :::
 
 ::: {.slide title="Visualizing Expert Load Shares Across Methods"}

@@ -644,7 +644,7 @@ Solve each scheduling design question quantitatively:
 | :--- | :--- | :--- | :--- |
 | **Bias–Noise Decomposition** | $\mathbb{E}[x_t^2] \approx e^{-2\lambda B_t}x_0^2 + \frac{\eta_t\sigma^2}{2\lambda}$ | Budget $B_t = \sum_{s<t}\eta_s$ erases start; $\eta_T$ sets floor | Requires both large $B_T$ and slow decay ($R_s \gtrsim 1/\lambda$) |
 | **Exponential Decay Hazard** | $\eta_t = \eta_0\gamma^t,\quad R_s \approx \frac{\eta_s}{1-\gamma}$ | Freezes noise at $\frac{(1-\gamma)\sigma^2}{4\lambda^2}$ once $\eta_s \lesssim \frac{1-\gamma}{2\lambda}$ | Avoid fast geometric decay without a floor or polynomial tail |
-| **Linear Warmup** | $\eta_t = \eta_0\min\!\left(1, \frac{t+1}{W}\right)$ | Prevents $67\%$ step-1 weight jump under AdamW | Ramp over $W \sim 1\%\text{--}5\%$ of steps (always $> \frac{1}{1-\beta_1} = 10$) |
+| **Linear Warmup** | $\eta_t = \eta_0\min\!\left(1, \frac{t+1}{W}\right)$ | Prevents $67\%$ step-1 weight jump under AdamW | Ramp over $W \sim 1\%\text{--}5\%$ of steps (always $\ge \frac{2}{1-\beta_1} = 20$) |
 | **Cosine Decay** | $\eta_t = \eta_T + \frac{\eta_0-\eta_T}{2}\left(1 + \cos\frac{\pi t}{T}\right)$ | Budget $B_T = 0.5\,\eta_0 T$ (for $\eta_T = 0$) | Standard for fixed-horizon runs where $T$ is known in advance |
 | **Warmup–Stable–Decay (WSD)** | Constant plateau $\eta_0$, then linear/cosine cooldown | Budget $B_T \approx 0.9\,\eta_0 T$; supports anytime branching | Fork $10\text{--}20\%$ cooldown branches (copying weights + $\mathbf{m}, \mathbf{v}$) |
 :::

@@ -583,7 +583,7 @@ Why does naive attention allocate $8n^2$ bytes of temporary memory per head in `
 ::: {.slide title="Measuring Quadratic Memory and Runtime on a GPU"}
 [Empirical Benchmarks]{.kicker}
 
-Measuring peak scratch memory (`d2l.peak_memory`) and wall-clock execution time (`d2l.Benchmark`) on a single `float32` head ($d_h = 64$) confirms the exact $8n^2$ byte footprint and $4\times$ time jump per doubling of $n$:
+Measuring peak scratch memory (`d2l.peak_memory`) and wall-clock execution time (`d2l.Benchmark`) on a single `float32` head ($d_h = 64$) confirms the exact $8n^2$ byte footprint and a $4\times$ time jump per doubling of $n$ once $n \ge 8{,}192$:
 
 @!attention-at-scale-counting-memory-3
 
@@ -806,7 +806,7 @@ Work through these three systems and algorithmic questions:
 
 1. **$\alpha_j = \exp(a_j - \ell)$**, because $\exp(a_j - m - \log s) = \exp(a_j - m) / s = \alpha_j$, requiring only $1$ float per query instead of $(m, s)$ or all $n$ weights.
 2. **Immediate overflow to `inf`**, followed by `inf / inf = NaN` in the output normalizer. Carrying $m$ guarantees $a_j - m' \le 0$ so every exponential lies in $(0, 1]$.
-3. **Tile size $b \le M / (4d_h)$ halves**, so twice as many passes over $\mathbf{K}, \mathbf{V}$ are needed and quadratic HBM traffic increases (by $2\times$ per head, or $4\times$ at fixed head count).
+3. **Tile size $b \le M / (4d_h)$ halves**, so twice as many passes over $\mathbf{K}, \mathbf{V}$ are needed and quadratic HBM traffic grows $4\times$ per head; at fixed total width $d$ the head count halves, so total traffic doubles.
 :::
 :::
 

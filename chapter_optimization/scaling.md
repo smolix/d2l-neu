@@ -349,7 +349,7 @@ d2l.plot(check_widths, list(mup_acts), 'width', 'mean |activation|',
          legend=['layer 1', 'layer 2', 'layer 3', 'logits'])
 ```
 
-Under SP (`MLP`), layer $2$ grows as $O(n)$, layer $3$ compounds to $O(n^2)$, and the output logits explode as $O(n^3)$ (increasing $1{,}000\times$ from width $128$ to width $8{,}192$ after a single step). Under $\mu\text{P}$ (`MuMLP`), every layer's activation and logit scale remains flat across all seven widths.
+Under SP (`MLP`), layer $2$, layer $3$ and the output logits approach $O(n)$, $O(n^2)$ and $O(n^3)$ growth at the widest widths (the logits rise about $1{,}000\times$ from width $128$ to width $8{,}192$ after a single step). Under $\mu\text{P}$ (`MuMLP`), every layer's activation and logit scale remains flat across all seven widths.
 
 Repeating the $400$-step learning-rate sweep under $\mu\text{P}$ confirms that the optimal learning rate aligns across the entire $64\times$ width range:
 
@@ -571,9 +571,9 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 ::: {.cols .vc}
 ::: {.col}
 - Setting `base_width=8192` ($m = 1$ at $n = 8{,}192$) makes `MuMLP` identical to `MLP` at the widest network so both sweeps share the exact same anchor at $n = 8{,}192$:
-  - **Rule 1 (`__init__`):** Multiply `fc_out` weights (initialized at std $1/\sqrt{n}$) by $\sqrt{m} = \sqrt{n / n_{\text{base}}}$ so variance becomes $\frac{1}{n} \cdot \frac{n}{n_{\text{base}}} = \frac{1}{n_{\text{base}}}$.
-  - **Rule 2 (`forward`):** Divide features entering `fc_out` by $m$.
-  - **Rule 3 (`configure_adam`):** Set hidden matrix learning rate to `lr / self.m`.
+  - **Rule 3 (`__init__`):** Multiply `fc_out` weights (initialized at std $1/\sqrt{n}$) by $\sqrt{m} = \sqrt{n / n_{\text{base}}}$ so variance becomes $\frac{1}{n} \cdot \frac{n}{n_{\text{base}}} = \frac{1}{n_{\text{base}}}$.
+  - **Rule 3 (`forward`):** Divide features entering `fc_out` by $m$.
+  - **Rule 2 (`configure_adam`):** Set hidden matrix learning rate to `lr / self.m`.
 :::
 
 ::: {.col .fig}
@@ -592,7 +592,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
   - **Layer 1 (`fc_in`, fan-in $784$):** Flat across all widths ($\Theta(1)$).
   - **Layer 2 (`fc_h1`, fan-in $n$):** Grows linearly with width as **$O(n)$** (slope $+1$).
   - **Layer 3 (`fc_h2`):** Compounds Layer 2's input blow-up with its own $O(n)$ update to grow as **$O(n^2)$** (slope $+2$).
-  - **Output logits (`fc_out`):** Explodes $1{,}000\times$ across the width range as **$O(n^3)$** (slope $+3$).
+  - **Output logits (`fc_out`):** Rise about $1{,}000\times$ across the width range, approaching **$O(n^3)$** (slope $+3$) at the widest widths.
 :::
 
 ::: {.col .fig}

@@ -704,7 +704,7 @@ We configure a $3{,}000$-step training run for a new $4$-block, width-$256$, $4$
 
 ::: {.cols .vc}
 ::: {.col}
-- Before launching the $3{,}000$-step run, we execute three $300$-step trial runs ($900$ steps total, $<30\%$ of one full run) across $\eta \in \{10^{-3}, 3{\times}10^{-3}, 10^{-2}\}$:
+- Before launching the $3{,}000$-step run, we execute three $300$-step trial runs ($900$ steps total, $30\%$ of one full run) across $\eta \in \{10^{-3}, 3{\times}10^{-3}, 10^{-2}\}$:
   - **$\eta = 10^{-3}$:** Slow ($\approx 1.88$ nats, $2\text{--}3\%$ clipped).
   - **$\eta = 3 \times 10^{-3}$:** **Optimal ($\approx 1.75$ nats, $3\%$ of steps clipped, a healthy guard)**.
   - **$\eta = 10^{-2}$:** Stalls at $\approx 2.5$ nats ($6\%$ clipped).
@@ -764,7 +764,7 @@ Diagnose and solve each practical training scenario:
 | **Global-Norm Clipping** | $\mathbf{g} \leftarrow \min\!\left(1, \frac{\theta}{\|\mathbf{g}\|_2}\right)\mathbf{g}$ ($\theta = 1.0$) | Fires on $<2\%\text{--}5\%$ of steps (guard); if $>20\%$, lower $\eta$ | Caps early SGD steps; protects AdamW's $\mathbf{v}_t$ from spikes |
 | **$\beta_2 = 0.95$ & Rewind** | $\tau_2 = \frac{1}{1-\beta_2} = 20$ steps (vs. $1{,}000$ at $0.999$) | Rewind $\sim 100$ steps & skip $200\text{--}500$ batches on spike | Prevents a single spike from paralyzing $\sqrt{\hat{\mathbf{v}}_t}$ for $2{,}300$ steps |
 | **Weight Averaging (EMA)** | $\bar{\mathbf{x}}_t = \alpha\bar{\mathbf{x}}_{t-1} + (1-\alpha)\mathbf{x}_t$ ($\alpha \in [0.995, 0.9999]$) | Window $\frac{1}{1-\alpha} > \frac{1}{\eta\lambda_{\text{curv}}}$; start after early descent | Matches cosine-decayed accuracy on constant-rate trajectories |
-| **Short-Run Calibration** | Sweep $\eta_0$ over $10\%$ horizon ($300$ of $3{,}000$ steps) | Pick $\eta_0$ $3\times$ below stall threshold; check $b_{\text{noise}}$ | Calibrates peak LR for $<30\%$ of a single full training run |
+| **Short-Run Calibration** | Sweep $\eta_0$ over $10\%$ horizon ($300$ of $3{,}000$ steps) | Pick $\eta_0$ $3\times$ below stall threshold; check $b_{\text{noise}}$ | Calibrates peak LR for $30\%$ of a single full training run |
 | **Modern Default Recipe** | AdamW $(0.9, 0.95)$, matrix-only $\lambda = 0.1$, clip $1.0$ | $1\text{--}5\%$ linear warmup + cosine or WSD decay to $\le 0.1\eta_0$ | Reliable baseline across Transformers and modern deep networks |
 :::
 

@@ -15,6 +15,10 @@ book:
   author:
     - Alexander J. Smola
   date: today
+  # GA4 property "d2l.ai" (account 417578730, property 566014842), one web
+  # stream for d2l.ai and all language subdomains. Quarto loads gtag only
+  # after the visitor accepts the cookie-consent banner below.
+  google-analytics: "G-JLMHBJ4RL3"
   cookie-consent:
     type: express
     style: headline

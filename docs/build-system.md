@@ -2184,8 +2184,11 @@ log goes to `logs/upload-data-<TS>.log`. Rules:
 - `tools/upload_data_r2.py --delete KEY...` removes keys; outside a `_test/`
   folder it also needs `--force`. Use `lm/_test/` for trial uploads.
 - **Pruning.** `make prune-data` (`tools/prune_lm_data.py`) lists the `lm/`
-  objects whose stem no quoted string names on any live branch of `origin` or
-  any tag; `DELETE=1` deletes them after a typed confirmation. Recipe and the
+  objects whose stem no tracked file names (in a quoted string, or as a whole
+  token in a config file) on any live branch of `origin` or any tag, read in a
+  temporary bare repository so the checkout's refs stay untouched; `DELETE=1`
+  deletes them after a typed confirmation and refuses over 25% of the bytes
+  without `ALLOW_LARGE=1`. Recipe and the
   reference rule: [build-guide §4.13a](build-guide.md#413a-pruning-unreferenced-lm-data).
 - **Do not fetch a public URL before its key exists.** The custom domain's
   Cloudflare edge caches a 404 for 8 h (`cache-control: max-age=28800`), so a
@@ -2387,7 +2390,7 @@ yubikey-free path recorded in CLAUDE.md memory); LFS rides the same HTTPS remote
 | `tools/test_freshness_deps.py` | `make test-trap`: shard naming, the transitive `.d` closure, the preamble/alias/module shards, per-key `DATA_HUB` shards and literal-key following, the no-manifest rule (§3.4). |
 | `tools/test_build_lib_async.py` | `make test-lm`: `async def` in `#@save` blocks (standalone and inline markers, `add_to_class`, shards, docstring labels, dedup) (§3.4). |
 | `tools/upload_data_r2.py` | `make upload-data`: versioned `DATA_HUB` artifacts → R2 bucket `d2l-data`; never overwrites a key with other bytes without `--force`; prints URL and sha1, never the credentials (§6.9). |
-| `tools/prune_lm_data.py`, `tools/test_prune_lm_data.py` | `make prune-data`: dry-run list (or `--delete`) of `d2l-data` `lm/` objects that no quoted string on a live branch or tag names; grace period 14 days; fixture test in `make test-lm` (§6.9). |
+| `tools/prune_lm_data.py`, `tools/test_prune_lm_data.py` | `make prune-data`: dry-run list (or `--delete`) of `d2l-data` `lm/` objects that no quoted string (or whole token in a config file) on a live branch or tag names; grace period 14 days; refs fetched into a temporary bare repository; fixture test in `make test-lm` (§6.9). |
 | `tools/scan_d2l_usage.py` (keys) | Also follows string literals that name a registered `DATA_HUB` key to its `DATA_HUB.<key>.py` shard (§3.4). |
 | `tools/locks.py`, `tools/test_notebook_locks.py` | Notebook locks (§3.7): the directive parser, materialization from the store and `make locks`; the GPU-free fixture test (run by `make test-trap`). |
 | `tools/test_notebook_venvs.py` | `make test-trap`: the separate `.venv-lm` (§6.4.2): pyproject pins, routing in `runtime_env.py` and `make/notebooks.mk`, provenance (`venv`, `packages`, warn-only drift), the `d2l-lm` kernelspec. |

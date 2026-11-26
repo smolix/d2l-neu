@@ -54,17 +54,20 @@ test-lm: | .venv-lm/.synced
 	@.venv-lm/bin/python -m unittest $(LM_TESTS) 2>&1 | tee $(LOGDIR)/test-lm-$(TS).log
 
 # Prune the d2l-data bucket (docs/build-guide.md §4.13a): list the lm/ objects
-# whose stem no quoted string of any tracked file names, on any live branch of
-# origin or any tag (`git fetch --prune --tags` first; git grep, no checkout).
-# Dry run by default (exit 0); DELETE=1 deletes them after a typed
-# confirmation. MIN_AGE_DAYS (default 14) holds back younger objects;
-# NO_FETCH=1 reads the remote-tracking refs as they are, without fetching.
+# whose stem no tracked file names (in a quoted string, or as a whole token in
+# a config file) on any live branch of origin or any tag. The refs are fetched
+# into a temporary bare repository, so this checkout's refs stay as they are;
+# git grep, no checkout. Dry run by default (exit 0); DELETE=1 deletes them
+# after a typed confirmation, and refuses when they hold over 25% of the bytes
+# unless ALLOW_LARGE=1. MIN_AGE_DAYS (default 14) holds back younger objects;
+# NO_FETCH=1 reads the local remote-tracking refs and tags, without fetching.
 # Credentials as upload-data (~/.config/d2l/r2-data.env, never printed).
 .PHONY: prune-data
 prune-data:
 	@mkdir -p $(LOGDIR)
 	@python3 tools/prune_lm_data.py $(if $(filter 1,$(DELETE)),--delete) \
 		$(if $(MIN_AGE_DAYS),--min-age-days $(MIN_AGE_DAYS)) $(if $(filter 1,$(NO_FETCH)),--no-fetch) \
+		$(if $(filter 1,$(ALLOW_LARGE)),--allow-large) \
 		2>&1 | tee $(LOGDIR)/prune-data-$(TS).log; exit $${PIPESTATUS[0]}
 
 # ── Locked notebooks (docs/build-system.md "Locked notebooks") ──

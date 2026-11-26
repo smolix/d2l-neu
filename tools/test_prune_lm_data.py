@@ -3,7 +3,8 @@
 A fake bucket listing stands in for R2 (no credentials, no network) and a
 temporary git repository with a bare "remote" holds the refs: main, a live
 branch, a branch deleted on the remote, and an `en-2026.11.01` tag whose
-commit no branch carries. Run by `make test-lm`.
+commit no branch carries. The clone's own config sets a hostile `git grep`
+output format (line numbers, columns, colour). Run by `make test-lm`.
 """
 
 import contextlib
@@ -15,6 +16,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import prune_lm_data as P  # noqa: E402
@@ -54,6 +56,13 @@ MAIN_FILES = {
     'shards.py': 'SHARDS = "fwedu-x-v1"\n',
     'notes.md': ("The old lm-prose-v1 and `lm-tick-v1` were superseded; "
                  "don't use 'lm-apos-v1' either.\n"),
+    # A registration in a subdirectory: found from any cwd.
+    'chapter_x/reg-lib.md': "d2l.DATA_HUB['lm-deep-v1'] = (url, sha1)\n",
+    # Config files count whole unquoted tokens; a longer name does not.
+    'tools/campaigns.yaml': ("outputs:\n"
+                             "  - data/lm/x/lm-yaml-v1.json -> lm-yaml-v1\n"
+                             "  - data/lm/x/lm-tok-v12.json -> lm-tok-v12\n"),
+    'tools/readme.md': "Campaign output lm-plain-v1 -> lm-plain-v1\n",
 }
 
 
@@ -76,6 +85,10 @@ OBJECTS = [
     obj('lm/lm-prose-v1.json', 40),
     obj('lm/lm-tick-v1.json', 40),
     obj('lm/lm-apos-v1.json', 40),
+    obj('lm/lm-deep-v1.json', 40),
+    obj('lm/lm-yaml-v1.json', 40),
+    obj('lm/lm-tok-v1.json', 40),
+    obj('lm/lm-plain-v1.json', 40),
     obj('lm/lm-old-v1.json', 40, 5_000_000),
     obj('lm/lm-young-v1.json', 3),
     obj('lm/lm-multi-v1.part0.bin', 30),
@@ -135,6 +148,18 @@ class StemTest(unittest.TestCase):
         i = line.index('lm-x')
         self.assertFalse(P.quoted(line, i, i + 7))
 
+    def test_whole_token_in_config(self):
+        line = '- data/lm/x/lm-x-v1.json -> lm-x-v1'
+        for i in (line.index('lm-x'), line.rindex('lm-x')):
+            self.assertTrue(P.counts('tools/c.yaml', line, i, i + 7))
+            self.assertFalse(P.counts('notes.md', line, i, i + 7))
+        line = 'x: lm-x-v12'
+        i = line.index('lm-x')
+        self.assertFalse(P.counts('c.yaml', line, i, i + 7))
+        self.assertTrue(P.is_config('make/store.mk'))
+        self.assertTrue(P.is_config('Makefile'))
+        self.assertFalse(P.is_config('tools/x.py'))
+
 
 class PruneRepoTest(unittest.TestCase):
     @classmethod
@@ -157,6 +182,9 @@ class PruneRepoTest(unittest.TestCase):
         git(seed, 'push', '-q', 'origin', 'en-2026.11.01')
         cls.work = root / 'work'
         git(root, 'clone', '-q', str(remote), str(cls.work))
+        for k, v in (('grep.lineNumber', 'true'), ('grep.column', 'true'),
+                     ('color.grep', 'always'), ('color.ui', 'always')):
+            git(cls.work, 'config', k, v)
         # Deleted on the remote after the clone fetched them: feat-b (its
         # remote-tracking ref in work is now stale) and release (only the tag
         # still carries its commit).
@@ -169,10 +197,10 @@ class PruneRepoTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
-    def survey(self, **kw):
+    def survey(self, repo=None, **kw):
         kw.setdefault('fetch', True)
-        refs, _, found, groups = P.survey(FakeBucket(OBJECTS), self.work,
-                                          now=NOW, **kw)
+        refs, _, found, groups = P.survey(FakeBucket(OBJECTS),
+                                          repo or self.work, now=NOW, **kw)
         keys = {g: {o['Key'] for o in v} for g, v in groups.items()}
         return refs, found, keys
 
@@ -192,11 +220,12 @@ class PruneRepoTest(unittest.TestCase):
             'lm/lm-cpt-runs-v1.cpt-qwen-A.json.gz',
             'lm/lm-cpt-runs-v1.cpt-qwen-B.json.gz',
             'lm/fwedu-x-v1/train-00000.bin', 'lm/lm-branch-v1.json',
-            'lm/lm-tag-only-v1.json', 'lm/lm-apos-v1.json'})
+            'lm/lm-tag-only-v1.json', 'lm/lm-apos-v1.json',
+            'lm/lm-deep-v1.json', 'lm/lm-yaml-v1.json'})
         self.assertEqual(k['unreferenced'], {
             'lm/lm-live-v12.json', 'lm/lm-gone-v1.json',
             'lm/lm-prose-v1.json', 'lm/lm-tick-v1.json',
-            'lm/lm-old-v1.json'})
+            'lm/lm-old-v1.json', 'lm/lm-tok-v1.json', 'lm/lm-plain-v1.json'})
         # Grace period; the old part of a young multi-part object waits too.
         self.assertEqual(k['held'], {'lm/lm-young-v1.json',
                                      'lm/lm-multi-v1.part0.bin',
@@ -207,6 +236,28 @@ class PruneRepoTest(unittest.TestCase):
         self.assertEqual(found['lm-tag-only-v1'],
                          'en-2026.11.01:release.py')
         self.assertTrue(found['lm-api-a-v1'].startswith('origin/main:'))
+        self.assertEqual(found['lm-deep-v1'], 'origin/main:chapter_x/reg-lib.md')
+        self.assertEqual(found['lm-yaml-v1'],
+                         'origin/main:tools/campaigns.yaml')
+
+    def test_any_cwd_gives_the_same_listing(self):
+        for fetch in (True, False):
+            _, top_found, top = self.survey(fetch=fetch)
+            for sub in ('chapter_x', 'tools'):
+                _, found, k = self.survey(repo=self.work / sub, fetch=fetch)
+                self.assertEqual(k, top, (sub, fetch))
+                self.assertEqual(found, top_found, (sub, fetch))
+
+    def test_fetch_leaves_the_repo_alone(self):
+        def state():
+            return subprocess.run(
+                ['git', 'for-each-ref'], cwd=self.work, check=True,
+                capture_output=True, text=True).stdout
+        git(self.work, 'update-ref', 'refs/remotes/origin/feat-b', self.feat_b)
+        before = state()
+        refs, _, _ = self.survey()
+        self.assertEqual(state(), before)
+        self.assertNotIn('refs/remotes/origin/feat-b', [n for n, _ in refs])
 
     def test_stale_ref_without_fetch_keeps_key(self):
         # An earlier fetch in this class may have pruned the stale ref.
@@ -219,8 +270,8 @@ class PruneRepoTest(unittest.TestCase):
         self.assertFalse(k['held'] | k['test_held'])
         self.assertIn('lm/lm-multi-v1.part1.bin', k['unreferenced'])
 
-    def run_tool(self, delete, answer=None):
-        bucket = FakeBucket(OBJECTS)
+    def run_tool(self, delete, answer=None, objects=OBJECTS, **kw):
+        bucket = FakeBucket(objects)
 
         def input_fn():
             if answer is None:
@@ -229,7 +280,7 @@ class PruneRepoTest(unittest.TestCase):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             rc = P.run(self.work, delete=delete, bucket=bucket, now=NOW,
-                       input_fn=input_fn)
+                       input_fn=input_fn, **kw)
         return rc, bucket, out.getvalue()
 
     def test_dry_run_deletes_nothing(self):
@@ -243,26 +294,88 @@ class PruneRepoTest(unittest.TestCase):
         self.assertIn('5.00 MB', out)                 # size
 
     def test_delete_needs_confirmation(self):
-        for answer in (None, 'yes', 'delete 5'):
+        for answer in (None, 'yes', 'delete 7'):
             rc, bucket, out = self.run_tool(delete=True, answer=answer)
             self.assertEqual(rc, 1, answer)
             self.assertEqual(bucket.deleted, [], answer)
-            self.assertIn('Type "delete 6" to confirm', out)
+            self.assertIn('Type "delete 8" to confirm', out)
+
+    VICTIMS = ['lm/lm-live-v12.json', 'lm/lm-gone-v1.json',
+               'lm/lm-prose-v1.json', 'lm/lm-tick-v1.json',
+               'lm/lm-old-v1.json', 'lm/lm-tok-v1.json',
+               'lm/lm-plain-v1.json', 'lm/_test/lm-live-v1.json']
 
     def test_delete_confirmed(self):
-        rc, bucket, out = self.run_tool(delete=True, answer='delete 6')
+        rc, bucket, out = self.run_tool(delete=True, answer='delete 8')
         self.assertEqual(rc, 0)
-        self.assertEqual(sorted(bucket.deleted), sorted([
-            'lm/lm-live-v12.json', 'lm/lm-gone-v1.json',
-            'lm/lm-prose-v1.json', 'lm/lm-tick-v1.json', 'lm/lm-old-v1.json',
-            'lm/_test/lm-live-v1.json']))
-        self.assertIn('Deleted 6 objects', out)
+        self.assertEqual(sorted(bucket.deleted), sorted(self.VICTIMS))
+        self.assertIn('Deleted 8 objects', out)
+
+    def test_large_share_needs_allow_large(self):
+        big = [obj(o['Key'], 40, 500_000_000) if o['Key'] == 'lm/lm-old-v1.json'
+               else o for o in OBJECTS]
+        rc, bucket, out = self.run_tool(delete=False, objects=big)
+        self.assertEqual(rc, 0)
+        self.assertIn('WARNING: the objects listed for deletion hold', out)
+        with self.assertRaises(P.PruneError):
+            self.run_tool(delete=True, answer='delete 8', objects=big)
+        rc, bucket, _ = self.run_tool(delete=True, answer='delete 8',
+                                      objects=big, allow_large=True)
+        self.assertEqual(rc, 0)
+        self.assertEqual(sorted(bucket.deleted), sorted(self.VICTIMS))
+
+    def main_tool(self, *argv, answer='no'):
+        bucket = FakeBucket(OBJECTS)
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(P.r2, 'connect', return_value=bucket), \
+                mock.patch('builtins.input', return_value=answer), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = P.main(['--repo', str(self.work), *argv])
+        return rc, bucket, out.getvalue(), err.getvalue()
+
+    def test_main_wiring(self):
+        rc, bucket, out, _ = self.main_tool('--min-age-days', '0',
+                                            '--verbose')
+        self.assertEqual((rc, bucket.deleted), (0, []))
+        self.assertIn('younger than 0.0 days (held back): 0 objects', out)
+        self.assertIn('origin/main:chapter_x/reg-lib.md', out)   # --verbose
+        # Without fetch the clone's stale origin/feat-b would keep a key.
+        git(self.work, 'update-ref', '-d', 'refs/remotes/origin/feat-b')
+        rc, bucket, out, _ = self.main_tool('--no-fetch', '--delete',
+                                            answer='delete 8')
+        self.assertEqual(rc, 0)
+        self.assertEqual(sorted(bucket.deleted), sorted(self.VICTIMS))
+        rc, _, _, err = self.main_tool('--remote', 'nosuch')
+        self.assertEqual(rc, 1)
+        self.assertIn('ERROR: git remote get-url', err)
+
+    def test_make_target_flags(self):
+        root = Path(__file__).resolve().parent.parent
+        cmd = ['make', '-s', '-n', '-f', 'make/store.mk', 'SHELL=/bin/bash',
+               'LOGDIR=L', 'TS=T', 'prune-data']
+        try:
+            dry = subprocess.run(cmd, cwd=root, capture_output=True,
+                                 text=True, check=True).stdout
+            full = subprocess.run(
+                cmd + ['DELETE=1', 'MIN_AGE_DAYS=3', 'NO_FETCH=1',
+                       'ALLOW_LARGE=1'], cwd=root, capture_output=True,
+                text=True, check=True).stdout
+        except FileNotFoundError:
+            self.skipTest('make not installed')
+        flags = ('--delete', '--min-age-days', '--no-fetch', '--allow-large')
+        for f in flags:
+            self.assertNotIn(f, dry)
+        self.assertIn('--delete', full)
+        self.assertIn('--min-age-days 3', full)
+        self.assertIn('--no-fetch', full)
+        self.assertIn('--allow-large', full)
+        self.assertIn('exit ${PIPESTATUS[0]}', full)
 
     def test_missing_main_raises(self):
         with tempfile.TemporaryDirectory() as d:
             git(d, 'init', '-q')
             with self.assertRaises(P.PruneError):
-                P.collect_refs(d, fetch=False)
+                P.collect_refs(d)
 
 
 if __name__ == '__main__':

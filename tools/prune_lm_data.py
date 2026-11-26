@@ -16,22 +16,28 @@ extension and its `.<part>` suffixes, ending at the version marker
 `lm-tuned-lens-qwen3-0.6b-v1.pt` -> `lm-tuned-lens-qwen3-0.6b-v1`); a name
 without `-v<N>` loses everything from its first dot. A key inside a folder
 (`lm/fwedu-r2-v1/train-00001.bin`) also has the stem of each folder. The key
-is live if one of its stems occurs inside a quoted string (a `'` or `"` before
-it and the same quote after it on one line) in any tracked file of any of
-these refs: every live branch of the remote (`origin/main` among them) and
-every tag (the `en-*` release tags pin the translated books). The match is
-textual, so a key registered through a loop over a quoted key list,
+is live if one of its stems occurs in a tracked file of any of these refs:
+every live branch of the remote (`origin/main` among them) and every tag (the
+`en-*` release tags pin the translated books). An occurrence counts when the
+same quote character (`'` or `"`) appears somewhere before it and somewhere
+after it on its line, or, in a config file (`*.yaml`, `*.yml`, `*.toml`,
+`*.ini`, `*.cfg`, `*.mk`, `Makefile`), when it stands as a whole token
+(`- data/lm/x/lm-x-v1.json -> lm-x-v1` in tools/lm_campaigns.yaml). The match
+is textual, so a key registered through a loop over a quoted key list,
 `d2l.DATA_HUB[key] = (d2l.LM_DATA_URL + key + '.zip', sha1)`, stays live, and a
 stem that also occurs in an unrelated string keeps its object: over-keeping
-is the safe direction. A mention in prose outside quotes (`` `lm-x-v1` `` in
-Markdown, too) does not keep an object.
+is the safe direction. A mention in Markdown prose (`` `lm-x-v1` `` too)
+usually keeps nothing; it keeps its object only when quote characters happen
+to surround it on its line (`it's `lm-x-v1`, don't`).
 
-Refs are read with `git grep` on each ref's tree (no checkout). By default the
-tool first runs `git fetch --prune --tags <remote>
-'+refs/heads/*:refs/remotes/<remote>/*'`, so a branch deleted on the remote no
-longer counts; --no-fetch uses the remote-tracking refs as they are (a stale
-ref of a deleted branch then still keeps its keys). Push a branch before
-pruning: unpushed commits are not read.
+Refs are read with `git grep` on each ref's whole tree, wherever the tool is
+started (no checkout). By default the tool fetches the remote's branches and
+tags (`--depth 1`) into a temporary bare repository that borrows the local
+object store (`objects/info/alternates`) and reads them there, so a branch
+deleted on the remote no longer counts and the local repository's refs and
+objects are left untouched. --no-fetch reads the local remote-tracking refs
+and tags as they are (a stale ref of a deleted branch then still keeps its
+keys). Push a branch before pruning: unpushed commits are not read.
 
 Output: the referenced count, then the unreferenced objects with size and
 last-modified time, objects under a `_test/` folder in their own list (they
@@ -40,13 +46,15 @@ are never matched), and unreferenced objects younger than --min-age-days
 them is young. A dry run changes nothing and exits 0. --delete deletes the
 listed unreferenced and `_test/` objects past the grace period, only after a
 confirmation line `delete <count>` typed on stdin, and checks each key is
-gone.
+gone. It refuses when they hold more than 25% of the listed bytes (a sign of a
+wrong listing) unless --allow-large is given.
 
 Credentials: as tools/upload_data_r2.py (~/.config/d2l/r2-data.env, never
 printed); needs the AWS CLI and git.
 """
 
 import argparse
+import contextlib
 import datetime as dt
 import os
 import re
@@ -62,6 +70,13 @@ PREFIX = 'lm/'
 TEST_FOLDER = '_test'
 VERSION_STEM = re.compile(r'(.+?-v\d+)(?=\.|$)')
 QUOTES = ("'", '"')
+CONFIG_SUFFIXES = ('.yaml', '.yml', '.toml', '.ini', '.cfg', '.mk')
+CONFIG_NAMES = ('Makefile', 'GNUmakefile')
+MAX_DELETE_SHARE = 0.25
+# Keep `git grep`'s output format fixed whatever the user's config says.
+GREP_CONFIG = ('-c', 'color.grep=never', '-c', 'grep.lineNumber=false',
+               '-c', 'grep.column=false', '-c', 'grep.fullName=true',
+               '-c', 'submodule.recurse=false')
 
 
 class PruneError(Exception):
@@ -110,12 +125,40 @@ def _git(repo, *args, ok=(0,)):
     return r
 
 
-def collect_refs(repo, remote='origin', fetch=True):
-    """[(ref name, commit)]: the remote's live branches (main first), then
-    every tag."""
-    if fetch:
-        _git(repo, 'fetch', '--quiet', '--prune', '--tags', remote,
+def _abs_git_path(repo, what):
+    out = _git(repo, 'rev-parse', '--path-format=absolute', what).stdout
+    return Path(out.strip())
+
+
+@contextlib.contextmanager
+def ref_store(repo, remote='origin', fetch=True):
+    """The git directory to read the refs from: *repo* itself without fetch;
+    with fetch, a temporary bare repository holding the remote's branches
+    (as refs/remotes/<remote>/*) and tags, fetched at depth 1 with the local
+    object store as alternate. Nothing in *repo* changes."""
+    if not fetch:
+        yield repo
+        return
+    url = _git(repo, 'remote', 'get-url', remote).stdout.strip()
+    if Path(repo, url).exists():                    # a local path remote
+        url = str(Path(repo, url).resolve())
+    common = _abs_git_path(repo, '--git-common-dir')
+    with tempfile.TemporaryDirectory(prefix='prune-lm-data-') as d:
+        _git(d, 'init', '--quiet', '--bare')
+        Path(d, 'objects', 'info', 'alternates').write_text(
+            f"{common / 'objects'}\n")
+        # A shallow local repository must say so, or the remote assumes the
+        # history under its shallow commits is present and omits it.
+        if (common / 'shallow').exists():
+            Path(d, 'shallow').write_bytes((common / 'shallow').read_bytes())
+        _git(d, 'fetch', '--quiet', '--depth', '1', '--tags', url,
              f'+refs/heads/*:refs/remotes/{remote}/*')
+        yield d
+
+
+def collect_refs(repo, remote='origin'):
+    """[(ref name, commit)] in *repo* (a ref_store): the remote-tracking
+    branches (main first), then every tag."""
     fmt = '--format=%(refname)%00%(objectname)%00%(*objectname)'
     out = []
     for space in (f'refs/remotes/{remote}/', 'refs/tags/'):
@@ -140,8 +183,30 @@ def short_ref(name):
 
 
 def quoted(line, i, j):
-    """True if line[i:j] has the same quote character before and after it."""
+    """True if the same quote character occurs somewhere before line[i:j]
+    and somewhere after it (not necessarily enclosing it)."""
     return any(q in line[:i] and q in line[j:] for q in QUOTES)
+
+
+def _token_char(c):
+    return c.isalnum() or c in '-_'
+
+
+def whole_token(line, i, j):
+    """True if line[i:j] is not part of a longer name (`lm-x-v1` in
+    `lm-x-v1.json` or `-> lm-x-v1`, not in `lm-x-v12`)."""
+    return ((i == 0 or not _token_char(line[i - 1]))
+            and (j == len(line) or not _token_char(line[j])))
+
+
+def is_config(path):
+    name = path.rsplit('/', 1)[-1]
+    return name in CONFIG_NAMES or name.endswith(CONFIG_SUFFIXES)
+
+
+def counts(path, line, i, j):
+    """Does the occurrence line[i:j] in file *path* keep its object?"""
+    return quoted(line, i, j) or (is_config(path) and whole_token(line, i, j))
 
 
 def find_stems(repo, refs, stems):
@@ -157,18 +222,21 @@ def find_stems(repo, refs, stems):
             f.write(''.join(s + '\n' for s in sorted(remaining)))
             patterns = f.name
         try:
-            r = _git(repo, 'grep', '-I', '-z', '-F', '-f', patterns, name,
-                     '--', ok=(0, 1))
+            # ':(top)': the whole tree, not the subtree under the cwd.
+            r = _git(repo, *GREP_CONFIG, 'grep', '--no-color', '--full-name',
+                     '-I', '-z', '-F', '-f', patterns, name, '--', ':(top)',
+                     ok=(0, 1))
         finally:
             os.unlink(patterns)
         for record in r.stdout.split('\n'):
             where, sep, line = record.partition('\0')
             if not sep:
                 continue
+            path = where.split(':', 1)[-1]
             for s in [s for s in remaining if s in line]:
                 start = line.find(s)
                 while start != -1:
-                    if quoted(line, start, start + len(s)):
+                    if counts(path, line, start, start + len(s)):
                         found[s] = short_ref(where)
                         remaining.discard(s)
                         break
@@ -279,30 +347,47 @@ def survey(bucket, repo='.', remote='origin', fetch=True, min_age_days=14,
     """(refs, objects, found stems, groups of classify) for one bucket
     listing; changes nothing in the bucket."""
     now = now or dt.datetime.now(dt.timezone.utc)
-    refs = collect_refs(repo, remote, fetch)
-    objects = bucket.list(prefix)
-    stems = set().union(*(key_stems(o['Key'], prefix) for o in objects
-                          if not is_test_key(o['Key'], prefix)))
-    found = find_stems(repo, refs, stems)
+    with ref_store(repo, remote, fetch) as store:
+        refs = collect_refs(store, remote)
+        objects = bucket.list(prefix)
+        stems = set().union(*(key_stems(o['Key'], prefix) for o in objects
+                              if not is_test_key(o['Key'], prefix)))
+        found = find_stems(store, refs, stems)
     return refs, objects, found, classify(objects, found, now, min_age_days,
                                           prefix)
 
 
+def large_share(victims, objects):
+    """The share of the listed bytes the victims hold, if it is over
+    MAX_DELETE_SHARE, else None."""
+    whole = total(objects)
+    share = total(victims) / whole if whole else 0
+    return share if share > MAX_DELETE_SHARE else None
+
+
 def run(repo='.', remote='origin', fetch=True, min_age_days=14,
-        delete=False, verbose=False, bucket=None, now=None, input_fn=input,
-        prefix=PREFIX):
+        delete=False, verbose=False, bucket=None, now=None, input_fn=None,
+        prefix=PREFIX, allow_large=False):
     now = now or dt.datetime.now(dt.timezone.utc)
     bucket = bucket or r2.connect()
     refs, objects, found, groups = survey(bucket, repo, remote, fetch,
                                           min_age_days, now, prefix)
     report(groups, refs, found, objects, now, min_age_days, verbose, prefix)
     victims = groups['unreferenced'] + groups['test']
+    share = large_share(victims, objects)
+    if share is not None:
+        msg = (f'the objects listed for deletion hold {share:.0%} of the '
+               f'listed bytes (over {MAX_DELETE_SHARE:.0%}): check the '
+               'listing first; --allow-large (ALLOW_LARGE=1) overrides')
+        if delete and not allow_large:
+            raise PruneError(f'refusing to delete: {msg}')
+        print(f'\nWARNING: {msg}.', flush=True)
     if not delete:
         print(f'\nDry run: nothing deleted. make prune-data DELETE=1 deletes '
               f'the {len(victims)} objects listed for deletion '
               f'({human(total(victims))}).', flush=True)
         return 0
-    return delete_objects(bucket, victims, input_fn)
+    return delete_objects(bucket, victims, input_fn or input)
 
 
 def main(argv=None):
@@ -312,12 +397,15 @@ def main(argv=None):
     ap.add_argument('--delete', action='store_true',
                     help='delete the listed objects after a typed '
                          'confirmation')
+    ap.add_argument('--allow-large', action='store_true',
+                    help='delete even when the listed objects hold more '
+                         f'than {MAX_DELETE_SHARE:.0%} of the bytes')
     ap.add_argument('--min-age-days', type=float, default=14,
                     help='hold back unreferenced objects younger than this '
                          '(default 14)')
     ap.add_argument('--no-fetch', action='store_true',
-                    help='do not fetch the remote first; use its '
-                         'remote-tracking refs as they are')
+                    help='do not fetch the remote; read the local '
+                         'remote-tracking refs and tags as they are')
     ap.add_argument('--remote', default='origin')
     ap.add_argument('--repo', default='.', help='git repository (default .)')
     ap.add_argument('--verbose', action='store_true',
@@ -325,7 +413,8 @@ def main(argv=None):
     args = ap.parse_args(argv)
     try:
         return run(args.repo, args.remote, not args.no_fetch,
-                   args.min_age_days, args.delete, args.verbose)
+                   args.min_age_days, args.delete, args.verbose,
+                   allow_large=args.allow_large)
     except (PruneError, r2.UploadError) as e:
         print(f'ERROR: {e}', file=sys.stderr)
         return 1

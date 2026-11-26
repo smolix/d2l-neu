@@ -147,7 +147,7 @@ function benchmarksOverview() {
   let o = '';
   const rows = [
     { sec: sec('sec_why-conv'), label: '3×3 RGB→64ch Kernel', metric: '1,792 params at any H×W', col: C.blue, bg: C.lblue, dk: D.blue.dark },
-    { sec: sec('sec_conv_layer'), label: 'Learned Edge [1, -1]', metric: 'Loss 12.0 → 0.004 in 9 steps', col: C.blue, bg: C.lblue, dk: D.blue.dark },
+    { sec: sec('sec_conv_layer'), label: 'Learned Edge [1, -1]', metric: 'Loss 12.0 → 0.004 in 10 steps', col: C.blue, bg: C.lblue, dk: D.blue.dark },
     { sec: sec('sec_padding'), label: 'Strided / Dilated 3×3×3', metric: 'Receptive field r = 7 → 15 px', col: C.purple, bg: D.purple.tint, dk: D.purple.dark },
     { sec: sec('sec_channels'), label: '1×1 Bottleneck (256→64→256)', metric: '589K → 69.6K weights (8.5× cut)', col: C.amber, bg: C.lamber, dk: D.orange.dark },
     { sec: sec('sec_pooling'), label: '2×2 Stride-2 MaxPool', metric: '50% 1-px shift absorbed, −∞ pad', col: C.amber, bg: C.lamber, dk: D.orange.dark },
@@ -620,7 +620,7 @@ function kernelGdConvergence() {
   let o = '';
   const steps = [
     { x: 16,  t: 'Step 0 (Init)', k: 'K ≈ [0.00, 0.00]', l: 'Loss ≈ 12.0', sub: 'Misses twelve ±1 edges', fill: D.red.tint, st: D.red.base, dk: D.red.dark },
-    { x: 194, t: 'Step 3 (SGD)', k: 'K ≈ [0.74, −0.74]', l: 'Loss ≈ 0.83', sub: 'η = 0.03 updates K', fill: C.lamber, st: C.amber, dk: D.orange.dark },
+    { x: 194, t: 'Step 3 (GD)', k: 'K ≈ [0.74, −0.74]', l: 'Loss ≈ 0.83', sub: 'η = 0.03 updates K', fill: C.lamber, st: C.amber, dk: D.orange.dark },
     { x: 372, t: 'Step 9 (Converged)', k: 'K = [0.99, −0.99]', l: 'Loss ≈ 0.004', sub: 'Recovers [1, −1]!', fill: C.lgreen, st: C.green, dk: D.green.dark },
   ];
   steps.forEach((s) => {
@@ -728,7 +728,7 @@ function learningEdgeLoop() {
   ]);
   o += arrow(350, 68, 374, 68, D.red.base);
   o += card(380, 20, 144, 96, D.red.tint, D.red.base, [
-    { t: 'SGD Step', fs: 14, fw: 700, fill: D.red.dark },
+    { t: 'GD Step', fs: 14, fw: 700, fill: D.red.dark },
     { t: 'K ← K − η ∇_K L', mono: true, fs: 12, fw: 700, fill: C.ink },
     { t: 'η = 0.03, 10 steps', mono: true, fs: 11.5, fill: C.muted },
   ]);
@@ -1447,21 +1447,21 @@ function lenetTrainingTrajectory() {
   const W = 540, H = 260;
   let o = '';
   o += card(16, 20, 152, 116, D.red.tint, D.red.base, [
-    { t: 'Epochs 1–3', fs: 14, fw: 700, fill: D.red.dark },
+    { t: 'Early epochs (if any)', fs: 14, fw: 700, fill: D.red.dark },
     { t: 'Sigmoid Plateau', fs: 13, fw: 700, fill: C.ink },
     { t: 'Loss ≈ ln 10 = 2.30', mono: true, fs: 12, fill: D.red.dark },
     { t: 'Val Acc ≈ 10%', mono: true, fs: 12, fill: C.muted },
   ]);
   o += arrow(172, 78, 190, 78, C.amber);
   o += card(194, 20, 152, 116, C.lamber, C.amber, [
-    { t: 'Epochs 4–12', fs: 14, fw: 700, fill: D.orange.dark },
+    { t: 'By epoch ~5', fs: 14, fw: 700, fill: D.orange.dark },
     { t: 'Rapid Escape', fs: 13, fw: 700, fill: C.ink },
     { t: 'Weights break symmetry', fs: 11.5, fill: C.muted },
     { t: 'Val Acc → 82%', mono: true, fs: 12.5, fw: 700, fill: D.orange.dark },
   ]);
   o += arrow(350, 78, 368, 78, C.green);
   o += card(372, 20, 152, 116, C.lgreen, C.green, [
-    { t: 'Epochs 13–30', fs: 14, fw: 700, fill: D.green.dark },
+    { t: 'By epoch 30', fs: 14, fw: 700, fill: D.green.dark },
     { t: 'Convergence', fs: 13, fw: 700, fill: C.ink },
     { t: 'Val Acc ≈ 88–90%', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
     { t: 'Beats MLP (~87%)!', fs: 12, fw: 700, fill: C.ink },
@@ -1598,7 +1598,7 @@ function convLayerSummary() {
   let o = '';
   const items = [
     { x: 16,  y: 16,  t: '1. 2D Cross-Correlation', s1: 'Y_{i,j} = Σ_{a,b} K_{a,b} X_{i+a,j+b}', s2: 'Output: (n_h−k_h+1) × (n_w−k_w+1)', fill: C.lblue, st: C.blue, dk: D.blue.dark },
-    { x: 278, y: 16,  t: '2. Learned Edge Filters', s1: 'K = [1, −1] finite difference', s2: 'Recovered by SGD in 9 steps', fill: C.lgreen, st: C.green, dk: D.green.dark },
+    { x: 278, y: 16,  t: '2. Learned Edge Filters', s1: 'K = [1, −1] finite difference', s2: 'Recovered by gradient descent in 10 steps', fill: C.lgreen, st: C.green, dk: D.green.dark },
     { x: 16,  y: 140, t: '3. im2col Matrix Multiply', s1: 'vec(Y) = P_im2col · vec(K)', s2: 'k_h k_w× patch RAM for GPU GEMM', fill: D.purple.tint, st: C.purple, dk: D.purple.dark },
     { x: 278, y: 140, t: '4. Stacked Receptive Field', s1: 'r = 1 + Σ (k_i − 1) = 2L + 1', s2: '3×(3×3) saves 45% vs 7×7', fill: C.lamber, st: C.amber, dk: D.orange.dark },
   ];

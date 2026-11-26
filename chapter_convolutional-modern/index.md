@@ -86,7 +86,7 @@ Modern Convolutional Neural Networks<br>**AlexNet · blocks · normalization · 
 ::: {.cols .vc}
 ::: {.col}
 - **AlexNet $\to$ Quarter-VGG / ResNet-18:** Accuracy climbs from $91\%$ to $93\text{--}94\%$ while parameters shrink from $46.8\textrm{M}$ to $11.2\textrm{M}$ (or $0.6\textrm{M}$ with GAP).
-- **BNLeNet & ResNet-56:** BatchNorm widens the usable LR band $100\times$ ($\eta_0 \in [0.03, 10]$); residual skips reverse 56-layer degradation.
+- **BNLeNet & ResNet-56:** BatchNorm widens the usable LR band $300\times$ ($\eta_0 \in [0.03, 10]$); residual skips reverse 56-layer degradation.
 - **ConvNeXt & RegNetX32:** Tie ResNet-18 ($\approx 94\%$) with $3.38\textrm{M}$ and $0.52\textrm{M}$ parameters ($21\times$ smaller).
 :::
 

@@ -53,8 +53,9 @@ padding, stride, and dilation (:numref:`sec_padding`), multi-channel filter
 banks and $1 \times 1$ bottlenecks (:numref:`sec_channels`), and local and
 global pooling (:numref:`sec_pooling`). Finally, we assemble these pieces into
 LeNet (:numref:`sec_lenet`), compare it against our MLP on Fashion-MNIST,
-inspect its learned first-layer filters, and test both models on pixel-shuffled
-images to isolate the contribution of spatial inductive bias. Modern deep
+inspect its learned first-layer filters, and retrain LeNet on pixel-shuffled
+images, which by symmetry leave the MLP's accuracy unchanged, to isolate the
+contribution of spatial inductive bias. Modern deep
 convolutional architectures follow in :numref:`chap_modern_cnn`.
 
 ```toc

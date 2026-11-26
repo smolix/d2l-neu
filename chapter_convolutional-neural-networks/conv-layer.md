@@ -856,14 +856,14 @@ Cross-correlating `X` with the $1 \times 2$ kernel $\mathbf{K} = \begin{bmatrix}
 :::
 
 ::: {.slide title="Inspecting the Learned Kernel Weights"}
-[Why Initial Loss Is 12 and Converges to [1, -1]]{.kicker}
+[Why the Initial Loss Is 12 and the Kernel Converges to [1, -1]]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 @conv-layer-learning-a-kernel-2
 
 - **Why loss starts at $12.0$:** Near-zero weights predict $\hat{Y} \approx 0$, missing the twelve $\pm 1$ edge pixels in `Y` ($12 \times 1^2 = 12$).
-- **Convergence in 9 steps:** SGD recovers $[0.99, -0.99]$ automatically from data.
+- **Convergence in 10 steps:** Gradient descent recovers $[0.99, -0.99]$ automatically from data.
 :::
 
 ::: {.col .fig}
@@ -974,7 +974,7 @@ Test your understanding of output shapes, `im2col`, and receptive-field arithmet
 
 ::: {.cols .vc}
 ::: {.col}
-- **2D Cross-Correlation & Edge Learning:** Slides $\mathbf{K}$ across valid windows ($(n_\textrm{h}-k_\textrm{h}+1)\times(n_\textrm{w}-k_\textrm{w}+1)$); SGD learns $[1, -1]$ in 9 steps.
+- **2D Cross-Correlation & Edge Learning:** Slides $\mathbf{K}$ across valid windows ($(n_\textrm{h}-k_\textrm{h}+1)\times(n_\textrm{w}-k_\textrm{w}+1)$); gradient descent learns $[1, -1]$ in 10 steps.
 - **im2col Matrix Multiply:** Trades $k_\textrm{h} k_\textrm{w}\times$ patch duplication for peak GPU GEMM throughput.
 - **Stacked Receptive Fields:** $r = 1 + \sum (k_i - 1) = 2L+1$ for $3 \times 3$ stacks, with Gaussian center sensitivity.
 :::

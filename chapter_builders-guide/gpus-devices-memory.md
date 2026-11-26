@@ -11,7 +11,7 @@ and politely ignored it. For the tiny models of earlier chapters that hardly
 mattered, since CPU training finished in seconds. Once models scale up,
 however, device placement makes the difference between seconds and hours: a
 modern desktop GPU multiplies two $4096 \times 4096$ matrices in under 2
-milliseconds, whereas a CPU needs a fifth of a second or more (as we benchmark
+milliseconds, whereas a CPU needs a tenth of a second or more (as we benchmark
 in :numref:`subsec_async_dispatch`). That raw speed comes with a strict hardware
 constraint: the GPU has its own dedicated memory (say 24 GB on a desktop card), and
 every tensor it operates on must reside there.
@@ -1342,7 +1342,7 @@ runs seamlessly on the CPU, the exact fallback behind every `Trainer(num_gpus=1)
 call throughout the rest of the book.
 
 How much faster does a GPU actually train a small model? While our
-$4096 \times 4096$ matrix product sped up by over $100\times$, an end-to-end
+$4096 \times 4096$ matrix product sped up by roughly $100\times$ or more, an end-to-end
 training loop includes data loading, Python dispatch, and smaller layers. Below we
 measure a Fashion-MNIST classifier built from two 256-wide residual blocks
 (:numref:`subsec_activation_checkpointing`) with $\mathcal{N}(0, 0.01^2)$

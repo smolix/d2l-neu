@@ -1127,7 +1127,7 @@ Training a 1,024-token BPE vocabulary ($1024 - 256 = 768$ merges) directly on th
 @!text-sequence-training-on-the-time-machine-1
 
 - **Earliest merges (`256..263`):** Common English letter pairs and trailing-space endings (`b'e '`, `b'th'`, `b't '`, `b'in'`, `b'd '`, `b'er'`).
-- **Final merges (`1016..1023`):** Multi-character stems and recurring thematic words (`b'imension'`, `b'Time Traveller '`, `b'little '`).
+- **Final merges (`1016..1023`):** Word stems and whole words with their trailing space (`b'ering '`, `b'door'`, `b'after '`).
 - **Notice the flaw:** Token `[b'Time Traveller ']` fused two separate words and a trailing space into a single vocabulary entry.
 :::
 
@@ -1138,7 +1138,7 @@ Because BPE assigns IDs sequentially in training order, retaining only merges wi
 
 ::: {.cols .vc}
 ::: {.col}
-- **Logarithmic gain per doubling:** Plotting UTF-8 bytes per token against $\log |\mathcal{V}|$ from $256 \to 4{,}096$ yields an almost straight line: each doubling of $|\mathcal{V}|$ adds roughly $0.5$ bytes/token.
+- **Logarithmic gain per doubling:** Plotting UTF-8 bytes per token against $\log |\mathcal{V}|$ from $256 \to 4{,}096$ yields an almost straight line: each doubling of $|\mathcal{V}|$ adds roughly $0.7$–$1$ byte/token.
 - **Diminishing marginal counts:** Merge 256 collapses thousands of occurrences of `b'e '`, whereas merge 4,095 collapses only a handful of occurrences.
 - **In-domain overfitting caveat:** Evaluating on training text flatters large $|\mathcal{V}|$ because 4,096 merges memorize novella-specific phrases.
 :::
@@ -1176,7 +1176,7 @@ Passing `pattern=BPETokenizer.GPT2_PATTERN` eliminates every boundary-crossing c
 ::: {.col}
 @!text-sequence-pre-tokenization-telling-bpe-where-words-end-3
 
-- **Zero boundary crossers:** `len(crossers)` drops from $78 \to 0$, replaced by clean whole-word tokens like `' Traveller'`, `' Machine'`, and `' dimension'`.
+- **Zero boundary crossers:** `len(crossers)` drops from $78 \to 0$, replaced by clean whole-word tokens like `' Traveller'`, `' Machine'`, and `' Morlocks'`.
 - **Leading-space convention:** Earliest merges become `b' t'`, `b' a'`, `b'he'`, `b'in'`—attaching the preceding space to the start of a word so decoding never needs heuristic space insertion.
 :::
 
@@ -1275,7 +1275,7 @@ Test your understanding of BPE encoding mechanics and production pre-tokenizatio
 
 | Tokenization Scheme | Base Alphabet | Vocab Size $|\mathcal{V}|$ (*Time Machine*) | Sequence Length $T$ | Out-of-Vocabulary (OOV) Behavior | Primary Architectural Trade-Off |
 |---|---|---|---|---|---|
-| **Unconstrained BPE** | UTF-8 bytes + greedy pair merges | Chosen hyperparameter (e.g., $1{,}024$) | $\sim 61{,}000$ | **Zero OOV** (unseen stems fall back to bytes) | Over-merges across spaces (`'of the '`), fragmenting single-word statistics |
+| **Unconstrained BPE** | UTF-8 bytes + greedy pair merges | Chosen hyperparameter (e.g., $1{,}024$) | $\sim 62{,}000$ | **Zero OOV** (unseen stems fall back to bytes) | Over-merges across spaces (`'of the '`), fragmenting single-word statistics |
 | **Pre-Tokenized BPE (GPT-2 / Llama 3)** | Regex chunks + byte-level BPE + high-ID specials | $1{,}024 + 3$ (ours) or $50\textrm{k}\text{--}200\textrm{k}$ (prod) | $65{,}741$ ($2.72$ B/tok) | **Zero OOV** + prompt-injection-safe specials | Industry standard balancing sequence compression, softmax cost, and open vocabulary |
 :::
 

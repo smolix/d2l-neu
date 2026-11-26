@@ -1200,8 +1200,8 @@ $$\textrm{GRN}(\mathbf{X})_c = \gamma_c \frac{g_c}{\bar{g} + \epsilon}\mathbf{X}
 |:--|:--|:--|:--|
 | **Training recipe** | 90 ep, SGD + step decay, crops/flips | 300 ep, AdamW, Mixup/CutMix, smoothing, EMA | **$+2.7\%$** ($76.1\% \to 78.8\%$); accounts for nearly half the ViT gap |
 | **Stage ratio & stem** | $(3, 4, 6, 3)$ stages; $7\times 7_{s2}$ + max-pool | $(3, 3, 9, 3)$ stages; $4\times 4_{s4}$ patchify conv | **$+0.7\%$** on $224^2$ ImageNet (but $4\times 4_{s4}$ loses $\approx 2\%$ on $64^2$ thumbnails) |
-| **Spatial vs. channel mixing** | Dense $3\times 3$ inside $4\times$ compressed bottleneck | Front $7\times 7$ depthwise conv + $4\times$ inverted bottleneck | **$+1.1\%$**; $49c$ depthwise cost is $<6\%$ of $8c^2$ pointwise MLP cost |
+| **Spatial vs. channel mixing** | Dense $3\times 3$ inside $4\times$ compressed bottleneck | Front $7\times 7$ depthwise conv + $4\times$ inverted bottleneck | **$+1.1\%$**; $49c$ depthwise cost is $\approx 6\%$ of the block's $49c + 8c^2$ MACs at $c=96$ |
 | **Activations & norms** | 3 ReLUs and 3 BatchNorms per block | **1 GELU** and **1 per-pixel LayerNorm** per block | **$+0.9\%$**; removing 2 nonlinearities per block gives $+0.7\%$ alone |
-| **Downsampling & scaling** | Stride-2 conv inside block 1 of stage | Separate $\textrm{LN} + 2\times 2_{s2}$ conv; layer scale $\boldsymbol{\gamma}=10^{-6}$ | **$+0.6\%$** (reaching **$82.0\%$** vs. Swin-T's $81.3\%$ without attention) |
+| **Downsampling & scaling** | Stride-2 conv inside block 1 of stage | Separate $\textrm{LN} + 2\times 2_{s2}$ conv; layer scale $\boldsymbol{\gamma}=10^{-6}$ | **$+0.5\%$** (reaching **$82.0\%$** vs. Swin-T's $81.3\%$ without attention) |
 :::
 

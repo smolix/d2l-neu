@@ -1067,7 +1067,7 @@ $$\hat{P}_\alpha(x_t \mid x_{t-n+1}, \ldots, x_{t-1}) = \frac{N(x_{t-n+1}, \ldot
 @!language-model-perplexity
 
 - **The fluency-versus-perplexity paradox:** Under Laplace smoothing ($\alpha = 0.01$), the trigram, whose generated samples looked most like Wells, suffers the **worst held-out perplexity ($2{,}481.4$ vs. $753.6$ for the bigram)**.
-- **Why Laplace smoothing fails at $n = 3$:** Because $87\%$ of validation trigrams are unseen, Laplace smoothing predicts a flat uniform distribution $1/|\mathcal{V}|$ on $87\%$ of test positions, ignoring both general word frequency and the observed bigram context $(x_{t-1})$.
+- **Why Laplace smoothing fails at $n = 3$:** Because $87\%$ of validation trigrams are unseen, Laplace smoothing gives most test positions a near-uniform guess (exactly $1/|\mathcal{V}|$ wherever the two-word context itself is unseen, about half of them), ignoring both general word frequency and the observed bigram context $(x_{t-1})$.
 :::
 
 ::: {.slide title="Interpolated Kneser–Ney: Discounting & Backoff"}
@@ -1134,7 +1134,7 @@ Evaluating trigram models across character, BPE-1024, and word tokenizations on 
 @!language-model-bits-per-byte
 
 - **From $400\times$ PPL gap to $0.2$ bpb:** While Laplace perplexities span $6.4$ to $2{,}481.4$, Laplace bits per byte sit within $2.58\text{--}2.81$ bpb.
-- **Why BPE-1024 wins ($1.90$ KN bpb):** Two BPE tokens span $\sim 5.6$ characters (vs. 2 characters for a character trigram) while incurring **zero `<unk>` spelling penalty** (which costs the word trigram $\approx 0.6$ bpb).
+- **Why BPE-1024 wins ($1.90$ KN bpb):** Two BPE tokens span $\sim 6$ characters (vs. 2 characters for a character trigram) while incurring **zero `<unk>` spelling penalty** (which costs the word trigram $\approx 0.6$ bpb).
 :::
 
 ::: {.slide title="Sliding Input–Target Windows for Neural Training"}

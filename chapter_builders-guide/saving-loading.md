@@ -1332,14 +1332,14 @@ When adapting an ImageNet-pretrained ResNet-50 ($\sim 25\text{M}$ parameters, $1
 
 Work out these three checkpointing questions:
 
-1. An MLP ($20 \to 256 \to 10$, `float32`) is saved to `mlp.safetensors` with a JSON header of $n = 280$ bytes. What is the exact total file size in bytes?
+1. An MLP ($20 \to 256 \to 10$, `float32`) is saved to `mlp.safetensors` with a JSON header of $n = 296$ bytes. What is the exact total file size in bytes?
 2. Our $20 \to 64 \to 1$ regressor has $20 \times 64 + 64 + 64 \times 1 + 1 = 1{,}409$ parameters. If we resume at $\eta = 0.05$ with a fresh Adam optimizer ($\mathbf{m}=\mathbf{v}=\mathbf{0}$) and every gradient entry is nonzero, what is the Euclidean norm $\|\Delta \mathbf{w}\|_2$ of the very first parameter update?
 3. You rename `self.fc` to `self.classifier` in ResNet-50 and load an original pretrained checkpoint with `strict=False`. What appears in `missing_keys` and `unexpected_keys`?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. **$8 + 280 + 4 \times 7{,}946 = 32{,}072$ bytes:** 8-byte length prefix $+$ 280-byte JSON header $+$ $31{,}784$ bytes for the $7{,}946$ `float32` parameters.
+1. **$8 + 296 + 4 \times 7{,}946 = 32{,}088$ bytes:** 8-byte length prefix $+$ 296-byte JSON header $+$ $31{,}784$ bytes for the $7{,}946$ `float32` parameters.
 2. **$\|\Delta \mathbf{w}\|_2 \approx 0.05 \sqrt{1{,}409} \approx 1.88$:** Every coordinate steps by $\pm \eta = \pm 0.05$ regardless of how small $\|\mathbf{g}\|_2$ is.
 3. **`missing_keys` lists `classifier.weight, classifier.bias` (left random); `unexpected_keys` lists `fc.weight, fc.bias` (ignored from file).**
 :::

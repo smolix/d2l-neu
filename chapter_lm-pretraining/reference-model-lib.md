@@ -150,6 +150,9 @@ d2l.DATA_HUB['lm-ladder-logs-v1'] = (
 d2l.DATA_HUB['lm-ladder-config-v1'] = (
     d2l.LM_DATA_URL + 'lm-ladder-config-v1.json',
     '28ba56be7ef0e427ae982096fdac0fff1aa3b38d')
+d2l.DATA_HUB['lm-r2-inst-t2-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-inst-t2-v1.json.gz',
+    '3296eb030f2cd5c5d3d725293d7b0839f61c100c')
 ```
 
 ```{.python .input #reference-model-lib-artifacts}

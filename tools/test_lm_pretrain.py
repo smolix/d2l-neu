@@ -27,6 +27,7 @@ import contextlib
 import io
 import math
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -45,8 +46,10 @@ def uncommitted():
     campaign's result is registered (the tests of pending and regeneration
     paths must not depend on which results run A has committed)."""
     keys = {key for key, _ in d2l.PRETRAIN_ARTIFACTS.values()}
+    weights = re.compile(r'^lm-r2(t1)?-s\d+(-state)?-v\d+$|^lm-r2-16k-')
     return mock.patch.object(d2l, 'DATA_HUB', {
-        k: v for k, v in d2l.DATA_HUB.items() if k not in keys})
+        k: v for k, v in d2l.DATA_HUB.items()
+        if k not in keys and not weights.match(k)})
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import test_lm_data_path as dp  # noqa: E402
@@ -226,7 +229,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(d2l._cfg_from_json(d2l._cfg_json(c)), c)
 
     def test_load_reference_model_unregistered(self):
-        with self.assertRaises(KeyError) as cm:
+        with uncommitted(), self.assertRaises(KeyError) as cm:
             d2l.load_reference_model()
         self.assertIn('reference checkpoints not committed yet',
                       str(cm.exception))
@@ -734,6 +737,7 @@ class MeasurementTest(unittest.TestCase):
         with mock.patch.object(d2l, 'load_reference_model', load), \
                 mock.patch.object(d2l, 'PRETRAIN_PENDING',
                                   frozenset({'reference-run'})), \
+                uncommitted(), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
             models = d2l.load_reference_models((5100, 6000))
         self.assertEqual(calls, [(1297, 't1'), (1526, 't1')])

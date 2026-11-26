@@ -141,6 +141,9 @@ d2l.DATA_HUB['lm-r2-s6000-v1'] = (
 d2l.DATA_HUB['lm-r2-s5100-state-v1'] = (
     d2l.LM_DATA_URL + 'lm-r2-s5100-state-v1.pt',
     'ffb9e95f1b0867206c5dd33db60d80a77e259f99')
+d2l.DATA_HUB['lm-r2-evals-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-evals-v1.json.gz',
+    '78ae3caa3a7573df21fceafdd84d2045cf2a57ea')
 ```
 
 ```{.python .input #reference-model-lib-artifacts}

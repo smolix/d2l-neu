@@ -1494,7 +1494,10 @@ class TestWorkloadFits(unittest.TestCase):
         self.assertAlmostEqual(c['alpha_k'] / alpha, 1, places=6)
         self.assertLess(abs(c['beta_eff'] / beta - 1), 0.01)
         self.assertEqual(c['gpu'], 'RTX 4090')
-        self.assertIsNone(c['alpha_ar'])
+        if d2l.hw_registered('box-p2p'):  # the all-reduce fit of 22.5
+            self.assertGreater(c['alpha_ar'], 0)
+        else:
+            self.assertIsNone(c['alpha_ar'])
         self.assertIsNone(d2l.hw_calibrate(log=pd.DataFrame()))
 
     def test_plot_frontier(self):
@@ -1577,6 +1580,26 @@ class TestMoECoverage(unittest.TestCase):
         self.assertEqual(back.routes['prose'].shape, (2, 48, 8))
 
 
+class TestLiveLine(unittest.TestCase):
+    def test_long_live_line_wraps(self):
+        """A live line with a long "differs:" list wraps at 80 columns
+        (make audit-outputs flagged 111 and 113 columns)."""
+        gpu = 'NVIDIA GeForce RTX 4090'
+        meta = {'env': {'gpu': gpu}}
+        text = ('2 points, largest difference 20%; differs: pinned h2d '
+                '256 MiB 26 vs 21 GB/s, pinned d2h 256 MiB 24 vs 20 GB/s')
+        out = io.StringIO()
+        with mock.patch.object(torch.cuda, 'is_available', lambda: True), \
+                mock.patch.object(torch.cuda, 'get_device_name',
+                                  lambda i=0: gpu), \
+                contextlib.redirect_stdout(out):
+            d2l._hw_live(lambda r, same: text, None, meta, 'host link')
+        lines = out.getvalue().splitlines()
+        self.assertGreater(len(lines), 1)
+        self.assertTrue(all(len(l) <= 80 for l in lines))
+        self.assertTrue(lines[1].startswith('  '))
+
+
 class TestInferenceX(unittest.TestCase):
     FIXTURE = ('model,hw,framework,precision,isl,osl,conc,tp,tps_per_gpu,'
                'tps_per_user,commit,retrieved\n'
@@ -1594,6 +1617,7 @@ class TestInferenceX(unittest.TestCase):
         lines, t = lines_of(self, d2l.rank_against, snap, committed_specs())
         self.assertTrue(any('not committed yet' in l for l in lines))
         self.assertIn('hops between', lines[-2])
+        self.assertNotIn('InferenceX', lines[0])  # no empty columns pending
         self.assertTrue(math.isnan(t['rank']['Groq LPU']))
         self.assertTrue(math.isnan(t['rank']['RTX 4090']))
         self.assertTrue(t.inferencex.isna().all())

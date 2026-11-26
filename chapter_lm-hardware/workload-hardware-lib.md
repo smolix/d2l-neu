@@ -1326,7 +1326,8 @@ def rank_against(snap, specs, chips=('H100 SXM', 'H200 SXM', 'B200', 'MI355X',
     ranked = t.index.isin(list(_HW_IX_CHIPS.values()))  # never the others
     t['rank'] = t.predicted[ranked].rank(ascending=False)
     t['ix_rank'] = t.inferencex.rank(ascending=False)
-    show_table(t, digits=0, headers={
+    shown = t if snap else t.drop(columns=['inferencex', 'ix_rank'])
+    show_table(shown, digits=0, headers={
         'tp': 'chips', 'predicted': 'predicted tok/s/GPU',
         'inferencex': 'InferenceX', 'rank': 'rank',
         'ix_rank': 'InferenceX rank'})

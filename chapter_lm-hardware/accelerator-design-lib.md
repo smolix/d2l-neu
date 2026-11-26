@@ -555,8 +555,9 @@ def _hw_live(live_check, result, meta, label=''):
     if not same:
         print(f'committed run on {_gpu_short(committed) or "no GPU"}; '
               f'live values on {_gpu_short(gpu)}')
-    print(f'live {"check" if same else "values"}{what} on {_gpu_short(gpu)}: '
-          f'{text}')
+    print(textwrap.fill(  # a long "differs:" list wraps, within the page
+        f'live {"check" if same else "values"}{what} on {_gpu_short(gpu)}: '
+        f'{text}', width=80, subsequent_indent='  '))
 
 #@save
 def _hw_result(name, compute, config, *, entry=None, live_check=None,

@@ -606,6 +606,15 @@ FLOP is at the lowest lock, the same job sweeps one step lower (`edge`); the
 first process decides, the others follow it, so the three processes' tables
 combine row by row.
 
+Two rules added after the committed sweep (F4 review, 2026-11-26), both
+fixed before the page's asserts use them: a lock whose compute-bound rate per
+reported GHz lies more than 5% from the other locks' median ran at a clock
+other than the one reported (`_misreported_locks`; on the box the 600 MHz
+lock, which a cycle-timed spin puts at 732-744 MHz), so the fit leaves it
+out; and E4's restatement names the knee of the power curve (`_power_knee`:
+the lowest clock where the slope to the next point exceeds 1.5x the median
+slope below it, with two or more slopes below).
+
 ```{.python .input #energy-cost-lib-sweep}
 %%tab pytorch
 #@save
@@ -913,6 +922,48 @@ def _least_energy_lock(log):
     return float(s.setting.iloc[int(np.argmin(s.power_w / s.rate))])
 
 #@save
+_HW_RATE_TOL = 0.05  # a compute-bound rate per GHz this far off: misreported
+
+#@save
+def _misreported_locks(s, tol=_HW_RATE_TOL):
+    """{lock GHz: clock GHz its rate implies} for the compute-bound rows s
+    (one per lock) whose rate per reported GHz lies more than tol from the
+    median over the locks: the card did not run at the clock it reported
+    (on the box, the 600 MHz lock ran the SM at about 740 MHz: NVML says
+    600, a clock64-timed spin says 732-744). Needs three locks."""
+    if len(s) < 3:
+        return {}
+    per = s.rate.to_numpy() / s.sm_mhz.to_numpy()  # work per s per MHz
+    med = np.median(per)
+    return {float(lock) / 1e3: float(r / med) / 1e3
+            for lock, r, p in zip(s.setting, s.rate, per)
+            if np.abs(p / med - 1) > tol}
+
+#@save
+def _clock_points(s):
+    """(clock as run in GHz, mean power in W) per distinct clock of the
+    rows s, ascending: locks the power cap held at one clock count once."""
+    f, j = np.unique(np.round(s.sm_mhz.to_numpy()) / 1e3, return_inverse=True)
+    return f, np.bincount(j, s.power_w.to_numpy()) / np.bincount(j)
+
+#@save
+_HW_KNEE_X = 1.5  # E4 restated: a power slope this many times the slope below
+
+#@save
+def _power_knee(f, P, x=_HW_KNEE_X):
+    """(f_knee, ratio): the lowest clock f[i] (ascending, two or more
+    slopes below it) where the power curve's slope to the next point is
+    more than x times the median slope below it, and that ratio; (NaN,
+    NaN) without one. A voltage floor makes power about linear in f up to
+    such a knee, and the least energy per unit of work sits there."""
+    slope = np.diff(P) / np.diff(f)
+    for i in range(2, len(slope)):
+        r = slope[i] / np.median(slope[:i])
+        if r > x:
+            return float(f[i]), float(r)
+    return math.nan, math.nan
+
+#@save
 def _clock_edge(rows, clocks, edge):
     """E4's edge rule: [edge] when the matrix product's least energy per
     FLOP lies at the lowest of clocks, else []. Only the first process of
@@ -964,10 +1015,11 @@ def hw_clock_sweep_log():
 def plot_dvfs(fit):
     """Board power (left) and work per joule relative to the top lock
     (right, squares; the model dashed) against the SM clock each window
-    ran at: the sweep's points, the fitted model, f* dotted, the least
-    energy marked. Prints the fit, f* against the least-energy lock and
-    the sweep step (how many steps apart, when more than one), the locks
-    the product ran below (its power cap), and the source."""
+    ran at: the fitted points, the model, f* dotted, the least energy
+    marked. Prints the fit, f* against the least-energy lock and the sweep
+    step (how many steps apart, when more than one, and then the power
+    curve's knee), the locks left out of the fit (misreported clock), the
+    locks the product ran below (its power cap), and the source."""
     f = np.linspace(min(fit.clocks) * 0.9, max(fit.clocks) * 1.05, 200)
     power = lambda x: fit.P_s + fit.k * x**3
     top = int(np.argmax(fit.locks))
@@ -976,16 +1028,23 @@ def plot_dvfs(fit):
     d2l.plot([f, fit.clocks], [power(f), fit.power],
              xlabel='SM clock as run (GHz)', ylabel='board power (W)',
              fmts=['C0-', 'C0o'], legend=['P_s + k f^3', 'power'],
-             figsize=(5, 3.5), legend_loc='lower right')
+             figsize=(5, 3.5))
     ax = d2l.plt.gca()
     ax.axvline(fit.f_star, color='k', ls=':', lw=1)
     ax2 = ax.twinx()
-    ax2.plot(f, model, 'C1--', lw=1)
-    ax2.plot(fit.clocks, eta, 'C1s', ms=4)
-    i = int(np.argmax(eta))
+    ax2.plot(f, model, 'C1--', lw=1, label='work/J, model')
+    ax2.plot(fit.clocks, eta, 'C1s', ms=4, label='work/J, measured')
+    at = np.isclose(fit.locks, fit.f_min)
+    i = int(np.argmax(at)) if at.any() else int(np.argmax(eta))
     ax2.plot(fit.clocks[i], eta[i], 'k*', ms=10)  # the least energy
     ax2.set_ylim(0, 1.2 * max(model.max(), eta.max()))
     ax2.set_ylabel('work per joule (top lock = 1)')
+    if ax.get_legend():
+        ax.get_legend().remove()
+    ax2.legend(ax.lines[:2] + ax2.lines[:2], ['P_s + k f^3', 'power',
+               'work/J, model', 'work/J, measured'], loc='upper center',
+               bbox_to_anchor=(0.5, -0.17), ncol=2, fontsize=8,
+               frameon=False)  # below the axes: nothing to cover
     spread = (f'; power within {fit.spread:.1%} across processes'
               if np.isfinite(fit.spread) else '')
     print(f'fit to the clock as run: P_s = {fit.P_s:.0f} W, k = '
@@ -996,10 +1055,21 @@ def plot_dvfs(fit):
     if not np.isfinite(off) or np.abs(off) <= 1 or (fit.edge and off >= -1):
         print(f'f* = {fit.f_star:.2f} GHz; least energy per FLOP at {where} '
               f'(step {fit.step:.2f} GHz)')
-    else:  # E4's fallback: say so, with both values
+    else:  # E4's fallback: say so, with both values, and the knee
         print(f'f* = {fit.f_star:.2f} GHz, {np.abs(off):.1f} steps '
               f'{"below" if off > 0 else "above"} the least energy per FLOP '
               f'at {where} (step {fit.step:.2f} GHz)')
+        if not np.isfinite(fit.f_knee):
+            print('the power curve has no knee')
+        else:
+            at = ('the least energy sits at it'
+                  if np.abs(fit.f_knee - fit.f_min) < fit.step / 2
+                  else 'the least energy does not')
+            print(f'power steepens above {fit.f_knee:.2f} GHz ('
+                  f'{fit.knee_x:.1f}x the slope below): {at}')
+    for lock, run in sorted(fit.left_out.items()):
+        print(f'left out of the fit: the {lock:.2f} GHz lock, which ran at '
+              f'about {run:.2f} GHz (its rate per GHz)')
     below = [f'{a:.2f} -> {b:.2f}' for a, b in zip(fit.locks, fit.clocks)
              if b < a - 0.03]
     print('below its lock (power cap), GHz: ' + (', '.join(below) or 'none'))
@@ -1068,14 +1138,20 @@ def clock_effect(log, train='train-8192', decode='decode-b1'):
     the power-cap arm ran, the same under each cap). attrs['decode_floor']:
     the lowest lock down to which every lowered lock keeps decode within
     its noise (None if decode slows at every lowered clock; noise as in
-    _effect_table). A lock at or above the clock decode ran at by default
-    lowers nothing and is not a floor (on the box: 3,000 MHz)."""
+    _effect_table); attrs['decode_mhz']: the clock decode ran at by
+    default. A lock at or above it lowers nothing and is not a floor (on
+    the box: 3,000 MHz). A lock whose matrix product ran at another clock
+    than reported (_misreported_locks) is named below the table."""
     table, t0, d0 = _effect_table(log, 'clock', train, decode)
     d2l.show_table(table, digits=_HW_EFFECT_DIGITS)
     print(f'x: step time over the default clocks\' (training {t0.step_ms:.0f}'
           f' ms at {t0.sm_mhz:,.0f} MHz, decode {d0.step_ms:.2f} ms)')
     print('noise: the larger of 5 x the larger median absolute deviation '
           'and the spread across processes')
+    mm = log[(log.kind == 'clock') & log.workload.str.startswith('matmul')]
+    for lock, run in sorted(_misreported_locks(mm).items()):
+        print(f'the {lock * 1e3:,.0f} MHz lock ran the SM at about '
+              f'{run * 1e3:,.0f} MHz (the product\'s rate), not as reported')
     floor = None
     for _, r in table.iterrows():  # from the top lock down
         if not np.isfinite(r['decode x']):
@@ -1087,6 +1163,7 @@ def clock_effect(log, train='train-8192', decode='decode-b1'):
             break
         floor = int(r['clock MHz'])
     table.attrs['decode_floor'] = floor
+    table.attrs['decode_mhz'] = float(d0.sm_mhz)  # below it: a lowered lock
     if floor is None:
         print('decode at b = 1 slows beyond its noise at every lowered clock')
     else:

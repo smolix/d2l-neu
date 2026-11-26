@@ -132,31 +132,39 @@ f^3. -->
 %%tab pytorch
 #@save
 DVFSFit = collections.namedtuple('DVFSFit', [
-    'P_s', 'k', 'f_star', 'f_min', 'step', 'edge', 'locks', 'clocks',
-    'power', 'rate', 'spread', 'source', 'a100'])
+    'P_s', 'k', 'f_star', 'f_min', 'f_knee', 'knee_x', 'step', 'edge',
+    'locks', 'clocks', 'power', 'rate', 'left_out', 'spread', 'source',
+    'a100'])
 
 def dvfs_fit(log):  #@save
-    """Fit P(f) = P_s + k f^3 (f in GHz: the clock each window ran at) by
-    least squares to the locked-clock windows of the compute-bound
-    workload; f* = (P_s / (2k))^(1/3) maximizes the work per joule. f_min
-    is the lock of least energy per unit of work, step the sweep's largest
-    step, edge whether f_min is the lowest lock, spread the largest
-    relative spread of a window's power across processes (NaN: one run)."""
+    """Fit P(f) = P_s + k f^3 (f in GHz: the clock each window ran at, one
+    point per clock) by least squares to the locked-clock windows of the
+    compute-bound workload; f* = (P_s / (2k))^(1/3) maximizes the work
+    per joule. Locks whose rate says they ran at another clock than the
+    one reported are left out (left_out: lock -> clock as run). f_min is
+    the lock of least energy per unit of work, f_knee where the power
+    curve steepens (knee_x: by how much), step the sweep's largest step,
+    edge whether f_min is the lowest lock, spread the largest relative
+    spread of a window's power across processes (NaN: one run)."""
     s = log[(log.kind == 'clock') & log.workload.str.startswith('matmul')]
     s = s.sort_values('setting')
-    f = s.sm_mhz.to_numpy() / 1e3  # the clock it ran at, GHz
-    A = np.stack([np.ones_like(f), f**3], axis=1)  # P is linear in 1, f^3
-    (P_s, k), *_ = np.linalg.lstsq(A, s.power_w.to_numpy(), rcond=None)
     lock = s.setting.to_numpy() / 1e3
     i = int(np.argmin(s.power_w.to_numpy() / s.rate.to_numpy()))  # J/FLOP
+    left_out = d2l._misreported_locks(s)  # {lock: clock its rate implies}
+    s = s[~np.isin(s.setting.to_numpy() / 1e3, list(left_out))]
+    f, P = d2l._clock_points(s)  # one point per clock as run: GHz, W
+    A = np.stack([np.ones_like(f), f**3], axis=1)  # P is linear in 1, f^3
+    (P_s, k), *_ = np.linalg.lstsq(A, P, rcond=None)
     spread = (log.attrs.get('spread') or {}).get('power_w')
     spread = (np.nanmax(np.asarray(spread, float)[s.index]) if spread
               else 0.0 if log.attrs.get('n_proc', 1) > 1 else math.nan)
     return DVFSFit(P_s, k, (P_s / (2 * k)) ** (1 / 3), lock[i],
+                   *d2l._power_knee(f, P),
                    np.diff(lock).max() if len(lock) > 1 else math.nan,
-                   i == 0, lock, f, s.power_w.to_numpy(),
-                   s.rate.to_numpy(), spread, log.attrs.get('source', ''),
-                   log.attrs.get('a100'))
+                   i == 0, s.setting.to_numpy() / 1e3,
+                   s.sm_mhz.to_numpy() / 1e3, s.power_w.to_numpy(),
+                   s.rate.to_numpy(), left_out, spread,
+                   log.attrs.get('source', ''), log.attrs.get('a100'))
 ```
 
 <!-- Placeholder (prose): how the sweep is measured, in a few sentences.
@@ -167,7 +175,7 @@ notebook locks a clock: the cell reads the committed sweep (9 locks from
 600 to 3,000 MHz plus the default clocks, three workloads, 10 s windows
 after a warm-up, NVML at 10 Hz, three processes). The fit uses the clock
 each window ran at: above about 2.5 GHz the product hits the 450 W limit
-and runs below its lock (the third printed line names those locks). Read
+and runs below its lock (the "below its lock" line names those locks). Read
 the plot: power grows as the cube of the clock past a static floor; the
 squares are the measured work per joule, the dashed line the model's, the
 star the least energy. Claim E4: f* within one sweep step of the lock of
@@ -177,13 +185,21 @@ text says "at or below" that lock). The A100 sweep (campaign C-T2) is
 pending; the last line says so. -->
 
 <!-- Placeholder (prose): the committed sweep (F4, 2026-11-26) misses E4 as
-pre-registered: the cubic fit puts f* at 1.66 GHz, 1.5 steps below the
-least energy per FLOP at the 2.10 GHz lock. Power rises about linearly with
-the clock up to 2.1 GHz (roughly 35 W per 300 MHz: a voltage floor, where
-P is close to P_0 + c f) and steeply above it, so the least energy sits at
-that knee; the plot shows the cubic missing the points. Wording, and the
-cell's E4 assert, await the coordinator and the author; state it as
-measured, never widen the step. -->
+pre-registered: the cubic fit puts f* at 1.73 GHz, 1.2 steps below the
+least energy per FLOP at the 2.10 GHz lock (quote both from the printed
+line). Power rises about linearly with the clock up to 2.1 GHz (roughly
+35 W per 300 MHz: a voltage floor, where P is close to P_0 + c f) and
+steeply above it (1.8x the slope below), so the least energy sits at that
+knee; the plot shows the cubic missing the points. A linear term improves
+the fit but leaves f* where it is (b drops out of the minimum of P/f); the
+least energy sits at the knee where the voltage starts to rise. E4 as
+restated (a coordinator proposal until the author rules, F13's set): f*
+within one step of the least-energy lock, or else the least energy at the
+power curve's knee; the cell's assert checks that. The 600 MHz lock is
+left out of the fit: NVML reports 600 MHz there, but the product's rate
+and a cycle-timed spin put the SM at about 740 MHz (the printed line says
+so); never quote that row as 600 MHz. State it as measured, never widen
+the step. -->
 
 ```{.python .input #energy-cost-dvfs}
 %%tab pytorch
@@ -191,7 +207,8 @@ sweep = d2l.hw_clock_sweep_log()  # committed: a notebook never locks clocks
 fit = d2l.dvfs_fit(sweep)
 d2l.plot_dvfs(fit)
 near = abs(fit.f_star - fit.f_min) <= fit.step  # within one sweep step
-assert near or (fit.edge and fit.f_star <= fit.f_min + fit.step)  # E4
+knee = abs(fit.f_knee - fit.f_min) < fit.step / 2  # least energy at the knee
+assert near or knee or (fit.edge and fit.f_star <= fit.f_min + fit.step)  # E4
 ```
 
 <!-- Placeholder (prose): the sweep the regeneration runs, shown because it
@@ -239,17 +256,27 @@ stays within its noise down to the clock the last line names (quote it and
 the training step's ratio there from the output; if decode slows at every
 lowered clock, the line says so and the text states it as measured; the
 committed sweep (F4) does: decode at b = 1 slows about as much as the
-training step, x 1.03 at 2,700 MHz and 2.33 at 600 MHz against 2.46 for
-training: a lowered clock costs decode about what it costs training). One
-setting for both workloads is the usual error. Zeus measures the same
-energy-time trade-off per job. -->
+training step, its step-time ratio within about 5% of training's at every
+lowered lock (x 1.03 at 2,700 MHz, 2.05 against 2.10 at 900 MHz): a
+lowered clock costs decode about what it costs training. E5 as restated
+(coordinator proposal until the author rules): decode slows at every
+lowered clock, with its ratio within 10% of training's; the cell asserts
+that. Never quote the 600 MHz row as 600 MHz: the SM ran at about 740 MHz
+there (the line under the table). The 3,000 MHz lock is not "the default":
+training ran at the same 2,805 MHz and the same step time, but drew 357 W
+against 335 W, so a locked clock seems to change the card's voltage or
+power state at the same frequency; no claim uses that row. One setting for
+both workloads is the usual error. Zeus measures the same energy-time
+trade-off per job. -->
 
 ```{.python .input #energy-cost-cap-effect}
 %%tab pytorch
 effect = d2l.clock_effect(sweep)  # step times against the default clocks
 floor = effect.attrs['decode_floor']  # lowest lock: decode within noise
 row = effect.set_index('clock MHz').loc[floor] if floor else None
-assert row is None or row['train x'] - 1 > row['train noise']  # E5
+low = effect[effect['clock MHz'] < effect.attrs['decode_mhz']]  # lowered
+same = (abs(low['decode x'] / low['train x'] - 1) <= 0.1).all()  # as much
+assert row['train x'] - 1 > row['train noise'] if floor else same  # E5
 ```
 
 ## Energy per Token

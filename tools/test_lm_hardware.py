@@ -3849,7 +3849,67 @@ class TestEnergyCost(unittest.TestCase):
         self.assertRegex(lines[1], r'^f\* = \d\.\d\d GHz, \d\.\d steps below '
                          r'the least energy per FLOP at the 2\.10 GHz lock '
                          r'\(step 0\.30 GHz\)$')
+        self.assertAlmostEqual(fit.f_knee, 2.1)  # E4 restated: the knee
+        self.assertAlmostEqual(fit.knee_x, 250 / 130)
+        self.assertEqual(lines[2], 'power steepens above 2.10 GHz (1.9x the '
+                         'slope below): the least energy sits at it')
         self.assertLessEqual(width, 100)
+        # power linear in f all the way: no knee, and the line says so
+        flat = clock_log()
+        flat.loc[mm, 'power_w'] = 15 + 130 * f
+        fit = d2l.dvfs_fit(flat)
+        self.assertTrue(math.isnan(fit.f_knee))
+        self.assertEqual(fit.f_min, 2.7)  # least J/FLOP at the capped top
+        _, lines, _ = max_width(d2l.plot_dvfs, fit)
+        self.assertEqual(lines[2], 'the power curve has no knee')
+
+    def test_power_knee(self):
+        """The knee: the first clock (two or more slopes below it) whose
+        slope to the next point exceeds 1.5x the median slope below."""
+        f = np.array([0.9, 1.2, 1.5, 1.8, 2.1, 2.4, 2.565])
+        P = np.array([161.4, 197.7, 234.4, 275.7, 310.8, 377.2, 449.0])
+        knee, x = d2l._power_knee(f, P)  # the box's matmul rows (F4)
+        self.assertEqual(knee, 2.1)
+        self.assertAlmostEqual(x, 1.82, places=2)
+        lin = 15 + 130 * f
+        self.assertTrue(np.isnan(d2l._power_knee(f, lin)).all())
+        # a jump right after the first slope is not a knee: one slope
+        # below is no baseline
+        jump = np.array([100.0, 130.0, 260.0, 290.0])
+        self.assertTrue(np.isnan(d2l._power_knee(np.array(
+            [0.9, 1.2, 1.5, 1.8]), jump)).all())
+        self.assertTrue(np.isnan(d2l._power_knee(f[:2], P[:2])).all())
+
+    def test_misreported_lock(self):
+        """A lock whose compute-bound rate per reported GHz is off by more
+        than 5% (the box's 600 MHz lock: 23% above) is left out of the fit
+        and named, here and under the clock_effect table; capped locks at
+        one clock count once in the fit."""
+        log = clock_log()
+        at600 = ((log.kind == 'clock') & (log.setting == 600)
+                 & (log.workload == 'matmul-8192'))
+        log.loc[at600, 'rate'] *= 1.23
+        log.loc[at600, 'power_w'] += 50  # would spoil the fit if kept
+        s = log[(log.kind == 'clock') & (log.workload == 'matmul-8192')]
+        self.assertEqual(list(d2l._misreported_locks(s)), [0.6])
+        self.assertAlmostEqual(d2l._misreported_locks(s)[0.6], 0.738)
+        self.assertEqual(d2l._misreported_locks(s.iloc[:2]), {})
+        fit = d2l.dvfs_fit(log)
+        self.assertAlmostEqual(fit.P_s, 60, places=6)  # 600 left out
+        self.assertAlmostEqual(fit.k, 20, places=6)
+        self.assertNotIn(0.6, list(fit.locks))
+        self.assertAlmostEqual(fit.step, 0.3)  # the sweep's step, all locks
+        width, lines, _ = max_width(d2l.plot_dvfs, fit)
+        self.assertLessEqual(width, 100)
+        self.assertIn('left out of the fit: the 0.60 GHz lock, which ran at '
+                      'about 0.74 GHz (its rate per GHz)', lines)
+        width, lines, _ = max_width(d2l.clock_effect, log)
+        self.assertLessEqual(width, 100)
+        self.assertIn('the 600 MHz lock ran the SM at about 738 MHz (the '
+                      "product's rate), not as reported", lines)
+        f, P = d2l._clock_points(s)
+        self.assertEqual(list(f)[-1], 2.5)  # 2,700 and 3,000: one point
+        self.assertEqual(len(f), len(s) - 1)
 
     def test_clock_edge_rule(self):
         """E4's pre-registered edge rule: a least energy at the lowest lock
@@ -3965,24 +4025,50 @@ class TestEnergyCost(unittest.TestCase):
         log = clock_log()
         log.attrs.update(source='committed sweep', a100=None)
         scope = dict(d2l=d2l, np=np, pd=pd)
+
+        def run(cell, sweep):
+            buf = io.StringIO()
+            with mock.patch.object(d2l, 'hw_clock_sweep_log',
+                                   lambda: sweep), \
+                    contextlib.redirect_stdout(buf):
+                exec(cells[cell].replace('%%tab pytorch\n', ''),
+                     dict(scope, sweep=sweep))
+            d2l.plt.close('all')
+            return buf.getvalue()
         with mock.patch.object(d2l, 'hw_clock_sweep_log', lambda: log), \
                 quiet():
             for i in ('energy-cost-dvfs', 'energy-cost-cap-effect'):
                 exec(cells[i].replace('%%tab pytorch\n', ''), scope)
         d2l.plt.close('all')
         self.assertEqual(scope['floor'], 1200)
-        # E5's pre-registered fallback: decode slower at every lowered
-        # clock; the cell says so (the library's line) and does not fail
+        self.assertTrue(scope['near'])
+        # E4 restated: f* more than a step away, the least energy at the
+        # power curve's knee, passes; at neither, the assert fails
+        mm = (log.kind == 'clock') & (log.workload == 'matmul-8192')
+        f = log.loc[mm, 'sm_mhz'] / 1e3
+        knee = log.copy()
+        knee.loc[mm, 'power_w'] = 15 + 130 * f + 400 * np.maximum(f - 2.1, 0)**2
+        self.assertIn('the least energy sits at it',
+                      run('energy-cost-dvfs', knee))
+        flat = log.copy()
+        flat.loc[mm, 'power_w'] = 15 + 130 * f
+        with self.assertRaises(AssertionError):
+            run('energy-cost-dvfs', flat)
+        # E5 restated (no floor): decode slows at every lowered clock by
+        # about as much as training (step-time ratios within 10%) passes ...
+        alike = clock_log()
+        dec = alike.workload == 'decode-b1'
+        alike.loc[dec, 'step_ms'] = (3.0 / 100) * alike.loc[
+            alike.workload == 'train-8192', 'step_ms'].to_numpy()
+        alike.loc[dec, 'step_mad_ms'] = 0.003  # 2,400 MHz (x 1.04): no floor
+        out = run('energy-cost-cap-effect', alike)
+        self.assertIn('slows beyond its noise at every lowered clock', out)
+        # ... and decode slowing by 10% while training doubles fails it
         slow = clock_log()
         lowered = (slow.kind == 'clock') & (slow.workload == 'decode-b1')
         slow.loc[lowered, 'step_ms'] *= 1.1
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            exec(cells['energy-cost-cap-effect'].replace('%%tab pytorch\n',
-                                                         ''),
-                 dict(d2l=d2l, sweep=slow))
-        self.assertIn('slows beyond its noise at every lowered clock',
-                      buf.getvalue())
+        with self.assertRaises(AssertionError):
+            run('energy-cost-cap-effect', slow)
         # the method on the page stays short: no guard, poll or retry code
         sweep = cells['energy-cost-clock-sweep-def']
         self.assertLessEqual(len(sweep.splitlines()), 16)
@@ -4909,6 +4995,23 @@ with mock.patch.object(d2l, 'hw_run', run), \\
         self.assertEqual(len(effect), len(want))
         self.assertTrue(all(len(x) <= 100
                             for x in out.getvalue().splitlines()))
+        # the page's cells 5 and 6, asserts included, on the committed data
+        text = read(os.path.join(CHAPTER, 'energy-cost.md'))
+        scope = dict(d2l=d2l, np=np, pd=pd)
+        with quiet():
+            for i in ('energy-cost-dvfs', 'energy-cost-cap-effect'):
+                exec(re.search(r'```\{\.python \.input #' + i + r'\}\n'
+                               r'(.*?)```', text, re.S).group(1).replace(
+                                   '%%tab pytorch\n', ''), scope)
+        d2l.plt.close('all')
+        fit = scope['fit']  # F4: the 600 MHz lock ran at about 740 MHz
+        self.assertEqual(list(fit.left_out), [0.6])
+        self.assertAlmostEqual(fit.left_out[0.6], 0.74, places=2)
+        self.assertFalse(scope['near'])  # E4 as pre-registered misses
+        self.assertTrue(scope['knee'])  # restated: least energy at the knee
+        self.assertEqual((fit.f_min, fit.f_knee), (2.1, 2.1))
+        self.assertIsNone(scope['floor'])  # E5: decode slows everywhere
+        self.assertTrue(scope['same'])
 
 
 def collections_counter(tree):

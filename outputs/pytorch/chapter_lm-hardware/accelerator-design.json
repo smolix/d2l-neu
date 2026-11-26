@@ -1,0 +1,218 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-hardware/accelerator-design.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:acf02aaecaa56efd1ed39f416de84c1a7245ac141f985678c9491c9692f2cdeb",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "accelerator-design-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "accelerator-design-extras": {
+      "code_fingerprint": "sha256:e14870bcf7afc0317dc8c1d8599d4ba94fe71152dadebae34a17279bbfc91811",
+      "kind": "text",
+      "outputs": []
+    },
+    "accelerator-design-chip-specs": {
+      "code_fingerprint": "sha256:1f35f2764cf7b3c518e0be48710900f0acd19e546fabdcc61da8ccb54ee8e5dc",
+      "kind": "text",
+      "outputs": []
+    },
+    "accelerator-design-three-chips": {
+      "code_fingerprint": "sha256:03f6343d659eb1c1e154db2e98e8217568e748d059ff7c92755e37930eb9704a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-8B weights in bf16: W = 16.4 GB\n         memory     GB  TB/s TFLOP/s W/beta (ms) sweep (ms) chips, at least\nH100 SXM   HBM3   80.0  3.35     989        4.89       23.9               1\nRTX 5090  GDDR7   32.0  1.79     210        9.14       17.9               1\nGroq LPU   SRAM  0.230  80.0               0.205    0.00287              72\n"
+        }
+      ]
+    },
+    "accelerator-design-hbm-stack": {
+      "code_fingerprint": "sha256:2074601edae3146a31a9150236eb2863b6fc13b624b20b54c22af30e04b137f7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "H100 SXM (HBM3): 3.35 TB/s over 5 stacks x 1,024 pins = 5.2 Gb/s per pin\nB200 (HBM3e): 8.00 TB/s over 8 stacks x 1,024 pins = 7.8 Gb/s per pin\n"
+        }
+      ]
+    },
+    "accelerator-design-derive-ratios": {
+      "code_fingerprint": "sha256:945d47c86cdc0f4434921eee3409518067c2219721ab5870e7e76c402b468d30",
+      "kind": "text",
+      "outputs": []
+    },
+    "accelerator-design-ratios-plane": {
+      "code_fingerprint": "sha256:78081b463cab201cbccea22172ade41ec3ea33d312e3053f80f57aa72f1131dd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "accelerator-design/accelerator-design-ratios-plane-1.png",
+          "bytes": 53818,
+          "sha256": "sha256:fcd0e2514bbed4f11b004e4229bae36aaf68ef8a3290b267032023ad68c9b0cf"
+        }
+      ]
+    },
+    "accelerator-design-sweep-floor-def": {
+      "code_fingerprint": "sha256:5e2c25478c581e8c6f8feecc98c9c49cb1f479e03dbc4a2a27194ebda72b69bd",
+      "kind": "text",
+      "outputs": []
+    },
+    "accelerator-design-sweep-floor": {
+      "code_fingerprint": "sha256:0138ea987760874b45c31c42631fed97698cffba4eedf7ef5fcb0d4511a342e7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                  sweep (ms) b_max floor (ms) tokens/s per user\nR200 (Rubin)            15.0   201       13.5              74.1\nRTX 5090                17.9    10       15.9              63.0\nMI455X                  18.5   308       16.7              60.0\nB200                    22.5   120       20.2              49.6\nRTX 4090                23.8     4       21.0              47.5\nH100 SXM                23.9    46       21.5              46.6\nA100 PCIe 40 GB         25.7    16       23.0              43.5\nTPU v7 (Ironwood)       27.9   140       25.1              39.8\nTrainium3               29.4    93       26.3              38.1\nH200 SXM                29.4    91       26.3              38.0\nTrainium2               35.6    63       31.9              31.4\nB300                    36.0   201       32.4              30.9\nMI355X                  36.0   201       32.4              30.9\nMI300X                  36.2   129       32.5              30.8\nA100 SXM 80 GB          39.2    46       35.3              28.3\n"
+        }
+      ]
+    },
+    "accelerator-design-sram-chips-def": {
+      "code_fingerprint": "sha256:a3ae63bd535ed2acc17a1c878b19c0e87929548481fbf2fbc7b5d8fd4b0a7b34",
+      "kind": "text",
+      "outputs": []
+    },
+    "accelerator-design-sram-chips": {
+      "code_fingerprint": "sha256:365023e4601149e0f201e5218989f46ee9817b7fb8d61801eda92737e0343f64",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-8B (16 GB) on Groq LPU (0.23 GB each, eta 0.8): 90 chips\ndense 70B (141 GB) on Groq LPU (0.23 GB each, eta 0.8): 767 chips\nQwen3-8B (16 GB) on Cerebras WSE-3 (44 GB each, eta 0.8): 1 chip\ndense 70B (141 GB) on Cerebras WSE-3 (44 GB each, eta 0.8): 5 chips\n"
+        }
+      ]
+    },
+    "accelerator-design-fingerprint": {
+      "code_fingerprint": "sha256:1b77dd90e84f6f1061d83f1aabb723c4643612d52cb038c50af4c94a29aa5eac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GPU: RTX 4090 (1 visible, 4 on the host)\nSMs per GPU: 128\nmax SM clock: 3,120 MHz; memory clock 10,501 MHz\npower limit: 450 W (settable 150-510 W)\nPCIe: Gen 4 x16 (max); Gen 1 x16 now\ndriver 595.71.05, NCCL 2.28.9, CUDA 12.8, torch 2.11.0+cu128, Triton 3.6.0\n"
+        }
+      ]
+    },
+    "accelerator-design-copy-bench": {
+      "code_fingerprint": "sha256:128d397e165fe76900f935e970bb20127e0567c806d9dcf78503deb15bf2d024",
+      "kind": "text",
+      "outputs": []
+    },
+    "accelerator-design-ladder": {
+      "code_fingerprint": "sha256:e3ee920d02c0876fdbaf14dd4512d31cc91b2421f2da1cefc702950370ea3551",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "L2 read (4 MiB to 36 MiB): 5,000 GB/s, 5.3x the DRAM read\nDRAM read (1-4 GiB): 950 GB/s, 94% of the datasheet 1,008 GB/s\nDRAM copy (1-4 GiB, read + write counted): 920 GB/s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (read bandwidth) on RTX 4090: 3 points, largest difference 8%\nA100 PCIe 40 GB: campaign C-T2 pending\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "accelerator-design/accelerator-design-ladder-1.svg",
+          "bytes": 38354,
+          "sha256": "sha256:ab101fd32a4fbb0547ab85090f07fb730f0cbd84d79ca5365ec8f2bdc59ddb59"
+        }
+      ]
+    },
+    "accelerator-design-fp8-scale": {
+      "code_fingerprint": "sha256:ec17337d3e23ded81137f1afdbfe33b067d0544aa4c99664a8590e1173a1613b",
+      "kind": "text",
+      "outputs": []
+    },
+    "accelerator-design-matmul-bench": {
+      "code_fingerprint": "sha256:bad1e84bb1949e3d11650c9fb2f8100b2c4f8d95259b833bce5725c8985fbb07",
+      "kind": "text",
+      "outputs": []
+    },
+    "accelerator-design-dtype-ladder": {
+      "code_fingerprint": "sha256:cb80f47a4ae4997e0ab4391ed88fa3052f17d6511dfa97c8117b14b47f17c2e5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "format TFLOP/s spread datasheet fraction SM GHz   W\n  fp32      45   0.1%      82.6      55%   2.07 464\n  tf32      87   1.4%      82.6     106%   2.73 447\n  bf16     160   0.0%       165      97%   2.58 406\n  fp16     150   0.4%       165      89%   2.49 411\n   fp8     330   0.7%       330      99%   2.58 430\ndatasheet peaks assume the 2.52 GHz boost clock\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (matmul) on RTX 4090: 2 points, largest difference 4%\n"
+        }
+      ]
+    },
+    "accelerator-design-smem-latency": {
+      "code_fingerprint": "sha256:00a28445bbf20c01bdad62e002faa95a89aa1a20fe7f84ffb27ce0b4bd3b7a96",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "L1 loads: 36 TB/s measured; bound 128 SMs x 128 B/clk x 2.60 GHz = 43 TB/s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (L1) on RTX 4090: 1 point, largest difference 2%\nlatency per dependent load: L1 17 ns, L2 98 ns, DRAM 220 ns\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (latency) on RTX 4090: 3 points, largest difference 11%; differs: 2 MiB 110 vs 98 ns\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "accelerator-design/accelerator-design-smem-latency-1.svg",
+          "bytes": 32505,
+          "sha256": "sha256:cb73c5e280c7524a564466014d5b5ab7932e05cfaac9baeb66077338af89e92c"
+        }
+      ]
+    },
+    "accelerator-design-datasheet-vs-measured": {
+      "code_fingerprint": "sha256:65a3eb7f7c983776c289171802d768fa715eb1e56bcd840e62bcfb4ba2980aa5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                 datasheet measured fraction\nBF16 (TFLOP/s)         165      160      97%\nFP16 (TFLOP/s)         165      150      89%\nTF32 (TFLOP/s)        82.6       87     106%\nFP32 (TFLOP/s)        82.6       45      55%\nFP8 (TFLOP/s)          330      330      99%\nDRAM read (GB/s)     1,008      950      94%\nL2 read (GB/s)                5,000         \nL1 loads (TB/s)*      42.5       36      86%\n* bound, not a datasheet figure: 128 SMs x 128 B/clk x 2.60 GHz\n"
+        }
+      ]
+    },
+    "accelerator-design-a100-twin": {
+      "code_fingerprint": "sha256:2f7c5004960d639b0a8ae3f9ce53182d8a6476224334f3b0705a9f3b54fdbad1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "A100 PCIe 40 GB: campaign C-T2 not run yet (datasheet values only)\n                 datasheet\nBF16 (TFLOP/s)         312\nFP16 (TFLOP/s)         312\nTF32 (TFLOP/s)         156\nFP32 (TFLOP/s)        19.5\nDRAM read (GB/s)     1,555\n"
+        }
+      ]
+    }
+  }
+}

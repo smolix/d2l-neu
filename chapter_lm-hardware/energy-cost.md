@@ -176,6 +176,15 @@ if the least is at the lowest lock, the job swept one step lower and the
 text says "at or below" that lock). The A100 sweep (campaign C-T2) is
 pending; the last line says so. -->
 
+<!-- Placeholder (prose): the committed sweep (F4, 2026-11-26) misses E4 as
+pre-registered: the cubic fit puts f* at 1.66 GHz, 1.5 steps below the
+least energy per FLOP at the 2.10 GHz lock. Power rises about linearly with
+the clock up to 2.1 GHz (roughly 35 W per 300 MHz: a voltage floor, where
+P is close to P_0 + c f) and steeply above it, so the least energy sits at
+that knee; the plot shows the cubic missing the points. Wording, and the
+cell's E4 assert, await the coordinator and the author; state it as
+measured, never widen the step. -->
+
 ```{.python .input #energy-cost-dvfs}
 %%tab pytorch
 sweep = d2l.hw_clock_sweep_log()  # committed: a notebook never locks clocks
@@ -228,7 +237,10 @@ The training step slows about in proportion to
 the clock; batch-1 decode, bound by memory and per-kernel fixed costs,
 stays within its noise down to the clock the last line names (quote it and
 the training step's ratio there from the output; if decode slows at every
-lowered clock, the line says so and the text states it as measured). One
+lowered clock, the line says so and the text states it as measured; the
+committed sweep (F4) does: decode at b = 1 slows about as much as the
+training step, x 1.03 at 2,700 MHz and 2.33 at 600 MHz against 2.46 for
+training: a lowered clock costs decode about what it costs training). One
 setting for both workloads is the usual error. Zeus measures the same
 energy-time trade-off per job. -->
 

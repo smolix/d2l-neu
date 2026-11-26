@@ -51,6 +51,9 @@ d2l.DATA_HUB['lm-hw-prices-v1'] = (
 d2l.DATA_HUB['lm-hw-buildbox-power-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-buildbox-power-v1.tar',
     'bb1534b3ab70a875afa35916b673df4a30df420b')
+d2l.DATA_HUB['lm-hw-buildbox-clocksweep-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-clocksweep-v1.tar',
+    '0f4ade57068fcd2d3dab488a8b24430a591c7fdf')
 ```
 
 ```{.python .input #energy-cost-lib-entries}
@@ -963,8 +966,8 @@ def plot_dvfs(fit):
     (right, squares; the model dashed) against the SM clock each window
     ran at: the sweep's points, the fitted model, f* dotted, the least
     energy marked. Prints the fit, f* against the least-energy lock and
-    the sweep step, the locks the product ran below (its power cap), and
-    the source."""
+    the sweep step (how many steps apart, when more than one), the locks
+    the product ran below (its power cap), and the source."""
     f = np.linspace(min(fit.clocks) * 0.9, max(fit.clocks) * 1.05, 200)
     power = lambda x: fit.P_s + fit.k * x**3
     top = int(np.argmax(fit.locks))
@@ -989,8 +992,14 @@ def plot_dvfs(fit):
           f'{fit.k:.3g} W/GHz^3{spread}')
     where = (f'the lowest lock, {fit.f_min:.2f} GHz: at or below it'
              if fit.edge else f'the {fit.f_min:.2f} GHz lock')
-    print(f'f* = {fit.f_star:.2f} GHz; least energy per FLOP at {where} '
-          f'(step {fit.step:.2f} GHz)')
+    off = (fit.f_min - fit.f_star) / fit.step  # E4's distance, in steps
+    if not np.isfinite(off) or np.abs(off) <= 1 or (fit.edge and off >= -1):
+        print(f'f* = {fit.f_star:.2f} GHz; least energy per FLOP at {where} '
+              f'(step {fit.step:.2f} GHz)')
+    else:  # E4's fallback: say so, with both values
+        print(f'f* = {fit.f_star:.2f} GHz, {np.abs(off):.1f} steps '
+              f'{"below" if off > 0 else "above"} the least energy per FLOP '
+              f'at {where} (step {fit.step:.2f} GHz)')
     below = [f'{a:.2f} -> {b:.2f}' for a, b in zip(fit.locks, fit.clocks)
              if b < a - 0.03]
     print('below its lock (power cap), GHz: ' + (', '.join(below) or 'none'))
@@ -1057,9 +1066,10 @@ def clock_effect(log, train='train-8192', decode='decode-b1'):
     """What a lower SM clock costs (E5): the training step and batch-1
     decode at each locked clock against the default-clock run (and, if
     the power-cap arm ran, the same under each cap). attrs['decode_floor']:
-    the lowest lock down to which every lock keeps decode within its
-    noise (None if decode slows at every lowered clock; noise as in
-    _effect_table)."""
+    the lowest lock down to which every lowered lock keeps decode within
+    its noise (None if decode slows at every lowered clock; noise as in
+    _effect_table). A lock at or above the clock decode ran at by default
+    lowers nothing and is not a floor (on the box: 3,000 MHz)."""
     table, t0, d0 = _effect_table(log, 'clock', train, decode)
     d2l.show_table(table, digits=_HW_EFFECT_DIGITS)
     print(f'x: step time over the default clocks\' (training {t0.step_ms:.0f}'
@@ -1071,6 +1081,8 @@ def clock_effect(log, train='train-8192', decode='decode-b1'):
         if not np.isfinite(r['decode x']):
             raise ValueError(f'the sweep has no {decode} row at the '
                              f'{r["clock MHz"]:,.0f} MHz lock')
+        if r['clock MHz'] >= d0.sm_mhz:  # not a lowered clock for decode
+            continue
         if r['decode x'] - 1 > r['decode noise']:
             break
         floor = int(r['clock MHz'])

@@ -3675,6 +3675,12 @@ def sweep_log(P_s=80.0, k=80.0, clocks=(0.6, 0.76, 0.92, 1.08, 1.24, 1.4),
     return df
 
 
+def sweep_next_key():
+    """The folder a box-clocksweep regeneration writes: the key after the
+    registered one (v1 before F4 registered it, v2 after)."""
+    return d2l._next_key(d2l.HW_ARTIFACTS['box-clocksweep'][0])
+
+
 def clock_log(lowest=600, cap=2.5, decode_knee=1.2, caps=False,
               P_s=60.0, k=20.0):
     """A box-like sweep: the default clocks and locks from lowest to 3,000
@@ -3828,6 +3834,22 @@ class TestEnergyCost(unittest.TestCase):
         width, lines, _ = max_width(d2l.plot_dvfs, d2l.dvfs_fit(log))
         self.assertIn('A100 (C-T2): P_s = 80 W', lines[4])
         self.assertLessEqual(width, 100)
+        # E4's fallback: power about linear in f up to a 2.1 GHz knee (a
+        # voltage floor, as on the box) puts the least energy at the knee,
+        # more than a step above the cubic's f*; the line says so
+        knee = clock_log()
+        mm = (knee.kind == 'clock') & (knee.workload == 'matmul-8192')
+        f = knee.loc[mm, 'sm_mhz'] / 1e3
+        knee.loc[mm, 'power_w'] = 15 + 130 * f + 400 * np.maximum(f - 2.1, 0)**2
+        knee.loc[mm, 'rate'] = f * 1e14
+        fit = d2l.dvfs_fit(knee)
+        self.assertEqual(fit.f_min, 2.1)
+        self.assertGreater((fit.f_min - fit.f_star) / fit.step, 1)
+        width, lines, _ = max_width(d2l.plot_dvfs, fit)
+        self.assertRegex(lines[1], r'^f\* = \d\.\d\d GHz, \d\.\d steps below '
+                         r'the least energy per FLOP at the 2\.10 GHz lock '
+                         r'\(step 0\.30 GHz\)$')
+        self.assertLessEqual(width, 100)
 
     def test_clock_edge_rule(self):
         """E4's pre-registered edge rule: a least energy at the lowest lock
@@ -3849,7 +3871,7 @@ class TestEnergyCost(unittest.TestCase):
         self.assertIn('the lowest lock, 0.30 GHz: at or below it', lines[1])
         with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
                 os.environ, {'D2L_HW_OUT': tmp, 'D2L_HW_PROC': '1'}):
-            folder = os.path.join(tmp, 'lm-hw-buildbox-clocksweep-v1')
+            folder = os.path.join(tmp, sweep_next_key())
             first = clock_log(lowest=300, P_s=5, k=80)
             d2l._hw_write(os.path.join(folder, 'proc0', 'sweep.json.gz'),
                           first, {})
@@ -3884,6 +3906,17 @@ class TestEnergyCost(unittest.TestCase):
         lowered = (slow.kind == 'clock') & (slow.workload == 'decode-b1')
         slow.loc[lowered, 'step_ms'] *= 1.1
         _, lines, t = max_width(d2l.clock_effect, slow)
+        self.assertIsNone(t.attrs['decode_floor'])
+        self.assertIn('slows beyond its noise at every lowered clock',
+                      lines[-1])
+        # locks at or above the default decode clock (2,700 and 3,000 MHz
+        # run at the default 2,500) lower nothing: decode within noise there
+        # and slower at every lock below is no floor (the box's sweep, F4)
+        top = clock_log()
+        below = ((top.kind == 'clock') & (top.workload == 'decode-b1')
+                 & (top.setting < 2500))
+        top.loc[below, 'step_ms'] *= 1.1
+        _, lines, t = max_width(d2l.clock_effect, top)
         self.assertIsNone(t.attrs['decode_floor'])
         self.assertIn('slows beyond its noise at every lowered clock',
                       lines[-1])
@@ -4465,7 +4498,7 @@ class TestClockSweep(unittest.TestCase):
             with quiet():
                 df = d2l.hw_clock_regen('smoke')
             saved, meta = d2l._hw_read(os.path.join(
-                tmp, 'lm-hw-buildbox-clocksweep-v1', 'sweep.json.gz'))
+                tmp, sweep_next_key(), 'sweep.json.gz'))
         self.assertEqual(list(df.kind), ['default'] * 2 + ['clock'] * 2)
         self.assertEqual(self.args(), [['-rgc'], ['-lgc', '1500,1500'],
                                        ['-lgc', '1500,1500'], ['-rgc']])
@@ -4732,7 +4765,7 @@ with mock.patch.object(d2l, 'hw_run', run), \\
                                power_limit_w=450.0, max_sm_mhz=3120.0,
                                dryrun=dryrun)
                 d2l._hw_write(os.path.join(
-                    env['D2L_HW_OUT'], 'lm-hw-buildbox-clocksweep-v1',
+                    env['D2L_HW_OUT'], sweep_next_key(),
                     f'proc{i}', 'sweep.json.gz'), t, dict(
                         config=cfg, run='box', env=dict(
                             contended=False, neighbours_busy=False,
@@ -4758,7 +4791,7 @@ with mock.patch.object(d2l, 'hw_run', run), \\
             os.chdir(cwd)
             for s_, h in saved.items():
                 signal.signal(s_, h)
-        folder = os.path.join(tmp, 'lm-hw-buildbox-clocksweep-v1')
+        folder = os.path.join(tmp, sweep_next_key())
         return rc, d2l._hw_read(os.path.join(folder, 'sweep.json.gz')), \
             os.path.exists(folder + '.tar')
 
@@ -4840,6 +4873,42 @@ with mock.patch.object(d2l, 'hw_run', run), \\
                                capture_output=True, text=True, timeout=120)
             self.assertEqual(r.returncode, 2, args)
             self.assertEqual(len(r.stderr.splitlines()), 1)
+
+    def test_committed_sweep(self):
+        """The registered box-clocksweep tar loads through
+        hw_clock_sweep_log: a box run of three processes, one row per lock
+        (and the edge lock, if the rule fired) and workload, every lock row
+        at or below its lock, no window shared with another process;
+        dvfs_fit, plot_dvfs and clock_effect run on it."""
+        if not d2l.hw_registered('box-clocksweep'):
+            self.skipTest('box-clocksweep is not registered yet')
+        with quiet():
+            log = d2l.hw_clock_sweep_log()
+        cfg = d2l._HW_CLOCK_CONFIGS['box']
+        self.assertEqual(log.attrs['n_proc'], 3)
+        self.assertFalse(log.attrs['dryrun'])
+        self.assertEqual(len(log.attrs['procs']), 3)
+        locks = log[log.kind == 'clock']
+        want = set(cfg['clocks']) | ({cfg['edge']} if log.attrs['edge']
+                                     else set())
+        self.assertEqual(set(locks.setting), want)
+        self.assertEqual(len(locks), len(want) * len(cfg['workloads']))
+        self.assertEqual(len(log[log.kind == 'default']),
+                         len(cfg['workloads']))
+        self.assertTrue((locks.sm_mhz <= locks.setting
+                         + d2l._HW_GUARD['lock_tol_mhz']).all())
+        self.assertFalse(log.contended.astype(bool).any())
+        fit = d2l.dvfs_fit(log)
+        self.assertTrue(np.isfinite([fit.P_s, fit.k, fit.f_star]).all())
+        self.assertGreater(fit.k, 0)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            d2l.plot_dvfs(fit)
+            effect = d2l.clock_effect(log)
+        d2l.plt.close('all')
+        self.assertEqual(len(effect), len(want))
+        self.assertTrue(all(len(x) <= 100
+                            for x in out.getvalue().splitlines()))
 
 
 def collections_counter(tree):

@@ -126,6 +126,7 @@ help:
 	@echo "  test-trap               [any] Regression tests: freshness trap, lib deps, notebook locks"
 	@echo "  test-lm                 [any] CPU unit tests of the Language Models library (.venv-lm)"
 	@echo "  upload-data FILES=...   [any] Upload versioned DATA_HUB files to R2 d2l-data [PREFIX=lm/] [DRY_RUN=1]"
+	@echo "  prune-data              [any] List d2l-data lm/ objects no branch or tag names [DELETE=1] [MIN_AGE_DAYS=14]"
 	@echo "  locks                   [any] List locked notebooks (requires, capture date, status)"
 	@echo "  rerun-locked FILES=...  [GPU*] Execute named LOCKED notebooks [FRAMEWORKS=pytorch]; then"
 	@echo "                                capture-outputs FILES=... UNLOCK=1"

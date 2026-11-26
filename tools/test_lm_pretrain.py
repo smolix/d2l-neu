@@ -32,8 +32,12 @@ refused); `t_interval` against `scipy.stats.t` (dof 1-10, 1e-4);
 grid: each variant's arm config (schedule, clip, warmup 305, softcap
 backend, QK-norm; unknown variants refused), the zero-layer model trains,
 `_arm_summary` (first step above 1,000, smallest and peak-phase entropy),
-`first_collapsed_rate`, a resumed job reads its finished arms, the merge
-keeps the zero-layer loss, the regeneration stores the recipe; a 2-process
+`first_collapsed_rate`, `departure` and `collapse_crossings` on synthetic
+traces (a diverged arm's loss crossing is its first non-finite step), the
+softcap entropy from capped scores with the raw maximum, the seed sets the
+data order, a resumed job reads its finished arms, the merge
+keeps the zero-layer loss, the regeneration stores the recipe (with the
+statistics version; a changed one is refused); a 2-process
 gloo DDP `pretrain` equal to one process at the same global batch (loss and
 `log_z`, 1e-5).
 """
@@ -481,6 +485,39 @@ class PretrainTest(unittest.TestCase):
             ent = -(p * torch.log(p.clamp_min(1e-30))).sum(-1).mean((0, 2))
             self.assertLess((stats[l].entropy - ent).abs().max(), 1e-5)
 
+    def test_attn_logit_stats_softcap(self):
+        """A softcap model: the entropy is that of the capped softmax the
+        model computes, the largest logit is the raw one (before the cap)."""
+        torch.manual_seed(0)
+        m = d2l.PackedGPT.from_arch(TOY, softcap=2.0, backend='math').eval()
+        with torch.no_grad():
+            for blk in m.blks:  # raw logits well above the cap
+                blk.attention.W_q.weight *= 12
+                blk.attention.W_k.weight *= 12
+        b = self.stream().batch(0)
+        stats = d2l.attn_logit_stats(m, b)
+        X, ctx = b['input_ids'][:1], d2l.PackCtx(b['doc_ids'][:1],
+                                                 b['pos_ids'][:1])
+        T = X.shape[1]
+        ok = (torch.ones(T, T, dtype=torch.bool).tril()
+              & (ctx.doc_ids[:, :, None] == ctx.doc_ids[:, None, :]))[:, None]
+
+        def entropy(s):
+            p = torch.softmax(s.masked_fill(~ok, -math.inf), -1)
+            return -(p * torch.log(p.clamp_min(1e-30))).sum(-1).mean((0, 2))
+        for l, (attn, Y, tables) in enumerate(
+                d2l._attention_inputs(m, X, ctx)):
+            with torch.no_grad():
+                q, k, _ = attn.qkv(Y, tables=tables)
+            k = k.repeat_interleave(2, 1)
+            s = q @ k.transpose(-2, -1) / math.sqrt(attn.head_dim)
+            raw = s.masked_fill(~ok, -math.inf).amax((0, 2, 3))
+            self.assertGreater(float(raw.max()), 4.0)  # the cap matters
+            self.assertLess((stats[l].max_logit - raw).abs().max(), 1e-5)
+            capped = entropy(d2l.softcap(s, 2.0))
+            self.assertLess((stats[l].entropy - capped).abs().max(), 1e-5)
+            self.assertGreater((entropy(s) - capped).abs().max(), 1e-2)
+
     def test_qk_clip(self):
         # one block: clipping a block changes the inputs of the next ones
         torch.manual_seed(0)
@@ -847,6 +884,7 @@ class MeasurementTest(unittest.TestCase):
             self.assertEqual(extra, dict(softcap=50.0, backend='math')
                              if v == 'softcap' else {}, v)
             self.assertEqual(c.micro_batch, 16, v)
+            self.assertEqual(c.data_seed, 1, v)  # the seed sets the order
         self.assertEqual(arms['warmup'][0].warmup, 305)
         # a pair's later run differs from its grid cell in one field only
         c, _ = d2l._inst_arm(cfg, 'clip', 1e-3, 0)
@@ -857,6 +895,8 @@ class MeasurementTest(unittest.TestCase):
         c, _ = d2l._inst_arm(cfg, 'none', 6e-3, 0, steps=500)
         self.assertEqual((c.steps, c.decay, c.probe_every, c.warmup),
                          (500, 0, 0, 76))
+        c, _ = d2l._inst_arm(cfg, 'none', 6e-3, 1, steps=500)
+        self.assertEqual(c.data_seed, cfg.data_seed)  # as before F10
         c, _ = d2l._inst_arm(cfg, 'none', 1e-3, 0, L=0)
         self.assertEqual(c.arch.L, 0)
         with self.assertRaisesRegex(ValueError, 'unknown variant'):
@@ -930,6 +970,64 @@ class MeasurementTest(unittest.TestCase):
                          3.2e-2)
         self.assertEqual(d2l.first_collapsed_rate(arms, 'none'), 8e-3)
         self.assertIsNone(d2l.first_collapsed_rate(arms, 'none', floor=0.0))
+
+    def test_departure(self):
+        rng = np.random.default_rng(0)
+        step = np.arange(1, 1501)
+        x = pd.Series(0.3 + 0.05 * rng.standard_normal(1500), index=step)
+        x[step < 76] = np.linspace(2.0, 0.3, 75)  # a warmup ramp: ignored
+        self.assertIsNone(d2l.departure(x, 76))
+        y = x.where(step < 900, x + 1.0)  # a sustained shift at step 900
+        self.assertTrue(900 <= d2l.departure(y, 76) <= 912)
+        z = x.copy()
+        z[[500, 501, 700]] = 50.0  # single spikes: the median ignores them
+        self.assertIsNone(d2l.departure(z, 76))
+        y[y.index > 1000] = np.nan  # a stopped run: its missing tail
+        self.assertTrue(900 <= d2l.departure(y, 76) <= 912)
+        # never inside the reference steps 76-275
+        early = x.where(step < 200, x + 1.0)
+        self.assertGreaterEqual(d2l.departure(early, 76) or 276, 276)
+
+    def test_collapse_crossings(self):
+        rng = np.random.default_rng(0)
+        step = np.arange(1, 1001)
+        stats = step % 10 == 0
+        twin = pd.DataFrame(dict(
+            step=step, loss=3 + 0.01 * rng.standard_normal(1000),
+            grad_norm=0.5 * np.exp(0.05 * rng.standard_normal(1000)),
+            max_logit=np.where(stats, 10.0, np.nan),
+            min_entropy=np.where(stats, 2.0, np.nan), variant='qk_norm'))
+        run = twin.assign(variant='none')
+        run['loss'] = twin['loss'] + np.where(step >= 600, 0.3, 0.0)
+        run['grad_norm'] = twin['grad_norm'] * np.where(step >= 500, 3, 1)
+        run['max_logit'] = np.where(stats, np.where(step >= 300, 2e3, 50),
+                                    np.nan)
+        run['min_entropy'] = np.where(stats, np.where(step >= 350, .05, 1),
+                                      np.nan)
+        other = run.assign(seed=1, loss=run['loss'] + 1)  # another seed
+        traces = pd.concat([run, twin], ignore_index=True).assign(
+            lr=8e-3, seed=0)
+        traces = pd.concat([traces, other.assign(lr=8e-3)],
+                           ignore_index=True)
+        table = pd.DataFrame([dict(variant='none', lr=8e-3, seed=0,
+                                   first_nonfinite=math.nan)])
+        inst = d2l.InstabilityRuns(table, traces, 30, '')
+        got = d2l.collapse_crossings(inst, 8e-3, 76)
+        self.assertEqual(got['largest logit > 1,000'], 300)
+        self.assertEqual(got['entropy < 0.1'], 350)
+        self.assertTrue(500 <= got['grad norm moves'] <= 512)
+        self.assertTrue(600 <= got['loss 0.1 above QK-norm'] <= 620)
+        # a run that diverges at step 450 and stops: no rolling crossing,
+        # the first non-finite step is the loss crossing
+        stop = traces[(traces['variant'] == 'qk_norm')
+                      | (traces['step'] < 450)].copy()
+        stop.loc[(stop['variant'] == 'none') & (stop['step'] == 449),
+                 'loss'] = np.nan
+        inst = d2l.InstabilityRuns(table.assign(first_nonfinite=449.0),
+                                   stop, 30, '')
+        got = d2l.collapse_crossings(inst, 8e-3, 76)
+        self.assertEqual(got['loss 0.1 above QK-norm'], 449)
+        self.assertIsNone(got['grad norm moves'])  # stopped before 500
 
     def test_inst_kept(self):
         path = os.path.join(self.tmp.name, 'kept', 'arm.json.gz')
@@ -1331,7 +1429,8 @@ class ResultTest(unittest.TestCase):
         config = d2l._stored_config(stored)
         self.assertEqual((config['steps'], config['variants']),
                          (None, ['none', 'clip']))
-        self.assertEqual(config['recipe']['warmup'], 0.2)
+        self.assertEqual((config['recipe']['warmup'],
+                          config['recipe']['stats']), (0.2, 2))
         self.assertEqual(stored.zero_layer, 7.5)
         # the committed grid loads; a changed recipe is refused
         d2l.DATA_HUB['lm-r2-inst-t1-v2'] = ('url', 'sha1')
@@ -1340,6 +1439,9 @@ class ResultTest(unittest.TestCase):
             self.assertEqual(call().zero_layer, 7.5)
             with mock.patch.object(d2l, 'INST_CLIP', 0.5), \
                     self.assertRaisesRegex(ValueError, 'recipe.clip'):
+                call()
+            with mock.patch.object(d2l, 'INST_STATS', 3), \
+                    self.assertRaisesRegex(ValueError, 'recipe.stats'):
                 call()
 
 

@@ -11810,9 +11810,11 @@ LogitStats = collections.namedtuple('LogitStats', ['max_logit', 'entropy'])
 
 @torch.no_grad()
 def attn_logit_stats(model, batch, max_seqs=1, chunk=512):
-    """Largest attention logit and mean attention entropy of every head, per
-    block, on the first max_seqs sequences of batch, from explicit scores
-    (fused kernels return none); under DDP the maximum is over all ranks.
+    """Largest attention logit (before a softcap) and mean attention entropy
+    (of the softmax the block computes, after its softcap) of every head,
+    per block, on the first max_seqs sequences of batch, from explicit
+    scores (fused kernels return none); under DDP the maximum is over all
+    ranks.
 
     Defined in :numref:`sec_lm_reference_model`"""
     X, ctx = d2l._probe_inputs(batch, max_seqs, model)
@@ -11821,7 +11823,8 @@ def attn_logit_stats(model, batch, max_seqs=1, chunk=512):
                                                                 ctx)):
         q, k, _ = attn.qkv(Y, tables=tables)
         k = k.repeat_interleave(attn.num_heads // attn.num_kv_heads, 1)
-        m, ent = d2l._chunked_logit_stats(q, k, ctx, chunk)
+        m, ent = d2l._chunked_logit_stats(q, k, ctx, chunk,
+                                          getattr(attn, 'softcap', None))
         stats[l] = LogitStats(d2l._all_reduce_max(m), ent)
     return stats
 
@@ -11915,6 +11918,22 @@ def first_collapsed_rate(arms, variant, seed=None, floor=0.1):
     if seed is not None:
         hit = hit[hit['seed'] == seed]
     return float(hit['lr'].min()) if len(hit) else None
+
+def departure(x, start, before=200, window=20, k=3):
+    """The first step from start + before on at which the rolling median of
+    x over window steps leaves k MAD around the median of x over the before
+    steps from start (for a paired series, so no trend line); None if it
+    never does.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    x = x[x.index >= start].dropna()
+    ref = x[x.index < start + before]
+    center = ref.median()
+    mad = (ref - center).abs().median()
+    roll = x.rolling(window).median()
+    out = roll[(roll.index >= start + before)
+               & ((roll - center).abs() > k * mad)]
+    return int(out.index[0]) if len(out) else None
 
 def fp8_quant(x, fmt='e4m3', granularity='tensor', scale_mode='current',
               state=None):
@@ -23053,10 +23072,11 @@ def _attention_inputs(model, X, ctx):
             h.remove()
     return seen
 
-def _chunked_logit_stats(q, k, ctx, chunk=512):
+def _chunked_logit_stats(q, k, ctx, chunk=512, softcap=None):
     """Per head: the largest logit q.k / sqrt(d_h) a query gives a key it
-    may see (same document, not later), and the mean entropy of its
-    attention, from fp32 scores, chunk queries at a time.
+    may see (same document, not later; before the softcap, if any), and
+    the mean entropy of the attention the model computes (after the
+    softcap), from fp32 scores, chunk queries at a time.
 
     Defined in :numref:`sec_lm_reference_model`"""
     B, H, T, d_h = q.shape
@@ -23071,9 +23091,10 @@ def _chunked_logit_stats(q, k, ctx, chunk=512):
         if ctx is not None:
             d = ctx.doc_ids
             ok = ok & (d[:, i, None] == d[:, None, :])[:, None]
-        s = s.masked_fill(~ok, -math.inf)
-        mx = torch.maximum(mx, s.amax((0, 2, 3)))
-        p = torch.softmax(s, -1)
+        mx = torch.maximum(mx, s.masked_fill(~ok, -math.inf).amax((0, 2, 3)))
+        if softcap is not None:
+            s = d2l.softcap(s, softcap)
+        p = torch.softmax(s.masked_fill(~ok, -math.inf), -1)
         ent += -(p * torch.log(p.clamp_min(1e-30))).sum(-1).sum((0, 2))
     return mx, ent / (B * T)
 
@@ -23825,6 +23846,7 @@ INST_ZERO_LR = 1e-3  # the zero-layer reference (t1's own peak rate)
 INST_LOGIT_ALARM = 1000.0  # Kimi K2's "above 1,000"
 INST_STATS_EVERY = 10  # steps between logit and entropy statistics
 INST_VAL_TOKENS = 2 ** 20  # the final validation of every arm
+INST_STATS = 2  # version of the arm statistics: bump when they change
 
 _INST_TABLES = dict(  # the columns of an InstabilityRuns' tables
     table=['variant', 'lr', 'seed', 'final_loss', 'max_logit',
@@ -23843,12 +23865,13 @@ def _qk_clip_hook(tau):
 
 def _inst_config(cfg, lr, seed, steps=None, **kw):
     """An arm at peak rate lr: the preset's full schedule (steps None: warmup,
-    constant rate, decay; update-RMS probes as the preset) or cfg's warmup
-    and then a constant rate for steps (no probes); logit statistics every
-    INST_STATS_EVERY steps, validation at the end only, nothing saved.
+    constant rate, decay; update-RMS probes as the preset; the seed sets
+    the data order too) or cfg's warmup and then a constant rate for steps
+    (no probes); logit statistics every INST_STATS_EVERY steps, validation
+    at the end only, nothing saved.
 
     Defined in :numref:`sec_lm_reference_model`"""
-    sched = (dict() if steps is None
+    sched = (dict(data_seed=seed) if steps is None
              else dict(steps=steps, decay=0, probe_every=0))
     args = dict(peak_lr=lr, seed=seed, stats_every=INST_STATS_EVERY,
                 val_every=0, ckpt_steps=(), state_steps=(), state_every=0,
@@ -23862,7 +23885,7 @@ def _inst_recipe():
     return dict(softcap=INST_SOFTCAP, clip=INST_CLIP, warmup=INST_WARMUP,
                 zero_layer=dict(L=0, lr=INST_ZERO_LR, seed=0),
                 logit_alarm=INST_LOGIT_ALARM, stats_every=INST_STATS_EVERY,
-                val_tokens=INST_VAL_TOKENS)
+                val_tokens=INST_VAL_TOKENS, stats=INST_STATS)
 
 def _inst_arm(cfg, variant, lr, seed, steps=None, L=None):
     """The PretrainConfig and the PackedGPT options of one arm of variant
@@ -23930,6 +23953,35 @@ def _arm_trace(log, variant, lr, seed):
     t['max_logit'] = log.filter(like='max_logit_').max(axis=1)
     t['min_entropy'] = log.filter(like='entropy_').min(axis=1)
     return t.assign(variant=variant, lr=lr, seed=seed)
+
+def collapse_crossings(inst, lr, start, seed=0):
+    """The steps at which the baseline arm at (lr, seed) of a T1 grid
+    crosses each threshold, against its QK-norm twin (same rate, seed and
+    batches): largest logit above INST_LOGIT_ALARM; smallest entropy below
+    0.1 nats; gradient norm departs (d2l.departure of the paired log ratio
+    from start); loss 0.1 nats above the twin's (20-step rolling means, or
+    the first non-finite step if that comes first: a diverged arm stops).
+    None: never.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    tr = inst.traces[(inst.traces['lr'] == lr) & (inst.traces['seed'] == seed)]
+    run, twin = (tr[tr['variant'] == v].set_index('step')
+                 for v in ('none', 'qk_norm'))
+
+    def first(mask):  # the first step at which mask holds, or None
+        return int(mask.idxmax()) if mask.any() else None
+    t = inst.table
+    bad = t.loc[(t['variant'] == 'none') & (t['lr'] == lr)
+                & (t['seed'] == seed), 'first_nonfinite'].dropna()
+    loss = [int(s) for s in bad] + [s for s in [first(
+        run['loss'].sub(twin['loss']).rolling(20).mean() > 0.1)]
+        if s is not None]
+    return {'largest logit > 1,000': first(run['max_logit']
+                                           > INST_LOGIT_ALARM),
+            'entropy < 0.1': first(run['min_entropy'] < 0.1),
+            'grad norm moves': d2l.departure(
+                np.log(run['grad_norm'] / twin['grad_norm']), start),
+            'loss 0.1 above QK-norm': min(loss) if loss else None}
 
 def _inst_run(c, extra, variant, tau, shards, val_fn, device):
     """One T1 arm (config c, PackedGPT options extra) in this process.

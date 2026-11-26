@@ -23,7 +23,10 @@ show (docs/code-guide.md 7.1):
   lm-evaluation-harness cross-check;
 - the drivers behind the page's one-line calls: the opening's
   `gradient_event`, the plot helpers (`plot_run_log`, `plot_traces`,
-  `plot_ladder_runs`), the checkpoint evaluations, the instability arms and the
+  `plot_lr_grid`, `plot_ladder_runs`), the checkpoint evaluations, the
+  instability arms (the T1 grid on the full t1 schedule: six variants, one
+  regeneration each, the zero-layer reference, each finished arm kept under
+  `data/lm/rerun/ch21/inst-t1/` so that a restarted job resumes) and the
   spike protocol. While the reference run is pending, each shows the T1
   configuration under a printed label (the T1 run keeps checkpoints at the
   reference run's fractions of training for this).
@@ -171,7 +174,7 @@ d2l.PRETRAIN_ARTIFACTS['ladder-evals'] = (
     'lm-ladder-evals-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['t1-runs'] = ('lm-r2t1-log-v1', 'jsonl')
 d2l.PRETRAIN_ARTIFACTS['instability-t1'] = (
-    'lm-r2-inst-t1-v1', 'json-table')
+    'lm-r2-inst-t1-v2', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['instability-t2'] = (
     'lm-r2-inst-t2-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v1', 'json-table')
@@ -209,6 +212,10 @@ d2l.PRETRAIN_JOBS['inst-t1-qkclip'] = (
 d2l.PRETRAIN_JOBS['inst-t1-qknorm'] = (
     'instability_arms', lambda: d2l._inst_t1_job())
 d2l.PRETRAIN_JOBS['inst-t1-softcap'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['inst-t1-clip'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['inst-t1-warmup'] = (
     'instability_arms', lambda: d2l._inst_t1_job())
 d2l.PRETRAIN_JOBS['spike-replay'] = ('spike_replay', lambda: dict(
     cfg=d2l.r2_config('t1', clip=None), bad_step=300, kind='random',
@@ -1139,7 +1146,8 @@ def _as_tuple(cls, result, tables, defaults=None):
 #@save
 _PANEL_LABELS = {'loss': 'train loss', 'grad_norm': 'grad norm\n(pre-clip)',
                  'rms': 'update RMS\n(units of lr)',
-                 'max_logit': 'largest\nattn. logit', 'mfu': 'MFU'}
+                 'max_logit': 'largest\nattn. logit', 'mfu': 'MFU',
+                 'min_entropy': 'smallest attn.\nentropy (nats)'}
 
 #@save
 def plot_run_log(log, cols, marks=(), figsize=(6, 7)):
@@ -1174,11 +1182,13 @@ def plot_run_log(log, cols, marks=(), figsize=(6, 7)):
     fig.align_ylabels()
 
 #@save
-def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
+def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4),
+                dashed=()):
     """Stacked panels of per-step traces against step, one line per group
     of the columns by (named by their values): cols as in plot_run_log
-    ('loss', 'grad_norm', 'max_logit') or any column; logy: the columns on
-    a log scale; steps: the (first, last) step shown."""
+    ('loss', 'grad_norm', 'max_logit', 'min_entropy') or any column; logy:
+    the columns on a log scale; steps: the (first, last) step shown;
+    dashed: the group names drawn dashed (a twin)."""
     d2l.use_svg_display()
     fig, axes = d2l.plt.subplots(len(cols), 1, sharex=True, figsize=figsize,
                                  squeeze=False)
@@ -1190,7 +1200,8 @@ def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
                         for k in np.atleast_1d(key))
         for ax, col in zip(axes, cols):
             ok = g[col].notna()
-            ax.plot(g['step'][ok], g[col][ok], lw=0.8, label=name)
+            ax.plot(g['step'][ok], g[col][ok], lw=0.8, label=name,
+                    ls='--' if name in dashed else '-')
     for ax, col in zip(axes, cols):
         ax.set_ylabel(_PANEL_LABELS.get(col, col), fontsize=8)
         if col in logy:
@@ -1200,6 +1211,39 @@ def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
         axes[0].legend(fontsize=7)
     axes[-1].set_xlabel('step')
     fig.align_ylabels()
+
+#@save
+def plot_lr_grid(arms, panels, variants, logy=(), figsize=(11, 3)):
+    """Side-by-side panels of a learning-rate grid (a table with variant, lr
+    and seed columns) on a log axis of the rate: per panel {column: (label,
+    reference)}, both seeds as points and a line through their mean per
+    variant, the reference (None: none) as a dotted black line; logy: the
+    columns on a log scale."""
+    d2l.use_svg_display()
+    fig, axes = d2l.plt.subplots(1, len(panels), figsize=figsize)
+    for i, (ax, (col, (label, ref))) in enumerate(zip(np.atleast_1d(axes),
+                                                      panels.items())):
+        X, Y = [], []
+        for v in variants:  # the mean lines first: the legend names them
+            g = arms[arms['variant'] == v].groupby('lr')[col].mean()
+            X.append(g.index.tolist())
+            Y.append(g.tolist())
+        for v in variants:
+            g = arms[arms['variant'] == v]
+            X.append(g['lr'].tolist())
+            Y.append(g[col].tolist())
+        fmts = ([f'C{k}-' for k in range(len(variants))]
+                + [f'C{k}o' for k in range(len(variants))])
+        if ref is not None and np.isfinite(ref):
+            X.append([arms['lr'].min(), arms['lr'].max()])
+            Y.append([ref, ref])
+            fmts.append('k:')
+        last = i == len(panels) - 1  # the legend beside the last panel
+        d2l.plot(X, Y, 'learning rate', label, xscale='log',
+                 yscale='log' if col in logy else 'linear', fmts=fmts,
+                 axes=ax, legend=list(variants) if last else None,
+                 legend_loc='outside')
+    fig.tight_layout()
 
 #@save
 def plot_ladder_runs(*logs, figsize=(5, 3)):
@@ -1458,21 +1502,30 @@ def ladder_evals(ladder, log, tasks):
 %%tab pytorch
 #@save
 InstabilityRuns = collections.namedtuple(
-    'InstabilityRuns', ['table', 'traces', 'tau', 'label'])
+    'InstabilityRuns', ['table', 'traces', 'tau', 'label', 'zero_layer'],
+    defaults=(math.nan,))
 
 #@save
-_INST_PARTS = {'none': 'inst-t1-none', 'qk_clip': 'inst-t1-qkclip',
-               'qk_norm': 'inst-t1-qknorm', 'softcap': 'inst-t1-softcap'}
+_INST_PARTS = {'none': 'inst-t1-none', 'qk_norm': 'inst-t1-qknorm',
+               'qk_clip': 'inst-t1-qkclip', 'softcap': 'inst-t1-softcap',
+               'clip': 'inst-t1-clip', 'warmup': 'inst-t1-warmup'}
 
 #@save
 INST_SOFTCAP = 50.0  # Gemma 2's attention-logit cap
+INST_CLIP = 1.0  # the 'clip' arm: the production recipe's gradient clipping
+INST_WARMUP = 0.2  # the 'warmup' arm: 4x the presets' 5% (305 of 1,526)
+INST_ZERO_LR = 1e-3  # the zero-layer reference (t1's own peak rate)
+INST_LOGIT_ALARM = 1000.0  # Kimi K2's "above 1,000"
+INST_STATS_EVERY = 10  # steps between logit and entropy statistics
+INST_VAL_TOKENS = 2 ** 20  # the final validation of every arm
 
 #@save
 _INST_TABLES = dict(  # the columns of an InstabilityRuns' tables
     table=['variant', 'lr', 'seed', 'final_loss', 'max_logit',
-           'first_nonfinite', 'val_loss', 'steps'],
-    traces=['step', 'loss', 'grad_norm', 'max_logit', 'variant', 'lr',
-            'seed'])
+           'first_nonfinite', 'val_loss', 'steps', 'min_entropy',
+           'peak_entropy', 'first_logit_1000'],
+    traces=['step', 'loss', 'grad_norm', 'max_logit', 'min_entropy',
+            'variant', 'lr', 'seed'])
 
 #@save
 def _qk_clip_hook(tau):
@@ -1482,23 +1535,64 @@ def _qk_clip_hook(tau):
     return hook
 
 #@save
-def _inst_config(cfg, lr, seed, steps, **kw):
-    """An arm: cfg's warmup, then a constant learning rate (no decay), logit
-    statistics every 10 steps, validation at the end only, nothing saved."""
-    args = dict(steps=steps, peak_lr=lr, decay=0, seed=seed, stats_every=10,
-                probe_every=0, val_every=0, ckpt_steps=(), state_steps=(),
-                state_every=0, branches=(), out_dir=None)
+def _inst_config(cfg, lr, seed, steps=None, **kw):
+    """An arm at peak rate lr: the preset's full schedule (steps None: warmup,
+    constant rate, decay; update-RMS probes as the preset) or cfg's warmup
+    and then a constant rate for steps (no probes); logit statistics every
+    INST_STATS_EVERY steps, validation at the end only, nothing saved."""
+    sched = (dict() if steps is None
+             else dict(steps=steps, decay=0, probe_every=0))
+    args = dict(peak_lr=lr, seed=seed, stats_every=INST_STATS_EVERY,
+                val_every=0, ckpt_steps=(), state_steps=(), state_every=0,
+                branches=(), out_dir=None, **sched)
     return dataclasses.replace(cfg, **dict(args, **kw))
 
 #@save
-def _arm_summary(log, variant, lr, seed, tail=20):
+def _inst_recipe():
+    """The library constants a stored T1 grid was computed with."""
+    return dict(softcap=INST_SOFTCAP, clip=INST_CLIP, warmup=INST_WARMUP,
+                zero_layer=dict(L=0, lr=INST_ZERO_LR, seed=0),
+                logit_alarm=INST_LOGIT_ALARM, stats_every=INST_STATS_EVERY,
+                val_tokens=INST_VAL_TOKENS)
+
+#@save
+def _inst_arm(cfg, variant, lr, seed, steps=None, L=None):
+    """The PretrainConfig and the PackedGPT options of one arm of variant
+    (L=0: the zero-layer model, embedding, final norm and tied head). A
+    later job that pairs a run with a grid cell builds the cell's config
+    here and checks that the two differ only where they should."""
+    if variant not in _INST_PARTS:
+        raise ValueError(f'unknown variant {variant!r}; one of '
+                         f'{list(_INST_PARTS)}')
+    arch = cfg.arch._replace(qk_norm=variant == 'qk_norm' or cfg.arch.qk_norm,
+                             **({} if L is None else dict(L=L)))
+    kw = dict(arch=arch)
+    if variant == 'clip':
+        kw['clip'] = INST_CLIP
+    if variant == 'warmup':
+        kw['warmup'] = round(INST_WARMUP * (steps or cfg.steps))
+    extra = (dict(softcap=INST_SOFTCAP, backend='math')
+             if variant == 'softcap' else {})
+    return _inst_config(cfg, lr, seed, steps, **kw), extra
+
+#@save
+def _arm_summary(log, variant, lr, seed, tail=20, peak_end=None):
     """One arm's row: final loss (mean of the last tail steps; inf after a
     non-finite loss), largest logit, first non-finite step, final
-    validation loss."""
+    validation loss; the smallest mean attention entropy of any layer
+    over the statistics steps (min_entropy) and at the last one up to
+    peak_end (peak_entropy; the end of the peak phase, None: the last
+    statistics step); the first step whose largest logit exceeds
+    INST_LOGIT_ALARM (None: never)."""
     loss = log['loss'].to_numpy(float)
     bad = np.flatnonzero(~np.isfinite(loss))
     first = int(log['step'].iloc[bad[0]]) if len(bad) else None
     logits = log.filter(like='max_logit_').to_numpy(float)
+    big = log.filter(like='max_logit_').max(axis=1)
+    small = log.filter(like='entropy_').min(axis=1)
+    peak = small[log['step'] <= (log['step'].max() if peak_end is None
+                                 else peak_end)].dropna()
+    alarm = log['step'][big > INST_LOGIT_ALARM]
     val = log['val_loss'].dropna() if 'val_loss' in log else pd.Series([])
     return dict(variant=variant, lr=lr, seed=seed,
                 final_loss=(math.inf if first is not None
@@ -1506,56 +1600,100 @@ def _arm_summary(log, variant, lr, seed, tail=20):
                 max_logit=float(np.nanmax(logits)) if np.isfinite(
                     logits).any() else math.nan, first_nonfinite=first,
                 val_loss=float(val.iloc[-1]) if len(val) else math.nan,
-                steps=int(log['step'].max()))
+                steps=int(log['step'].max()),
+                min_entropy=float(small.min()) if small.notna().any()
+                else math.nan,
+                peak_entropy=float(peak.iloc[-1]) if len(peak) else math.nan,
+                first_logit_1000=int(alarm.iloc[0]) if len(alarm) else None)
 
 #@save
 def _arm_trace(log, variant, lr, seed):
-    """Per step: loss, pre-clip norm, the largest logit per layer and over
-    layers (at the statistics steps)."""
-    t = log[['step', 'loss', 'grad_norm']
-            + [c for c in log if c.startswith('max_logit_')]].copy()
+    """Per step: loss and pre-clip norm; at the statistics steps the
+    largest logit and the mean attention entropy per layer, their extremes
+    over layers (max_logit, min_entropy) and log_z; at the probe steps the
+    update RMS per module (rms_*)."""
+    keep = [c for c in log if c == 'log_z' or c.startswith((
+        'max_logit_', 'entropy_', 'rms_'))]
+    t = log[['step', 'loss', 'grad_norm'] + keep].copy()
     t['max_logit'] = log.filter(like='max_logit_').max(axis=1)
+    t['min_entropy'] = log.filter(like='entropy_').min(axis=1)
     return t.assign(variant=variant, lr=lr, seed=seed)
 
 #@save
-def _inst_run(cfg, variant, lr, seed, steps, tau, shards, val_fn, device):
-    """One T1 arm in this process."""
-    arch = cfg.arch._replace(qk_norm=variant == 'qk_norm' or cfg.arch.qk_norm)
-    extra = (dict(softcap=INST_SOFTCAP, backend='math')
-             if variant == 'softcap' else {})
-    c = _inst_config(cfg, lr, seed, steps, arch=arch)
-    torch.manual_seed(seed)
-    model = d2l.PackedGPT.from_arch(arch, **extra).to(device)
-    stream = d2l.PackedStream(shards, arch.T, c.global_batch,
+def _inst_run(c, extra, variant, tau, shards, val_fn, device):
+    """One T1 arm (config c, PackedGPT options extra) in this process."""
+    torch.manual_seed(c.seed)
+    model = d2l.PackedGPT.from_arch(c.arch, **extra).to(device)
+    stream = d2l.PackedStream(shards, c.arch.T, c.global_batch,
                               seed=c.data_seed)
     hooks = [_qk_clip_hook(tau)] if variant == 'qk_clip' else []
-    return d2l.pretrain(model, stream, c, val_fn=val_fn, hooks=hooks)
+    log = d2l.pretrain(model, stream, c, val_fn=val_fn, hooks=hooks)
+    del model
+    torch._dynamo.reset()
+    d2l.lm_free()
+    return log
+
+#@save
+def _inst_kept(path, config, compute):
+    """One arm's (row, trace): read from path if a finished arm of the same
+    configuration is there (a restarted job resumes), else compute() and
+    write it there first. Either way the values have been through the
+    file, so a resumed job's result equals an uninterrupted one's."""
+    if os.path.exists(path):
+        kept = d2l._read_result(path, 'json-table')
+        if d2l._config_diff(config, d2l._stored_config(kept)) is None:
+            return kept.table.iloc[0].to_dict(), kept.traces
+    row, trace = compute()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    d2l._write_result(path, 'json-table', dict(
+        table=pd.DataFrame([row]), traces=trace), dict(config=config,
+                                                       label=''))
+    kept = d2l._read_result(path, 'json-table')
+    return kept.table.iloc[0].to_dict(), kept.traces
 
 #@save
 def _inst_t1(cfg, lrs, variant, seeds, steps, tau, device=None):
-    """The T1 grid of one variant, on one GPU (device: tests only)."""
+    """The T1 grid of one variant on one GPU (device: tests only), each arm
+    kept under _job_root()/inst-t1/<part>/ as it finishes; 'none' adds the
+    zero-layer reference (L = 0 at INST_ZERO_LR, seed 0, same schedule)."""
     if device is None and not torch.cuda.is_available():
         raise RuntimeError('the instability arms train on a GPU')
     device, shards = torch.device(device or 'cuda'), _train_shards(cfg)
-    val = _val_fn(dataclasses.replace(cfg, val_tokens=2 ** 20))
+    val = _val_fn(dataclasses.replace(cfg, val_tokens=INST_VAL_TOKENS))
+    folder = os.path.join(_job_root(), 'inst-t1', _INST_PARTS[variant])
+
+    def arm(lr, seed, L=None):
+        c, extra = _inst_arm(cfg, variant, lr, seed, steps, L)
+        config = d2l._jsonable(dict(
+            cfg=_cfg_json(c), variant=variant, model=extra,
+            recipe=_inst_recipe(), tau=tau if variant == 'qk_clip' else None))
+
+        def compute():
+            log = _inst_run(c, extra, variant, tau, shards, val, device)
+            return (_arm_summary(log, variant, lr, seed,
+                                 peak_end=c.steps - c.decay),
+                    _arm_trace(log, variant, lr, seed))
+        name = f'{"zero-layer" if L == 0 else variant}-{lr:g}-s{seed}'
+        return _inst_kept(os.path.join(folder, name + '.json.gz'), config,
+                          compute)
     rows, traces = [], []
     for lr in lrs:
         for seed in seeds:
-            log = _inst_run(cfg, variant, lr, seed, steps, tau, shards, val,
-                            device)
-            rows.append(_arm_summary(log, variant, lr, seed))
-            traces.append(_arm_trace(log, variant, lr, seed))
-            torch._dynamo.reset()
-            d2l.lm_free()
+            row, trace = arm(lr, seed)
+            rows.append(row)
+            traces.append(trace)
+    zero = (arm(INST_ZERO_LR, 0, L=0)[0]['val_loss'] if variant == 'none'
+            else math.nan)
     return InstabilityRuns(pd.DataFrame(rows), pd.concat(
-        traces, ignore_index=True), tau, '')
+        traces, ignore_index=True), tau, '', float(zero))
 
 #@save
 def _inst_t2(cfg, lrs, variants, steps, tau):
     """The T2 arms as torchrun jobs on every GPU, and the reference run's
     first steps as the baseline (same recipe at its own learning rate)."""
-    if 'softcap' in variants:
-        raise ValueError('the torchrun job has no softcap variant')
+    if set(variants) - {'none', 'qk_clip', 'qk_norm'}:
+        raise ValueError('the torchrun job runs the none, qk_clip and '
+                         'qk_norm variants only')
     base = _job_log('reference-run')
     base = base[(base['run'] == cfg.preset) & (base['step'] <= steps)]
     cfgs, jobs, extra, arms = [], [], [], []
@@ -1583,11 +1721,15 @@ def _inst_t2(cfg, lrs, variants, steps, tau):
 
 #@save
 def _merge_arms(parts):
+    """The variants' parts as one InstabilityRuns; the zero-layer loss
+    from the part that ran it ('none')."""
     runs = list(parts.values())
+    zero = [z for z in (getattr(r, 'zero_layer', None) for r in runs)
+            if z is not None and math.isfinite(z)]
     return InstabilityRuns(
         pd.concat([r.table for r in runs], ignore_index=True),
         pd.concat([r.traces for r in runs], ignore_index=True), runs[0].tau,
-        '')
+        '', zero[0] if zero else math.nan)
 
 #@save
 T1_STAND_IN_LR = 1.6e-2  # the T1 grid's rate shown while inst-t2 is pending
@@ -1609,29 +1751,41 @@ def _t1_stand_in(res):
     return InstabilityRuns(*out, res.tau, d2l._label_of(res))
 
 #@save
-def instability_arms(cfg, lrs, variants, seeds=(0,), steps=400, tau=None):
-    """Short runs of cfg at each learning rate, per variant ('none';
-    'qk_clip', QK-clip at tau after every step; 'qk_norm'; 'softcap',
-    attention logits capped at INST_SOFTCAP) and seed, warmup as cfg and a
-    constant rate after it: InstabilityRuns(table, traces, tau, label), one
-    table row per arm (final loss = mean of the last 20 steps, inf after a
-    non-finite loss), traces per step. The t1 preset trains here on one GPU
-    (a regeneration name per variant); the reference preset launches
-    torchrun jobs (inst-t2) and adds the reference run's first steps as the
-    baseline."""
+def instability_arms(cfg, lrs, variants, seeds=(0,), steps=None, tau=None):
+    """Runs of cfg at each learning rate, per variant and seed: 'none';
+    'qk_norm'; 'qk_clip' (QK-clip at tau after every step); 'softcap'
+    (attention logits capped at INST_SOFTCAP, the math backend); 'clip'
+    ('none' with gradient clipping at INST_CLIP); 'warmup' ('none' with a
+    warmup of INST_WARMUP of the run). steps=None: the preset's full
+    schedule (the t1 grid); else cfg's warmup and then a constant rate for
+    steps. InstabilityRuns(table, traces, tau, label, zero_layer): a table
+    row per arm (_arm_summary), traces per step and, for t1 with 'none',
+    the final validation loss of the zero-layer model at INST_ZERO_LR. The
+    t1 preset trains here on one GPU, one regeneration name per variant;
+    the reference preset launches torchrun jobs (inst-t2) and adds the
+    reference run's first steps as the baseline."""
+    if set(variants) - set(_INST_PARTS):
+        raise ValueError(f'unknown variants {set(variants) - set(_INST_PARTS)}'
+                         f'; the variants are {list(_INST_PARTS)}')
     if 'qk_clip' in variants and tau is None:  # tau comes from tau_rule
         raise ValueError('the qk_clip variant needs tau')
     config = dict(cfg=_cfg_json(cfg), lrs=list(lrs), variants=list(variants),
                   seeds=list(seeds), steps=steps, tau=tau)
     if cfg.preset == 't1':
+        config['recipe'] = _inst_recipe()
         parts = {_INST_PARTS[v]: (lambda v=v: _inst_t1(
             cfg, lrs, v, seeds, steps, tau), dict(config, variants=[v]))
             for v in variants}
         res = d2l._pretrain_merged(None, parts, _merge_arms, config)
-        return d2l._show_label(_as_tuple(InstabilityRuns, res, _INST_TABLES))
+        return d2l._show_label(_as_tuple(InstabilityRuns, res, _INST_TABLES,
+                                         dict(zero_layer=math.nan)))
+    if steps is None:
+        raise ValueError('the reference-preset arms run a given number of '
+                         'steps (the full schedule is the t1 grid)')
     res = d2l._pretrain_result('inst-t2', lambda: _inst_t2(
         cfg, lrs, variants, steps, tau), config, fallback='instability-t1')
-    res = _as_tuple(InstabilityRuns, res, _INST_TABLES)
+    res = _as_tuple(InstabilityRuns, res, _INST_TABLES,
+                    dict(zero_layer=math.nan))
     if res.label.startswith('T2 run pending') and len(res.table):
         res = _t1_stand_in(res)
     return d2l._show_label(res)
@@ -1758,7 +1912,7 @@ def _inst_t1_job():
     t1 = _job_log('t1-runs')
     return dict(cfg=d2l.r2_config('t1', clip=None),
                 lrs=(1e-3, 2e-3, 4e-3, 8e-3, 1.6e-2, 3.2e-2),
-                variants=('none', 'qk_clip', 'qk_norm', 'softcap'),
-                seeds=(0, 1), steps=400,
-                tau=d2l.tau_rule(t1[t1['seed'] == 0], 76, 400))
+                variants=('none', 'qk_norm', 'qk_clip', 'softcap', 'clip',
+                          'warmup'),
+                seeds=(0, 1), tau=d2l.tau_rule(t1[t1['seed'] == 0], 76, 400))
 ```

@@ -68,7 +68,7 @@ from torch.utils.flop_counter import FlopCounterMode
 
 ```{.python .input #reference-model-opening}
 %%tab pytorch
-MILD, DELTA = 3, 0.3  # a mild event; the stability margin (see below)
+MILD, DELTA = 3, 0.3  # a mild event; a loss failure: DELTA above baseline
 log = d2l.reference_run_log()
 event = d2l.gradient_event(log, mild=MILD, delta=DELTA)
 print(f'largest gradient event: step {event.step} (hour {event.hour:.1f}), '
@@ -891,7 +891,7 @@ print(f'under QK-norm: no layer clipped, {len(caught)} warning')
 
 ### The Stable Learning-Rate Range
 
-<!-- Placeholder (prose): the T1 grid (six learning rates, two seeds, 400 steps, clipping off because it hides the growth that precedes a spike, z-loss and weight decay as in t1); tau fixed beforehand by the rule below; the stability criterion: finite and final loss at most l_ref + delta, l_ref the best final loss of the baseline over the grid, delta = 0.3 checked against three times the two-seed difference. What a variant changes is the upper edge: the largest rate above its best rate before the first unstable one. Rates below the best that miss l_ref + delta are slower (400 steps at a small constant rate leave them under-trained), not unstable, and are listed apart. The learning-rate sensitivity of Wortsman et al. -->
+<!-- Placeholder (prose): the T1 grid on the full t1 schedule (1,526 steps, warmup 76, constant to step 1,297, linear decay over the last 229; only the peak rate changes, six rates, two seeds), clipping off because it hides the growth that precedes a spike, z-loss and weight decay as in t1; tau fixed beforehand by the rule below. Six arms: the baseline, QK-norm, QK-clip, softcap (c = 50, through the math backend), and two baselines with the production recipe's fixes, gradient clipping at 1.0 and a four times longer warmup (305 steps). Statistics every 10 steps: the largest attention logit and the mean attention entropy per layer; the final validation loss on 2^20 tokens; the zero-layer reference (t1 with no blocks: embedding, final norm, tied head) at 1e-3 is Wortsman et al.'s line a model with attention must beat. Wortsman et al.'s divergence is a final loss far above the best (counted at ln V in the sensitivity), not a NaN: the collapse is silent. A rate has collapsed when some layer's mean entropy falls below 0.1 nats (pre-registered). -->
 
 ```{.python .input #reference-model-stable-lr}
 %%tab pytorch
@@ -901,63 +901,120 @@ def tau_rule(log, lo, hi):
     ceiling of a tenth of the largest logit in log over steps lo to hi."""
     rows = log[log['step'].between(lo, hi)]
     return 10 * math.ceil(rows.filter(like='max_logit_').max().max() / 10)
+
+#@save
+def first_collapsed_rate(arms, variant, seed=None, floor=0.1):
+    """The smallest learning rate at which an arm of variant (of seed, if
+    given) had a layer whose mean attention entropy fell below floor nats
+    at some statistics step; None if no rate collapsed."""
+    hit = arms[(arms['variant'] == variant) & (arms['min_entropy'] < floor)]
+    if seed is not None:
+        hit = hit[hit['seed'] == seed]
+    return float(hit['lr'].min()) if len(hit) else None
 ```
 
 ```{.python .input #reference-model-stable-lr-arms}
 %%tab pytorch
 LRS = (1e-3, 2e-3, 4e-3, 8e-3, 1.6e-2, 3.2e-2)
-VARIANTS = ('none', 'qk_clip', 'qk_norm', 'softcap')
+VARIANTS = ('none', 'qk_norm', 'qk_clip', 'softcap', 'clip', 'warmup')
 TAU_T1 = tau_rule(t1[t1['seed'] == 0], t1_cfg.warmup, 400)
 inst = d2l.instability_arms(r2_config('t1', clip=None), lrs=LRS,
-                            variants=VARIANTS, seeds=(0, 1), steps=400,
-                            tau=TAU_T1)
-arms = inst.table
-ell_ref = arms.loc[arms['variant'] == 'none', 'final_loss'].min()
-pair = arms[(arms['variant'] == 'none') & (arms['lr'] == LRS[0])]
-seed_gap = 3 * pair['final_loss'].diff().abs().iloc[-1]
-print(f'τ (t1) = {TAU_T1}')
-print(f'δ = {DELTA} above 3 × two-seed difference at lr {LRS[0]:g} '
-      f'({seed_gap:.3f}): {"yes" if DELTA > seed_gap else "no"}')
+                            variants=VARIANTS, seeds=(0, 1), tau=TAU_T1)
+arms = inst.table.assign(  # diverged: ln V, as the sensitivity counts it
+    loss=inst.table['val_loss'].fillna(math.inf).clip(upper=math.log(V)))
+mean = arms.groupby(['variant', 'lr'])['loss'].mean()  # of the two seeds
+top = LRS[-1]
+print(f'{"variant":>8} {"best lr":>7} {"sensitivity":>11} '
+      f'{f"{top:g} − best":>12} {"largest logit":>13} '
+      f'{f"logit > 1,000 at {top:g}":>21}')
+for v in VARIANTS:
+    m, g = mean[v], arms[arms['variant'] == v]
+    first = g.loc[g['lr'] == top, 'first_logit_1000'].min()  # either seed
+    print(f'{v:>8} {m.idxmin():7g} {lr_sensitivity(m, math.log(V)):11.2f} '
+          f'{m[top] - m.min():12.2f} {g["max_logit"].max():13.0f} '
+          f'{"—" if pd.isna(first) else f"step {int(first):,}":>21}')
+print(f'zero-layer reference: {inst.zero_layer:.2f}')
+print(f'τ (t1) = {inst.tau}')
 ```
+
+<!-- Placeholder (prose): read the table: the best rate and the sensitivity per arm; what QK-norm, QK-clip and softcap change, and whether clipping and the longer warmup change the baseline's curve (claims 15, 15b, 15c; the prediction is little), as measured. Softcap's largest logit is the value before the cap: the softmax sees at most 50 while the raw product grows (Kimi K2: it "can still grow excessively before capping"). -->
 
 ```{.python .input #reference-model-stable-lr-edge}
 %%tab pytorch
-def stable_range(g):
-    """A variant's best rate, the largest rate above it before the first
-    unstable one (None if the best is unstable), and the slower rates
-    below it: finite, but above ell_ref + DELTA."""
-    final = g.groupby('lr')['final_loss']
-    stable = final.max() <= ell_ref + DELTA  # both seeds; inf fails
-    best, edge = final.mean().idxmin(), None
-    for lr in stable.index[stable.index >= best]:  # upward from the best
-        if not stable[lr]:
-            break
-        edge = lr
-    slower = [lr for lr in stable.index[stable.index < best]
-              if not stable[lr] and np.isfinite(final.max()[lr])]
-    return best, edge, slower
-
-print(f'{"variant":>8} {"best lr":>8} {"stable up to":>12} '
-      f'{"slower":>19} {"lr sensitivity":>14}')
-for v in VARIANTS:
-    g = arms[arms['variant'] == v]
-    best, edge, slower = stable_range(g)
-    sens = lr_sensitivity(g.groupby('lr')['final_loss'].mean().to_numpy(),
-                          math.log(V))
-    print(f'{v:>8} {best:8g} {"—" if edge is None else f"{edge:g}":>12} '
-          f'{", ".join(f"{lr:g}" for lr in slower) or "—":>19} {sens:14.2f}')
+by_seed = arms.pivot_table('loss', 'lr', ['variant', 'seed'])
+gap = by_seed['none'] - by_seed['qk_norm']  # paired: same seed, batches
+spread = (by_seed['none'][0] - by_seed['none'][1]).abs()
+noise = 3 * max(spread[LRS[0]],
+                abs(by_seed['qk_norm'][0] - by_seed['qk_norm'][1])[LRS[0]])
+clip_gap = mean['clip'] - mean['none']
+dead = arms[arms['min_entropy'] < 0.1]
+print(f'Δ = baseline − QK-norm (paired); 3 × seed difference at '
+      f'{LRS[0]:g}: {noise:.3f}')
+print(f'{"lr":>7} {"Δ seed 0":>9} {"Δ seed 1":>9} {"resolved":>9} '
+      f'{"clip − none":>11} {"seed diff":>9} {"collapsed":>9}')
+for lr in LRS:
+    hit = ((dead['variant'] == 'none') & (dead['lr'] == lr)).any()
+    print(f'{lr:7g} {gap.loc[lr, 0]:+9.3f} {gap.loc[lr, 1]:+9.3f} '
+          f'{"yes" if (gap.loc[lr] > noise).all() else "no":>9} '
+          f'{clip_gap[lr]:+11.3f} {spread[lr]:9.3f} '
+          f'{"yes" if hit else "no":>9}')
+base, low = arms[arms['variant'] == 'none'], dead[dead['variant'] == 'none']
+print(f'collapsed baseline cells: {len(low)} of {len(base)}; finite: '
+      f'{int(low["first_nonfinite"].isna().sum())}; above the zero-layer '
+      f'loss: {int((low["loss"] > inst.zero_layer).sum())}')
+print(f'{"":>21}' + ''.join(f'{v:>9}' for v in VARIANTS))
+rates = [first_collapsed_rate(arms, v) for v in VARIANTS]
+print(f'{"first collapsed rate":>21}'
+      + ''.join(f'{"—" if r is None else f"{r:g}":>9}' for r in rates))
+print(f'{"smallest entropy":>21}' + ''.join(
+    f'{arms.loc[arms["variant"] == v, "min_entropy"].min():9.2f}'
+    for v in VARIANTS))
 ```
 
-<!-- Placeholder (prose): final loss against the learning rate per variant (mean of the two seeds; a diverged run drawn at ln V), the band l_ref to l_ref + delta shaded. -->
+<!-- Placeholder (prose): the three panels on one log axis of the rate, both seeds as points and a line through their mean: the final loss with the zero-layer line; the largest logit with tau marked; the smallest per-layer entropy at the end of the peak phase (step 1,290). Panels 2 and 3 are the mechanism: the loss departs where the entropy reaches zero, for the softcap arm as well, whose capped logit never passes 50. Then the collapsed cells: how many end with a finite loss and where they sit against the zero-layer model (claim 15a), and whether the decay brings them back (claim 15d), as measured. -->
 
 ```{.python .input #reference-model-stable-lr-plot}
 %%tab pytorch
-curves = arms.groupby(['lr', 'variant'])['final_loss'].mean().unstack()
-d2l.plot(list(LRS), [curves[v].clip(upper=math.log(V)).to_numpy()
-                     for v in VARIANTS], 'learning rate', 'final loss',
-         legend=list(VARIANTS), xscale='log', fmts=('o-', 's-', '^-', 'd-'))
-d2l.plt.axhspan(ell_ref, ell_ref + DELTA, color='0.9')
-d2l.plt.show()
+d2l.plot_lr_grid(arms, {'loss': ('final val loss', inst.zero_layer),
+                        'max_logit': ('largest logit', TAU_T1),
+                        'peak_entropy': ('smallest entropy (nats)', None)},
+                 VARIANTS, logy=['max_logit'])
+```
+
+### Who Moves First at T1
+
+<!-- Placeholder (prose): the baseline (seed 0) at the first collapsed rate against its QK-norm twin (same rate, seed and batches): when the largest logit passes 1,000, when the smallest entropy falls below 0.1 nats, when the gradient norm moves (the detector of "Who Moves First", from the end of warmup), and when the loss first sits 0.1 nats above the twin's (20-step means). The statistics are sampled every 10 steps, so a lead under 10 steps is no lead (claim 6b). If no rate collapsed, the cell says so and the claim is dropped. -->
+
+```{.python .input #reference-model-who-moves-first-at-t1}
+%%tab pytorch
+lr_c = first_collapsed_rate(arms, 'none', seed=0)
+if lr_c is None:  # pre-registered: the claim is dropped
+    print('no baseline rate collapsed: every entropy stayed above 0.1 nats')
+else:
+    tr = inst.traces[(inst.traces['seed'] == 0) & (inst.traces['lr'] == lr_c)]
+    run, twin = (tr[tr['variant'] == v].set_index('step')
+                 for v in ('none', 'qk_norm'))
+    def first(mask):  # the first step at which mask holds, or None
+        return int(mask.idxmax()) if mask.any() else None
+    moves = moved(run['grad_norm'], t1_cfg.warmup)  # from the end of warmup
+    steps = {'largest logit > 1,000': first(run['max_logit'] > 1000),
+             'entropy < 0.1': first(run['min_entropy'] < 0.1),
+             'grad norm moves': (None if moves is None
+                                 else t1_cfg.warmup + moves),
+             'loss 0.1 above QK-norm': first(run['loss'].sub(twin['loss'])
+                                             .rolling(20).mean() > 0.1)}
+    at = steps['loss 0.1 above QK-norm']
+    print(f'baseline at lr {lr_c:g} (first collapsed rate), seed 0')
+    for name, s in steps.items():
+        lead = ('' if s is None or at is None or s == at else
+                f', {abs(at - s)} steps {"before" if s < at else "after"} '
+                'the loss')
+        print(f'{name:>22}: ' + ('never' if s is None else f'step {s:,}')
+              + lead)
+    d2l.plot_traces(tr[tr['variant'].isin(['none', 'qk_norm'])],
+                    ['max_logit', 'min_entropy', 'grad_norm', 'loss'],
+                    by='variant', logy=['max_logit', 'grad_norm'],
+                    dashed=['qk_norm'], figsize=(5, 5))
 ```
 
 ### Ten Times the Learning Rate

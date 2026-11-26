@@ -9,7 +9,7 @@ Qwen3-0.6B-Base config (6 N_mm = 3,575,906,304, F(T=2,048) =
 4,985,192,448), `causal_half`, `T=None`; `mfu` arithmetic; `r2_config`
 overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
 `_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
-chapter's 35 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
+chapter's 37 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
 vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
 (losses 1e-6) and a branch from a saved state; the stats-step columns
 `entropy_<l>` and `log_z` (finite; `log_z` the explicit mean logsumexp
@@ -28,12 +28,18 @@ stored, load, configuration mismatch, absent in a normal run, pending,
 two regeneration names with other calls in the same process, D2L_RERUN=1
 refused); `t_interval` against `scipy.stats.t` (dof 1-10, 1e-4);
 `packed_to_hf` against `LlamaForCausalLM` (fp32 1e-5);
-`load_reference_model` before the checkpoints are registered; a 2-process
+`load_reference_model` before the checkpoints are registered; the T1
+grid: each variant's arm config (schedule, clip, warmup 305, softcap
+backend, QK-norm; unknown variants refused), the zero-layer model trains,
+`_arm_summary` (first step above 1,000, smallest and peak-phase entropy),
+`first_collapsed_rate`, a resumed job reads its finished arms, the merge
+keeps the zero-layer loss, the regeneration stores the recipe; a 2-process
 gloo DDP `pretrain` equal to one process at the same global batch (loss and
 `log_z`, 1e-5).
 """
 import collections
 import contextlib
+import dataclasses
 import io
 import math
 import os
@@ -68,7 +74,8 @@ torch.set_num_threads(min(8, torch.get_num_threads()))
 
 RERUN_NAMES = (
     'pdp-throughput', 'pdp-mask-runs', 't1-runs', 'inst-t1-none',
-    'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'spike-replay',
+    'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'inst-t1-clip',
+    'inst-t1-warmup', 'spike-replay',
     'reference-run', 'ladder', 'inst-t2', 'reference-evals', 't1-evals',
     'ladder-evals',
     'gemm-sweep', 'lowp-runs', 'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B',
@@ -227,7 +234,8 @@ class ConfigTest(unittest.TestCase):
         self.assertLessEqual(set(d2l._RERUN_ARTIFACT.values()),
                              set(d2l.PRETRAIN_ARTIFACTS))
         needs_run = {'ladder-evals', 'inst-t2', 'inst-t1-none',
-                     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap'}
+                     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap',
+                     'inst-t1-clip', 'inst-t1-warmup'}
         with mock.patch.object(d2l, '_rerun_dir', lambda: '/nonexistent'), \
                 uncommitted():
             for name, (driver, kwargs) in d2l.PRETRAIN_JOBS.items():
@@ -802,24 +810,144 @@ class MeasurementTest(unittest.TestCase):
         return toy_config(preset='t1', compile=False, warmup=2, **kw)
 
     def test_inst_t1(self):
-        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards):
-            val = None
-            with mock.patch.object(d2l, '_val_fn', lambda c: (
-                    lambda m: 1.0)):
-                runs = {v: d2l._inst_t1(self.toy_cfg(clip=None), (1e-3, 1e-1),
-                                        v, (0, 1), 12, 0.5, device='cpu')
-                        for v in ('none', 'qk_clip', 'qk_norm')}
+        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
+                mock.patch.object(d2l, '_job_root', lambda: self.tmp.name), \
+                mock.patch.object(d2l, '_val_fn', lambda c: (lambda m: 1.0)):
+            runs = {v: d2l._inst_t1(self.toy_cfg(clip=None), (1e-3, 1e-1),
+                                    v, (0, 1), 12, 0.5, device='cpu')
+                    for v in ('none', 'qk_clip', 'qk_norm')}
         for r in runs.values():
             self.assertEqual(len(r.table), 4)
             self.assertEqual(set(r.traces['step']), set(range(1, 13)))
             self.assertTrue(r.traces['max_logit'].notna().any())
+            self.assertTrue(r.traces['min_entropy'].notna().any())
+            self.assertTrue(r.table['min_entropy'].notna().all())
         # the clip pulls every head back to tau after each step
         hi = {v: r.table[r.table['lr'] == 1e-1]['max_logit'].values
               for v, r in runs.items()}
         self.assertTrue((hi['qk_clip'] < 0.2 * hi['none']).all())
+        self.assertEqual(runs['none'].zero_layer, 1.0)  # the zero-layer run
+        self.assertTrue(math.isnan(runs['qk_norm'].zero_layer))
         merged = d2l._merge_arms(runs)
         self.assertEqual(len(merged.table), 12)
-        del val
+        self.assertEqual(merged.zero_layer, 1.0)
+
+    def test_inst_arm_configs(self):
+        cfg = d2l.r2_config('t1', clip=None)
+        arms = {v: d2l._inst_arm(cfg, v, 8e-3, 1) for v in d2l._INST_PARTS}
+        for v, (c, extra) in arms.items():  # the full t1 schedule
+            self.assertEqual((c.steps, c.warmup if v != 'warmup' else 76,
+                              c.decay, c.peak_lr, c.seed), (1526, 76, 229,
+                                                            8e-3, 1), v)
+            self.assertEqual((c.stats_every, c.val_every, c.probe_every,
+                              c.out_dir, c.state_steps), (10, 0, 50, None,
+                                                          ()), v)
+            self.assertEqual(c.arch.qk_norm, v == 'qk_norm', v)
+            self.assertEqual(c.clip, 1.0 if v == 'clip' else None, v)
+            self.assertEqual(extra, dict(softcap=50.0, backend='math')
+                             if v == 'softcap' else {}, v)
+            self.assertEqual(c.micro_batch, 16, v)
+        self.assertEqual(arms['warmup'][0].warmup, 305)
+        # a pair's later run differs from its grid cell in one field only
+        c, _ = d2l._inst_arm(cfg, 'clip', 1e-3, 0)
+        diff = {k for k, v in d2l._cfg_json(c).items()
+                if d2l._cfg_json(dataclasses.replace(c, eps=1e-6))[k] != v}
+        self.assertEqual(diff, {'eps'})
+        # the 10x arms and the spike runs: constant rate after the warmup
+        c, _ = d2l._inst_arm(cfg, 'none', 6e-3, 0, steps=500)
+        self.assertEqual((c.steps, c.decay, c.probe_every, c.warmup),
+                         (500, 0, 0, 76))
+        c, _ = d2l._inst_arm(cfg, 'none', 1e-3, 0, L=0)
+        self.assertEqual(c.arch.L, 0)
+        with self.assertRaisesRegex(ValueError, 'unknown variant'):
+            d2l._inst_arm(cfg, 'qknorm', 1e-3, 0)
+        with self.assertRaisesRegex(ValueError, 'unknown variants'):
+            d2l.instability_arms(cfg, (1e-3,), ('none', 'clip_1'))
+        with self.assertRaisesRegex(ValueError, 'given number of steps'):
+            d2l.instability_arms(d2l.r2_config('r2'), (6e-3,), ('none',))
+        with self.assertRaisesRegex(ValueError, 'none, qk_clip and qk_norm'):
+            d2l._inst_t2(d2l.r2_config('r2'), (6e-3,), ('clip',), 500, 30)
+        job = d2l.PRETRAIN_JOBS['inst-t1-warmup'][1]
+        with mock.patch.object(d2l, '_job_log', lambda n: toy_log()):
+            kw = job()
+        self.assertEqual(kw['variants'], ('none', 'qk_norm', 'qk_clip',
+                                          'softcap', 'clip', 'warmup'))
+        self.assertNotIn('steps', kw)  # the full schedule
+        self.assertEqual((kw['seeds'], kw['cfg'].clip), ((0, 1), None))
+
+    def test_zero_layer_model(self):
+        arch = TOY._replace(L=0)
+        model = d2l.PackedGPT.from_arch(arch, backend='sdpa')
+        self.assertEqual(len(model.blks), 0)
+        self.assertEqual(sum(p.numel() for p in model.parameters()),
+                         TOY.vocab * TOY.d + TOY.d)  # embedding, final norm
+        stream = d2l.PackedStream(self.shards, TOY.T, 8)
+        cfg = toy_config(arch=arch, steps=6, stats_every=2, probe_every=2)
+        before = model.token_emb.weight.detach().clone()
+        with contextlib.redirect_stdout(io.StringIO()):
+            log = d2l.pretrain(model, stream, cfg, val_fn=lambda m: 2.0)
+        self.assertTrue(np.isfinite(log['loss']).all())
+        self.assertTrue(np.isfinite(log['grad_norm']).all())
+        self.assertFalse(torch.equal(model.token_emb.weight, before))
+        self.assertFalse(any(c.startswith(('max_logit_', 'entropy_'))
+                             for c in log))
+        row = d2l._arm_summary(log, 'none', 1e-3, 0)
+        self.assertTrue(math.isnan(row['min_entropy']))
+        self.assertEqual(row['val_loss'], 2.0)
+
+    def test_arm_summary_entropy(self):
+        log = toy_log(100)  # largest logit 10 + l + step / 50
+        for l in range(2):
+            log[f'entropy_{l}'] = np.where(log['step'] % 10 == 0,
+                                           3 - log['step'] / 40 - l, np.nan)
+        log.loc[log['step'] == 70, 'max_logit_1'] = 2000.0
+        row = d2l._arm_summary(log, 'none', 1e-3, 0, peak_end=55)
+        self.assertEqual(row['first_logit_1000'], 70)
+        self.assertAlmostEqual(row['min_entropy'], 3 - 100 / 40 - 1)
+        self.assertAlmostEqual(row['peak_entropy'], 3 - 50 / 40 - 1)
+        row = d2l._arm_summary(log, 'none', 1e-3, 0)
+        self.assertAlmostEqual(row['peak_entropy'], row['min_entropy'])
+        self.assertIsNone(d2l._arm_summary(toy_log(100), 'none', 1e-3, 0)[
+            'first_logit_1000'])
+        tr = d2l._arm_trace(log.assign(log_z=1.0), 'none', 1e-3, 0)
+        for c in ('entropy_0', 'entropy_1', 'min_entropy', 'log_z',
+                  'rms_W_q'):
+            self.assertIn(c, tr.columns)
+        self.assertAlmostEqual(tr.loc[tr['step'] == 40, 'min_entropy'].item(),
+                               3 - 1 - 1)
+
+    def test_first_collapsed_rate(self):
+        ent = {'none': (2.0, 0.05, 0.0), 'qk_norm': (2.0, 1.5, 1.2)}
+        rows = [dict(variant=v, lr=lr, seed=s, min_entropy=e)
+                for v in ent for s in (0, 1)
+                for lr, e in zip((1e-3, 8e-3, 3.2e-2), ent[v])]
+        arms = pd.DataFrame(rows)
+        self.assertEqual(d2l.first_collapsed_rate(arms, 'none'), 8e-3)
+        self.assertIsNone(d2l.first_collapsed_rate(arms, 'qk_norm'))
+        arms.loc[(arms['lr'] == 8e-3) & (arms['seed'] == 0),
+                 'min_entropy'] = 0.5
+        self.assertEqual(d2l.first_collapsed_rate(arms, 'none', seed=0),
+                         3.2e-2)
+        self.assertEqual(d2l.first_collapsed_rate(arms, 'none'), 8e-3)
+        self.assertIsNone(d2l.first_collapsed_rate(arms, 'none', floor=0.0))
+
+    def test_inst_kept(self):
+        path = os.path.join(self.tmp.name, 'kept', 'arm.json.gz')
+        calls = []
+
+        def compute():
+            calls.append(1)
+            return (dict(variant='none', lr=1e-3, seed=0,
+                         final_loss=math.inf, first_nonfinite=None),
+                    toy_log(20))
+        row, tr = d2l._inst_kept(path, dict(a=1), compute)
+        again, tr2 = d2l._inst_kept(path, dict(a=1), compute)
+        self.assertEqual(len(calls), 1)  # resumed: read, not trained
+        self.assertTrue(pd.isna(row['final_loss']))  # inf is stored as null
+        self.assertEqual(str(row), str(again))
+        pd.testing.assert_frame_equal(tr, tr2)
+        d2l._inst_kept(path, dict(a=2), compute)  # another configuration
+        self.assertEqual(len(calls), 2)
 
     def test_spike(self):
         replays = (('from 6, same batches', 6, (), None),
@@ -966,6 +1094,27 @@ class MeasurementTest(unittest.TestCase):
         self.assertEqual(len(fig.axes), 2)
         labels = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
         self.assertEqual(labels, ['0.001 none', '0.001 qk_clip'])
+        d2l.plt.close('all')
+        d2l.plot_traces(traces, ['loss'], by='variant', dashed=['qk_clip'])
+        styles = [ln.get_linestyle() for ln in d2l.plt.gcf().axes[0].lines]
+        self.assertEqual(styles, ['-', '--'])
+        d2l.plt.close('all')
+        arms = pd.DataFrame([dict(variant=v, lr=lr, seed=s, loss=3 + lr + s,
+                                  max_logit=10 * lr)
+                             for v in ('none', 'qk_norm')
+                             for lr in (1e-3, 1e-2) for s in (0, 1)])
+        d2l.plot_lr_grid(arms, {'loss': ('loss', 3.5),
+                                'max_logit': ('logit', None)},
+                         ('none', 'qk_norm'), logy=['max_logit'])
+        fig = d2l.plt.gcf()
+        self.assertEqual(len(fig.axes), 2)
+        self.assertEqual(len(fig.axes[0].lines), 5)  # 2 means, 2 seeds, ref
+        self.assertEqual(len(fig.axes[1].lines), 4)
+        self.assertEqual(fig.axes[1].get_yscale(), 'log')
+        labels = [t.get_text() for t in fig.axes[1].get_legend().get_texts()]
+        self.assertEqual(labels, ['none', 'qk_norm'])  # beside the last
+        np.testing.assert_allclose(fig.axes[0].lines[0].get_ydata(),
+                                   [3.5 + 1e-3, 3.5 + 1e-2])  # seed mean
         d2l.plt.close('all')
         log = toy_log(200).assign(job='ladder-25m-s0')
         log.loc[log['step'] > 150, 'run'] = 'b150'
@@ -1149,6 +1298,49 @@ class ResultTest(unittest.TestCase):
             self.assertEqual(len(call(self.compute)), 6)
         self.assertEqual(self.calls, calls)
         self.assertTrue(os.path.exists(merged))
+
+
+    def test_inst_t1_regeneration(self):
+        """Each variant is its own regeneration; the merged result keeps the
+        zero-layer loss of the 'none' part and stores the recipe."""
+        cfg = d2l.r2_config('t1', clip=None)
+
+        def fake(cfg, lrs, v, seeds, steps, tau):
+            self.calls += 1
+            rows = [dict(variant=v, lr=lr, seed=s, val_loss=3.0)
+                    for lr in lrs for s in seeds]
+            return d2l.InstabilityRuns(
+                pd.DataFrame(rows), pd.DataFrame(rows).assign(step=1), tau,
+                '', 7.5 if v == 'none' else math.nan)
+
+        def call():
+            with contextlib.redirect_stdout(io.StringIO()):
+                return d2l.instability_arms(cfg, (1e-3, 8e-3),
+                                            ('none', 'clip'), seeds=(0, 1),
+                                            tau=30)
+        with mock.patch.object(d2l, '_inst_t1', fake):
+            os.environ['D2L_RERUN'] = 'inst-t1-clip'
+            self.assertTrue(call().label.endswith('pending'))
+            os.environ['D2L_RERUN'] = 'inst-t1-none'
+            res = call()
+        self.assertEqual(self.calls, 2)
+        self.assertEqual((len(res.table), res.zero_layer, res.tau),
+                         (8, 7.5, 30))
+        path = '../data/lm/rerun/lm-r2-inst-t1-v2.json.gz'
+        stored = d2l._read_result(path, 'json-table')
+        config = d2l._stored_config(stored)
+        self.assertEqual((config['steps'], config['variants']),
+                         (None, ['none', 'clip']))
+        self.assertEqual(config['recipe']['warmup'], 0.2)
+        self.assertEqual(stored.zero_layer, 7.5)
+        # the committed grid loads; a changed recipe is refused
+        d2l.DATA_HUB['lm-r2-inst-t1-v2'] = ('url', 'sha1')
+        os.environ['D2L_RERUN'] = ''
+        with mock.patch.object(d2l, 'download_keyed', lambda key: path):
+            self.assertEqual(call().zero_layer, 7.5)
+            with mock.patch.object(d2l, 'INST_CLIP', 0.5), \
+                    self.assertRaisesRegex(ValueError, 'recipe.clip'):
+                call()
 
 
 class LibraryStructureTest(unittest.TestCase):

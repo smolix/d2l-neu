@@ -113,7 +113,8 @@ PRETRAIN_PENDING = frozenset()  # campaigns an author step declared pending
 PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'pdp-throughput', 'pdp-mask-runs',
     't1-runs', 'inst-t1-none', 'inst-t1-qkclip', 'inst-t1-qknorm',
-    'inst-t1-softcap', 'spike-replay', 'reference-run', 'ladder', 'inst-t2',
+    'inst-t1-softcap', 'inst-t1-clip', 'inst-t1-warmup', 'spike-replay',
+    'reference-run', 'ladder', 'inst-t2',
     'reference-evals', 't1-evals', 'ladder-evals',
     'gemm-sweep', 'lowp-runs',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
@@ -129,7 +130,8 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     'pdp-mask-runs': 'packing-mask-runs',
     't1-runs': 't1-runs', 'inst-t1-none': 'instability-t1',
     'inst-t1-qkclip': 'instability-t1', 'inst-t1-qknorm': 'instability-t1',
-    'inst-t1-softcap': 'instability-t1', 'spike-replay': 'spike-replay',
+    'inst-t1-softcap': 'instability-t1', 'inst-t1-clip': 'instability-t1',
+    'inst-t1-warmup': 'instability-t1', 'spike-replay': 'spike-replay',
     'reference-run': 'reference-run-log', 'ladder': 'ladder-logs',
     'inst-t2': 'instability-t2', 'reference-evals': 'reference-evals',
     't1-evals': 't1-evals', 'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
@@ -624,6 +626,8 @@ def _doc_mask(ctx, backend, T, device):
 #@save
 def _packed_mask(model, ctx, X):
     """The mask every block of a PackedGPT uses, built once per forward."""
+    if not len(model.blks):  # the zero-layer reference model
+        return None
     backend = _attn_backend(model.blks[0].attention, X, ctx)
     return None if backend == 'causal' else _doc_mask(ctx, backend,
                                                       X.shape[1], X.device)

@@ -133,14 +133,15 @@ f^3. -->
 #@save
 DVFSFit = collections.namedtuple('DVFSFit', [
     'P_s', 'k', 'f_star', 'f_min', 'step', 'edge', 'locks', 'clocks',
-    'power', 'rate', 'source', 'a100'])
+    'power', 'rate', 'spread', 'source', 'a100'])
 
 def dvfs_fit(log):  #@save
     """Fit P(f) = P_s + k f^3 (f in GHz: the clock each window ran at) by
     least squares to the locked-clock windows of the compute-bound
     workload; f* = (P_s / (2k))^(1/3) maximizes the work per joule. f_min
     is the lock of least energy per unit of work, step the sweep's largest
-    step, edge whether f_min is the lowest lock."""
+    step, edge whether f_min is the lowest lock, spread the largest
+    relative spread of a window's power across processes (NaN: one run)."""
     s = log[(log.kind == 'clock') & log.workload.str.startswith('matmul')]
     s = s.sort_values('setting')
     f = s.sm_mhz.to_numpy() / 1e3  # the clock it ran at, GHz
@@ -148,10 +149,13 @@ def dvfs_fit(log):  #@save
     (P_s, k), *_ = np.linalg.lstsq(A, s.power_w.to_numpy(), rcond=None)
     lock = s.setting.to_numpy() / 1e3
     i = int(np.argmin(s.power_w.to_numpy() / s.rate.to_numpy()))  # J/FLOP
+    spread = (log.attrs.get('spread') or {}).get('power_w')
+    spread = (np.nanmax(np.asarray(spread, float)[s.index]) if spread
+              else 0.0 if log.attrs.get('n_proc', 1) > 1 else math.nan)
     return DVFSFit(P_s, k, (P_s / (2 * k)) ** (1 / 3), lock[i],
                    np.diff(lock).max() if len(lock) > 1 else math.nan,
                    i == 0, lock, f, s.power_w.to_numpy(),
-                   s.rate.to_numpy(), log.attrs.get('source', ''),
+                   s.rate.to_numpy(), spread, log.attrs.get('source', ''),
                    log.attrs.get('a100'))
 ```
 
@@ -217,8 +221,10 @@ clocks by the coordinator until the author rules; a power cap pulls the
 same lever on a compute-bound kernel, and the -pl arm is off: ruling H1
 covers clocks only). The table: each lock from the top down, the training
 step's clock as run, its power and step time, the batch-1 decode step time,
-each as a ratio x to the default-clock run with its noise (3 x the larger
-median absolute deviation). The training step slows about in proportion to
+each as a ratio x to the default-clock run with its noise (the larger of
+5 x the larger median absolute deviation and the spread across the three
+processes: the locks and the default clocks are not run back to back).
+The training step slows about in proportion to
 the clock; batch-1 decode, bound by memory and per-kernel fixed costs,
 stays within its noise down to the clock the last line names (quote it and
 the training step's ratio there from the output; if decode slows at every
@@ -230,8 +236,8 @@ energy-time trade-off per job. -->
 %%tab pytorch
 effect = d2l.clock_effect(sweep)  # step times against the default clocks
 floor = effect.attrs['decode_floor']  # lowest lock: decode within noise
-row = effect.set_index('clock MHz').loc[floor]
-assert row['train x'] - 1 > row['train 3MAD']  # E5: training pays there
+row = effect.set_index('clock MHz').loc[floor] if floor else None
+assert row is None or row['train x'] - 1 > row['train noise']  # E5
 ```
 
 ## Energy per Token

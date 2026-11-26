@@ -13,8 +13,12 @@
 # when D2L_HW_SUDO=1, which only this script sets); the Python job runs in the background, so the
 # traps below run at once on INT, TERM or HUP: reset the card, pass the signal on, wait, exit 143.
 # The EXIT trap resets again and records the card's clocks (and power, with the cap arm) in the
-# log. A kill -9 of this script skips its traps: the runner then issues one
-# `sudo -n nvidia-smi -rgc -i <uuid>` after the job's PID is gone.
+# log; it also covers a `sudo nvidia-smi -lgc` still in flight when the job stopped. A kill -9 of
+# this script skips its traps, and nothing here or in the GPU-lock helper resets the card then:
+# whoever ran it issues one `sudo -n nvidia-smi -rgc -i <uuid>` by hand once the job's PID is gone.
+#
+# D2L_HW_GPU_LOCK_DIR=<dir> (the GPU-lock helper's lock folder): refuse to start unless
+# <dir>/gpu<gpu>.lock is held (by the helper that runs this script), as ruling H1 requires.
 #
 # The power-cap arm (nvidia-smi -pl) runs only when the configuration's caps are not empty (none
 # is, until the author allows -pl); then the default limit is read first and restored by every
@@ -49,6 +53,12 @@ priv() {  # a privileged nvidia-smi call: printed in a dry run, else through sud
 
 UUID=$("$SMI" --query-gpu=uuid --format=csv,noheader -i "$GPU" 2>/dev/null | head -n 1)
 [ -n "$UUID" ] || { echo "$(ts) no GPU $GPU" >&2; exit 2; }
+if [ -n "${D2L_HW_GPU_LOCK_DIR:-}" ]; then
+  LOCK=$D2L_HW_GPU_LOCK_DIR/gpu$GPU.lock
+  if [ ! -e "$LOCK" ] || flock -n "$LOCK" true; then
+    echo "$(ts) $LOCK is not held: run this under the GPU-lock helper; refused" >&2; exit 3
+  fi
+fi
 if [ -n "${CUDA_VISIBLE_DEVICES:-}" ] && [ "$CUDA_VISIBLE_DEVICES" != "$GPU" ] \
    && [ "$CUDA_VISIBLE_DEVICES" != "$UUID" ]; then
   echo "$(ts) CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES is not GPU $GPU: refused" >&2; exit 2

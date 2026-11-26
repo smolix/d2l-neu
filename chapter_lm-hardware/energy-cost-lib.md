@@ -582,7 +582,13 @@ measure, `finally` reset); the guards live here:
 - `_ClockWatchdog`, a thread that checks the card's compute processes once a
   second while the clock is locked: a foreign one resets the card within a
   second and flags the window, which `_sweep_rows` discards (H1: no other
-  user's process runs at a locked clock for more than about a second);
+  user's process runs at a locked clock for more than about a second); the
+  two share one lock, so they never run `nvidia-smi` at the same time;
+- `_sweep_rows` raises when the driver refused the setting, and discards a
+  window whose SM clock ran more than 30 MHz above its lock (a lock that did
+  not take: a locked card never runs above it, a power-capped one runs
+  below), applies the lock again and measures it again; a dry run, which
+  locks nothing, raises there, so it never yields lock rows;
 - `hw_clock_regen` turns SIGTERM, SIGHUP and SIGINT into `sys.exit`, so a
   plain kill still runs every `finally` reset; the wrapper's traps and one
   `-rgc` after the job cover a `kill -9`.
@@ -611,13 +617,15 @@ _HW_CLOCK_CONFIGS = {  # caps=(): no power limit is set (H1 covers clocks)
                caps=())}
 
 #@save
-_HW_GUARD = dict(poll_s=60, max_wait_s=7200, watch_s=1.0, tries=10)
+_HW_GUARD = dict(poll_s=60, max_wait_s=7200, watch_s=1.0, tries=10,
+                 lock_tol_mhz=30)  # a locked card never runs above its lock
 
 #@save
 _HW_SMI_CALLS = []  # every nvidia-smi setting of this process: the record
 
 #@save
-_HW_GUARD_EVENTS = []  # every foreign process the guards saw
+_HW_GUARD_EVENTS = []  # every foreign process the guards saw, every
+                       # window that ran above its lock
 
 #@save
 def _card_pids(uuid):
@@ -654,28 +662,32 @@ def _clock_guard(smi, relock=None, dog=None):
     watchdog dog (if any) has not tripped. Else reset the card at once
     (smi.reset), wait in polls until it is free (at most max_wait_s, then
     raise with the card reset), apply relock (nvidia-smi arguments, the
-    window's setting), re-arm dog and return False: the caller discards
-    its window."""
+    window's setting; a refusal raises), re-arm dog and return False: the
+    caller discards its window. The dog's lock is held from the reset to
+    the re-arm, so the watchdog never runs nvidia-smi at the same time."""
     if smi is None:
         return True
     pids = _card_foreign(smi)
     if not pids and not (dog is not None and dog.tripped):
         return True
-    smi.reset()
-    t0 = time.monotonic()
-    if pids:  # (else the watchdog tripped and recorded its sighting)
-        _HW_GUARD_EVENTS.append(dict(t=time.time(), by='guard', pids=pids))
-    while pids:
-        if time.monotonic() - t0 > _HW_GUARD['max_wait_s']:
-            raise RuntimeError(f'a foreign process stayed on the card for '
-                               f'{_HW_GUARD["max_wait_s"] / 3600:g} h; the '
-                               'card is reset')
-        time.sleep(_HW_GUARD['poll_s'])
-        pids = _card_foreign(smi)
-    if relock:
-        smi(*relock)
-    if dog is not None:
-        dog.rearm()
+    with dog.lock if dog is not None else contextlib.nullcontext():
+        smi.reset()
+        t0 = time.monotonic()
+        if pids:  # (else the watchdog tripped and recorded its sighting)
+            _HW_GUARD_EVENTS.append(dict(t=time.time(), by='guard',
+                                         pids=pids))
+        while pids:
+            if time.monotonic() - t0 > _HW_GUARD['max_wait_s']:
+                raise RuntimeError(f'a foreign process stayed on the card '
+                                   f'for {_HW_GUARD["max_wait_s"] / 3600:g} '
+                                   'h; the card is reset')
+            time.sleep(_HW_GUARD['poll_s'])
+            pids = _card_foreign(smi)
+        if relock and smi(*relock).refused:
+            raise PermissionError(f'the driver refused nvidia-smi '
+                                  f'{" ".join(relock)} after a reset')
+        if dog is not None:
+            dog.rearm()
     return False
 
 #@save
@@ -684,11 +696,12 @@ class _ClockWatchdog:
     compute processes; a foreign one resets the card at once (smi.reset)
     and trips the dog, which then stays tripped (no further resets) until
     _clock_guard re-arms it on a free, re-locked card. trips counts the
-    trips, so a window that saw one is known. smi=None: a dog that never
-    trips."""
+    trips, so a window that saw one is known; lock serializes its check
+    and reset with the guard's reset and re-lock. smi=None: a dog that
+    never trips."""
     def __init__(self, smi):
         import threading
-        self.smi, self.trips = smi, 0
+        self.smi, self.trips, self.lock = smi, 0, threading.Lock()
         self._armed, self._stop = threading.Event(), threading.Event()
         self._armed.set()
         self._thread = None
@@ -705,14 +718,16 @@ class _ClockWatchdog:
 
     def _run(self):
         while not self._stop.wait(_HW_GUARD['watch_s']):
-            if self._armed.is_set():
+            with self.lock:
+                if not self._armed.is_set():
+                    continue
                 pids = _card_foreign(self.smi)
                 if pids:
                     self.smi.reset()
                     self._armed.clear()
                     self.trips += 1
-                    _HW_GUARD_EVENTS.append(dict(t=time.time(), by='watchdog',
-                                                 pids=pids))
+                    _HW_GUARD_EVENTS.append(dict(t=time.time(),
+                                                 by='watchdog', pids=pids))
 
     def __enter__(self):
         return self
@@ -733,6 +748,18 @@ def _sweep_relock(kind, setting):
     return None
 
 #@save
+def _clock_held(w, setting):
+    """None when window w of a clock lock ran at or below its lock (MHz,
+    within lock_tol_mhz; a power cap may hold it lower), else why not."""
+    ran = w.get('sm_mhz')
+    if ran is None or not np.isfinite(ran):
+        return f'the clock as run was not read at the {setting:.0f} MHz lock'
+    if ran > setting + _HW_GUARD['lock_tol_mhz']:
+        return (f'the SM clock ran at {ran:.0f} MHz, above its '
+                f'{setting:.0f} MHz lock')
+    return None
+
+#@save
 def _sweep_rows(kind, setting, workloads, smi=None, seconds=10):
     """One row per workload at one sweep setting (kind 'clock': a locked
     clock in MHz, 'cap': a power limit in W, 'default': the default
@@ -740,7 +767,9 @@ def _sweep_rows(kind, setting, workloads, smi=None, seconds=10):
     median absolute deviation. With smi (the card's nvidia-smi), the
     guards run: a window that a foreign process shared, before, during or
     at its end, is discarded (column 'discarded' counts them) and measured
-    again once the card is free and the setting re-applied."""
+    again once the card is free and the setting re-applied. A refused
+    setting raises; a clock window that ran above its lock is discarded
+    and the lock applied again (a dry run, which locks nothing, raises)."""
     relock, rows = _sweep_relock(kind, setting), []
     with _ClockWatchdog(smi) as dog:
         for name in workloads:
@@ -748,15 +777,35 @@ def _sweep_rows(kind, setting, workloads, smi=None, seconds=10):
             discarded = 0
             while True:
                 _clock_guard(smi, relock, dog)
+                if smi is not None and smi.last_refused:
+                    raise PermissionError(f'the driver refused nvidia-smi '
+                                          f'{" ".join(smi.last_refused)}')
                 trips = dog.trips
                 w = _power_window(step, work, seconds=seconds)
+                why = 'shared the card'
                 if (dog.trips == trips and not w['contended']
                         and _clock_guard(smi, relock, dog)):
-                    break
+                    held = _clock_held(w, setting) if kind == 'clock' else None
+                    if held is None:
+                        break
+                    if os.environ.get('D2L_HW_DRYRUN') == '1':
+                        raise RuntimeError(f'dry run: {held}; nothing was '
+                                           'locked, so no lock row is kept')
+                    why = held
+                    _HW_GUARD_EVENTS.append(dict(t=time.time(), by='as run',
+                                                 lock=setting,
+                                                 sm_mhz=w.get('sm_mhz')))
+                    if smi is not None:
+                        with dog.lock:
+                            if smi(*relock).refused:
+                                raise PermissionError(
+                                    'the driver refused nvidia-smi '
+                                    f'{" ".join(relock)}')
                 discarded += 1
                 if discarded >= _HW_GUARD['tries']:
-                    raise RuntimeError(f'{discarded} windows in a row shared '
-                                       'the card: regenerate when it is free')
+                    raise RuntimeError(f'{discarded} windows in a row were '
+                                       f'discarded (last: {why}); regenerate '
+                                       'when the card is free and locks')
             w.pop('trace')
             rows.append(dict(kind=kind, setting=setting, workload=name,
                              unit=unit, discarded=discarded, **w))
@@ -769,7 +818,8 @@ class _HWSmi:
     """nvidia-smi on one visible GPU, addressed by its UUID. smi(*args)
     applies a setting (-lgc, or -pl while the power-cap arm runs) after
     _clock_guard has found the card free, and returns the HWRun (a refusal
-    is a result here, not an error); smi.restore(*args) runs a reset and
+    is a result here, not an error, and last_refused names the setting
+    until the next one is applied); smi.restore(*args) runs a reset and
     prints one line if it failed; smi.reset() puts the card back at once
     (-rgc, and the default power limit when default_limit is set, which
     only the cap arm does). With D2L_HW_SUDO=1 (set only by
@@ -782,7 +832,7 @@ class _HWSmi:
                              '(CUDA_VISIBLE_DEVICES): the power trace reads '
                              'that one')
         self.uuid = _hw_visible_uuids()[device]
-        self.default_limit = default_limit
+        self.default_limit, self.last_refused = default_limit, None
 
     def _run(self, *args):
         if args[0] == '-pl' and self.default_limit is None:
@@ -799,6 +849,8 @@ class _HWSmi:
             run = hw_run(cmd, 60, record=True)
         _HW_SMI_CALLS.append(dict(t=time.time(), args=list(args),
                                   refused=run.refused))
+        if args[0] in ('-lgc', '-pl'):  # a setting: was it applied?
+            self.last_refused = tuple(args) if run.refused else None
         return run
 
     def __call__(self, *args):
@@ -879,9 +931,24 @@ def _clock_edge(rows, clocks, edge):
 def hw_clock_sweep_log():
     """The committed clock sweep of the box (box-clocksweep, entry 'sweep'),
     with campaign C-T2's A100 sweep in attrs['a100'] once committed (else
-    its CampaignPending) and the run in attrs['source']. Absent as every box
-    result (hw_box_log)."""
-    log = hw_box_log('box-clocksweep', 'sweep')
+    its CampaignPending) and the run in attrs['source']. The entry must be
+    a box run of _HW_CLOCK_CONFIGS['box'] that locked clocks (no smoke, no
+    dry run): else ValueError. Absent as every box result (hw_box_log)."""
+    loaded = _hw_load('box-clocksweep', 'sweep')
+    if loaded is None:
+        log = hw_box_log('box-clocksweep', 'sweep')  # pending, or KeyError
+    else:
+        log, meta = loaded
+        want = d2l._jsonable(dict(config='box', **_HW_CLOCK_CONFIGS['box']))
+        d = d2l._config_diff(want, meta.get('config'))
+        key = d2l.HW_ARTIFACTS['box-clocksweep'][0]
+        if d:
+            raise ValueError(f'page configuration differs from the committed '
+                             f'run {key}: {d[0]} {d[1]!r} != {d[2]!r}')
+        dry = bool(meta.get('dryrun') or log.attrs.get('dryrun'))
+        if meta.get('run') != 'box' or dry:
+            raise ValueError(f'{key} is not a box run that locked clocks '
+                             f'(run {meta.get("run")!r}, dry run {dry})')
     a100 = hw_campaign_log('a100-clocksweep')
     log.attrs['a100'] = a100.get('sweep') if a100 else a100
     if len(log):
@@ -916,8 +983,10 @@ def plot_dvfs(fit):
     ax2.plot(fit.clocks[i], eta[i], 'k*', ms=10)  # the least energy
     ax2.set_ylim(0, 1.2 * max(model.max(), eta.max()))
     ax2.set_ylabel('work per joule (top lock = 1)')
+    spread = (f'; power within {fit.spread:.1%} across processes'
+              if np.isfinite(fit.spread) else '')
     print(f'fit to the clock as run: P_s = {fit.P_s:.0f} W, k = '
-          f'{fit.k:.3g} W/GHz^3')
+          f'{fit.k:.3g} W/GHz^3{spread}')
     where = (f'the lowest lock, {fit.f_min:.2f} GHz: at or below it'
              if fit.edge else f'the {fit.f_min:.2f} GHz lock')
     print(f'f* = {fit.f_star:.2f} GHz; least energy per FLOP at {where} '
@@ -942,31 +1011,46 @@ def _clock_column(log, kind, workload):
     return rows.set_index('setting').sort_index(ascending=False)
 
 #@save
+def _step_spread(log):
+    """The between-process relative spread (max - min) / median of each
+    row's step time (attrs['spread'] of _hw_combine, aligned on the
+    combined table's rows; 0 where the processes agreed or ran once)."""
+    s = (log.attrs.get('spread') or {}).get('step_ms')
+    if s is None:
+        return pd.Series(0.0, index=log.index)
+    s = pd.Series(np.nan_to_num(np.asarray(s, float), nan=0.0))
+    return s.reindex(log.index).fillna(0.0)
+
+#@save
 def _effect_table(log, kind, train, decode):
     """Per setting of kind (descending): the training step's clock as run,
     power and step time, the batch-1 decode step time, each time as a
-    ratio x to the default-clock run, and its noise: 3 x the larger median
-    absolute deviation (the setting's or the default's) as a ratio."""
+    ratio x to the default-clock run, and its noise (R4: the lock and the
+    default rows were not run back to back, the default clocks unlocked):
+    the larger of 5 x the larger median absolute deviation over the
+    default's step and either row's spread across processes."""
+    log = log.assign(step_spread=_step_spread(log))
     t, d = _clock_column(log, kind, train), _clock_column(log, kind, decode)
     t0 = _clock_column(log, 'default', train).iloc[0]
     d0 = _clock_column(log, 'default', decode).iloc[0]
-    noise = lambda g, g0: 3 * np.maximum(g.step_mad_ms, g0.step_mad_ms) / (
-        g0.step_ms)
+    noise = lambda g, g0: np.maximum(np.maximum(
+        5 * np.maximum(g.step_mad_ms, g0.step_mad_ms) / g0.step_ms,
+        g.step_spread), g0.step_spread)  # a Series on g's settings
     return pd.DataFrame({
         'clock MHz' if kind == 'clock' else 'cap W': t.index.astype(int),
         'train MHz': t.sm_mhz.values, 'train W': t.power_w.values,
         'train ms': t.step_ms.values,
         'train x': (t.step_ms / t0.step_ms).values,
-        'train 3MAD': noise(t, t0).values,
+        'train noise': noise(t, t0).values,
         'decode ms': d.step_ms.reindex(t.index).values,
         'decode x': (d.step_ms / d0.step_ms).reindex(t.index).values,
-        'decode 3MAD': noise(d, d0).reindex(t.index).values}), t0, d0
+        'decode noise': noise(d, d0).reindex(t.index).values}), t0, d0
 
 #@save
 _HW_EFFECT_DIGITS = {'clock MHz': 0, 'cap W': 0, 'train MHz': 0,
-                     'train W': 0, 'train ms': 1, 'train x': 2,
-                     'train 3MAD': 2, 'decode ms': 2, 'decode x': 2,
-                     'decode 3MAD': 2}
+                     'train W': 0, 'train ms': 1, 'train x': 3,
+                     'train noise': 3, 'decode ms': 2, 'decode x': 3,
+                     'decode noise': 3}
 
 #@save
 def clock_effect(log, train='train-8192', decode='decode-b1'):
@@ -974,15 +1058,20 @@ def clock_effect(log, train='train-8192', decode='decode-b1'):
     decode at each locked clock against the default-clock run (and, if
     the power-cap arm ran, the same under each cap). attrs['decode_floor']:
     the lowest lock down to which every lock keeps decode within its
-    noise (None if decode slows at every lowered clock)."""
+    noise (None if decode slows at every lowered clock; noise as in
+    _effect_table)."""
     table, t0, d0 = _effect_table(log, 'clock', train, decode)
     d2l.show_table(table, digits=_HW_EFFECT_DIGITS)
     print(f'x: step time over the default clocks\' (training {t0.step_ms:.0f}'
           f' ms at {t0.sm_mhz:,.0f} MHz, decode {d0.step_ms:.2f} ms)')
-    print('3MAD: 3 x the larger median absolute deviation, as a ratio')
+    print('noise: the larger of 5 x the larger median absolute deviation '
+          'and the spread across processes')
     floor = None
     for _, r in table.iterrows():  # from the top lock down
-        if r['decode x'] - 1 > r['decode 3MAD']:
+        if not np.isfinite(r['decode x']):
+            raise ValueError(f'the sweep has no {decode} row at the '
+                             f'{r["clock MHz"]:,.0f} MHz lock')
+        if r['decode x'] - 1 > r['decode noise']:
             break
         floor = int(r['clock MHz'])
     table.attrs['decode_floor'] = floor
@@ -1369,8 +1458,11 @@ processes, about 30 min on one card) with `D2L_HW_SUDO=1`; each process calls
 `hw_clock_regen`, which writes one entry, `sweep`: the default-clock rows,
 then one row per lock and workload (and per cap, if the arm is on), with the
 record of every `nvidia-smi` setting and of every foreign process the guards
-saw in its attrs. `--config smoke` (one lock) writes only under `--out` and
-is never packed; `--config t2` is campaign C-T2's A100 sweep.
+saw in its attrs. Before the three entries are combined,
+`hw_clock_regen_prepare` moves each process's record into `attrs['procs']`
+and sums each row's discarded windows. `--config smoke` (one lock) writes
+only under `--out` and is never packed, nor is a dry run
+(`D2L_HW_DRYRUN=1`); `--config t2` is campaign C-T2's A100 sweep.
 
 ```{.python .input #energy-cost-lib-the-clock-sweep-driver}
 %%tab pytorch
@@ -1426,8 +1518,32 @@ def _clock_sweep_compute(cfg):
     df = _hw_frame(rows)
     df.attrs.update(edge=bool(edge), field='power.draw (NVML, 1 s average)',
                     hz=_HW_POWER['hz'], **_power_limits(),
+                    dryrun=os.environ.get('D2L_HW_DRYRUN') == '1',
                     smi=list(_HW_SMI_CALLS), guard=list(_HW_GUARD_EVENTS))
     return df
+
+#@save
+def hw_clock_regen_prepare(folder, n):
+    """Before tools/hw_regen.py combines processes proc0..proc{n-1}: every
+    process's record (its nvidia-smi settings, guard events and power
+    limits) goes into attrs['procs'] of each part, and each row's
+    `discarded` becomes its sum over the processes, so the combined entry
+    keeps all of them (the combination keeps one process's attrs)."""
+    paths = [os.path.join(folder, f'proc{i}', _hw_entry_file('sweep'))
+             for i in range(n)]
+    parts = [d2l._hw_read(p) for p in paths]
+    procs = [dict(smi=t.attrs.pop('smi', []), guard=t.attrs.pop('guard', []),
+                  **{k: t.attrs.get(k) for k in ('power_limit_w',
+                                                 'max_sm_mhz')})
+             for t, _ in parts]
+    same = all(len(t) == len(parts[0][0]) for t, _ in parts)
+    total = (np.sum([t.discarded.to_numpy() for t, _ in parts], axis=0)
+             if same else None)
+    for (t, meta), path in zip(parts, paths):
+        t.attrs['procs'] = procs
+        if total is not None:  # (else the combination refuses the parts)
+            t['discarded'] = total
+        d2l._hw_write(path, t, meta)
 
 #@save
 def hw_clock_regen(config='box'):

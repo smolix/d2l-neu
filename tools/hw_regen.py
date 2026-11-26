@@ -43,7 +43,8 @@ records carry that configuration's tier, and the driver refuses a GPU that
 is not the campaign's chip-table row. `--config box` is the default (no
 configuration). `--config smoke` (box-clocksweep only) is a short test run:
 it needs `--out`, and its folder is combined but never packed, so a smoke
-never reaches an upload. SIGTERM, SIGINT and SIGHUP are passed on to the
+never reaches an upload. A dry run (`D2L_HW_DRYRUN=1`) is never packed
+either, and its combined entries record `dryrun` in their meta. SIGTERM, SIGINT and SIGHUP are passed on to the
 running process (once), so its `finally` blocks run (box-clocksweep resets
 the clock there) before this script exits.
 """
@@ -98,6 +99,12 @@ def child(d2l, name):
     return 0
 
 
+def dryrun():
+    """D2L_HW_DRYRUN=1: the privileged nvidia-smi calls were printed, not
+    run (tools/hw_clock_sweep.sh), so nothing may be packed."""
+    return os.environ.get('D2L_HW_DRYRUN') == '1'
+
+
 def combine(d2l, folder, n):
     """Combine proc0..proc{n-1} into folder; return the contended count."""
     procs = [os.path.join(folder, f'proc{i}') for i in range(n)]
@@ -117,6 +124,8 @@ def combine(d2l, folder, n):
         env['n_proc'] = n
         contended += env['contended']
         meta['env'] = env
+        if dryrun():
+            meta['dryrun'] = True
         d2l._hw_write(os.path.join(folder, f),
                       d2l._hw_combine([r for r, _ in parts]), meta)
     return contended, entries
@@ -238,9 +247,9 @@ def main():
     finish = getattr(d2l, f'{driver}_finish', None)
     if finish is not None:  # files written from the combined entries
         finish(folder)
-    if smoke:
-        print(f'{a.name} (smoke): {len(entries)} entries in {folder}; not '
-              'packed', flush=True)
+    if smoke or dryrun():
+        print(f'{a.name} ({"smoke" if smoke else "dry run"}): {len(entries)} '
+              f'entries in {folder}; not packed', flush=True)
         return 0
     d2l._hw_pack(folder, kind, out)
     print(f'{a.name}: {len(entries)} entries in {(time.time() - t) / 60:.1f} '

@@ -3808,6 +3808,19 @@ class TestEnergyCost(unittest.TestCase):
         self.assertLessEqual(width, 100)
         self.assertLessEqual(len(lines), 15)
         self.assertIn('2.70 -> 2.50, 3.00 -> 2.50', lines[2])
+        self.assertIn('power within 0.0% across processes', lines[0])
+        # E4's power spread: the largest of the matmul lock rows'
+        spread = np.zeros(len(log))
+        spread[((log.kind == 'clock') & (log.setting == 900)
+                & (log.workload == 'matmul-8192')).to_numpy()] = 0.004
+        spread[((log.kind == 'clock')  # not a matmul row: not counted
+                & (log.workload == 'decode-b1')).to_numpy()] = 0.5
+        log.attrs['spread'] = dict(power_w=spread.tolist())
+        fit = d2l.dvfs_fit(log)
+        self.assertAlmostEqual(fit.spread, 0.004)
+        _, lines, _ = max_width(d2l.plot_dvfs, fit)
+        self.assertIn('power within 0.4% across processes', lines[0])
+        log.attrs.pop('spread')
         self.assertEqual(lines[4], 'A100 PCIe 40 GB: campaign C-T2 not run '
                          'yet')
         # a committed A100 sweep gets its own fit line
@@ -3858,8 +3871,10 @@ class TestEnergyCost(unittest.TestCase):
         row = t.set_index('clock MHz').loc[1200]
         self.assertAlmostEqual(row['train x'], 2.5 / 1.2)
         self.assertAlmostEqual(row['decode x'], 1.0)
-        self.assertAlmostEqual(row['decode 3MAD'], 3 * 0.03 / 3.0)
-        self.assertAlmostEqual(row['train 3MAD'], 0.03)
+        # R4: 5 x the larger MAD (no spread across processes recorded)
+        self.assertAlmostEqual(row['decode noise'], 5 * 0.03 / 3.0)
+        self.assertAlmostEqual(row['train noise'], 5 * 1.0 / 100)
+        self.assertIn('0.050', '\n'.join(lines))  # 3 decimals: readable
         self.assertIn('within its noise down to 1,200 MHz', lines[-1])
         self.assertIn('2.08x as long', lines[-1])
         self.assertIn('training 100 ms at 2,500 MHz, decode 3.00 ms',
@@ -3872,6 +3887,33 @@ class TestEnergyCost(unittest.TestCase):
         self.assertIsNone(t.attrs['decode_floor'])
         self.assertIn('slows beyond its noise at every lowered clock',
                       lines[-1])
+        # a spread across processes above 5 MAD is the noise: decode at
+        # 900 MHz (x = 1.17) is then within it, and the floor moves down
+        wide = clock_log()
+        spread = np.zeros(len(wide))
+        at900 = ((wide.kind == 'clock') & (wide.setting == 900)
+                 & (wide.workload == 'decode-b1')).to_numpy()
+        spread[at900] = 0.2
+        wide.attrs['spread'] = dict(step_ms=spread.tolist())
+        _, lines, t = max_width(d2l.clock_effect, wide)
+        self.assertEqual(t.attrs['decode_floor'], 900)
+        self.assertAlmostEqual(
+            t.set_index('clock MHz').loc[900, 'decode noise'], 0.2)
+        self.assertAlmostEqual(  # the other rows keep 5 MAD
+            t.set_index('clock MHz').loc[1200, 'decode noise'], 0.05)
+        # the default row's spread counts for every lock
+        spread[:] = 0.0
+        spread[((wide.kind == 'default')
+                & (wide.workload == 'train-8192')).to_numpy()] = 0.3
+        wide.attrs['spread'] = dict(step_ms=spread.tolist())
+        _, _, t = max_width(d2l.clock_effect, wide)
+        self.assertTrue((t['train noise'] == 0.3).all())
+        # a lock without decode rows raises instead of passing as noise
+        gap = clock_log()
+        gap = gap[~((gap.setting == 1500) & (gap.workload == 'decode-b1'))]
+        with self.assertRaisesRegex(ValueError, 'no decode-b1 row at the '
+                                    '1,500 MHz lock'), quiet():
+            d2l.clock_effect(gap)
         # the power-cap arm, if it ever runs, gets its own table
         width, lines, t = max_width(d2l.clock_effect, clock_log(caps=True))
         self.assertEqual(list(t.attrs['caps']['cap W']), [450, 300])
@@ -3896,6 +3938,18 @@ class TestEnergyCost(unittest.TestCase):
                 exec(cells[i].replace('%%tab pytorch\n', ''), scope)
         d2l.plt.close('all')
         self.assertEqual(scope['floor'], 1200)
+        # E5's pre-registered fallback: decode slower at every lowered
+        # clock; the cell says so (the library's line) and does not fail
+        slow = clock_log()
+        lowered = (slow.kind == 'clock') & (slow.workload == 'decode-b1')
+        slow.loc[lowered, 'step_ms'] *= 1.1
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            exec(cells['energy-cost-cap-effect'].replace('%%tab pytorch\n',
+                                                         ''),
+                 dict(d2l=d2l, sweep=slow))
+        self.assertIn('slows beyond its noise at every lowered clock',
+                      buf.getvalue())
         # the method on the page stays short: no guard, poll or retry code
         sweep = cells['energy-cost-clock-sweep-def']
         self.assertLessEqual(len(sweep.splitlines()), 16)
@@ -4533,6 +4587,249 @@ with mock.patch.object(d2l, 'hw_run', run), \\
             self.assertEqual(proc.returncode, 143)
             reset = out.index('+ sudo -n nvidia-smi -rgc -i GPU-fake')
             self.assertLess(reset, out.index('job: TERM'))  # reset first
+            # D2L_HW_GPU_LOCK_DIR: the card's GPU lock must be held
+            import fcntl
+            locked = dict(env, D2L_HW_GPU_LOCK_DIR=tmp)
+            r = subprocess.run(['bash', wrapper, '0'], env=locked, text=True,
+                               capture_output=True, timeout=60)
+            self.assertEqual(r.returncode, 3)  # no lock file
+            self.assertIn('is not held', r.stderr)
+            lock = os.path.join(tmp, 'gpu0.lock')
+            with open(lock, 'a') as f:
+                r = subprocess.run(['bash', wrapper, '0'], env=locked,
+                                   text=True, capture_output=True, timeout=60)
+                self.assertEqual(r.returncode, 3)  # a free lock
+                self.assertNotIn('job:', r.stdout)
+                fcntl.flock(f, fcntl.LOCK_EX)
+                r = subprocess.run(['bash', wrapper, '0'], env=locked,
+                                   text=True, capture_output=True, timeout=60)
+                self.assertEqual(r.returncode, 0, r.stderr)  # held: runs
+                self.assertIn('job: tools/hw_regen.py', r.stdout)
+
+    # -- finding 1 of the F3 review: a lock the driver refused, or one that
+    # did not take (a dry run, a race with a reset), never yields lock rows
+    def clocked(self, refuse=(), ignore=0):
+        """hw_run that tracks the card's SM clock: 2,800 MHz at the default
+        clocks, f after an accepted `-lgc f,f`; it refuses the locks in
+        refuse and ignores the first `ignore` locks (exit 0, no effect)."""
+        self.clock, self.ignore = 2800.0, ignore
+
+        def run(cmd, timeout_s, **kw):
+            self.calls.append(list(cmd))
+            args = cmd[cmd.index('-i') + 2:]
+            self.events.append(' '.join(args))
+            if args[0] == '-lgc':
+                f = int(args[1].split(',')[0])
+                if f in refuse:
+                    return d2l.HWRun(cmd, 4, '', 'denied', 0.1,
+                                     'exit status 4')
+                if self.ignore > 0:
+                    self.ignore -= 1
+                else:
+                    self.clock = float(f)
+            elif args[0] == '-rgc':
+                self.clock = 2800.0
+            return OK_RUN
+
+        def window(step, work, **kw):
+            self.windows += 1
+            self.events.append(f'window {self.windows} at {self.clock:.0f}')
+            return dict(contended=0.0, trace={}, power_w=100.0, rate=1.0,
+                        step_ms=1.0, step_mad_ms=0.01,
+                        sm_mhz=min(self.clock, getattr(self, 'cap', 1e9)))
+        return run, window
+
+    def test_refused_lock_mid_sweep(self):
+        run, window = self.clocked(refuse=(900,))
+        with mock.patch.object(d2l, 'hw_run', run), \
+                mock.patch.object(d2l, '_power_window', window):
+            with self.assertRaisesRegex(PermissionError,
+                                        'refused nvidia-smi -lgc 900,900'):
+                d2l.hw_clock_sweep([600, 900, 1200], ['a'])
+        self.assertEqual(self.windows, 1)  # only the 600 MHz window ran
+        self.assertEqual(self.args()[-1], ['-rgc'])
+
+    def test_lock_that_did_not_take(self):
+        """A window above its lock is discarded and the lock applied again;
+        a power-capped window below its lock is kept; a lock that never
+        takes fails the sweep instead of writing rows."""
+        run, window = self.clocked(ignore=2)  # the page locks twice
+        with mock.patch.object(d2l, 'hw_run', run), \
+                mock.patch.object(d2l, '_power_window', window):
+            rows = d2l.hw_clock_sweep([900], ['a', 'b'])
+        self.assertEqual(list(rows.discarded), [1, 0])
+        self.assertEqual(list(rows.sm_mhz), [900.0, 900.0])
+        self.assertEqual(self.events[1:5], ['-lgc 900,900', 'window 1 at 2800',
+                                            '-lgc 900,900', 'window 2 at 900'])
+        self.assertEqual([e['by'] for e in d2l._HW_GUARD_EVENTS], ['as run'])
+        self.cap, self.windows = 2500.0, 0  # the product's power cap
+        run, window = self.clocked()
+        with mock.patch.object(d2l, 'hw_run', run), \
+                mock.patch.object(d2l, '_power_window', window):
+            rows = d2l.hw_clock_sweep([3000], ['a'])
+        self.assertEqual(list(rows.discarded), [0])
+        del self.cap
+        d2l._HW_GUARD['tries'] = 3
+        run, window = self.clocked(ignore=99)
+        with mock.patch.object(d2l, 'hw_run', run), \
+                mock.patch.object(d2l, '_power_window', window):
+            with self.assertRaisesRegex(RuntimeError, 'ran at 2800 MHz, '
+                                        'above its 1200 MHz lock'):
+                d2l.hw_clock_sweep([1200], ['a'])
+        self.assertEqual(self.args()[-1], ['-rgc'])
+
+    def test_dry_run_keeps_no_lock_rows(self):
+        run, window = self.clocked()
+        os.environ.update(D2L_HW_SUDO='1', D2L_HW_DRYRUN='1')
+        with mock.patch.object(d2l, 'hw_run', run), \
+                mock.patch.object(d2l, '_power_window', window), quiet():
+            with self.assertRaisesRegex(RuntimeError, 'dry run: the SM clock '
+                                        'ran at 2800 MHz'):
+                d2l.hw_clock_sweep([900], ['a'])
+            # the default rows are fine in a dry run: nothing is locked
+            rows = d2l._sweep_rows('default', math.nan, ['a'],
+                                   d2l.hw_smi_card(0))
+        self.assertEqual(self.windows, 2)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(self.calls, [])  # every sudo call only printed
+
+    def test_guard_relock_refused(self):
+        run, _ = self.clocked(refuse=(900,))
+        self.foreign = {999}
+        d2l._HW_GUARD['poll_s'] = 0.05
+
+        def leave():
+            time.sleep(0.1)
+            self.foreign = set()
+        import threading
+        threading.Thread(target=leave).start()
+        with mock.patch.object(d2l, 'hw_run', run):
+            with self.assertRaisesRegex(PermissionError, 'after a reset'):
+                d2l._clock_guard(d2l.hw_smi_card(0), ('-lgc', '900,900'))
+        self.assertEqual(self.args(), [['-rgc'], ['-lgc', '900,900']])
+
+    # -- findings 4 and 1: every process's record survives the combination,
+    # and a dry run is never packed
+    def regen(self, tmp, dryrun, discarded):
+        """tools/hw_regen.py box-clocksweep in-process on a fake child that
+        writes one entry per process."""
+        import importlib.util
+        import signal
+        spec = importlib.util.spec_from_file_location(
+            'hw_regen_t', os.path.join(REPO, 'tools', 'hw_regen.py'))
+        tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tool)
+        cfg = d2l._jsonable(dict(config='box', **d2l._HW_CLOCK_CONFIGS['box']))
+
+        class Child:
+            def __init__(self, cmd, env):
+                i = int(env['D2L_HW_PROC'])
+                t = clock_log()
+                t['discarded'] = 0
+                t.loc[3, 'discarded'] = discarded[i]
+                t.attrs.update(smi=[dict(args=['-lgc', f'{i}'])],
+                               guard=[dict(by='guard', pids=[i])] if i else [],
+                               power_limit_w=450.0, max_sm_mhz=3120.0,
+                               dryrun=dryrun)
+                d2l._hw_write(os.path.join(
+                    env['D2L_HW_OUT'], 'lm-hw-buildbox-clocksweep-v1',
+                    f'proc{i}', 'sweep.json.gz'), t, dict(
+                        config=cfg, run='box', env=dict(
+                            contended=False, neighbours_busy=False,
+                            seconds=1.0)))
+
+            def wait(self):
+                return 0
+
+            def poll(self):
+                return 0
+        saved = {s_: signal.getsignal(s_) for s_ in (
+            signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
+        cwd = os.getcwd()
+        env = {'D2L_HW_DRYRUN': '1'} if dryrun else {}
+        try:
+            with mock.patch.object(tool.subprocess, 'Popen', Child), \
+                    mock.patch.dict(os.environ, env), \
+                    mock.patch.object(sys, 'argv', [
+                        'hw_regen.py', 'box-clocksweep', '--processes', '3',
+                        '--out', tmp, '--replace']), quiet():
+                rc = tool.main()
+        finally:
+            os.chdir(cwd)
+            for s_, h in saved.items():
+                signal.signal(s_, h)
+        folder = os.path.join(tmp, 'lm-hw-buildbox-clocksweep-v1')
+        return rc, d2l._hw_read(os.path.join(folder, 'sweep.json.gz')), \
+            os.path.exists(folder + '.tar')
+
+    def test_regen_keeps_every_process(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rc, (t, meta), packed = self.regen(tmp, True, [0, 0, 3])
+            self.assertEqual(rc, 0)
+            self.assertFalse(packed)  # a dry run is never packed
+            self.assertTrue(meta['dryrun'])
+            self.assertEqual(t.loc[3, 'discarded'], 3)  # the sum, not 0
+            self.assertEqual(int(t.discarded.sum()), 3)
+            procs = t.attrs['procs']
+            self.assertEqual([p['smi'][0]['args'][1] for p in procs],
+                             ['0', '1', '2'])
+            self.assertEqual([len(p['guard']) for p in procs], [0, 1, 1])
+            self.assertNotIn('smi', t.attrs)
+            rc, (t, meta), packed = self.regen(tmp, False, [1, 0, 0])
+            self.assertEqual(rc, 0)
+            self.assertTrue(packed)
+            self.assertNotIn('dryrun', meta)
+            self.assertEqual(t.loc[3, 'discarded'], 1)
+
+    # -- finding 5: the committed sweep must be the box configuration's
+    def test_sweep_log_config_check(self):
+        cfg = d2l._jsonable(dict(config='box', **d2l._HW_CLOCK_CONFIGS['box']))
+        pending = d2l.CampaignPending('a100-clocksweep', 'C-T2', 'A100')
+
+        def load(meta, **attrs):
+            log = clock_log()
+            log.attrs.update(attrs)
+            with mock.patch.object(d2l, '_hw_load', lambda n, e: (log, meta)), \
+                    mock.patch.object(d2l, 'hw_campaign_log',
+                                      lambda n: pending):
+                return d2l.hw_clock_sweep_log()
+        log = load(dict(config=cfg, run='box'))
+        self.assertEqual(log.attrs['source'],
+                         'committed sweep on the RTX 4090 (3 processes)')
+        old = dict(cfg, clocks=cfg['clocks'][1:])
+        with self.assertRaisesRegex(ValueError, 'differs from the committed '
+                                    'run lm-hw-buildbox-clocksweep-v1: clocks'):
+            load(dict(config=old, run='box'))
+        smoke = d2l._jsonable(dict(config='smoke',
+                                   **d2l._HW_CLOCK_CONFIGS['smoke']))
+        with self.assertRaisesRegex(ValueError, 'differs'):
+            load(dict(config=smoke, run='box'))
+        with self.assertRaisesRegex(ValueError, "run 't2'"):
+            load(dict(config=cfg, run='t2'))
+        with self.assertRaisesRegex(ValueError, 'dry run True'):
+            load(dict(config=cfg, run='box', dryrun=True))
+        with self.assertRaisesRegex(ValueError, 'dry run True'):
+            load(dict(config=cfg, run='box'), dryrun=True)
+
+    def test_watchdog_and_guard_serialized(self):
+        """The guard holds the dog's lock from its reset to the re-arm."""
+        smi, seen = d2l.hw_smi_card(0), []
+        with d2l._ClockWatchdog(None) as dog:
+            def reset():
+                seen.append(dog.lock.locked())
+                return []
+            smi.reset = reset
+            self.foreign = {999}
+            d2l._HW_GUARD['poll_s'] = 0.01
+
+            def leave():
+                time.sleep(0.05)
+                self.foreign = set()
+            import threading
+            threading.Thread(target=leave).start()
+            self.assertFalse(d2l._clock_guard(smi, ('-lgc', '900,900'), dog))
+        self.assertEqual(seen, [True])
+        self.assertFalse(dog.lock.locked())
 
     def test_regen_smoke_needs_out(self):
         import subprocess

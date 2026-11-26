@@ -31596,6 +31596,9 @@ d2l.HW_CAMPAIGNS['t2pair-moe'] = (
 d2l.DATA_HUB['lm-hw-buildbox-workloads-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-buildbox-workloads-v1.tar',
     '35446a34dab2afe999c020ae9318764c87a5a6e2')
+d2l.DATA_HUB['lm-hw-buildbox-moe-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-moe-v1.tar',
+    '588f52bbf8b2f4037295831bde65b63de33dfd88')
 
 d2l.HW_JOBS['box-workloads'] = (
     'regen_workloads', lambda: dict(config='box'))

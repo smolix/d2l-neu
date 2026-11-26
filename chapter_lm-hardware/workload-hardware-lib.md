@@ -50,6 +50,9 @@ The box results, committed with the book (tools/hw_regen.py writes them).
 d2l.DATA_HUB['lm-hw-buildbox-workloads-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-buildbox-workloads-v1.tar',
     '35446a34dab2afe999c020ae9318764c87a5a6e2')
+d2l.DATA_HUB['lm-hw-buildbox-moe-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-moe-v1.tar',
+    '588f52bbf8b2f4037295831bde65b63de33dfd88')
 ```
 
 ```{.python .input #workload-hardware-lib-jobs}

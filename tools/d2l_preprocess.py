@@ -12,14 +12,17 @@ Converts d2l-en markdown files to Quarto .qmd format with:
 - No tabsets on pages of single-framework parts (SINGLE_FRAMEWORK_PARTS)
 """
 
+import json
 import re
 import sys
 import argparse
 try:
     from exercise_refs import render as render_exercise_refs
+    import i18n
     import preamble
 except ImportError:  # imported as tools.d2l_preprocess
     from tools.exercise_refs import render as render_exercise_refs
+    from tools import i18n
     from tools import preamble
 from pathlib import Path
 from typing import Optional
@@ -630,6 +633,16 @@ NO_AUTO_EQ_BEGIN = '<!-- d2l:no-auto-eq -->'
 NO_AUTO_EQ_END = '<!-- /d2l:no-auto-eq -->'
 
 
+# Structural text of a section: its `## Exercises` heading and the
+# `[Discussions](...)` forum link. A translated source may keep the English
+# words or use the catalog's (tools/i18n.py: book.exercises_heading,
+# book.discussions_link); both are recognised.
+EXERCISES_HEADINGS = tuple('## ' + h for h in
+                           i18n.variants('book.exercises_heading'))
+DISCUSSIONS_LINKS = tuple(f'[{d}]' for d in
+                          i18n.variants('book.discussions_link'))
+
+
 def _exercise_body(lines):
     """(first, end) line indices of the body of `## Exercises`.
 
@@ -637,17 +650,17 @@ def _exercise_body(lines):
     Discussions link(s) (a `[Discussions]` line or the `:begin_tab:` wrapping
     one), `<!-- slides -->`, or the next `#`/`##` heading.
     """
-    a = next((i for i, l in enumerate(lines) if l.startswith('## Exercises')),
-             None)
+    a = next((i for i, l in enumerate(lines)
+              if l.startswith(EXERCISES_HEADINGS)), None)
     if a is None:
         return None
     for i in range(a + 1, len(lines)):
         l = lines[i]
-        if l.startswith(('<!-- slides -->', '[Discussions]', '# ', '## ')):
+        if l.startswith(('<!-- slides -->', *DISCUSSIONS_LINKS, '# ', '## ')):
             return a + 1, i
         if _EX_TAB_BEGIN.match(l):
             nxt = next((m for m in lines[i + 1:] if m.strip()), '')
-            if nxt.startswith('[Discussions]'):
+            if nxt.startswith(DISCUSSIONS_LINKS):
                 return a + 1, i
     return a + 1, len(lines)
 
@@ -1290,10 +1303,11 @@ def convert_index(src_path):
     if text.lstrip().startswith('---'):
         return text
 
+    title = json.dumps(i18n.t('book.title'), ensure_ascii=False)
     front = (
         '---\n'
-        'title: "Dive into Deep Learning"\n'
-        'pagetitle: "Dive into Deep Learning"\n'
+        f'title: {title}\n'
+        f'pagetitle: {title}\n'
         'number-sections: false\n'
         'toc: false\n'
         'page-layout: full\n'

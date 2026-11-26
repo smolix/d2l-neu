@@ -139,6 +139,9 @@ help:
 	@echo "  render-fresh           [GPU*] refresh-stale, then rebuild slides + html + pdfs"
 	@echo "  all                     [GPU] Full pipeline: generate, execute, rebuild with outputs"
 	@echo "  clean / veryclean       [any] Remove build artifacts (veryclean also drops data/)"
+	@echo "  release-check           [any] Check HEAD is releasable (origin/main, clean, fresh, all-quick green)"
+	@echo "  release TAG=en-Y.M.D    [any] release-check, then tag + push (DRY_RUN=1 prints the git commands)"
+	@echo "  i18n                    [any] Render UI-string includes for D2L_LANG / D2L_LOCALE_FILE"
 	@echo "  (*) CPU-only notebooks run anywhere; GPU notebooks are skipped/deferred without a GPU."
 	@echo ""
 	@echo "Variables:  SOURCE=$(SOURCE)  NUM_GPUS=$(NUM_GPUS)"
@@ -234,11 +237,13 @@ rebuild-book-artifacts:
 	$(MAKE) notebook-zips
 	$(MAKE) check-all-artifacts
 
-# Quick build without notebook execution
+# Quick build without notebook execution. Its last step records the green
+# build for this commit (.all-quick.ok), which `make release` requires.
 all-quick:
 	$(MAKE) lib
 	$(MAKE) notebooks
 	$(MAKE) rebuild-book-artifacts
+	@python3 tools/release.py stamp-build
 
 check-all-artifacts:
 	@mkdir -p $(LOGDIR)
@@ -259,6 +264,8 @@ clean:
 	rm -rf _book _pdf _notebooks _slides
 	rm -rf d2l/_blocks
 	rm -f img/*.pdf .preprocess.stamp d2l/.built _d2l-slides-data.html
+	rm -rf _i18n
+	rm -f 404.qmd .all-quick.ok
 	# img/outputs/ is render scratch; stale *.pdf there make Quarto's
 	# convert_svg skip-then-read an old/corrupt PDF and abort the PDF build
 	# (main.lua:7348 assertion). Clear them so PDFs always rebuild clean.

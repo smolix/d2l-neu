@@ -54,6 +54,7 @@ from build_date import version_page_tex  # noqa: E402
 from fix_latex import SRC_MARKER  # noqa: E402
 from gen_pdf import PDF_FONTSIZE, PDF_GEOMETRY  # noqa: E402
 from d2l_preprocess import CHAPTER_NUMBERING  # noqa: E402
+import i18n  # noqa: E402
 
 # slug -> (part page in _quarto.yml, cover name stem)
 PARTS = {
@@ -129,7 +130,9 @@ def slice_part(body, members):
     if i1 < len(markers):
         end = markers[i1][0]
     else:  # the last part: stop at the References chapter
-        end = body.index('\\chapter*{References}')
+        end = min(body.index(f'\\chapter*{{{r}}}')
+                  for r in i18n.variants('pdf.references')
+                  if f'\\chapter*{{{r}}}' in body)
     text = body[start:end]
     # The full book switches to arabic page numbers at Preliminaries; a part
     # PDF does so at its own start (\mainmatter).
@@ -219,10 +222,11 @@ def part_preamble(preamble, title):
             not re.search(r'\\documentclass\[\s*' + PDF_FONTSIZE + ',', preamble):
         sys.exit('ERROR: the full-book .tex was not built with gen_pdf.py\'s '
                  f'{PDF_FONTSIZE} / {geometry} page; rebuild it (make pdf-<fw>)')
-    pre = preamble.replace('pdftitle={Dive into Deep Learning}',
-                           f'pdftitle={{Dive into Deep Learning: {title}}}')
-    pre = pre.replace('\\title{Dive into Deep Learning}',
-                      f'\\title{{Dive into Deep Learning: {title}}}')
+    book = i18n.t('book.title')
+    pre = preamble.replace(f'pdftitle={{{book}}}',
+                           f'pdftitle={{{book}: {title}}}')
+    pre = pre.replace(f'\\title{{{book}}}',
+                      f'\\title{{{book}: {title}}}')
     return pre + '\\usepackage{pdfpages}\n'
 
 
@@ -233,7 +237,8 @@ def bibliography(entries, text, book_tex):
     kept = [chunk for key, chunk in entries if key in cited]
     if not kept:   # a part that cites nothing gets no empty References page
         return '', 0, cited
-    head = re.search(r'\\chapter\*\{References\}.*?\\begin\{CSLReferences\}'
+    refs = '|'.join(re.escape(r) for r in i18n.variants('pdf.references'))
+    head = re.search(r'\\chapter\*\{(?:' + refs + r')\}.*?\\begin\{CSLReferences\}'
                      r'\{[^}]*\}\{[^}]*\}\n', book_tex, re.S).group(0)
     tex = ('\\bookmarksetup{startatroot}\n\n' + head + '\n'.join(kept)
            + '\n\\end{CSLReferences}\n')

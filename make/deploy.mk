@@ -103,3 +103,24 @@ deploy:
 	if [ $$colab_rc -ne 0 ] || [ $$r2_rc -ne 0 ]; then \
 		echo "ERROR: deploy had failures (colab=$$colab_rc r2=$$r2_rc)"; exit 1; \
 	fi; } 2>&1 | tee $(LOGDIR)/deploy-$(TS).log
+
+# ── English releases (tags that translations build against) ─────────────────
+# `make release TAG=en-YYYY.MM.DD` tags HEAD and pushes the tag (HTTPS via gh,
+# never SSH) — but only on a commit of origin/main with a clean tree, a fresh
+# and complete outputs/ store, no Git-LFS pointer files under img/, static/ or
+# outputs/, and a green `make all-quick` recorded for this very commit
+# (.all-quick.ok, written at the end of all-quick). `make release-check` runs
+# the same checks without tagging; DRY_RUN=1 makes `release` print the git
+# commands instead of running them (tools/release.py, docs/build-guide.md
+# §4.15, d2l-localization DESIGN §1).
+TAG ?=
+DRY_RUN ?=
+.PHONY: release release-check
+release-check:
+	@mkdir -p $(LOGDIR)
+	@python3 tools/release.py check $(if $(TAG),--tag $(TAG)) 2>&1 | tee $(LOGDIR)/release-check-$(TS).log
+
+release:
+	@test -n "$(TAG)" || { echo "usage: make release TAG=en-YYYY.MM.DD [DRY_RUN=1]"; exit 2; }
+	@mkdir -p $(LOGDIR)
+	@python3 tools/release.py tag --tag $(TAG) $(if $(DRY_RUN),--dry-run) 2>&1 | tee $(LOGDIR)/release-$(TS).log

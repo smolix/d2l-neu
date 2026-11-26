@@ -420,11 +420,11 @@
   // Downloadable versions, in button order after HTML.
   var EXPORTS = [
     {kind: 'pdf', suffix: '.pdf',
-     title: 'Open the {fw} slides as a PDF (Beamer)'},
+     title: '{{tjs:toc_slides.open_pdf}}'},
     {kind: 'pptx', suffix: '.pptx',
-     title: 'Download the {fw} slides as an editable PowerPoint file'},
+     title: '{{tjs:toc_slides.open_pptx}}'},
     {kind: 'tex', suffix: '-latex.zip',
-     title: 'Download the Beamer LaTeX source of the {fw} slides (zip)'}
+     title: '{{tjs:toc_slides.open_latex}}'}
   ];
   var exportsAvailable = {};
   var pageKey = null;
@@ -449,21 +449,22 @@
     var label = buttonEl.querySelector('.d2l-notebook-label');
     var links = buttonEl.querySelectorAll('.d2l-notebook-action');
     if (available.indexOf(fw) !== -1) {
-      label.textContent = 'Slides · ' + fwLabel;
+      label.textContent = '{{tjs:toc_slides.label}}'.replace('{fw}', fwLabel);
       setAction(links[0], buildUrl(fw, pageKey),
-        'Open the ' + fwLabel + ' slides for this section');
+        '{{tjs:toc_slides.open_html}}'.replace('{fw}', fwLabel));
       EXPORTS.forEach(function(x, i) {
         var has = (exportsAvailable[x.kind] || []).indexOf(fw) !== -1;
         setAction(links[i + 1],
           has ? buildUrl(fw, pageKey).replace(/\.html$/, x.suffix) : null,
           has ? x.title.replace('{fw}', fwLabel)
-              : 'Not available for these slides yet');
+              : '{{tjs:toc_slides.export_missing}}');
       });
     } else {
       var altList = available.map(function(f) { return FW_DISPLAY[f]; }).join(', ');
-      label.textContent = 'Slides · ' + fwLabel + ' n/a';
-      var why = altList ? 'No ' + fwLabel + ' deck. Available: ' + altList
-                        : 'No slides for this section';
+      label.textContent = '{{tjs:toc_slides.label_missing}}'.replace('{fw}', fwLabel);
+      var why = altList ? '{{tjs:toc_slides.deck_missing}}'.replace('{fw}', fwLabel)
+                            .replace('{list}', altList)
+                        : '{{tjs:toc_slides.none}}';
       for (var i = 0; i < links.length; i++) setAction(links[i], null, why);
     }
   }
@@ -497,10 +498,10 @@
     wrapper.innerHTML =
       '<div class="d2l-notebook-label"></div>' +
       '<div class="d2l-notebook-actions">' +
-      '<a class="d2l-notebook-action">HTML</a>' +
-      '<a class="d2l-notebook-action">PDF</a>' +
-      '<a class="d2l-notebook-action" download>PowerPoint</a>' +
-      '<a class="d2l-notebook-action" download>LaTeX</a>' +
+      '<a class="d2l-notebook-action">{{tjs:toc_slides.html}}</a>' +
+      '<a class="d2l-notebook-action">{{tjs:toc_slides.pdf}}</a>' +
+      '<a class="d2l-notebook-action" download>{{tjs:toc_slides.pptx}}</a>' +
+      '<a class="d2l-notebook-action" download>{{tjs:toc_slides.latex}}</a>' +
       '</div>';
     toc.appendChild(wrapper);
     buttonEl = wrapper;
@@ -539,10 +540,14 @@
 // handles the visibility toggle. Both blocks read window.location.href
 // + document.title at click time, so the same code drives both.
 (function() {
+  // The page title ends in " – <book title>"; shares carry the page part.
+  var TITLE_RE = new RegExp('\\s*[—-]\\s*' +
+    '{{tjs:book.title}}'.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*$');
+
   function buildUrls() {
     var url = encodeURIComponent(location.href);
     var title = encodeURIComponent(
-      document.title.replace(/\s*[—-]\s*Dive into Deep Learning.*$/, '')
+      document.title.replace(TITLE_RE, '')
     );
     return {
       twitter:  'https://twitter.com/intent/tweet?url=' + url + '&text=' + title,
@@ -561,10 +566,10 @@
   }
 
   var ICONS = [
-    {key: 'twitter',  cls: 'bi-twitter-x', label: 'Share on X (Twitter)'},
-    {key: 'facebook', cls: 'bi-facebook',  label: 'Share on Facebook'},
-    {key: 'threads',  cls: 'bi-threads',   label: 'Share on Threads'},
-    {key: 'linkedin', cls: 'bi-linkedin',  label: 'Share on LinkedIn'}
+    {key: 'twitter',  cls: 'bi-twitter-x', label: '{{tjs:share.x}}'},
+    {key: 'facebook', cls: 'bi-facebook',  label: '{{tjs:share.facebook}}'},
+    {key: 'threads',  cls: 'bi-threads',   label: '{{tjs:share.threads}}'},
+    {key: 'linkedin', cls: 'bi-linkedin',  label: '{{tjs:share.linkedin}}'}
   ];
 
   function makeAnchors(urls) {
@@ -603,7 +608,7 @@
       bottom.className = 'd2l-share-bottom';
       var label = document.createElement('span');
       label.className = 'd2l-share-label';
-      label.textContent = 'Share';
+      label.textContent = '{{tjs:share.label}}';
       bottom.appendChild(label);
       makeAnchors(urls).forEach(function(a) { bottom.appendChild(a); });
       main.appendChild(bottom);
@@ -617,7 +622,7 @@
       block.className = 'd2l-share-block';
       var label2 = document.createElement('div');
       label2.className = 'd2l-share-label';
-      label2.textContent = 'Share';
+      label2.textContent = '{{tjs:share.label}}';
       block.appendChild(label2);
       var icons = document.createElement('div');
       icons.className = 'd2l-share-icons';
@@ -643,7 +648,7 @@
 // Replaces plain d2l.discourse.group links with inline Discourse comment streams.
 // When framework tabs switch, the embed reloads with the new topic.
 (function() {
-  var DISCOURSE_URL = 'https://d2l.discourse.group/';
+  var DISCOURSE_URL = '{{tjs:forum.url}}/';
   // Topic id from the current d2l.discourse.group links (also accept the
   // legacy discuss.d2l.ai form, so any un-migrated link still resolves).
   var LINK_RE = /^https:\/\/(?:discuss\.d2l\.ai|d2l\.discourse\.group)\/t\/(\d+)/;

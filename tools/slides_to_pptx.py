@@ -31,6 +31,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import i18n  # noqa: E402
 import pptx_fit  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
@@ -239,8 +240,21 @@ def deck_meta(qmd: Path):
     """(title, section) of a deck, section like '§5.4' or ''."""
     text = qmd.read_text()
     title = re.search(r'^title:\s*"?(.*?)"?\s*$', text, re.M).group(1)
-    sec = re.search(r'Dive into Deep Learning · (§[\d.]+)', text)
+    titles = '|'.join(re.escape(x) for x in i18n.variants('book.title'))
+    sec = re.search(r'(?:' + titles + r') · (§[\d.]+)', text)
     return title, (sec.group(1) if sec else '')
+
+
+def deck_footer(title: str, sec: str) -> str:
+    """Footer line of every slide: '§5.4 Title  ·  d2l.ai'."""
+    return i18n.t('slides.footer', sec=sec, title=title,
+                  host=i18n.setting('site.hosts')[0]).strip()
+
+
+def deck_cover(sec: str) -> str:
+    """The line under the logo on the cover: 'Dive into Deep Learning  ·  §5.4'."""
+    return i18n.t('slides.cover', book=i18n.t('book.title'), sec=sec) \
+        if sec else ''
 
 
 def build_pptx(qmd: Path, pptx: Path, reference_doc: Path = None,
@@ -258,9 +272,8 @@ def build_pptx(qmd: Path, pptx: Path, reference_doc: Path = None,
             title, sec = deck_meta(qmd)
             ref = work / 'd2l-reference.pptx'
             pptx_fit.build_reference(
-                ref, QUARTO, footer=f'{sec} {title}  ·  d2l.ai'.strip(),
-                cover=f'Dive into Deep Learning  ·  {sec}' if sec else '',
-                logo=LOGO)
+                ref, QUARTO, footer=deck_footer(title, sec),
+                cover=deck_cover(sec), logo=LOGO)
         tmp_out = work / 'deck.pptx'
         cmd = [str(QUARTO), 'pandoc', str(md_path),
                '-f', 'markdown', '-t', 'pptx', '--slide-level=2',

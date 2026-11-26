@@ -44,6 +44,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 from d2l_preprocess import CHAPTER_NUMBERING
+import i18n
 
 
 # Downloadable versions of each deck, written beside <deck>.html:
@@ -179,23 +180,28 @@ def slug(s: str) -> str:
 FW_SHORT = {'pytorch': 'PyTorch', 'tensorflow': 'TensorFlow', 'jax': 'JAX',
             'mxnet': 'MXNet'}
 
-DOWNLOADS = (  # kind, label, icon, attributes
-    ('pdf', 'PDF', 'bi-file-earmark-pdf',
-     'title="Open this deck as a PDF"'),
-    ('pptx', 'PPTX', 'bi-file-earmark-slides',
-     'download title="Download this deck as an editable PowerPoint file"'),
-    ('tex', 'LaTeX', 'bi-file-earmark-code',
-     'download title="Download the Beamer LaTeX source of this deck (zip)"'),
-)
+def download_kinds():
+    """(kind, label, icon, attributes) of each download, in the UI language."""
+    t, h = i18n.t, i18n.html_text
+    return (
+        ('pdf', h(t('slides_index.pdf')), 'bi-file-earmark-pdf',
+         f'title="{h(t("slides_index.pdf_title"))}"'),
+        ('pptx', h(t('slides_index.pptx')), 'bi-file-earmark-slides',
+         f'download title="{h(t("slides_index.pptx_title"))}"'),
+        ('tex', h(t('slides_index.latex')), 'bi-file-earmark-code',
+         f'download title="{h(t("slides_index.latex_title"))}"'),
+    )
 
 
 def fw_phrase(fws: list) -> str:
     """'All four frameworks', 'PyTorch and JAX only', 'PyTorch only'."""
     if len(fws) == len(FRAMEWORKS):
-        return 'All four frameworks'
+        return i18n.t('slides_index.all_frameworks')
     names = [FW_SHORT[f] for f in fws]
-    head = ', '.join(names[:-1])
-    return (f'{head} and {names[-1]}' if head else names[-1]) + ' only'
+    head = i18n.t('slides_index.list_sep').join(names[:-1])
+    listed = (i18n.t('slides_index.list_and', head=head, last=names[-1])
+              if head else names[-1])
+    return i18n.t('slides_index.only', list=listed)
 
 
 def render_deck(chap_dir: str, deck: dict, overview: bool = False) -> str:
@@ -206,9 +212,12 @@ def render_deck(chap_dir: str, deck: dict, overview: bool = False) -> str:
         f'<a class="d2l-dl" data-kind="{kind}" '
         f'data-fws="{",".join(deck.get(kind, []))}" {attrs}>'
         f'<i class="bi {icon}" aria-hidden="true"></i>{label}</a>'
-        for kind, label, icon, attrs in DOWNLOADS)
+        for kind, label, icon, attrs in download_kinds())
     page = 'index' if overview else stem
-    title = 'Chapter overview' if overview else html_escape(deck['title'])
+    title = (html_escape(i18n.t('slides_index.chapter_overview')) if overview
+             else html_escape(deck['title']))
+    read = i18n.t('slides_index.read_chapter' if overview
+                  else 'slides_index.read_section')
     return (
         f'<li class="d2l-deck{" d2l-overview" if overview else ""}" '
         f'data-dir="{chap_dir}" data-stem="{stem}" '
@@ -219,8 +228,8 @@ def render_deck(chap_dir: str, deck: dict, overview: bool = False) -> str:
         f'<span class="d2l-fallback"></span></a>'
         f'<span class="d2l-actions">{downloads}'
         f'<a class="d2l-book" href="../{chap_dir}/{page}.html" '
-        f'title="Read this {"chapter" if overview else "section"} in the '
-        f'book"><i class="bi bi-book" aria-hidden="true"></i></a>'
+        f'title="{html_escape(read)}"><i class="bi bi-book" '
+        f'aria-hidden="true"></i></a>'
         f'</span></li>')
 
 
@@ -232,22 +241,21 @@ def render_content(idx: dict) -> tuple:
         f'<li class="nav-item" role="presentation"><a class="nav-link" '
         f'href="#" role="tab" data-fw="{fw}">{FW_SHORT[fw]}</a></li>'
         for fw in FRAMEWORKS)
+    t = i18n.t
     head = [
         '<header id="title-block-header" class="quarto-title-block default">'
-        '<div class="quarto-title"><h1 class="title">Slides</h1></div>'
+        f'<div class="quarto-title"><h1 class="title">'
+        f'{html_escape(t("slides_index.title"))}</h1></div>'
         '</header>',
         '<div class="d2l-slides-index">',
-        f'<p class="d2l-lead">Each section of the book comes with a slide '
-        f'deck for lectures and self-study, {n_decks} decks in all. A deck '
-        f'runs in the browser with the code and outputs of the framework you '
-        f'choose below. You can also download it as a PDF, as an editable '
-        f'PowerPoint file, or as Beamer LaTeX source to adapt for your own '
-        f'course.</p>',
-        '<div class="d2l-fw-bar"><span class="d2l-fw-label">Framework</span>'
+        f'<p class="d2l-lead">{t("slides_index.lead", n=n_decks)}</p>',
+        '<div class="d2l-fw-bar"><span class="d2l-fw-label">'
+        f'{html_escape(t("slides_index.framework"))}</span>'
         f'<ul class="nav nav-tabs" role="tablist">{tabs}</ul></div>',
     ]
     toc = ['<nav id="TOC" role="doc-toc">',
-           '<h2 id="toc-title">Parts</h2>', '<ul>']
+           f'<h2 id="toc-title">{html_escape(t("slides_index.parts"))}</h2>',
+           '<ul>']
     cards, sections = [], []
     for part in idx['parts']:
         pid = 'part-' + slug(part['title'] or 'front-matter')
@@ -255,11 +263,12 @@ def render_content(idx: dict) -> tuple:
                       for fw in d['frameworks']}, key=FRAMEWORKS.index)
         nums = [int(c['num']) for c in part['chapters']
                 if c['num'].isdigit()]
-        span = ('' if not nums else f'Chapter {nums[0]}' if len(nums) == 1
-                else f'Chapters {nums[0]}&ndash;{nums[-1]}')
+        span = ('' if not nums else t('slides_index.chapter', n=nums[0])
+                if len(nums) == 1 else
+                t('slides_index.chapters', first=nums[0], last=nums[-1]))
         count = sum(len(c['decks']) + bool(c['overview'])
                     for c in part['chapters'])
-        decks = f'{count} deck{"s" * (count != 1)}'
+        decks = i18n.tn('slides_index.decks', count)
         fw_words = fw_phrase(fws)
         summary = ' &middot; '.join(x for x in (span, decks, fw_words) if x)
         missing = [FW_SHORT[f] for f in FRAMEWORKS if f not in fws]
@@ -279,9 +288,10 @@ def render_content(idx: dict) -> tuple:
         sections.append(f'<p class="d2l-part-note">{summary}</p>')
         if missing:
             sections.append(
-                f'<p class="d2l-part-fallback" hidden>This part has no '
-                f'<span class="d2l-fw-name"></span> decks; its decks open '
-                f'in {FW_SHORT[fws[0]]}.</p>')
+                '<p class="d2l-part-fallback" hidden>' +
+                t('slides_index.part_fallback',
+                  fw='<span class="d2l-fw-name"></span>',
+                  first=FW_SHORT[fws[0]]) + '</p>')
         for chap in part['chapters']:
             cid = 'chap-' + slug(chap['dir'].replace('chapter_', ''))
             num = (f'<span class="header-section-number">{chap["num"]}'
@@ -297,7 +307,8 @@ def render_content(idx: dict) -> tuple:
             sections.append('</ol></section>')
         sections.append('</section>')
     toc.append('</ul></nav>')
-    page = head + ['<nav class="d2l-cards" aria-label="Parts">'
+    page = head + ['<nav class="d2l-cards" aria-label="'
+                   f'{html_escape(t("slides_index.parts"))}">'
                    + ''.join(cards) + '</nav>'] + sections + ['</div>']
     return '\n'.join(page), '\n'.join(toc)
 
@@ -441,8 +452,9 @@ def _replace_between(html: str, start: str, end: str, new: str) -> str:
 def frame_page(frame: str, main: str, toc: str) -> str:
     """Put the landing page into a rendered book page of the same depth."""
     html = re.sub(r'<title>[^<]*</title>',
-                  '<title>Slides – Dive into Deep Learning</title>', frame,
-                  count=1)
+                  lambda m: '<title>' + html_escape(i18n.t(
+                      'slides_index.page_title', book=i18n.t('book.title')))
+                  + '</title>', frame, count=1)
     # Main column; the part page's title block is replaced too.
     html = _replace_between(html, '<main class="content" '
                             'id="quarto-document-content">', '</main>',
@@ -471,9 +483,13 @@ def frame_page(frame: str, main: str, toc: str) -> str:
 def standalone_page(main: str, bootstrap_css: str) -> str:
     """Fallback when no rendered book page exists to supply the frame."""
     return (
-        '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8">'
+        f'<!DOCTYPE html>\n<html lang="{html_escape(i18n.setting("lang"))}"'
+        f'{" dir=" + chr(34) + "rtl" + chr(34) if i18n.setting("dir") == "rtl" else ""}>'
+        '<head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<title>Slides – Dive into Deep Learning</title>'
+        '<title>' + html_escape(i18n.t('slides_index.page_title',
+                                       book=i18n.t('book.title'))) +
+        '</title>'
         '<link rel="stylesheet" href="../site_libs/bootstrap/'
         'bootstrap-icons.css">'
         f'<link rel="stylesheet" href="{bootstrap_css}">'

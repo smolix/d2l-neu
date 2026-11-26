@@ -16,6 +16,13 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import i18n  # noqa: E402
+
+# `## Exercises` and `[Discussions]` in English or in the source's language.
+_HEADINGS = tuple('## ' + h for h in i18n.variants('book.exercises_heading'))
+_DISCUSSIONS = tuple(f'[{d}]' for d in i18n.variants('book.discussions_link'))
+
 LABEL_LINE = re.compile(r'^[ \t]*:exlabel:`([^`]+)`[ \t]*$')
 REF = re.compile(r':exref:`([^`]+)`')
 ITEM = re.compile(r'^(\d+)\. ')
@@ -25,13 +32,13 @@ _INDEX = {}
 
 
 def _block_range(lines):
-    a = next((i for i, l in enumerate(lines) if l.startswith('## Exercises')), None)
+    a = next((i for i, l in enumerate(lines) if l.startswith(_HEADINGS)), None)
     if a is None:
         return None
     for i in range(a + 1, len(lines)):
         l = lines[i]
-        if l.startswith('<!-- slides -->') or l.startswith('[Discussions]') or (
-                TAB_BEGIN.match(l) and i + 1 < len(lines) and lines[i + 1].startswith('[Discussions]')):
+        if l.startswith('<!-- slides -->') or l.startswith(_DISCUSSIONS) or (
+                TAB_BEGIN.match(l) and i + 1 < len(lines) and lines[i + 1].startswith(_DISCUSSIONS)):
             return a, i
     return a, len(lines)
 

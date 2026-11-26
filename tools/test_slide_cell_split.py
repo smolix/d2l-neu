@@ -272,8 +272,14 @@ def test_render_split_deck():
         return
     with tempfile.TemporaryDirectory() as tmp:
         root = corpus(tmp)
-        for f in ('_d2l-slides.scss', '_d2l-slides-overlay.html'):
-            shutil.copy(REPO / f, root / f)
+        shutil.copy(REPO / '_d2l-slides.scss', root / '_d2l-slides.scss')
+        # Decks include the rendered overlay (tools/i18n.py render).
+        sys.path.insert(0, str(TOOLS))
+        import i18n
+        (root / '_i18n').mkdir()
+        (root / '_i18n' / '_d2l-slides-overlay.html').write_text(
+            i18n.render_template(
+                (REPO / '_d2l-slides-overlay.html').read_text()))
         (root / 'img').mkdir()
         (root / '.venv-build').symlink_to(REPO / '.venv-build')
         env = {**os.environ,

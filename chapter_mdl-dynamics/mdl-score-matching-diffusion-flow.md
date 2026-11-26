@@ -564,7 +564,7 @@ for q in (1.0, 8.0):
 ```
 
 Over the twenty draws the exact score's mean squared error has a standard
-deviation of $0.03$ to $0.04$. One sample of pairs therefore gives the floor
+deviation of $0.03$ to $0.05$. One sample of pairs therefore gives the floor
 to a few hundredths and no better (Exercise
 :exref:`ex_mdl-score-matching-diffusion-flow-bayes-risk-floor` obtains the
 same figure from a single sample). At $x = 1$ the twenty fits stay within
@@ -682,7 +682,7 @@ for start, w in ((-2.0, 0.8), (2.0, 0.2)):              # every chain in one mod
 
 Of the 10,000 chains started in the heavy mode, about one in two hundred
 has ended on the other side. Of those started in the light mode, about one
-in forty has. In the valley the density is tiny and the drift points back to
+in forty or fifty has. In the valley the density is tiny and the drift points back to
 the mode the chain came from. Crossing needs a rare run of noise in one
 direction, and the waiting time grows exponentially with the height of the
 barrier in $-\log p$.
@@ -1258,7 +1258,7 @@ about $0.23$ against $0.243$. With the exact noise prediction the only error
 is Euler's, so this is the error of fifty strides. It has the size the
 Gaussian corollary led us to expect, a shrinkage of a few percent, where
 fifty strides multiplied Gaussian data by $0.964$. The fit adds one visible
-error of its own, a light mode of width $0.26$ to $0.28$ where the exact row
+error of its own, a light mode of width $0.25$ to $0.28$ where the exact row
 has about $0.24$. The two modes differ in nothing but their share of the data, so the
 excess comes from there. Least squares spends its 17 weights where the pairs
 are, and only a fifth of the pairs fall in the light mode. The KS statistics
@@ -1803,7 +1803,7 @@ What happens when we run $10{,}000$ Langevin chains for $2{,}000$ steps ($h = 0.
 
 @!score-matching-diffusion-flow-langevin
 
-- **Exponential Valley Trapping:** Crossing the low-density valley around $x = 0$ against the restoring pull requires an exponentially rare sequence of noise kicks ($0.5\%$ transition rate out of the heavy mode, $2.5\%$ out of the light mode; mixing relaxation takes $\sim 67{,}000$ steps).
+- **Exponential Valley Trapping:** Crossing the low-density valley around $x = 0$ against the restoring pull requires an exponentially rare sequence of noise kicks ($0.5\%$ transition rate out of the heavy mode, $2$–$2.5\%$ out of the light mode; mixing relaxation takes $\sim 67{,}000$ steps).
 - **Wrong Mode Proportions ($0.48$ vs. $0.20$):** Chains started from symmetric $\mathcal{N}(0, 3^2)$ simply slide into the nearest mode and stay trapped, preserving the $50/50$ proportions of the initialization instead of the $80/20$ data weights.
 :::
 
@@ -1923,7 +1923,7 @@ Fitting our 17-feature linear model by ridge least squares at each of the $50$ n
 @!mdl-score-matching-diffusion-flow-denoising-diffusion-implicit-models-1
 
 ::: {.d2l-note .rule}
-**Multi-Level Regression Solves Mode Weighting:** Where single-level Langevin with the *exact* score left $48\%$ of samples in the light mode, 50-stride DDIM on *least-squares fitted* scores recovers the true $20\%$ light-mode mass ($0.197$) and matches the exact-score DDIM trajectory to $\text{KS} = 0.02$.
+**Multi-Level Regression Solves Mode Weighting:** Where single-level Langevin with the *exact* score left $48\%$ of samples in the light mode, 50-stride DDIM on *least-squares fitted* scores recovers the true $20\%$ light-mode mass to within a hundredth or two and matches the exact-score DDIM trajectory to a KS distance of a few hundredths.
 :::
 :::
 

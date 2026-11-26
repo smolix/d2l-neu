@@ -27,6 +27,7 @@ from d2l_preprocess import (
     CodeBlock, MarkdownBlock, CodeTabSet, TocBlock,
 )
 from build_lib import flatten_tab_branches
+import i18n
 
 
 # A dark, conventional hyperlink blue that remains legible in print. Quarto's
@@ -106,16 +107,23 @@ def localize_external_images(text):
     return text
 
 
+def _discussions_re():
+    """'Discussions?' or, in a translated source, its catalog text too."""
+    return '|'.join(['Discussions?'] + [re.escape(x) for x in
+                     i18n.variants('book.discussions_link')[1:]])
+
+
 def strip_discussions(text):
     """Remove Discussion sections and links (website-only content)."""
+    word = _discussions_re()
     # Remove ## Discussion headings and content until next heading or EOF
     text = re.sub(
-        r'^##\s+Discussions?\s*\n.*?(?=^##\s|\Z)',
+        r'^##\s+(?:' + word + r')\s*\n.*?(?=^##\s|\Z)',
         '', text, flags=re.MULTILINE | re.DOTALL)
     # Remove standalone discussion links (website-only): both the current
     # d2l.discourse.group domain and the legacy discuss.d2l.ai one.
     text = re.sub(
-        r'^\[Discussions?\]\(https://(?:discuss\.d2l\.ai|d2l\.discourse\.group)/[^)]*\)\s*$',
+        r'^\[(?:' + word + r')\]\(https://(?:discuss\.d2l\.ai|d2l\.discourse\.group)/[^)]*\)\s*$',
         '', text, flags=re.MULTILINE)
     return text
 
@@ -189,8 +197,8 @@ def _pdf_excluded_ref_replacements():
         m = _re.search(r'^# (.+)$', text, _re.M)
         title = m.group(1).strip() if m else rel
         for label in _re.findall(r':label:`([^`]+)`', text):
-            repl[convert_label_id(label)] = (
-                f'the online appendix "{title}"')
+            repl[convert_label_id(label)] = i18n.t('pdf.online_appendix',
+                                                   title=title)
     return repl
 
 
@@ -235,10 +243,13 @@ def convert_file_pdf(src_path, framework, chapter_number=None):
     # label-type map is the prefix: chap_ -> sec-chap- reads "Chapter N";
     # sec_/subsec_ -> sec- reads "Section N.M" (see convert_label_id).
     # PDF-only — the HTML path (d2l_preprocess) must not be touched.
+    chapter, section = i18n.t('pdf.chapter'), i18n.t('pdf.section')
     output = _re.sub(r'@sec-chap-([A-Za-z0-9-]+)',
-                     r'`Chapter~\\ref{sec-chap-\1}`{=latex}', output)
+                     lambda m: f'`{chapter}~\\ref{{sec-chap-{m.group(1)}}}`{{=latex}}',
+                     output)
     output = _re.sub(r'@sec-(?!chap-)([A-Za-z0-9-]+)',
-                     r'`Section~\\ref{sec-\1}`{=latex}', output)
+                     lambda m: f'`{section}~\\ref{{sec-{m.group(1)}}}`{{=latex}}',
+                     output)
 
     # Auto-number all display equations
     output = _add_equation_numbers(output, src_path)
@@ -308,14 +319,14 @@ def main():
     # Generate index.qmd
     index_dst = dst / 'index.qmd'
     index_dst.write_text(
-        '---\ntitle: "Dive into Deep Learning"\n---\n\n'
-        'An interactive deep learning book with code, math, and discussions.\n',
+        f'---\ntitle: {_yaml_str(i18n.t("book.title"))}\n---\n\n'
+        f'{i18n.t("pdf.blurb")}\n',
         encoding='utf-8')
 
     # Generate references.qmd
     refs_dst = dst / 'references.qmd'
-    refs_dst.write_text('# References {.unnumbered}\n\n::: {#refs}\n:::\n',
-                        encoding='utf-8')
+    refs_dst.write_text(f'# {i18n.t("pdf.references")} {{.unnumbered}}\n\n'
+                        '::: {#refs}\n:::\n', encoding='utf-8')
 
     # Copy assets from the project (d2l-neu), not from the source (d2l-en)
     project_dir = Path(__file__).parent.parent
@@ -377,9 +388,55 @@ def main():
     print(f'To render: cd {dst} && quarto render --to pdf')
 
 
+def _yaml_str(s):
+    """A YAML double-quoted scalar (JSON's escapes are valid YAML)."""
+    import json
+    return json.dumps(s, ensure_ascii=False)
+
+
+def _font_yaml(kind, english_name, options):
+    """The `<kind>font:` entry: the bundled English font with its static/fonts
+    options, or a locale's system font by name (fonts.pdf.<kind>)."""
+    name = i18n.setting(f'fonts.pdf.{kind}')
+    if name == english_name:
+        return f'    {kind}font: "{name}"\n    {kind}fontoptions:\n' + ''.join(
+            f'      - {o}\n' for o in options)
+    return f'    {kind}font: {_yaml_str(name)}\n'
+
+
+def _locale_yaml():
+    """Language settings of a localized PDF ('' for English): pandoc `lang`,
+    text direction, and xeCJK for CJK fonts (static/d2l-i18n-preamble.tex)."""
+    out = ''
+    if i18n.setting('pdf.lang'):
+        out += f'    lang: {_yaml_str(i18n.setting("pdf.lang"))}\n'
+    if i18n.setting('dir') == 'rtl':
+        out += '    dir: rtl\n'
+    return out
+
+
 def _write_quarto_yml(dst, framework, files):
     """Write a PDF-specific _quarto.yml."""
     fw_display = FRAMEWORK_DISPLAY.get(framework, framework)
+    body_opts = ('Path=static/fonts/', 'Extension=.ttf', 'UprightFont=*-Regular',
+                 'BoldFont=*-Bold', 'ItalicFont=*-Italic')
+    fonts = (_font_yaml('main', 'SourceSerif4', body_opts) +
+             _font_yaml('sans', 'SourceSans3', body_opts) +
+             _font_yaml('mono', 'Inconsolata',
+                        ('Path=static/fonts/', 'Extension=.ttf',
+                         'UprightFont=*-Regular', 'BoldFont=*-Bold',
+                         'Scale=0.9')))
+    cjk = i18n.latex_cjk_preamble()
+    if cjk:
+        (dst / 'static').mkdir(parents=True, exist_ok=True)
+        (dst / 'static' / 'd2l-i18n-preamble.tex').write_text(
+            '% Generated by tools/gen_pdf.py from the locale (tools/i18n.py).\n'
+            + cjk, encoding='utf-8')
+        header = ('    include-in-header:\n'
+                  '      - static/d2l-preamble.tex\n'
+                  '      - static/d2l-i18n-preamble.tex\n')
+    else:
+        header = '    include-in-header: static/d2l-preamble.tex\n'
 
     geometry = '\n'.join(f'      - {opt}' for opt in PDF_GEOMETRY)
 
@@ -395,8 +452,8 @@ def _write_quarto_yml(dst, framework, files):
   output-dir: _pdf
 
 book:
-  title: "Dive into Deep Learning"
-  subtitle: "{fw_display} Edition"
+  title: {_yaml_str(i18n.t('book.title'))}
+  subtitle: {_yaml_str(i18n.t('pdf.subtitle', fw=fw_display))}
   author:
     - Alexander J. Smola
   date: today
@@ -423,34 +480,12 @@ format:
     classoption:
       - twoside
       - openright
-    mainfont: "SourceSerif4"
-    mainfontoptions:
-      - Path=static/fonts/
-      - Extension=.ttf
-      - UprightFont=*-Regular
-      - BoldFont=*-Bold
-      - ItalicFont=*-Italic
-    sansfont: "SourceSans3"
-    sansfontoptions:
-      - Path=static/fonts/
-      - Extension=.ttf
-      - UprightFont=*-Regular
-      - BoldFont=*-Bold
-      - ItalicFont=*-Italic
-    monofont: "Inconsolata"
-    monofontoptions:
-      - Path=static/fonts/
-      - Extension=.ttf
-      - UprightFont=*-Regular
-      - BoldFont=*-Bold
-      - Scale=0.9
-    geometry:
+{fonts}{_locale_yaml()}    geometry:
 {geometry}
     linkcolor: "{PDF_LINK_COLOR}"
     citecolor: "{PDF_LINK_COLOR}"
     urlcolor: "{PDF_LINK_COLOR}"
-    include-in-header: static/d2l-preamble.tex
-    toc: true
+{header}    toc: true
     toc-depth: 2
     code-block-bg: "#f2f2f2"
     fig-pos: "htbp"

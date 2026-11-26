@@ -56,52 +56,15 @@ _ZIP_DATE = (1980, 1, 1, 0, 0, 0)
 # bundling the referenced files there makes the download self-contained.
 _IMGREF = re.compile(r'\.\./img/([\w./-]+\.(?:svg|png|jpg|jpeg|gif))')
 
-_README = """\
-# Dive into Deep Learning — {fw} notebooks
+def readme_text(fw: str) -> str:
+    """The zip's README.md, in the UI language (i18n key notebooks.readme)."""
+    import i18n
+    note = {'pytorch': 'notebooks.cpu_note_pytorch',
+            'mxnet': 'notebooks.cpu_note_mxnet'}.get(fw)
+    return i18n.t('notebooks.readme', fw=fw, mod=_MOD[fw],
+                  book=i18n.t('book.title'),
+                  cpu_note=i18n.t(note) if note else '')
 
-These are the executed {fw} notebooks from the book. Computed outputs and the
-figures referenced by the notebooks are included. The matching `d2l` source and
-pinned environments are included as well.
-
-The latest source is at <https://github.com/smolix/d2l-neu>.
-
-## CPU setup (recommended first)
-
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
-
-    uv venv --python 3.12
-    uv pip sync pylock.cpu.toml
-    uv run --no-sync jupyter lab
-
-{cpu_note}## NVIDIA GPU setup
-
-On Linux/x86-64 with a compatible NVIDIA driver, replace the CPU lock above:
-
-    uv pip sync pylock.gpu.toml
-    uv run --no-sync jupyter lab
-
-The GPU lock is framework-specific; check that `nvidia-smi` works before using
-it. The notebooks import the backend as, e.g.:
-
-    from d2l import {mod} as d2l
-
-Notebook outputs can be read offline. Executing notebooks that use datasets or
-pretrained models downloads those assets on first use and therefore needs an
-internet connection and additional disk space.
-"""
-
-_CPU_NOTE = {
-    'pytorch': ('The Language Models chapters (`chapter_lm-*`) need '
-                'Transformers and the OpenAI client\non top of PyTorch: for '
-                'them use `pylock.lm-cpu.toml` (or `pylock.lm-gpu.toml`)\n'
-                'in a separate venv, e.g. `uv venv --python 3.12 .venv-lm`, '
-                'then\n`VIRTUAL_ENV=.venv-lm uv pip sync pylock.lm-cpu.toml`.'
-                '\n\n'),
-    'tensorflow': '',
-    'jax': '',
-    'mxnet': ('On Apple Silicon, use `pylock.cpu-macos.toml` instead of '
-              '`pylock.cpu.toml`.\n\n'),
-}
 
 _MOD = {'pytorch': 'torch', 'tensorflow': 'tensorflow', 'jax': 'jax',
         'mxnet': 'mxnet'}
@@ -171,7 +134,7 @@ def build_zip(repo_root, notebooks_dir, store_dir, img_dir, env_dir,
     # Deterministic: sorted entries, fixed timestamps, fixed compression.
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED,
                          compresslevel=9) as z:
-        readme = _README.format(fw=fw, mod=_MOD[fw], cpu_note=_CPU_NOTE[fw])
+        readme = readme_text(fw)
         _write(z, f'{top}/README.md', readme.encode('utf-8'))
         _write(z, f'{top}/.python-version', b'3.12\n')
         _write(z, f'{top}/pyproject.toml', project_file.read_bytes())

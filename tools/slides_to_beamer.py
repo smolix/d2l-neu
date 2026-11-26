@@ -44,7 +44,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from slides_to_pptx import (REPO, QUARTO, LOGO, MAX_PX,  # noqa: E402
-                            shrink_raster, resolve_image, deck_meta)
+                            shrink_raster, resolve_image, deck_meta,
+                            deck_footer, deck_cover)
+import i18n  # noqa: E402
 
 THEME = REPO / 'tools/beamer/d2l-beamer.tex'
 LUA = REPO / 'tools/beamer/outputs.lua'
@@ -334,18 +336,11 @@ def read_positions(aux: Path) -> dict:
     return pos
 
 
-README = """{title} ({sec}), Dive into Deep Learning, https://d2l.ai
-Beamer source of the slide deck; builds with XeLaTeX (TeX Live 2022 or later):
-
-    xelatex {stem}.tex
-
-Files: {stem}.tex (the deck), d2l-beamer.tex (the D2L theme), sizes.tex
-(per-frame font sizes fitted so no frame overflows), figures/, d2l-logo.png.
-Fonts: Source Sans 3 and Inconsolata if installed (free from Google Fonts),
-else TeX Live's Source Sans Pro and Inconsolata (zi4), else the defaults.
-To reuse a frame in your own Beamer deck, copy it together with the
-\\input{{d2l-beamer}} preamble lines; \\dtlstart/\\dtlend only set its size.
-"""
+def readme(title: str, sec: str, stem: str) -> str:
+    """README.txt of a deck's LaTeX bundle (i18n key slides.beamer_readme)."""
+    return i18n.t('slides.beamer_readme', title=title, sec=sec, stem=stem,
+                  book=i18n.t('book.title'),
+                  host=i18n.setting('site.hosts')[0])
 
 
 def build_pdf(qmd: Path, pdf: Path, bundle: Path = None, keep: Path = None,
@@ -361,12 +356,15 @@ def build_pdf(qmd: Path, pdf: Path, bundle: Path = None, keep: Path = None,
         (work / 'deck.md').write_text(md)
         shutil.copy(THEME, work / 'd2l-beamer.tex')
         shutil.copy(LOGO, work / 'd2l-logo.png')
-        footer = f'{sec} {title}  ·  d2l.ai'.strip()
+        footer = deck_footer(title, sec)
+        cover = deck_cover(sec) or i18n.t('book.title')
         (work / 'header.tex').write_text(
             '\\def\\dtllogo{d2l-logo.png}\n'
             f'\\def\\dtlfooter{{{footer}}}\n'
-            f'\\def\\dtlcover{{Dive into Deep Learning{"  ·  " + sec if sec else ""}}}\n'
-            '\\input{d2l-beamer}\n\\InputIfFileExists{sizes}{}{}\n')
+            f'\\def\\dtlcover{{{cover}}}\n'
+            '\\input{d2l-beamer}\n\\InputIfFileExists{sizes}{}{}\n'
+            # xeCJK and its fonts for a CJK locale (none for English).
+            + i18n.latex_cjk_preamble())
         tex_name = f'{stem}.tex'
         r = subprocess.run(
             [str(QUARTO), 'pandoc', 'deck.md', '-f', 'markdown', '-t', 'beamer',
@@ -445,7 +443,7 @@ def build_pdf(qmd: Path, pdf: Path, bundle: Path = None, keep: Path = None,
         shutil.copy(work / f'{stem}.pdf', pdf)
         if bundle:
             (work / 'README.txt').write_text(
-                README.format(title=title, sec=sec or 'd2l.ai', stem=stem))
+                readme(title, sec or i18n.setting('site.hosts')[0], stem))
             files = [tex_name, 'd2l-beamer.tex', 'sizes.tex', 'd2l-logo.png',
                      'README.txt'] + sorted(
                 f'figures/{f.name}' for f in (work / 'figures').iterdir())

@@ -76,13 +76,13 @@
     var homeHref=(slog && slog.getAttribute("href")) || "/";
 
     var burger=document.createElement("button");
-    burger.id="d2l-burger"; burger.type="button"; burger.setAttribute("aria-label","Open menu");
+    burger.id="d2l-burger"; burger.type="button"; burger.setAttribute("aria-label","{{tjs:mobilenav.open}}");
     burger.setAttribute("aria-controls","d2l-drawer"); burger.setAttribute("aria-expanded","false");
     burger.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
 
     var home=document.createElement("a");
-    home.id="d2l-home"; home.href=homeHref; home.setAttribute("aria-label","Home");
-    home.innerHTML='<img src="'+MARK+'" alt="Dive into Deep Learning — home">';
+    home.id="d2l-home"; home.href=homeHref; home.setAttribute("aria-label","{{tjs:mobilenav.home}}");
+    home.innerHTML='<img src="'+MARK+'" alt="{{t:mobilenav.home_alt}}">';
 
     navc.insertBefore(burger, navc.firstChild);
     navc.appendChild(home);
@@ -90,10 +90,10 @@
     var drawer=document.createElement("aside");
     drawer.id="d2l-drawer"; drawer.setAttribute("aria-hidden","true");
     drawer.innerHTML=
-      '<div class="d2l-dhead"><img src="'+FULL+'" alt=""><button class="d2l-dx" type="button" aria-label="Close">&#10005;</button></div>'+
+      '<div class="d2l-dhead"><img src="'+FULL+'" alt=""><button class="d2l-dx" type="button" aria-label="{{t:mobilenav.close}}">&#10005;</button></div>'+
       '<div class="d2l-tabs" role="tablist">'+
-        '<button role="tab" aria-selected="true" data-pane="d2l-contents">Contents</button>'+
-        '<button role="tab" aria-selected="false" data-pane="d2l-menu">Menu</button>'+
+        '<button role="tab" aria-selected="true" data-pane="d2l-contents">{{t:mobilenav.contents}}</button>'+
+        '<button role="tab" aria-selected="false" data-pane="d2l-menu">{{t:mobilenav.menu}}</button>'+
       '</div>'+
       '<div class="d2l-pane on" id="d2l-contents"></div>'+
       '<div class="d2l-pane" id="d2l-menu"></div>';
@@ -104,27 +104,36 @@
     var toc=q("#quarto-sidebar .sidebar-menu-container");
     if(toc) q("#d2l-contents",drawer).innerHTML=toc.outerHTML;
 
-    var menu=document.createElement("div"); menu.className="d2l-menu";
-    document.querySelectorAll("#navbarCollapse .navbar-nav > .nav-item").forEach(function(li){
-      var dd=li.querySelector(".dropdown-menu");
-      if(dd){
-        var lbl=li.querySelector(".nav-link, .dropdown-toggle");
-        var g=document.createElement("div"); g.className="d2l-grp";
-        var s=document.createElement("span"); s.textContent=(lbl?lbl.textContent:"").trim(); g.appendChild(s);
-        dd.querySelectorAll("a.dropdown-item").forEach(function(a){
+    // The Menu tab mirrors the navbar items; rebuilt when the language menu
+    // (_d2l-languages.html) replaces its fallback entries.
+    function buildMenu(){
+      var menu=document.createElement("div"); menu.className="d2l-menu";
+      document.querySelectorAll("#navbarCollapse .navbar-nav > .nav-item").forEach(function(li){
+        var dd=li.querySelector(".dropdown-menu");
+        if(dd){
+          var lbl=li.querySelector(".nav-link, .dropdown-toggle");
+          var icon=lbl&&lbl.querySelector("[aria-label]");
+          var g=document.createElement("div"); g.className="d2l-grp";
+          var s=document.createElement("span");
+          s.textContent=(lbl?lbl.textContent:"").trim()||(icon?icon.getAttribute("aria-label"):"");
+          g.appendChild(s);
+          dd.querySelectorAll("a.dropdown-item").forEach(function(a){
+            var na=document.createElement("a"); na.href=a.getAttribute("href")||"#";
+            na.textContent=a.textContent.trim(); g.appendChild(na);
+          });
+          menu.appendChild(g);
+        }else{
+          var a=li.querySelector("a.nav-link"); if(!a) return;
           var na=document.createElement("a"); na.href=a.getAttribute("href")||"#";
-          na.textContent=a.textContent.trim(); g.appendChild(na);
-        });
-        menu.appendChild(g);
-      }else{
-        var a=li.querySelector("a.nav-link"); if(!a) return;
-        var na=document.createElement("a"); na.href=a.getAttribute("href")||"#";
-        na.textContent=a.textContent.trim();
-        if(a.getAttribute("target")) na.target=a.getAttribute("target");
-        menu.appendChild(na);
-      }
-    });
-    q("#d2l-menu",drawer).appendChild(menu);
+          na.textContent=a.textContent.trim();
+          if(a.getAttribute("target")) na.target=a.getAttribute("target");
+          menu.appendChild(na);
+        }
+      });
+      var pane=q("#d2l-menu",drawer); pane.innerHTML=""; pane.appendChild(menu);
+    }
+    buildMenu();
+    window.d2lMobileNavRefresh=buildMenu;
 
     function setOpen(o){
       document.body.classList.toggle("d2l-open",o);

@@ -63,6 +63,7 @@ from d2l_preprocess import (
     extract_cell_id, translate_directives, page_frameworks,
 )
 from build_lib import flatten_tab_branches
+import i18n
 import preamble
 from exercise_refs import render as render_exercise_refs
 import section_refs
@@ -727,6 +728,17 @@ def _emit_slide(slide, source_cells, framework, slide_path, warnings,
     return out
 
 
+def _localized_deck_css():
+    """<style> for the In/Out tags of code cells when the locale renames
+    them (_d2l-slides.scss sets the English ones), else ''."""
+    rules = []
+    for key, sel in (('slides.code_label', '.reveal .cell .sourceCode.cell-code::before'),
+                     ('slides.output_label', '.reveal .cell-output::before')):
+        if i18n.t(key) != i18n.en(key):
+            rules.append(f'{sel} {{ content: {json.dumps(i18n.t(key), ensure_ascii=False)} !important; }}')
+    return '<style>' + ' '.join(rules) + '</style>' if rules else ''
+
+
 def generate_slides_qmd(src_path, framework, warnings):
     """Generate a Reveal.js .qmd slide deck from a source .md file.
 
@@ -759,9 +771,11 @@ def generate_slides_qmd(src_path, framework, warnings):
     nums = CHAPTER_NUMBERING.get(rel) if rel else None
     if nums:
         section = '.'.join(str(n) for n in nums)
+        # A translated source may keep the English book title or use its own.
+        titles = '|'.join(re.escape(x) for x in i18n.variants('book.title'))
         text = re.sub(
-            r'(\[Dive into Deep Learning · §)[0-9]+(?:\.[0-9]+)?(\]\{\.kicker\})',
-            r'\g<1>' + section + r'\g<2>', text)
+            r'(\[(?:' + titles + r') · §)[0-9]+(?:\.[0-9]+)?(\]\{\.kicker\})',
+            lambda m: m.group(1) + section + m.group(2), text)
 
     slides = parse_slide_blocks(text)
     if not slides:
@@ -798,6 +812,8 @@ def generate_slides_qmd(src_path, framework, warnings):
         _t = translate_directives(file_title)
         _t_yaml = _t.replace('\\', '\\\\').replace('"', '\\"')
         out.append(f'title: "{_t_yaml}"')
+    # lang/dir of a localized build (none for English).
+    out.extend(i18n.quarto_lang_yaml().splitlines())
     out.append('format:')
     out.append('  revealjs:')
     out.append('    theme: [simple, ../../../_d2l-slides.scss]')
@@ -810,7 +826,12 @@ def generate_slides_qmd(src_path, framework, warnings):
     # containers (the "scroll windows") that fight reveal's fit-to-window
     # scaling. Content is authored to fit 720px, so scaling alone suffices.
     out.append('    code-line-numbers: false')
-    out.append('    include-after-body: ../../../_d2l-slides-overlay.html')
+    # The rendered UI-string copy of the overlay (tools/i18n.py render).
+    out.append('    include-after-body: ../../../_i18n/_d2l-slides-overlay.html')
+    head = _localized_deck_css()
+    if head:
+        out.append('    include-in-header:')
+        out.append('      text: ' + json.dumps(head, ensure_ascii=False))
     # KaTeX renders math with bundled fonts (reliable for `\mathcal`,
     # `\mathbb`, etc.); MathJax 2.7 — Quarto's default for revealjs —
     # ships the math output via dynamic font requests that occasionally
@@ -1291,7 +1312,8 @@ def main():
             theme_bytes = b''.join(
                 (theme_root / f).read_bytes()
                 if (theme_root / f).exists() else b''
-                for f in ('_d2l-slides.scss', '_d2l-slides-overlay.html'))
+                for f in ('_d2l-slides.scss',
+                          '_i18n/_d2l-slides-overlay.html'))
             cur_hashes = {
                 rel: hashlib.sha256(
                     (fw_dir / rel).read_bytes() + theme_bytes).hexdigest()

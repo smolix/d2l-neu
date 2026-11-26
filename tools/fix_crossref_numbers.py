@@ -15,6 +15,46 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import i18n  # noqa: E402
+
+# The words Quarto puts before cross-reference numbers, in the book's UI
+# language (Quarto's language file for `lang`, or the locale's quarto.*
+# overrides; English: Chapter, Section, Figure, ...). Each is a regex
+# alternation of the caption and reference forms.
+_TERM_KEYS = {
+    'Chapter': ('crossref-ch-prefix',),
+    'Section': ('crossref-sec-prefix',),
+    'Figure': ('crossref-fig-title', 'crossref-fig-prefix'),
+    'Table': ('crossref-tbl-title', 'crossref-tbl-prefix'),
+    'Listing': ('crossref-lst-title', 'crossref-lst-prefix'),
+    'Equation': ('crossref-eq-prefix',),
+}
+
+
+def term(name):
+    """The (first) localized word for `name` ('Chapter', 'Figure', ...)."""
+    return i18n.quarto_term(_TERM_KEYS[name][0])
+
+
+def term_re(*names):
+    """Regex alternation (no group) of the localized words for `names`."""
+    words = []
+    for name in names:
+        for key in _TERM_KEYS[name]:
+            w = i18n.quarto_term(key)
+            if w not in words:
+                words.append(w)
+    return '|'.join(re.escape(w) for w in words)
+
+
+def _h1(path):
+    """A source page's `# ` title without its {#id} / :label:."""
+    for line in Path(path).read_text(encoding='utf-8').split('\n'):
+        if line.startswith('# '):
+            return re.sub(r'\s*(\{#[^}]*\}|:label:`[^`]*`)', '', line[2:]).strip()
+    return ''
+
 
 def build_chapter_map(book_dir):
     """Build pandoc_chapter → logical_prefix mapping.
@@ -100,7 +140,7 @@ def fix_section_numbers(content, ch_map):
     #   <span>Section 54.1.2</span> → <span>Section 8.1.1.2</span>
     for label in ['Chapter', 'Section']:
         content = re.sub(
-            rf'({label} )(\d+)((?:\.\d+)*</span>)',
+            rf'((?:{term_re(label)}) )(\d+)((?:\.\d+)*</span>)',
             replace_number, content)
 
     # Fix inline chapter cross-refs in quarto-xref links:
@@ -113,7 +153,7 @@ def fix_section_numbers(content, ch_map):
     #   Figure&nbsp;54.1  or  Figure&nbsp;<span>54.1
     for label in ['Figure', 'Table', 'Listing']:
         content = re.sub(
-            rf'({label}&nbsp;(?:<span>)?)(\d+)(\.\d+)',
+            rf'((?:{term_re(label)})&nbsp;(?:<span>)?)(\d+)(\.\d+)',
             replace_number, content)
 
     # Fix <title> tag: <title>54&nbsp; Title</title>
@@ -128,7 +168,7 @@ def fix_section_numbers(content, ch_map):
 
     # Fix equation references: Equation&nbsp;(54.1)
     content = re.sub(
-        r'(Equation&nbsp;\()(\d+)(\.\d+)',
+        rf'((?:{term_re("Equation")})&nbsp;\()(\d+)(\.\d+)',
         replace_number, content)
 
     return content, count
@@ -157,11 +197,11 @@ def fix_chapter_to_section(content, ch_map, section_files):
         base = num.split('.')[0] + '.' + num.split('.')[1] if '.' in num else num
         if base in section_prefixes or num in section_prefixes:
             count += 1
-            return f'Section {num}{after}'
+            return f'{term("Section")} {num}{after}'
         return m.group(0)
 
     content = re.sub(
-        r'Chapter (\d+\.\d+(?:\.\d+)*)(</span>)',
+        rf'(?:{term_re("Chapter")}) (\d+\.\d+(?:\.\d+)*)(</span>)',
         replace_chapter_with_section, content)
 
     return content, count
@@ -188,13 +228,14 @@ def fix_equation_crossrefs(content, ch_map):
         return m.group(0)
 
     # Equation&nbsp;N.M  or  Equation&nbsp;<span>N.M
+    eq = term_re('Equation')
     content = re.sub(
-        r'(Equation&nbsp;(?:<span>)?)(\d+)(\.\d+)',
+        rf'((?:{eq})&nbsp;(?:<span>)?)(\d+)(\.\d+)',
         replace_eq_number, content)
 
     # Equation&nbsp;(N.M)
     content = re.sub(
-        r'(Equation&nbsp;\()(\d+)(\.\d+)',
+        rf'((?:{eq})&nbsp;\()(\d+)(\.\d+)',
         replace_eq_number, content)
 
     return content, count
@@ -207,24 +248,26 @@ def strip_frontmatter_figures(content, unnumbered):
     numbers like 'Figure 2.1'. Replace with just 'Figure' or strip the number.
     """
     count = 0
+    fig = term('Figure')
+    efig = re.escape(fig)
     for pandoc_ch in unnumbered:
         # Figure&nbsp;N.M → Figure
-        old = f'Figure&nbsp;{pandoc_ch}.'
+        old = f'{fig}&nbsp;{pandoc_ch}.'
         while old in content:
             # Find the full number (e.g., "Figure&nbsp;2.1")
-            m = re.search(rf'Figure&nbsp;{pandoc_ch}\.\d+', content)
+            m = re.search(rf'{efig}&nbsp;{pandoc_ch}\.\d+', content)
             if m:
-                content = content.replace(m.group(), 'Figure', 1)
+                content = content.replace(m.group(), fig, 1)
                 count += 1
             else:
                 break
 
         # Also in <span> form: Figure&nbsp;<span>N.M</span> → Figure
-        old_span = f'Figure&nbsp;<span>{pandoc_ch}.'
+        old_span = f'{fig}&nbsp;<span>{pandoc_ch}.'
         while old_span in content:
-            m = re.search(rf'Figure&nbsp;<span>{pandoc_ch}\.\d+</span>', content)
+            m = re.search(rf'{efig}&nbsp;<span>{pandoc_ch}\.\d+</span>', content)
             if m:
-                content = content.replace(m.group(), 'Figure', 1)
+                content = content.replace(m.group(), fig, 1)
                 count += 1
             else:
                 break
@@ -257,12 +300,11 @@ def strip_frontmatter_numbers(content, unnumbered):
 def fix_frontmatter_crossrefs(content):
     """Use page titles, not raw Pandoc chapter numbers, for frontmatter xrefs."""
     count = 0
-    titles = {
-        'chapter_preface/index.html': 'Preface',
-        'chapter_installation/index.html': 'Installation',
-        'chapter_notation/index.html': 'Notation',
-        'chapter_introduction/index.html': 'Introduction',
-    }
+    # The pages' own `# ` titles (English, or a translation's).
+    titles = {f'{chap}/index.html': _h1(Path(__file__).resolve().parent.parent
+                                        / chap / 'index.md')
+              for chap in ('chapter_preface', 'chapter_installation',
+                           'chapter_notation', 'chapter_introduction')}
     for target, title in titles.items():
         pattern = re.compile(
             rf'(<a href="[^"]*{re.escape(target)}" class="quarto-xref">'
@@ -375,9 +417,10 @@ def fix_search_json(search_path, ch_map, unnumbered, section_files):
             base = num.split('.')[0] + '.' + num.split('.')[1] if '.' in num else num
             if base in section_prefixes or num in section_prefixes:
                 count += 1
-                return f'Section {num}'
+                return f'{term("Section")} {num}'
             return m.group(0)
-        return re.sub(r'Chapter[ \xa0](\d+\.\d+(?:\.\d+)*)', repl, text)
+        return re.sub(rf'(?:{term_re("Chapter")})[ \xa0](\d+\.\d+(?:\.\d+)*)',
+                      repl, text)
 
     def fix_leading_number(text):
         # A search entry's own title/section carries the chapter number as a
@@ -400,13 +443,14 @@ def fix_search_json(search_path, ch_map, unnumbered, section_files):
             return f'{logical}{m.group(2)}{m.group(3)}{text[m.end():]}'
         return text
 
+    labels = term_re('Figure', 'Table', 'Section', 'Equation', 'Listing')
     for entry in data:
         for field in ['text', 'title', 'section']:
             val = entry.get(field, '')
             if not val:
                 continue
             new_val = re.sub(
-                r'(Figure|Table|Section|Equation|Listing)([ \xa0])(\d+)(\.\d+(?:\.\d+)*)',
+                rf'({labels})([ \xa0])(\d+)(\.\d+(?:\.\d+)*)',
                 replace_text_number, val)
             new_val = fix_chapter_label(new_val)
             if field in ('title', 'section'):

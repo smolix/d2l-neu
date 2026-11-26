@@ -11,6 +11,24 @@
 # rebuild-book-artifacts used to do.
 OUTPUT_MANIFESTS := $(wildcard outputs/*/*/*.json)
 
+# ── UI strings (i18n) ──────────────────────────────────────
+# The _d2l-*.html includes are templates of the UI strings in i18n/en.yml;
+# tools/i18n.py renders them into _i18n/ for the selected language (D2L_LANG,
+# D2L_LOCALE_FILE; English by default), localizes _quarto.yml, and writes
+# _i18n/catalog.json, the effective catalog that the PDF, slide, and notebook
+# rules depend on. It runs on every make, but rewrites only files whose
+# content changes, so an unchanged language leaves their mtimes alone
+# (docs/build-guide.md §4.14).
+I18N_TEMPLATES := _d2l-favicon.html _d2l-tabs.html _d2l-notebooks.html \
+	_d2l-mobilenav.html _d2l-languages.html _d2l-slides-overlay.html
+I18N_FILES := $(addprefix _i18n/,$(I18N_TEMPLATES)) _i18n/catalog.json 404.qmd
+
+$(I18N_FILES) &: FORCE
+	@python3 tools/i18n.py render
+
+.PHONY: i18n
+i18n: $(I18N_FILES)
+
 # ── HTML book ──────────────────────────────────────────────
 
 # ALLOW_STALE=1 turns the --verify-fresh gate below into a warning, for a
@@ -40,7 +58,7 @@ index.qmd: | .preprocess.stamp
 	@test -f $@ || { rm -f .preprocess.stamp && $(MAKE) --no-print-directory .preprocess.stamp; }
 
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp index.qmd _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py tools/inject_outputs.py d2l.bib $(OUTPUT_MANIFESTS) | .venv-build/.synced
+_book/index.html: $(I18N_FILES) .preprocess.stamp index.qmd _quarto.yml _d2l-theme.scss _d2l-style.css tools/build_hosted_notebooks.py tools/inject_outputs.py d2l.bib $(OUTPUT_MANIFESTS) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Verifying committed outputs are fresh ==="
 	@python3 tools/audit_outputs.py --verify-fresh || \
@@ -91,7 +109,7 @@ _book/index.html: .preprocess.stamp index.qmd _quarto.yml _d2l-theme.scss _d2l-s
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
 
-_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py static/d2l-preamble.tex d2l.bib $(wildcard static/fonts/*)
+_pdf/%/.generated: $(SRC_MDS) _i18n/catalog.json tools/gen_pdf.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py static/d2l-preamble.tex d2l.bib $(wildcard static/fonts/*)
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating PDF sources for $* ==="
 	@python3 tools/gen_pdf.py $(SOURCE) _pdf/$* --framework $* 2>&1 | tee $(LOGDIR)/pdf-$*-gen-$(TS).log
@@ -178,7 +196,7 @@ pdf-parts: $(PDF_PART_FILES)
 # inject that framework's committed outputs (gen_slides.py), so an output change
 # re-renders its decks and an unchanged store lets the recipe skip entirely — no
 # force-rm needed in rebuild-book-artifacts.
-_slides/%/.built: $(SRC_MDS) _d2l-slides.scss _d2l-slides-overlay.html tools/gen_slides.py tools/inject_outputs.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py $$(wildcard outputs/$$*/*/*.json) | .venv-build/.synced
+_slides/%/.built: $(SRC_MDS) _d2l-slides.scss _i18n/_d2l-slides-overlay.html _i18n/catalog.json tools/gen_slides.py tools/inject_outputs.py tools/d2l_preprocess.py tools/preamble.py tools/build_lib.py $$(wildcard outputs/$$*/*/*.json) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	@# pipefail is global (.SHELLFLAGS) so gen_slides.py's non-zero exit on a
@@ -203,7 +221,7 @@ slides-%: _slides/%/.built
 # redone when its .qmd or the converter is newer than its .pptx). The book's
 # right-sidebar "Slides" block links each deck's HTML, PDF, PowerPoint and
 # LaTeX versions.
-PPTX_TOOLS := tools/slides_to_pptx.py tools/pptx_fit.py static/logo-with-text.png
+PPTX_TOOLS := tools/slides_to_pptx.py tools/pptx_fit.py static/logo-with-text.png _i18n/catalog.json
 _slides/%/.pptx-built: _slides/%/.built $(PPTX_TOOLS) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* PowerPoint decks ==="
@@ -227,7 +245,8 @@ slides-pptx: $(addprefix slides-pptx-,$(FRAMEWORKS))
 # passes that shrink any frame running into the footer. Needs XeLaTeX;
 # incremental per deck like the PowerPoint step.
 BEAMER_TOOLS := tools/slides_to_beamer.py tools/slides_to_pptx.py \
-	tools/beamer/d2l-beamer.tex tools/beamer/outputs.lua static/logo-with-text.png
+	tools/beamer/d2l-beamer.tex tools/beamer/outputs.lua static/logo-with-text.png \
+	_i18n/catalog.json
 _slides/%/.beamer-built: _slides/%/.built $(BEAMER_TOOLS) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* Beamer PDFs and LaTeX bundles ==="

@@ -92,3 +92,14 @@ run_one.sh
 
 # torch.compile / Triton caches (make/notebooks.mk EXTRA_ENV_pytorch)
 .cache/
+
+# UI-string includes and the 404 page, rendered from i18n/en.yml (tools/i18n.py)
+/_i18n/
+/404.qmd
+
+# Shared venvs and data linked in from another checkout (worktrees, l10n builds)
+/.venv-*
+/data
+
+# Record of the last green `make all-quick` (tools/release.py)
+/.all-quick.ok

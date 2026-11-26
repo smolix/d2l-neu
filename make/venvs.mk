@@ -4,13 +4,21 @@
 
 # ── UV venvs ───────────────────────────────────────────────
 #
+# Shared venvs: a checkout whose .venv-<name> is a symlink (a git worktree,
+# or the scratch tree `l10n build` creates, linked to the main checkout's
+# venvs) never syncs it. Its .synced stamp gets no prerequisites, so the
+# fresh mtimes of this tree's pyproject.toml/uv.lock cannot trigger a
+# `uv sync` that would rewrite the venv another checkout owns. Sync it from
+# the checkout that owns it (docs/build-guide.md §4.14).
+VENV_SYNC_PREREQS = $(if $(shell test -L .venv-$(1) && echo shared),,$(2))
+#
 # Preflight runs before every `uv sync`: if pyproject pins the mxnet wheel
 # at a missing file path, `uv sync` for ANY framework fails during lock
 # validation (uv walks all path-direct sources, even those in conflicting
 # extras). The preflight is a fast no-op when the pin matches disk; when
 # the wheel is missing it auto-bumps the pin to the newest `../mxnet/dist/`
 # wheel and relocks. See tools/preflight_mxnet_pin.py for the trace.
-.venv-%/.synced: pyproject.toml uv.lock | .preflight.mxnet-pin
+.venv-%/.synced: $$(call VENV_SYNC_PREREQS,$$*,pyproject.toml uv.lock) | $$(call VENV_SYNC_PREREQS,$$*,.preflight.mxnet-pin)
 	@mkdir -p $(LOGDIR)
 	@echo "=== Syncing venv for $* ==="
 	UV_PROJECT_ENVIRONMENT=.venv-$* uv sync --extra $* --extra run 2>&1 | tee $(LOGDIR)/venv-$*-$(TS).log
@@ -20,7 +28,7 @@
 # omits nvidia/cusolver/lib, so TF silently falls back to CPU. Applying the
 # cusolver symlinks at sync time means a fresh `uv sync` doesn't leave the venv
 # in a CPU-only state. See tools/check_runtime_deps.py for the gory detail.
-.venv-tensorflow/.synced: pyproject.toml uv.lock tools/check_runtime_deps.py | .preflight.mxnet-pin
+.venv-tensorflow/.synced: $(call VENV_SYNC_PREREQS,tensorflow,pyproject.toml uv.lock tools/check_runtime_deps.py) | $(call VENV_SYNC_PREREQS,tensorflow,.preflight.mxnet-pin)
 	@mkdir -p $(LOGDIR)
 	@echo "=== Syncing venv for tensorflow ==="
 	UV_PROJECT_ENVIRONMENT=.venv-tensorflow uv sync --extra tensorflow --extra run 2>&1 | tee $(LOGDIR)/venv-tensorflow-$(TS).log
@@ -38,7 +46,7 @@
 # Used by HTML and PDF recipes so `quarto` is a real declared dependency rather
 # than an implicit system tool. Override-style rule for the `build` extra:
 # `uv sync --extra build` is enough; no `--extra run` (no jupyter needed).
-.venv-build/.synced: pyproject.toml uv.lock
+.venv-build/.synced: $(call VENV_SYNC_PREREQS,build,pyproject.toml uv.lock)
 	@mkdir -p $(LOGDIR)
 	@echo "=== Syncing build venv (quarto-cli) ==="
 	UV_PROJECT_ENVIRONMENT=.venv-build uv sync --extra build 2>&1 | tee $(LOGDIR)/venv-build-$(TS).log

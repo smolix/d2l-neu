@@ -1,0 +1,228 @@
+# UI string catalog of the book: every piece of text the build emits outside
+# the chapter sources (navbar, injected HTML/JS, slide index and templates,
+# PDF front matter, notebook downloads), plus the per-language settings.
+#
+# Read by tools/i18n.py. A localized build sets
+#   D2L_LANG=<code>            ISO 639-1 code of the language (default: en)
+#   D2L_LOCALE_FILE=<path>     YAML file with the same schema; its keys override
+#                              these key by key, a missing key stays English
+# (docs/build-guide.md §4.14). Keys are flat and dotted; a locale file may also
+# nest them (`nav: {slides: スライド}` is `nav.slides`). `{name}` marks a value
+# the emitter fills in; keep every placeholder a key has here. A key ending in
+# `.one` / `.other` is a count (`.one` for n = 1).
+#
+# `python3 tools/i18n.py check FILE` validates a locale file against this one.
+
+# ── Language settings (not strings) ─────────────────────────────────────────
+code: en                    # ISO 639-1; the language menu marks it as current
+lang: en                    # BCP-47 for Quarto `lang:` (localizes Quarto's own UI)
+dir: ltr                    # ltr | rtl
+site.hosts: [d2l.ai, en.d2l.ai]   # first host is canonical (slide footers)
+site.languages_url: https://d2l-data.smola.org/site/languages.json
+forum.mode: english         # english: link the English topics | own: own category
+forum.category: 5           # Discourse category id (5 = English Version)
+forum.url: https://d2l.discourse.group
+# HTML fonts: CSS font-family stacks. A locale that changes one gets a style
+# override; fonts.html.google lists extra Google Fonts css2 families to load
+# (e.g. "Noto Sans JP:wght@400;500;700").
+fonts.html.sans: "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+fonts.html.mono: "'JetBrains Mono', ui-monospace, monospace"
+fonts.html.google: []
+# PDF fonts (XeLaTeX). The English ones ship in static/fonts/; any other name
+# must be installed on the build host (fc-list). fonts.pdf.cjk (and _sans,
+# _mono) load xeCJK with that font for CJK text in the PDFs and Beamer decks.
+fonts.pdf.main: SourceSerif4
+fonts.pdf.sans: SourceSans3
+fonts.pdf.mono: Inconsolata
+fonts.pdf.cjk: null
+fonts.pdf.cjk_sans: null
+fonts.pdf.cjk_mono: null
+# Pandoc/Quarto `lang` for the PDFs (babel hyphenation and LaTeX names).
+# null: not set. Set it only for languages whose babel module works with
+# XeLaTeX (de, fr, es, pt, ...).
+pdf.lang: null
+# Overrides of Quarto's own language strings (keys of Quarto's
+# share/language/_language.yml), e.g. quarto.crossref-ch-prefix: 第
+# English needs none.
+
+# ── Book ─────────────────────────────────────────────────────────────────────
+book.title: Dive into Deep Learning
+# Headings and link texts the build finds in the chapter sources. A translated
+# source may use the English text or this one.
+book.exercises_heading: Exercises
+book.discussions_link: Discussions
+
+# ── Navbar (_quarto.yml) ─────────────────────────────────────────────────────
+nav.slides: Slides
+nav.courses: Courses
+nav.github: GitHub
+nav.discuss: Discuss
+nav.pdf: PDF
+nav.pdf_parts: Parts (PyTorch)
+nav.part_basics: Basics
+nav.part_advanced: Advanced
+nav.part_language_models: Language Models
+nav.part_mathematics: Mathematics for Deep Learning
+nav.notebooks: Notebooks
+nav.language: Language
+
+# ── Right-sidebar Slides block (_d2l-tabs.html) ──────────────────────────────
+toc_slides.label: "Slides · {fw}"
+toc_slides.label_missing: "Slides · {fw} n/a"
+toc_slides.html: HTML
+toc_slides.pdf: PDF
+toc_slides.pptx: PowerPoint
+toc_slides.latex: LaTeX
+toc_slides.open_html: Open the {fw} slides for this section
+toc_slides.open_pdf: Open the {fw} slides as a PDF (Beamer)
+toc_slides.open_pptx: Download the {fw} slides as an editable PowerPoint file
+toc_slides.open_latex: Download the Beamer LaTeX source of the {fw} slides (zip)
+toc_slides.export_missing: Not available for these slides yet
+toc_slides.deck_missing: "No {fw} deck. Available: {list}"
+toc_slides.none: No slides for this section
+
+# ── Share buttons (_d2l-tabs.html) ───────────────────────────────────────────
+share.label: Share
+share.x: Share on X (Twitter)
+share.facebook: Share on Facebook
+share.threads: Share on Threads
+share.linkedin: Share on LinkedIn
+
+# ── Run-notebook block (_d2l-notebooks.html) ─────────────────────────────────
+notebook.label: "Run notebook · {fw}"
+notebook.colab: Colab
+notebook.kaggle: Kaggle
+notebook.download: Download
+notebook.unavailable: Notebook unavailable
+notebook.unavailable_title: No hosted notebook is available for this page
+notebook.open_colab: Open the {fw} notebook in Colab
+notebook.open_kaggle: Import the {fw} notebook into Kaggle
+notebook.kaggle_missing: Kaggle import is unavailable for this notebook
+notebook.open_download: Download the {fw} notebook
+
+# ── Mobile navigation drawer (_d2l-mobilenav.html) ───────────────────────────
+mobilenav.open: Open menu
+mobilenav.home: Home
+mobilenav.home_alt: Dive into Deep Learning — home
+mobilenav.close: Close
+mobilenav.contents: Contents
+mobilenav.menu: Menu
+
+# ── Language menu (_d2l-languages.html) and 404 page (404.qmd) ───────────────
+languages.current: current language
+notfound.title: Page not found
+notfound.text: This page does not exist in this edition of the book. Taking you to the home page.
+notfound.link: Go to the home page
+
+# ── Slide decks: chrome (_d2l-slides-overlay.html) and code cells ────────────
+deck.home_title: Dive into Deep Learning — book home
+deck.book_chapter: Book Chapter
+deck.fullscreen: Fullscreen
+deck.fullscreen_title: "Toggle fullscreen view (shortcut: F)"
+deck.fullscreen_aria: Toggle fullscreen
+deck.fullscreen_exit_title: Exit fullscreen view (Esc)
+deck.fullscreen_mobile_title: "Toggle fullscreen view for mobile, iPad, or projector (shortcut: F)"
+deck.fullscreen_mobile_aria: Toggle fullscreen view
+deck.presenter_title: "Open speaker / presenter view in a second window (shortcut: S)"
+deck.presenter_aria: Presenter view
+# The tags on code cells and their outputs (web decks).
+slides.code_label: In
+slides.output_label: Out
+# PowerPoint / Beamer: cover line, footer, LaTeX-bundle README.
+slides.cover: "{book}  ·  {sec}"
+slides.footer: "{sec} {title}  ·  {host}"
+slides.beamer_readme: |
+  {title} ({sec}), {book}, https://{host}
+  Beamer source of the slide deck; builds with XeLaTeX (TeX Live 2022 or later):
+
+      xelatex {stem}.tex
+
+  Files: {stem}.tex (the deck), d2l-beamer.tex (the D2L theme), sizes.tex
+  (per-frame font sizes fitted so no frame overflows), figures/, d2l-logo.png.
+  Fonts: Source Sans 3 and Inconsolata if installed (free from Google Fonts),
+  else TeX Live's Source Sans Pro and Inconsolata (zi4), else the defaults.
+  To reuse a frame in your own Beamer deck, copy it together with the
+  \input{d2l-beamer} preamble lines; \dtlstart/\dtlend only set its size.
+
+# ── Slides landing page (tools/build_slides_index.py) ────────────────────────
+slides_index.title: Slides
+slides_index.page_title: "Slides – {book}"
+slides_index.lead: >-
+  Each section of the book comes with a slide deck for lectures and
+  self-study, {n} decks in all. A deck runs in the browser with the code and
+  outputs of the framework you choose below. You can also download it as a
+  PDF, as an editable PowerPoint file, or as Beamer LaTeX source to adapt for
+  your own course.
+slides_index.framework: Framework
+slides_index.parts: Parts
+slides_index.chapter_overview: Chapter overview
+slides_index.read_chapter: Read this chapter in the book
+slides_index.read_section: Read this section in the book
+slides_index.pdf: PDF
+slides_index.pptx: PPTX
+slides_index.latex: LaTeX
+slides_index.pdf_title: Open this deck as a PDF
+slides_index.pptx_title: Download this deck as an editable PowerPoint file
+slides_index.latex_title: Download the Beamer LaTeX source of this deck (zip)
+slides_index.chapter: Chapter {n}
+slides_index.chapters: Chapters {first}&ndash;{last}
+slides_index.decks.one: "{n} deck"
+slides_index.decks.other: "{n} decks"
+slides_index.all_frameworks: All four frameworks
+slides_index.only: "{list} only"
+slides_index.list_and: "{head} and {last}"
+slides_index.list_sep: ", "
+slides_index.part_fallback: "This part has no {fw} decks; its decks open in {first}."
+
+# ── PDF books (tools/gen_pdf.py, fix_latex.py, build_part_pdfs.py) ───────────
+pdf.subtitle: "{fw} Edition"
+pdf.blurb: An interactive deep learning book with code, math, and discussions.
+pdf.references: References
+pdf.chapter: Chapter
+pdf.section: Section
+pdf.online_appendix: the online appendix "{title}"
+# The back of the cover; {book} comes in italics.
+pdf.version: "{book}, version {date}."
+
+# ── Notebook downloads (tools/build_notebook_zips.py) ────────────────────────
+notebooks.readme: |
+  # {book} — {fw} notebooks
+
+  These are the executed {fw} notebooks from the book. Computed outputs and the
+  figures referenced by the notebooks are included. The matching `d2l` source and
+  pinned environments are included as well.
+
+  The latest source is at <https://github.com/smolix/d2l-neu>.
+
+  ## CPU setup (recommended first)
+
+  Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+
+      uv venv --python 3.12
+      uv pip sync pylock.cpu.toml
+      uv run --no-sync jupyter lab
+
+  {cpu_note}## NVIDIA GPU setup
+
+  On Linux/x86-64 with a compatible NVIDIA driver, replace the CPU lock above:
+
+      uv pip sync pylock.gpu.toml
+      uv run --no-sync jupyter lab
+
+  The GPU lock is framework-specific; check that `nvidia-smi` works before using
+  it. The notebooks import the backend as, e.g.:
+
+      from d2l import {mod} as d2l
+
+  Notebook outputs can be read offline. Executing notebooks that use datasets or
+  pretrained models downloads those assets on first use and therefore needs an
+  internet connection and additional disk space.
+notebooks.cpu_note_pytorch: |+
+  The Language Models chapters (`chapter_lm-*`) need Transformers and the OpenAI client
+  on top of PyTorch: for them use `pylock.lm-cpu.toml` (or `pylock.lm-gpu.toml`)
+  in a separate venv, e.g. `uv venv --python 3.12 .venv-lm`, then
+  `VIRTUAL_ENV=.venv-lm uv pip sync pylock.lm-cpu.toml`.
+
+notebooks.cpu_note_mxnet: |+
+  On Apple Silicon, use `pylock.cpu-macos.toml` instead of `pylock.cpu.toml`.
+

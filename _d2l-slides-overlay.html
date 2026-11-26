@@ -18,19 +18,19 @@
 <nav class="d2l-deck-nav">
   <div class="d2l-deck-brand">
     <a class="d2l-deck-logo" href="../../../index.html"
-       title="Dive into Deep Learning — book home">
-      <img src="../../../static/logo-with-text.png" alt="Dive into Deep Learning">
+       title="{{t:deck.home_title}}">
+      <img src="../../../static/logo-with-text.png" alt="{{t:book.title}}">
     </a>
   </div>
   <ul class="d2l-deck-nav-links">
-    <li><a href="../../../index.html">Book Chapter</a></li>
-    <li><a href="../../index.html">Slides</a></li>
-    <li><a href="https://courses.d2l.ai">Courses</a></li>
-    <li><a href="https://github.com/smolix/d2l-neu" title="GitHub">GitHub</a></li>
-    <li><a href="https://d2l.discourse.group">Discuss</a></li>
+    <li><a href="../../../index.html">{{t:deck.book_chapter}}</a></li>
+    <li><a href="../../index.html">{{t:nav.slides}}</a></li>
+    <li><a href="https://courses.d2l.ai">{{t:nav.courses}}</a></li>
+    <li><a href="https://github.com/smolix/d2l-neu" title="{{t:nav.github}}">{{t:nav.github}}</a></li>
+    <li><a href="{{t:forum.url}}">{{t:nav.discuss}}</a></li>
     <li>
       <button type="button" id="d2l-nav-fullscreen" class="d2l-nav-fullscreen-btn"
-              title="Toggle fullscreen view (shortcut: F)" aria-label="Toggle fullscreen"
+              title="{{t:deck.fullscreen_title}}" aria-label="{{t:deck.fullscreen_aria}}"
               aria-pressed="false">
         <svg class="icon-enter-fs" viewBox="0 0 16 16" width="16" height="16" fill="none"
              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -40,7 +40,7 @@
              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M5.5 2v3.5H2M14 5.5h-3.5V2M10.5 14v-3.5H14M2 10.5h3.5V14"/>
         </svg>
-        <span class="d2l-fs-label">Fullscreen</span>
+        <span class="d2l-fs-label">{{t:deck.fullscreen}}</span>
       </button>
     </li>
   </ul>
@@ -48,8 +48,8 @@
 <!-- Presenter / speaker-view toggle and Fullscreen toggle, parked in the
      bottom-left control cluster next to reveal's menu + chalkboard icons. -->
 <button id="d2l-deck-presenter" class="d2l-presenter-btn"
-        title="Open speaker / presenter view in a second window (shortcut: S)"
-        aria-label="Presenter view">
+        title="{{t:deck.presenter_title}}"
+        aria-label="{{t:deck.presenter_aria}}">
   <!-- Inline SVG (Quarto's revealjs doesn't load the bootstrap-icons font):
        a presentation screen with a speaker figure. -->
   <svg viewBox="0 0 16 16" width="21" height="21" fill="none"
@@ -62,8 +62,8 @@
   </svg>
 </button>
 <button id="d2l-deck-fullscreen" class="d2l-fullscreen-btn"
-        title="Toggle fullscreen view for mobile, iPad, or projector (shortcut: F)"
-        aria-label="Toggle fullscreen view"
+        title="{{t:deck.fullscreen_mobile_title}}"
+        aria-label="{{t:deck.fullscreen_mobile_aria}}"
         aria-pressed="false">
   <svg class="icon-enter-fs" viewBox="0 0 16 16" width="19" height="19" fill="none"
        stroke="currentColor" stroke-width="1.4"
@@ -106,8 +106,8 @@
       if (btns[k]) {
         btns[k].setAttribute('aria-pressed', active ? 'true' : 'false');
         btns[k].setAttribute('title', active
-          ? 'Exit fullscreen view (Esc)'
-          : 'Toggle fullscreen view (shortcut: F)');
+          ? '{{tjs:deck.fullscreen_exit_title}}'
+          : '{{tjs:deck.fullscreen_title}}');
       }
     }
     syncChrome();

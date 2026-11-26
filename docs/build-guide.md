@@ -242,6 +242,8 @@ framework.
 | Publish (R2, Colab, forum) | [4.11](#411-publish) |
 | Publish a data file for a `DATA_HUB` entry | [4.13](#413-publish-a-data-artifact-data_hub) |
 | `make html` says outputs are stale | [4.12](#412-diagnose-a-stale-or-failing-freshness-gate) |
+| Build a translated edition, or build in another checkout | [4.14](#414-build-a-translated-edition-or-in-any-checkout) |
+| Cut an English release tag (`en-YYYY.MM.DD`) | [4.15](#415-cut-an-english-release) |
 
 ### 4.1 Render the book on a laptop
 
@@ -687,6 +689,117 @@ Common failures:
   `python3 tools/upload_data_r2.py --delete lm/_test/<file>`.
 
 Details: [`build-system.md` §6.9](build-system.md#69-makefile-layout-extracted-scripts--artifact-phase-timing).
+
+### 4.14 Build a translated edition, or in any checkout
+
+A translated edition is an English release with its prose replaced; it never
+executes code. The `l10n build` tool of
+[d2l-localization](https://github.com/smolix/d2l-localization) does the
+following, and any checkout of d2l-neu builds the same way:
+
+```bash
+git worktree add /scratch/d2l-ja en-2026.12.01        # the pinned English tag
+cd /scratch/d2l-ja
+for v in .venv-build .venv-pytorch .venv-jax .venv-tensorflow .venv-mxnet .venv-lm .env data; do
+  ln -s /home/smola/d2l-neu/$v $v                     # shared, read-only
+done
+git lfs pull                                          # if images are pointers
+cp -r <ja>/book/chapter_* .                           # translated .md, same paths, same code
+export D2L_LANG=ja D2L_LOCALE_FILE=<ja>/strings.yml
+ulimit -u 8000
+make html                                             # quick test
+make all-quick                                        # HTML, PDFs, slides, notebook zips
+```
+
+What the build needs: the checkout itself (no git history beyond it), the
+symlinked venvs, `data/` and `.env`, and nothing else untracked. A symlinked
+`.venv-*` is never synced from that tree (`make/venvs.mk`), so the fresh
+mtimes of its `pyproject.toml` cannot trigger a `uv sync` of the venvs
+another checkout owns. Notebooks are only generated, never executed, so the
+editable `d2l` path in the shared venvs does not matter.
+
+The language switch:
+
+- `D2L_LANG=<code>`: the ISO 639-1 code (default `en`).
+- `D2L_LOCALE_FILE=<path>`: a YAML file with the schema of
+  [`i18n/en.yml`](../i18n/en.yml) whose keys override English key by key; a
+  key it lacks stays English. Without it, `i18n/<code>.yml` is used if it
+  exists. `python3 tools/i18n.py check <file>` validates one (unknown keys,
+  placeholders, setting types); `python3 tools/i18n.py show` prints the
+  effective catalog.
+
+The catalog holds every UI string the build emits outside the chapter
+sources (navbar, the injected `_d2l-*.html` scripts, the slide index and
+deck chrome, PowerPoint and Beamer covers and footers, PDF front matter,
+notebook-zip README) and the settings: `lang` (BCP-47, given to Quarto so its
+own UI and search are localized), `dir` (`ltr`/`rtl`), `fonts.html.*` and
+`fonts.pdf.*` (a CJK font loads xeCJK), `pdf.lang`, `site.hosts`,
+`forum.mode`, `forum.category`, and `quarto.<key>` overrides of Quarto's
+language strings. `make html` first runs `tools/i18n.py render`: it renders
+the `_d2l-*.html` templates (`{{t:key}}`, `{{tjs:key}}`) into `_i18n/`, the
+404 page into `404.qmd`, the effective catalog into `_i18n/catalog.json`
+(which the PDF, slide and PowerPoint/Beamer rules depend on, so a language
+switch rebuilds them), and localizes `_quarto.yml` in place: navbar labels,
+the language menu's fallback links, and a delimited block with `lang`, `dir`
+and `language:` at the end. English renders every include byte for byte as
+the template's English text and leaves `_quarto.yml` as committed; an
+English run after a localized one restores it.
+
+What stays as it is:
+
+- A translated `.md` replaces the English file at the same path; a file
+  without a translation stays English. The page `index.md` is a source
+  like any other and is translated the same way.
+- Code cells must be byte-identical to English. Prose is outside every
+  fingerprint, so a translated tree passes the freshness gate with the
+  English `outputs/` store unchanged (`make audit-outputs` shows no stale
+  notebook after `make notebooks`).
+- The build recognises the `## Exercises` heading, the `[Discussions](...)`
+  link, the slide-cover kicker `[Dive into Deep Learning · §N.M]{.kicker}`
+  and the book title in either English or the catalog's text
+  (`book.exercises_heading`, `book.discussions_link`, `book.title`).
+- Cross-reference words come from Quarto's language file for `lang` (or the
+  `quarto.crossref-*` overrides); `tools/fix_crossref_numbers.py` renumbers
+  them in that language.
+- Figures, covers and code comments stay English. Hosted Colab/Kaggle
+  notebooks link to the English `notebooks` branch.
+
+The navbar's language menu is filled at page load from
+`https://d2l-data.smola.org/site/languages.json` (generated by
+d2l-localization; `site.languages_url`), current languages first, then a
+divider and the old editions, the build's own language marked. If the fetch
+fails (no CORS header, offline), the static menu from `_quarto.yml` stays,
+with the same marking. Each current language links to the same path on its
+host; a page that language lacks hits that site's `404.html`
+(from `404.qmd`), which sends the reader to its home page. The bucket must
+send `Access-Control-Allow-Origin` for the book hosts, and Cloudflare must
+serve `/404.html` for missing paths (a custom error rule); R2 has no error
+document of its own.
+
+### 4.15 Cut an English release
+
+Translations build against tags `en-YYYY.MM.DD` (d2l-localization DESIGN §1).
+A tag is cut only from a state that builds without execution:
+
+```bash
+git switch main && git pull
+ulimit -u 8000
+make all-quick                              # records the green build in .all-quick.ok
+make release-check                          # the checks, no tag
+make release TAG=en-2026.12.01 DRY_RUN=1    # checks + the git commands it would run
+make release TAG=en-2026.12.01              # annotated tag, pushed over HTTPS (gh)
+```
+
+`tools/release.py` refuses unless: the tag is `en-YYYY.MM.DD` and new
+(locally and on origin); HEAD is on origin/main; no tracked file is modified
+and no untracked file sits under a build input (`chapter_*`, `outputs/`,
+`img/`, `static/`, `tools/`, `i18n/`, ...); `tools/audit_outputs.py` reports
+no stale, orphaned, missing or never-captured notebook and no locked
+notebook with code drift; no Git-LFS pointer file is under `img/`, `static/`
+or `outputs/`; and `.all-quick.ok` records an English `make all-quick` on a
+clean tree at this exact commit. The push goes to
+`https://github.com/smolix/d2l-neu.git` after `gh auth setup-git` (SSH needs a
+hardware key).
 
 ## 5. Rules that bite
 

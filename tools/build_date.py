@@ -36,9 +36,14 @@ def build_date() -> str:
 
 def version_page_tex() -> str:
     """LaTeX for the back of a cover: blank, with the version at the foot."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import i18n
+    version = i18n.t('pdf.version',
+                     book='\\textit{' + i18n.t('book.title') + '}',
+                     date=build_date())
     return ('\\null\\thispagestyle{empty}\\vfill\n'
-            '\\noindent{\\small\\textit{Dive into Deep Learning}, version '
-            f'{build_date()}.}}\\newpage')
+            '\\noindent{\\small' + version + '}\\newpage')
 
 
 def stamp(paths) -> int:

@@ -162,10 +162,17 @@ def _textbox(sid, name, geom, text, sz, rgb, algn='l', bold=False):
             f'<a:t>{_esc(text)}</a:t></a:r></a:p></p:txBody></p:sp>')
 
 
+def _book_title():
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import i18n
+    return i18n.t('book.title')
+
+
 def _pic(sid, rid, geom):
     x, y, w, h = geom
     return (f'<p:pic><p:nvPicPr><p:cNvPr id="{sid}" name="D2L logo" '
-            f'descr="Dive into Deep Learning"/><p:cNvPicPr><a:picLocks '
+            f'descr="{_esc(_book_title())}"/><p:cNvPicPr><a:picLocks '
             f'noChangeAspect="1"/></p:cNvPicPr><p:nvPr userDrawn="1"/>'
             f'</p:nvPicPr><p:blipFill><a:blip r:embed="{rid}"/><a:stretch>'
             f'<a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm>'

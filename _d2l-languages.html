@@ -1,0 +1,136 @@
+<script>
+// Language menu (the navbar's translate icon). Its entries come from
+// languages.json in the d2l-data bucket, generated from d2l-localization's
+// languages.yml, so adding a language needs no rebuild of the others:
+//   {"languages":   [{"code", "name", "url"}, ...],
+//    "old_editions": [{"name", "url"}, ...]}
+// Current languages first, a divider, then old editions; the language of
+// this build is marked. If the fetch fails, the static menu from
+// _quarto.yml stays. A current language links to the same path on its host
+// (a page missing there lands on that site's 404 page, which sends the
+// reader to its home page); an old edition links to its home page.
+// The rendered copy is _i18n/_d2l-languages.html (tools/i18n.py render).
+(function() {
+  var URL = '{{tjs:site.languages_url}}';
+  var CURRENT = '{{tjs:code}}';
+  var CURRENT_LABEL = '{{tjs:languages.current}}';
+  var CACHE_KEY = 'd2l-languages';
+
+  function menu() {
+    return document.querySelector(
+      'ul.dropdown-menu[aria-labelledby="nav-menu-bi-translate"]');
+  }
+
+  function samePath(base) {
+    var path = location.pathname;
+    // A local preview serves the book from .../_book/; keep the part below.
+    var i = path.lastIndexOf('/_book/');
+    if (i >= 0) path = path.slice(i + 6);
+    return base.replace(/\/+$/, '') + path + location.hash;
+  }
+
+  function item(label, href, current) {
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.className = 'dropdown-item' + (current ? ' active' : '');
+    a.href = href;
+    if (current) {
+      a.setAttribute('aria-current', 'page');
+      a.title = CURRENT_LABEL;
+    }
+    var span = document.createElement('span');
+    span.className = 'dropdown-text';
+    span.textContent = label;
+    a.appendChild(span);
+    li.appendChild(a);
+    return li;
+  }
+
+  function divider() {
+    var li = document.createElement('li');
+    var hr = document.createElement('hr');
+    hr.className = 'dropdown-divider';
+    li.appendChild(hr);
+    return li;
+  }
+
+  function valid(data) {
+    return data && Array.isArray(data.languages) && data.languages.length &&
+      data.languages.every(function(l) { return l && l.code && l.name && l.url; });
+  }
+
+  function apply(data) {
+    var ul = menu();
+    if (!ul || !valid(data)) return false;
+    var items = [];
+    data.languages.forEach(function(l) {
+      var current = l.code === CURRENT;
+      items.push(item(l.code + ' · ' + l.name,
+                      current ? location.pathname + location.hash : samePath(l.url),
+                      current));
+    });
+    var old = (data.old_editions || []).filter(function(e) { return e && e.name && e.url; });
+    if (old.length) {
+      items.push(divider());
+      old.forEach(function(e) {
+        items.push(item((e.code ? e.code + ' · ' : '') + e.name, e.url, false));
+      });
+    }
+    ul.innerHTML = '';
+    items.forEach(function(li) { ul.appendChild(li); });
+    if (window.d2lMobileNavRefresh) {
+      try { window.d2lMobileNavRefresh(); } catch (e) {}
+    }
+    return true;
+  }
+
+  // The static fallback: mark the current language, and point the other
+  // current languages (the entries above the divider) at the same path.
+  function patchFallback() {
+    var ul = menu();
+    if (!ul) return;
+    var beforeRule = true;
+    Array.prototype.forEach.call(ul.children, function(li) {
+      if (li.querySelector('hr.dropdown-divider')) { beforeRule = false; return; }
+      var a = li.querySelector('a.dropdown-item');
+      if (!a || !beforeRule) return;
+      var code = (a.textContent.trim().match(/^([a-z]{2,3}) · /) || [])[1];
+      var href = a.getAttribute('href') || '';
+      if (code === CURRENT) {
+        a.classList.add('active');
+        a.setAttribute('aria-current', 'page');
+        a.title = CURRENT_LABEL;
+      } else if (/^https?:\/\/[^/]+\/?$/.test(href)) {
+        a.href = samePath(href);
+      }
+    });
+  }
+
+  function cached() {
+    try { return JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null'); }
+    catch (e) { return null; }
+  }
+
+  function init() {
+    if (window.__d2lLanguagesInit) return;
+    window.__d2lLanguagesInit = true;
+    if (!menu()) return;
+    if (!apply(cached())) patchFallback();
+    if (!window.fetch) return;
+    fetch(URL, {credentials: 'omit'}).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function(data) {
+      if (apply(data)) {
+        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+      }
+    }).catch(function() { /* keep the static menu */ });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>

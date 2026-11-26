@@ -141,7 +141,8 @@
     block.appendChild(heading);
     var actions = document.createElement('div');
     actions.className = 'd2l-notebook-actions';
-    var links = [action('Colab'), action('Kaggle'), action('Download')];
+    var links = [action('{{tjs:notebook.colab}}'), action('{{tjs:notebook.kaggle}}'),
+                 action('{{tjs:notebook.download}}')];
     links.forEach(function(link) { actions.appendChild(link); });
     block.appendChild(actions);
     return {block: block, label: heading, links: links};
@@ -150,20 +151,21 @@
   function update(ui, entry) {
     var variant = variantFor(entry);
     if (!variant) {
-      ui.label.textContent = 'Notebook unavailable';
+      ui.label.textContent = '{{tjs:notebook.unavailable}}';
       ui.links.forEach(function(link) {
-        setAction(link, null, 'No hosted notebook is available for this page');
+        setAction(link, null, '{{tjs:notebook.unavailable_title}}');
       });
       return;
     }
     var data = entry.variants[variant];
     var display = FW_DISPLAY[variant] || variant;
-    ui.label.textContent = 'Run notebook · ' + display;
-    setAction(ui.links[0], data.colab, 'Open the ' + display + ' notebook in Colab');
+    function fw(s) { return s.replace('{fw}', display); }
+    ui.label.textContent = fw('{{tjs:notebook.label}}');
+    setAction(ui.links[0], data.colab, fw('{{tjs:notebook.open_colab}}'));
     setAction(ui.links[1], data.kaggle,
-      data.kaggle ? 'Import the ' + display + ' notebook into Kaggle'
-                  : 'Kaggle import is unavailable for this notebook');
-    setAction(ui.links[2], data.raw, 'Download the ' + display + ' notebook');
+      data.kaggle ? fw('{{tjs:notebook.open_kaggle}}')
+                  : '{{tjs:notebook.kaggle_missing}}');
+    setAction(ui.links[2], data.raw, fw('{{tjs:notebook.open_download}}'));
   }
 
   function init() {

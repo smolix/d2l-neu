@@ -17,6 +17,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from build_date import version_page_tex
 from d2l_preprocess import CHAPTER_NUMBERING, PDF_CHAPTER_FILES
+import i18n
+
+_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _h1(rel):
+    """The `# ` title of a source page (English or translated)."""
+    for line in (_ROOT / rel).read_text(encoding='utf-8').split('\n'):
+        if line.startswith('# '):
+            return re.sub(r'\s*(\{#[^}]*\}|:label:`[^`]*`)', '', line[2:]).strip()
+    return ''
 
 
 # References into pages that exist only in the HTML edition (the
@@ -125,7 +136,7 @@ def fix_all(content):
         if file_idx >= len(files):
             # References or extra
             title = re.search(r'\\chapter\{([^}]+)\}', m.group()).group(1)
-            if 'References' in title:
+            if any(r in title for r in i18n.variants('pdf.references')):
                 tagged.append((m, 'references', None, None))
             else:
                 tagged.append((m, 'extra', None, None))
@@ -234,19 +245,23 @@ def fix_all(content):
     # numeric \ref is undefined for \chapter* and can otherwise inherit the
     # preceding chapter counter.
     frontmatter_refs = {
-        'sec-chap-installation': 'Installation',
-        'sec-chap-notation': 'Notation',
-        'sec-chap-introduction': 'Introduction',
+        'sec-chap-installation': _h1('chapter_installation/index.md'),
+        'sec-chap-notation': _h1('chapter_notation/index.md'),
+        'sec-chap-introduction': _h1('chapter_introduction/index.md'),
     }
+    chapter = i18n.t('pdf.chapter')
     for label, title in frontmatter_refs.items():
         content = content.replace(
-            f'Chapter~\\ref{{{label}}}', f'\\hyperref[{label}]{{{title}}}')
+            f'{chapter}~\\ref{{{label}}}', f'\\hyperref[{label}]{{{title}}}')
 
     # ── Phase 5: Page numbering ──
     content = add_frontmatter_page_numbering(content)
 
+    # The first numbered chapter, by its title in the source (English, or a
+    # translation's).
     first_chapter = re.search(
-        r'\\setcounter\{chapter\}\{0\}\n\\chapter\{Preliminaries\}', content)
+        r'\\setcounter\{chapter\}\{0\}\n\\chapter\{'
+        + re.escape(_h1('chapter_preliminaries/index.md')) + r'\}', content)
     if first_chapter:
         content = (content[:first_chapter.start()] +
                   '\\pagenumbering{arabic}\\setcounter{page}{1}\n' +

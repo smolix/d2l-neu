@@ -1130,20 +1130,25 @@ class TestKernelDisplays(unittest.TestCase):
         self.assertEqual(len(s), 10)  # 3 best (one worst among them), 2 more
 
     def test_spill_summary(self):
-        """K3's line: the fastest spill-free block_q 128 configuration by
-        throughput (not the largest tile), light and heavy spills as % of
-        the shape's best, 'none' where a shape has no such configuration."""
+        """K3's lines, one per shape, all at block_q 128: the fastest
+        spill-free configuration by throughput (not the largest tile), the
+        configurations spilling 1-99 and 100+ words as % of the shape's
+        best (block_q 64 rows count only for the best), 'none' where a
+        shape has no such configuration."""
         t = pd.DataFrame({
-            'TF/s ref': [100.0, 90.0, 99.4, 70.0, 80.0],
-            'spills ref': [0, 0, 0, 5, 150],
-            'TF/s 8B': [50.0, 60.0, 30.0, 45.0, 20.0],
-            'spills 8B': [0, 40, 12, 0, 0]},
+            'TF/s ref': [100.0, 90.0, 99.4, 70.0, 80.0, 95.0],
+            'spills ref': [0, 0, 0, 5, 150, 60],
+            'TF/s 8B': [50.0, 60.0, 30.0, 45.0, 20.0, 10.0],
+            'spills 8B': [4, 40, 12, 0, 0, 0]},
             index=['64x64 w4', '128x32 w4', '128x64 w8', '128x128 w8',
-                   '128x128 w4'])
-        line = d2l._spill_summary(t)
-        self.assertEqual(line, 'spill-free block_q 128: ref 128x64 w8 99%, '
-                         '8B 128x128 w8 75%; light 70%, none; heavy 80%, none')
-        self.assertLessEqual(len(line), 100)
+                   '128x128 w4', '64x128 w8'])
+        lines = d2l._spill_summary(t).split('\n')
+        self.assertEqual(lines, [
+            'ref, block_q 128: fastest spill-free 128x64 w8 99%; spilling '
+            '1-99 words 70%, 100+ words 80%',
+            '8B, block_q 128: fastest spill-free 128x128 w8 75%; spilling '
+            '1-99 words 50-100%, 100+ words none'])
+        self.assertTrue(all(len(line) <= 100 for line in lines))
 
     def test_campaign_status(self):
         pending = d2l.CampaignPending('a100-microbench', 'C-T2',
@@ -1830,8 +1835,9 @@ class TestCommittedClaims(unittest.TestCase):
     def test_k3_spill_summary(self):
         """K3 on the committed flash sweep: the fastest spill-free block_q
         128 configuration is 128 x 32 w4 at the reference shape (146 TF/s)
-        and 128 x 32 w8 for Qwen3-8B (129); heavy spills cost about 16%
-        (reference) and up to 43% (Qwen3-8B), from the unrounded medians."""
+        and 128 x 32 w8 for Qwen3-8B (129); at block_q 128, spills under
+        100 words run at 98-100% of the best, 100 words or more cost about
+        16% (reference) and up to 43% (Qwen3-8B), unrounded medians."""
         if not d2l.hw_registered('box-microbench'):
             self.skipTest('box-microbench is not registered yet')
         flash = d2l.hw_box_log('box-microbench', 'flash-sweep')
@@ -1852,9 +1858,14 @@ class TestCommittedClaims(unittest.TestCase):
         self.assertAlmostEqual(heavy, 0.16, delta=0.01)
         heavy = 1 - t.loc['128x128 w4', 'TF/s 8B'] / t['TF/s 8B'].max()
         self.assertAlmostEqual(heavy, 0.43, delta=0.01)
-        self.assertEqual(d2l._spill_summary(t), (
-            'spill-free block_q 128: ref 128x32 w4 98%, 8B 128x32 w8 97%; '
-            'light 98-100%, 76%; heavy 84%, 57-80%'))
+        # Spills under 100 words cost at most about 2% at block_q 128 (the
+        # fastest Qwen3-8B kernel, 128x128 w8, spills 22 words); 100 words
+        # or more cost 16% (reference) and 20-43% (Qwen3-8B).
+        self.assertEqual(d2l._spill_summary(t).split('\n'), [
+            'ref, block_q 128: fastest spill-free 128x32 w4 98%; spilling '
+            '1-99 words 98-100%, 100+ words 84%',
+            '8B, block_q 128: fastest spill-free 128x32 w8 97%; spilling '
+            '1-99 words 99-100%, 100+ words 57-80%'])
 
     def test_m1_m2_lines(self):
         """M1's plateau label names a range over copies (not an interval):
@@ -2138,6 +2149,7 @@ class TestMemoryTiers(unittest.TestCase):
         self.assertEqual([g[1] for g in groups],
                          [(0,), (0, 1), (0, 2), (0, 1, 2, 3)])
         self.assertEqual(len(d2l._bridge_groups(2, {(0, 1): 'PHB'})), 2)
+        self.assertEqual(d2l._bridge_cards(4, rel), [2, 2])  # the box
 
     def test_fio_command(self):
         with mock.patch.object(d2l, 'hw_bin', return_value='fio'):
@@ -2221,8 +2233,8 @@ class TestMemoryTiers(unittest.TestCase):
         self.assertEqual(len(lines), 6)
         self.assertEqual(lines[0], 'plateau beta: the median of the copies '
                          'of 256 MiB and more, and their range')
-        self.assertRegex(lines[1], r'^pinned h2d: alpha 10 us, beta 25 GB/s '
-                         r'\(range \d+-\d+\), \d+% of 31\.5$')
+        self.assertEqual(lines[1], 'pinned h2d: alpha 10 us, beta 25 GB/s '
+                         '(range 24.9-25.1), 80% of 31.5')  # flat: decimals
         self.assertIn('pinned, 2 MiB pages: h2d 26 GB/s', lines[3])
         self.assertIn('Gen 4 x16 during the sweep, Gen 1 x16 at rest',
                       lines[-1])
@@ -2235,6 +2247,23 @@ class TestMemoryTiers(unittest.TestCase):
         self.assertIn('h2d 26 GB/s', lines[5])
         two = agg[agg.group.isin(['one card', 'two cards, two host bridges'])]
         self.assertIsNone(d2l._per_bridge(two))  # no pair behind one bridge
+        # A recorded layout other than two cards per bridge: no line (the
+        # pair is then not the whole bridge); two per bridge: the same line.
+        for cards, line in (([3, 1], None), ([4], None), ([2, 1, 1], None),
+                            ([2, 2], lines[4])):
+            other = agg.copy()
+            other.attrs = dict(agg.attrs, bridge_cards=cards)
+            self.assertEqual(d2l._per_bridge(other), line)
+        self.assertEqual(d2l._bridge_cards(4, {(0, 1): 'PHB', (2, 3): 'PHB',
+                                               (0, 2): 'NODE'}), [2, 2])
+        self.assertEqual(d2l._bridge_cards(4, {(0, 1): 'PIX', (1, 2): 'PXB',
+                                               (0, 3): 'SYS'}), [3, 1])
+        # The rounded range ends agree: one decimal, never 'range 15-15'.
+        flat = links.copy()
+        flat.loc[('pinned', 'h2d'), ['beta_lo', 'beta_hi']] = 24.8e9, 25.3e9
+        lines, _ = lines_of(self, d2l.plot_h2d, h2d, flat)
+        d2l.plt.close('all')
+        self.assertIn('beta 25 GB/s (range 24.8-25.3)', lines[1])
         lines, _ = lines_of(self, d2l._show_dram, dram)
         self.assertEqual(len(lines), 2)
         self.assertIn('triad 90 GB/s (16 threads)', lines[0])
@@ -3285,6 +3314,8 @@ class TestCollectives(unittest.TestCase):
         text = ' '.join(l.strip() for l in lines)
         self.assertIn('ring: within 0.2%', text)
         self.assertIn('never above the closed form', text)
+        with self.assertRaisesRegex(ValueError, 'no column at S_b'):
+            d2l.sim_summary(err.drop(columns=cols[1]))
 
     def test_parse_info(self):
         d = d2l._parse_info(NCCL_INFO_SAMPLE)

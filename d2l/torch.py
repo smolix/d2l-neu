@@ -898,43 +898,48 @@ def triton_spills(launcher, flash):
               'in local memory')
         print(f'(TF/s omitted: the sweep ran on {committed}, not on {here})')
         return
-    print('regs: registers, spills: spilled 32-bit words per thread (light '
-          f'<= {_SPILL_LIGHT}, heavy >= {_SPILL_HEAVY}); %: of best')
+    print("regs: registers, spills: spilled 32-bit words per thread; %: of "
+          "the shape's best")
     print(_spill_summary(t))
 
-_SPILL_LIGHT, _SPILL_HEAVY = 10, 100  # spilled words: light up to, heavy from
+_SPILL_HEAVY = 100  # spilled words per thread from which a spill is heavy
 
 def _spill_summary(t):
-    """One line from triton_spills' table (TF/s, spills per shape tag):
-    per shape the fastest spill-free configuration with block_q 128, and
-    the TF/s of the configurations with light and with heavy spills, each
-    as a percentage of the shape's best configuration (from the unrounded
-    medians; a range over the configurations, 'none' without one).
+    """One line per shape from triton_spills' table (TF/s, spills per
+    shape tag), all at block_q 128, the tile height of the spill-free
+    reference: the fastest spill-free configuration, and the TF/s of the
+    configurations spilling 1 to _SPILL_HEAVY - 1 words and of those
+    spilling _SPILL_HEAVY or more, each as a percentage of the shape's
+    best configuration (from the unrounded medians; a range over the
+    configurations, 'none' without one).
 
     Defined in :numref:`sec_lm_kernels`"""
     tags = [c[len('TF/s '):] for c in t.columns if c.startswith('TF/s ')]
-    block_q = np.array([int(label.split('x')[0]) for label in t.index])
-    free, light, heavy = [], [], []
+    tall = np.array([int(label.split('x')[0]) == 128 for label in t.index])
 
     def span(x):
         if len(x) == 0:
             return 'none'
         lo, hi = (int(round(v)) for v in (np.min(x), np.max(x)))
         return f'{lo}%' if lo == hi else f'{lo}-{hi}%'
+    lines = []
     for tag in tags:
         tf = t[f'TF/s {tag}'].to_numpy(float)
         sp = t[f'spills {tag}'].to_numpy(float)
         rel = 100 * tf / np.nanmax(tf)
-        ok = (sp == 0) & (block_q == 128) & np.isfinite(tf)
-        if ok.any():
-            i = np.flatnonzero(ok)[np.argmax(tf[ok])]
-            free.append(f'{tag} {t.index[i]} {rel[i]:.0f}%')
+        ok = tall & np.isfinite(tf)
+        free = ok & (sp == 0)
+        if free.any():
+            i = np.flatnonzero(free)[np.argmax(tf[free])]
+            best = f'{t.index[i]} {rel[i]:.0f}%'
         else:
-            free.append(f'{tag} none')
-        light.append(span(rel[(sp > 0) & (sp <= _SPILL_LIGHT)]))
-        heavy.append(span(rel[sp >= _SPILL_HEAVY]))
-    return (f"spill-free block_q 128: {', '.join(free)}; "
-            f"light {', '.join(light)}; heavy {', '.join(heavy)}")
+            best = 'none'
+        some = span(rel[ok & (sp > 0) & (sp < _SPILL_HEAVY)])
+        heavy = span(rel[ok & (sp >= _SPILL_HEAVY)])
+        lines.append(f'{tag}, block_q 128: fastest spill-free {best}; '
+                     f'spilling 1-{_SPILL_HEAVY - 1} words {some}, '
+                     f'{_SPILL_HEAVY}+ words {heavy}')
+    return '\n'.join(lines)
 
 _SOFTMAX_OPS = ('masked_fill', 'amax', 'maximum', 'sub', 'exp', 'sum', 'div',
                 'mul')  # the operations of the online softmax, in its order
@@ -33403,10 +33408,11 @@ def plot_h2d(h2d, links, pcie_gen=4, lanes=16):
 
     def line(mode, d):
         r = links.loc[(mode, d)]
+        lo, hi = r.beta_lo / 1e9, r.beta_hi / 1e9
+        k = 1 if round(lo) == round(hi) else 0  # never 'range 15-15'
         print(f'{mode} {d}: alpha {r.alpha * 1e6:.0f} us, beta '
-              f'{r.beta / 1e9:.0f} GB/s (range {r.beta_lo / 1e9:.0f}-'
-              f'{r.beta_hi / 1e9:.0f}), {r.beta / 1e9 / ceiling:.0%} of '
-              f'{ceiling:.1f}')
+              f'{r.beta / 1e9:.0f} GB/s (range {lo:.{k}f}-{hi:.{k}f}), '
+              f'{r.beta / 1e9 / ceiling:.0%} of {ceiling:.1f}')
     print(f'plateau beta: the median of the copies of {big} and more, and '
           'their range')
     line('pinned', 'h2d')
@@ -33471,7 +33477,8 @@ def _concurrent_compute(nbytes=2**28, copies=8, repeats=5):
     if n < 2:
         raise RuntimeError('the four-card measurement needs every card')
     topo = d2l.hw_run(['nvidia-smi', 'topo', '-m'], timeout_s=60).stdout
-    groups = _bridge_groups(n, _topo_relations(topo))
+    relations = _topo_relations(topo)
+    groups = _bridge_groups(n, relations)
     bufs = {i: (torch.ones(nbytes, dtype=torch.uint8, pin_memory=True),
                 torch.empty(nbytes, dtype=torch.uint8, device=i))
             for i in range(n)}
@@ -33484,8 +33491,26 @@ def _concurrent_compute(nbytes=2**28, copies=8, repeats=5):
             rows.append(dict(group=label, n_cards=len(devices), direction=d,
                              gbs=med, mad_gbs=mad))
     df = d2l._hw_frame(rows)
-    df.attrs.update(nbytes=nbytes, nvbandwidth=_nvbandwidth_cards())
+    df.attrs.update(nbytes=nbytes, nvbandwidth=_nvbandwidth_cards(),
+                    bridge_cards=_bridge_cards(n, relations))
     return df
+
+def _bridge_cards(n, relations):
+    """Cards behind each host bridge, largest first: GPUs i and j share
+    one when `nvidia-smi topo -m` relates them by PHB, PIX or PXB.
+
+    Defined in :numref:`sec_lm_memory_tiers`"""
+    root = list(range(n))
+
+    def find(i):
+        while root[i] != i:
+            i = root[i]
+        return i
+    for (i, j), rel in relations.items():
+        if i < n and j < n and rel in ('PHB', 'PIX', 'PXB'):
+            root[find(i)] = find(j)
+    roots = [find(i) for i in range(n)]
+    return sorted((roots.count(r) for r in set(roots)), reverse=True)
 
 def _show_concurrent(agg):
     one = {d: agg.gbs[(agg.n_cards == 1) & (agg.direction == d)].iloc[0]
@@ -33509,7 +33534,8 @@ def _show_concurrent(agg):
 def _per_bridge(agg):
     """One line: the h2d rate of the pair behind one host bridge as the
     bridge's rate, and every card at once against the bridges times that
-    rate (two cards per bridge, as on the box); None without both groups.
+    rate; None without both groups or unless every bridge holds two cards
+    (only then is the pair the whole bridge).
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     h2d = agg[agg.direction == 'h2d'].set_index('group').gbs
@@ -33517,7 +33543,12 @@ def _per_bridge(agg):
     if 'two cards, one host bridge' not in h2d.index or all_n.empty:
         return None
     x, n = h2d['two cards, one host bridge'], int(all_n.n_cards.iloc[0])
-    total, bridges = float(all_n.gbs.iloc[0]), n // 2
+    # box-storage v1 predates the field; the box has two cards behind each
+    # of its two bridges (`nvidia-smi topo -m`, box-p2p's relation matrix)
+    cards = agg.attrs.get('bridge_cards') or [2] * (n // 2) + [1] * (n % 2)
+    if sum(cards) != n or set(cards) != {2}:
+        return None
+    total, bridges = float(all_n.gbs.iloc[0]), len(cards)
     return (f'per host bridge: about {x:.0f} GB/s h2d (two cards behind it); '
             f'all {n}: {total / (bridges * x):.0%} of {bridges} x {x:.0f}')
 
@@ -35775,8 +35806,7 @@ def show_fits(ab, max_rows=10):
                    width=79)
     pairs = _pair_paths_line(ab)
     if pairs:
-        import textwrap
-        print(textwrap.fill(pairs, 79, subsequent_indent='  '))
+        _say(pairs)  # collectives-lib's wrapper, at 79 columns
 
 def _pair_paths_line(ab):
     """The two-card all-reduce across the host bridges (NODE) and behind
@@ -36747,13 +36777,15 @@ def sim_summary(err):
     G where it occurs.
 
     Defined in :numref:`sec_lm_collectives`"""
-    import textwrap
     cols = [c for c in err.columns if str(c).endswith('S_b (%)')]
+    at_b = f'{1:g} S_b (%)'  # the page names columns f'{f:g} S_b (%)'
+    if at_b not in cols:
+        raise ValueError(f'no column at S_b among {cols}')
     ring, tree = err[err.algo == 'ring'], err[err.algo == 'tree']
     r = float(ring[cols].abs().max().max())
     over = float(tree[cols].max().max())
     far = float(tree[[cols[0], cols[-1]]].abs().max().max())
-    at = tree['1 S_b (%)']
+    at = tree[at_b]
     i = at.idxmin()
     text = (f"ring: {'exact' if r == 0 else f'within {r:.1f}%'}; tree: "
             + (f'exceeds the closed form by at most {over:.1f}%'
@@ -36761,7 +36793,7 @@ def sim_summary(err):
             + f', within {far:.1f}% of it far from S_b, '
             + (f'up to {-at[i]:.1f}% below it at S_b (G = {tree.G[i]})'
                if at[i] < 0 else 'never below it at S_b'))
-    print(textwrap.fill(text, 79, subsequent_indent='  '))
+    _say(text)
 
 def a2a_inter_node_time(S, n, g, a_out, b_out, a_in, b_in):
     """Seconds of an all-to-all of S bytes per GPU across n nodes of g

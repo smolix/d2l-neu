@@ -511,10 +511,11 @@ def plot_h2d(h2d, links, pcie_gen=4, lanes=16):
 
     def line(mode, d):
         r = links.loc[(mode, d)]
+        lo, hi = r.beta_lo / 1e9, r.beta_hi / 1e9
+        k = 1 if round(lo) == round(hi) else 0  # never 'range 15-15'
         print(f'{mode} {d}: alpha {r.alpha * 1e6:.0f} us, beta '
-              f'{r.beta / 1e9:.0f} GB/s (range {r.beta_lo / 1e9:.0f}-'
-              f'{r.beta_hi / 1e9:.0f}), {r.beta / 1e9 / ceiling:.0%} of '
-              f'{ceiling:.1f}')
+              f'{r.beta / 1e9:.0f} GB/s (range {lo:.{k}f}-{hi:.{k}f}), '
+              f'{r.beta / 1e9 / ceiling:.0%} of {ceiling:.1f}')
     print(f'plateau beta: the median of the copies of {big} and more, and '
           'their range')
     line('pinned', 'h2d')
@@ -589,7 +590,8 @@ def _concurrent_compute(nbytes=2**28, copies=8, repeats=5):
     if n < 2:
         raise RuntimeError('the four-card measurement needs every card')
     topo = d2l.hw_run(['nvidia-smi', 'topo', '-m'], timeout_s=60).stdout
-    groups = _bridge_groups(n, _topo_relations(topo))
+    relations = _topo_relations(topo)
+    groups = _bridge_groups(n, relations)
     bufs = {i: (torch.ones(nbytes, dtype=torch.uint8, pin_memory=True),
                 torch.empty(nbytes, dtype=torch.uint8, device=i))
             for i in range(n)}
@@ -602,8 +604,25 @@ def _concurrent_compute(nbytes=2**28, copies=8, repeats=5):
             rows.append(dict(group=label, n_cards=len(devices), direction=d,
                              gbs=med, mad_gbs=mad))
     df = d2l._hw_frame(rows)
-    df.attrs.update(nbytes=nbytes, nvbandwidth=_nvbandwidth_cards())
+    df.attrs.update(nbytes=nbytes, nvbandwidth=_nvbandwidth_cards(),
+                    bridge_cards=_bridge_cards(n, relations))
     return df
+
+#@save
+def _bridge_cards(n, relations):
+    """Cards behind each host bridge, largest first: GPUs i and j share
+    one when `nvidia-smi topo -m` relates them by PHB, PIX or PXB."""
+    root = list(range(n))
+
+    def find(i):
+        while root[i] != i:
+            i = root[i]
+        return i
+    for (i, j), rel in relations.items():
+        if i < n and j < n and rel in ('PHB', 'PIX', 'PXB'):
+            root[find(i)] = find(j)
+    roots = [find(i) for i in range(n)]
+    return sorted((roots.count(r) for r in set(roots)), reverse=True)
 
 #@save
 def _show_concurrent(agg):
@@ -629,13 +648,19 @@ def _show_concurrent(agg):
 def _per_bridge(agg):
     """One line: the h2d rate of the pair behind one host bridge as the
     bridge's rate, and every card at once against the bridges times that
-    rate (two cards per bridge, as on the box); None without both groups."""
+    rate; None without both groups or unless every bridge holds two cards
+    (only then is the pair the whole bridge)."""
     h2d = agg[agg.direction == 'h2d'].set_index('group').gbs
     all_n = agg[(agg.direction == 'h2d') & (agg.n_cards > 2)]
     if 'two cards, one host bridge' not in h2d.index or all_n.empty:
         return None
     x, n = h2d['two cards, one host bridge'], int(all_n.n_cards.iloc[0])
-    total, bridges = float(all_n.gbs.iloc[0]), n // 2
+    # box-storage v1 predates the field; the box has two cards behind each
+    # of its two bridges (`nvidia-smi topo -m`, box-p2p's relation matrix)
+    cards = agg.attrs.get('bridge_cards') or [2] * (n // 2) + [1] * (n % 2)
+    if sum(cards) != n or set(cards) != {2}:
+        return None
+    total, bridges = float(all_n.gbs.iloc[0]), len(cards)
     return (f'per host bridge: about {x:.0f} GB/s h2d (two cards behind it); '
             f'all {n}: {total / (bridges * x):.0%} of {bridges} x {x:.0f}')
 

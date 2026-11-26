@@ -875,43 +875,48 @@ def triton_spills(launcher, flash):
               'in local memory')
         print(f'(TF/s omitted: the sweep ran on {committed}, not on {here})')
         return
-    print('regs: registers, spills: spilled 32-bit words per thread (light '
-          f'<= {_SPILL_LIGHT}, heavy >= {_SPILL_HEAVY}); %: of best')
+    print("regs: registers, spills: spilled 32-bit words per thread; %: of "
+          "the shape's best")
     print(_spill_summary(t))
 
 #@save
-_SPILL_LIGHT, _SPILL_HEAVY = 10, 100  # spilled words: light up to, heavy from
+_SPILL_HEAVY = 100  # spilled words per thread from which a spill is heavy
 
 #@save
 def _spill_summary(t):
-    """One line from triton_spills' table (TF/s, spills per shape tag):
-    per shape the fastest spill-free configuration with block_q 128, and
-    the TF/s of the configurations with light and with heavy spills, each
-    as a percentage of the shape's best configuration (from the unrounded
-    medians; a range over the configurations, 'none' without one)."""
+    """One line per shape from triton_spills' table (TF/s, spills per
+    shape tag), all at block_q 128, the tile height of the spill-free
+    reference: the fastest spill-free configuration, and the TF/s of the
+    configurations spilling 1 to _SPILL_HEAVY - 1 words and of those
+    spilling _SPILL_HEAVY or more, each as a percentage of the shape's
+    best configuration (from the unrounded medians; a range over the
+    configurations, 'none' without one)."""
     tags = [c[len('TF/s '):] for c in t.columns if c.startswith('TF/s ')]
-    block_q = np.array([int(label.split('x')[0]) for label in t.index])
-    free, light, heavy = [], [], []
+    tall = np.array([int(label.split('x')[0]) == 128 for label in t.index])
 
     def span(x):
         if len(x) == 0:
             return 'none'
         lo, hi = (int(round(v)) for v in (np.min(x), np.max(x)))
         return f'{lo}%' if lo == hi else f'{lo}-{hi}%'
+    lines = []
     for tag in tags:
         tf = t[f'TF/s {tag}'].to_numpy(float)
         sp = t[f'spills {tag}'].to_numpy(float)
         rel = 100 * tf / np.nanmax(tf)
-        ok = (sp == 0) & (block_q == 128) & np.isfinite(tf)
-        if ok.any():
-            i = np.flatnonzero(ok)[np.argmax(tf[ok])]
-            free.append(f'{tag} {t.index[i]} {rel[i]:.0f}%')
+        ok = tall & np.isfinite(tf)
+        free = ok & (sp == 0)
+        if free.any():
+            i = np.flatnonzero(free)[np.argmax(tf[free])]
+            best = f'{t.index[i]} {rel[i]:.0f}%'
         else:
-            free.append(f'{tag} none')
-        light.append(span(rel[(sp > 0) & (sp <= _SPILL_LIGHT)]))
-        heavy.append(span(rel[sp >= _SPILL_HEAVY]))
-    return (f"spill-free block_q 128: {', '.join(free)}; "
-            f"light {', '.join(light)}; heavy {', '.join(heavy)}")
+            best = 'none'
+        some = span(rel[ok & (sp > 0) & (sp < _SPILL_HEAVY)])
+        heavy = span(rel[ok & (sp >= _SPILL_HEAVY)])
+        lines.append(f'{tag}, block_q 128: fastest spill-free {best}; '
+                     f'spilling 1-{_SPILL_HEAVY - 1} words {some}, '
+                     f'{_SPILL_HEAVY}+ words {heavy}')
+    return '\n'.join(lines)
 
 #@save
 _SOFTMAX_OPS = ('masked_fill', 'amax', 'maximum', 'sub', 'exp', 'sum', 'div',

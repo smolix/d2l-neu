@@ -121,13 +121,15 @@ def sim_summary(err):
     largest excess over the closed form, its largest error far from S_b
     (the first and last columns) and its largest deficit at S_b, with the
     G where it occurs."""
-    import textwrap
     cols = [c for c in err.columns if str(c).endswith('S_b (%)')]
+    at_b = f'{1:g} S_b (%)'  # the page names columns f'{f:g} S_b (%)'
+    if at_b not in cols:
+        raise ValueError(f'no column at S_b among {cols}')
     ring, tree = err[err.algo == 'ring'], err[err.algo == 'tree']
     r = float(ring[cols].abs().max().max())
     over = float(tree[cols].max().max())
     far = float(tree[[cols[0], cols[-1]]].abs().max().max())
-    at = tree['1 S_b (%)']
+    at = tree[at_b]
     i = at.idxmin()
     text = (f"ring: {'exact' if r == 0 else f'within {r:.1f}%'}; tree: "
             + (f'exceeds the closed form by at most {over:.1f}%'
@@ -135,7 +137,7 @@ def sim_summary(err):
             + f', within {far:.1f}% of it far from S_b, '
             + (f'up to {-at[i]:.1f}% below it at S_b (G = {tree.G[i]})'
                if at[i] < 0 else 'never below it at S_b'))
-    print(textwrap.fill(text, 79, subsequent_indent='  '))
+    _say(text)
 ```
 
 ## The All-to-All across Nodes

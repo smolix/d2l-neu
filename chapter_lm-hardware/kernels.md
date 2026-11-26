@@ -476,15 +476,19 @@ claim K3, stated as measured (the fallback wording), not as predicted:
 Do not write "the largest spill-free block_q at 4 warps was 64": 128 x 32 at
 4 warps has no spills at the reference shape. -->
 
-<!-- Placeholder (prose): fix pass F2 (K3): the cell's last line now states
-the claim as measured, per shape: the fastest spill-free block_q 128
-configuration (by throughput) and the TF/s of light (<= 10 words) and heavy
-(>= 100 words) spill configurations as a percentage of the shape's best.
-The numbers in the comment above come from an earlier run; quote the
-committed table and its summary line (run of 2026-11-26: reference 128x32
-w4 at 98% of the best 128x64 w4, Qwen3-8B 128x32 w8 at 97%; light spills
-98-100% at the reference shape, 76% at Qwen3-8B, where the only light
-configuration has block_q 64; heavy 84%, and 57-80% at Qwen3-8B). -->
+<!-- Placeholder (prose): fix pass F2 (K3): the cell's last two lines state
+the claim as measured, one per shape, all at block_q 128 (the spill-free
+reference's tile height, so the tile height does not mix into the spill
+cost): the fastest spill-free configuration (by throughput) and the TF/s of
+the configurations spilling 1-99 words and 100+ words as a percentage of the
+shape's best. The numbers in the comment above come from an earlier run;
+quote the committed table and its summary lines (run of 2026-11-26:
+reference 128x32 w4 at 98% of the best 128x64 w4, which spills 10 words;
+spilling 1-99 words 98-100%, 100+ words 84%; Qwen3-8B 128x32 w8 at 97%,
+1-99 words 99-100% (the best, 128x128 w8, spills 22 words), 100+ words
+57-80%). Spills under 100 words cost nothing measurable (the 1-2% gaps are
+within the sweep's noise; never rank configurations on them); 100 words or
+more cost 16-43%. -->
 
 ```{.python .input #kernels-spill}
 %%tab pytorch

@@ -364,7 +364,7 @@ d2l.show_table(err, digits=dict.fromkeys(cols, 1), width=79)
 d2l.sim_summary(err)  # claim C1, read from the table
 assert (err[err.algo == 'ring'][cols].abs() < 1e-6).all().all()  # exact
 assert (err[[cols[0], cols[-1]]].abs() < 1).all().all()  # C1: far from S_b
-assert (err[cols] < 1).all().all()  # the closed form is an upper bound
+assert (err[cols] < 1).all().all()  # C1: less than 1% above the closed form
 ```
 
 ## Protocols

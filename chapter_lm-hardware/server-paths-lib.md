@@ -1288,8 +1288,7 @@ def show_fits(ab, max_rows=10):
                    width=79)
     pairs = _pair_paths_line(ab)
     if pairs:
-        import textwrap
-        print(textwrap.fill(pairs, 79, subsequent_indent='  '))
+        _say(pairs)  # collectives-lib's wrapper, at 79 columns
 
 #@save
 def _pair_paths_line(ab):

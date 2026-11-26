@@ -2,13 +2,15 @@
 // Language menu (the navbar's translate icon). Its entries come from
 // languages.json in the d2l-data bucket, generated from d2l-localization's
 // languages.yml, so adding a language needs no rebuild of the others:
-//   {"languages":   [{"code", "name", "url"}, ...],
+//   {"languages":   [{"code", "name", "url", "pages": ["index.html", ...]}, ...],
 //    "old_editions": [{"name", "url"}, ...]}
 // Current languages first, a divider, then old editions; the language of
-// this build is marked. If the fetch fails, the static menu from
-// _quarto.yml stays. A current language links to the same path on its host
-// (a page missing there lands on that site's 404 page, which sends the
-// reader to its home page); an old edition links to its home page.
+// this build is marked. A current language links to the same page on its
+// host when its `pages` list (written by tools/update_language_pages.py on
+// every upload to that language's bucket) has this page, and to its home
+// page otherwise; no 404 page is involved. An old edition links to its home
+// page. If the fetch fails, the static menu from _quarto.yml stays, with
+// every language linking to its home page.
 // The rendered copy is _i18n/_d2l-languages.html (tools/i18n.py render).
 (function() {
   var URL = '{{tjs:site.languages_url}}';
@@ -21,12 +23,26 @@
       'ul.dropdown-menu[aria-labelledby="nav-menu-bi-translate"]');
   }
 
-  function samePath(base) {
+  // This page as a path relative to the site root ("index.html",
+  // "chapter_x/y.html"), the form the `pages` lists use.
+  function pagePath() {
     var path = location.pathname;
     // A local preview serves the book from .../_book/; keep the part below.
     var i = path.lastIndexOf('/_book/');
-    if (i >= 0) path = path.slice(i + 6);
-    return base.replace(/\/+$/, '') + path + location.hash;
+    path = i >= 0 ? path.slice(i + 7) : path.replace(/^\/+/, '');
+    if (path === '' || /\/$/.test(path)) path += 'index.html';
+    return path;
+  }
+
+  // The same page on another language's site if that site has it,
+  // otherwise that site's home page.
+  function target(l) {
+    var base = l.url.replace(/\/+$/, '');
+    var page = pagePath();
+    if (Array.isArray(l.pages) && l.pages.indexOf(page) >= 0) {
+      return base + '/' + page + location.hash;
+    }
+    return base + '/';
   }
 
   function item(label, href, current) {
@@ -66,7 +82,7 @@
     data.languages.forEach(function(l) {
       var current = l.code === CURRENT;
       items.push(item(l.code + ' · ' + l.name,
-                      current ? location.pathname + location.hash : samePath(l.url),
+                      current ? location.pathname + location.hash : target(l),
                       current));
     });
     var old = (data.old_editions || []).filter(function(e) { return e && e.name && e.url; });
@@ -84,8 +100,8 @@
     return true;
   }
 
-  // The static fallback: mark the current language, and point the other
-  // current languages (the entries above the divider) at the same path.
+  // The static fallback: mark the current language. Without the page lists
+  // the other languages keep their home-page links.
   function patchFallback() {
     var ul = menu();
     if (!ul) return;
@@ -95,13 +111,10 @@
       var a = li.querySelector('a.dropdown-item');
       if (!a || !beforeRule) return;
       var code = (a.textContent.trim().match(/^([a-z]{2,3}) · /) || [])[1];
-      var href = a.getAttribute('href') || '';
       if (code === CURRENT) {
         a.classList.add('active');
         a.setAttribute('aria-current', 'page');
         a.title = CURRENT_LABEL;
-      } else if (/^https?:\/\/[^/]+\/?$/.test(href)) {
-        a.href = samePath(href);
       }
     });
   }

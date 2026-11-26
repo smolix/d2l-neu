@@ -457,4 +457,13 @@ if [[ -z "$DRY_RUN" ]]; then
     echo "Manifest written: $MANIFEST_FILE ($TOTAL files)"
 fi
 
+# ── Record this language's pages for the language menu ──────
+# A production language bucket (d2l-<code>) serves <code>.d2l.ai; the menu on
+# every site links to the same page here only if this list has it
+# (tools/update_language_pages.py). A failure here does not fail the upload.
+if [[ -n "$CRED_FILE" ]]; then
+    python3 "$SCRIPT_DIR/update_language_pages.py" "${BUCKET#d2l-}" "$BOOK_DIR" \
+        ${DRY_RUN:+--dry-run} || echo "WARNING: languages.json page list not updated" >&2
+fi
+
 echo "Done."

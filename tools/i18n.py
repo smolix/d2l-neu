@@ -500,7 +500,8 @@ def localize_quarto(root: Path = REPO, verbose: bool = True) -> bool:
         path.write_text(new, encoding='utf-8')
     if verbose:
         print(f'i18n: {code()} — _quarto.yml '
-              f'{"localized" if new != old else "unchanged"}')
+              + ('unchanged' if new == old else
+                 'restored to English' if is_english() else 'localized'))
     return new != old
 
 

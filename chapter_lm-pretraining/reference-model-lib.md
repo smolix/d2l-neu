@@ -144,6 +144,12 @@ d2l.DATA_HUB['lm-r2-s5100-state-v1'] = (
 d2l.DATA_HUB['lm-r2-evals-v1'] = (
     d2l.LM_DATA_URL + 'lm-r2-evals-v1.json.gz',
     '78ae3caa3a7573df21fceafdd84d2045cf2a57ea')
+d2l.DATA_HUB['lm-ladder-logs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-ladder-logs-v1.jsonl.gz',
+    '4a64125165abd77b05dcd0e2c5e53b485547ec67')
+d2l.DATA_HUB['lm-ladder-config-v1'] = (
+    d2l.LM_DATA_URL + 'lm-ladder-config-v1.json',
+    '28ba56be7ef0e427ae982096fdac0fff1aa3b38d')
 ```
 
 ```{.python .input #reference-model-lib-artifacts}

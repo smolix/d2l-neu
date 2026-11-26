@@ -283,7 +283,10 @@ def _peak_flops(device):
     return GPU_PEAK_BF16.get(torch.cuda.get_device_name(device))
 
 #@save
-_CFG_ADDED = {'clip_from': None}  # fields added after runs were committed
+# Fields added after runs were committed, each with its default then: a
+# field is left out of _cfg_json only while it equals that value, so if a
+# default here ever changes, the committed configurations change with it.
+_CFG_ADDED = {'clip_from': None}
 
 #@save
 def _cfg_json(cfg):
@@ -1643,19 +1646,34 @@ SpikeReplay = collections.namedtuple('SpikeReplay',
 #@save
 class _BadBatchStream(d2l.PackedStream):
     """A PackedStream whose batch of log step bad_step (1-based, as the log
-    counts) is make_bad_batch(kind); skipping that step removes it, and
-    bad_step=None gives the plain stream."""
+    counts; clip_from=bad_step - 1 clips that step) is make_bad_batch(kind,
+    k, period); skipping that step removes it, and bad_step=None gives the
+    plain stream. make_bad_batch sees this rank's rows only, so 'ngram' (k
+    rows of one n-gram) is refused under more than one rank."""
     def __init__(self, shards, seq_len, global_batch, bad_step, kind, vocab,
-                 **kw):
+                 k=None, period=None, **kw):
         super().__init__(shards, seq_len, global_batch, **kw)
+        if kind not in ('random', 'repeat', 'ngram'):
+            raise ValueError(f'unknown bad-batch kind {kind!r}')
+        if kind == 'ngram' and not (
+                isinstance(period, int) and 1 <= period <= 13
+                and (k is None or 1 <= k <= global_batch)):
+            raise ValueError(f'ngram needs 1 <= period <= 13 and 1 <= k <= '
+                             f'{global_batch} (k=None: all rows); got '
+                             f'k={k}, period={period}')
+        if kind == 'ngram' and self.world > 1:
+            raise ValueError("'ngram' replaces k of this rank's rows; one "
+                             'rank only')
         self.bad_step, self.kind, self.vocab = bad_step, kind, vocab
+        self.k, self.period = k, period
 
     def batch(self, step):
         b = super().batch(step)
         if (self.bad_step is not None
                 and self.physical_index(step) == self.bad_step - 1):
             b = d2l.make_bad_batch(b, self.kind, self.vocab,
-                                   seed=self.bad_step)
+                                   seed=self.bad_step, k=self.k,
+                                   period=self.period)
         return b
 
 #@save
@@ -1668,6 +1686,10 @@ def _spike(cfg, bad_step, kind, replays, steps=400, window=(200, 400),
     import shutil
     if device is None and not torch.cuda.is_available():
         raise RuntimeError('the spike protocol trains on a GPU')
+    if cfg.clip_from is not None and cfg.clip_from >= bad_step:
+        raise ValueError(f'clip_from={cfg.clip_from} leaves the bad batch '
+                         f'(log step {bad_step}) unclipped; clip_from counts '
+                         f'updates, so use at most {bad_step - 1}')
     device = device or 'cuda'
     shards, folder = _train_shards(cfg), os.path.join(_job_root(), 'spike')
     shutil.rmtree(folder, ignore_errors=True)  # this driver's own states

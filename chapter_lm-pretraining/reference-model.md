@@ -110,7 +110,7 @@ class PretrainConfig:
     eps: float = 1e-8
     wd: float = 0.1
     clip: float = 1.0           # None: log the gradient norm, never clip
-    clip_from: int = None       # clipping starts at this step (None: 0)
+    clip_from: int = None       # clip after this many updates (None: all)
     z_loss: float = 1e-4
     dtype: str = 'bf16'
     compile: bool = True
@@ -317,7 +317,7 @@ print(f'lr at steps {", ".join(map(str, steps))}: '
 
 ### One Step
 
-<!-- Placeholder (prose): token-weighted accumulation (each micro-batch's summed loss over the step's global count n_valid), z-loss (restate subsec_practice-nan in one sentence), the pre-clip norm logged because clipping hides the growth that precedes a spike; clip_from turns clipping on mid-run (the spike arms switch it on at their branch step); log_z, the mean log-partition of the output softmax over the step's targets, comes from the logits the loss already has (what z-loss pulls to zero). -->
+<!-- Placeholder (prose): token-weighted accumulation (each micro-batch's summed loss over the step's global count n_valid), z-loss (restate subsec_practice-nan in one sentence), the pre-clip norm logged because clipping hides the growth that precedes a spike; clip_from turns clipping on mid-run, counted like state_steps (clip_from=250: log steps 251 on are clipped, so a bad batch at log step 300 is; the spike arms switch it on at their branch step); log_z, the mean log-partition of the output softmax over the step's targets, comes from the logits the loss already has (what z-loss pulls to zero). -->
 
 ```{.python .input #reference-model-step}
 %%tab pytorch
@@ -325,8 +325,9 @@ print(f'lr at steps {", ".join(map(str, steps))}: '
 def pretrain_step(model, optimizer, micro_batches, cfg, n_valid, step=None):
     """One step on this rank's micro-batches; n_valid is the step's global
     count of valid targets, so the gradient is the token-weighted mean over
-    every rank and micro-batch. Clipping at cfg.clip starts at step
-    cfg.clip_from. Returns loss, pre-clip norm, clipped and the mean
+    every rank and micro-batch. step counts the updates before this one,
+    as state_steps does, so clipping at cfg.clip starts at log step
+    cfg.clip_from + 1. Returns loss, pre-clip norm, clipped and the mean
     log-partition log_z of the output softmax."""
     world, nll, lse = d2l._rank_world()[1], 0.0, 0.0
     for k, mb in enumerate(micro_batches):
@@ -345,13 +346,13 @@ def pretrain_step(model, optimizer, micro_batches, cfg, n_valid, step=None):
     norm = torch.nn.utils.clip_grad_norm_(params, clip)
     optimizer.step()
     optimizer.zero_grad(set_to_none=True)
-    return dict(loss=d2l._all_reduce_sum(nll) / n_valid, grad_norm=norm,
-                clipped=norm > clip, log_z=d2l._all_reduce_sum(lse) / n_valid)
+    loss, log_z = d2l._all_reduce_sum(torch.stack([nll, lse])) / n_valid
+    return dict(loss=loss, grad_norm=norm, clipped=norm > clip, log_z=log_z)
 ```
 
 ### The Loop
 
-<!-- Placeholder (prose): what the loop logs and when (every step: loss, pre-clip norm, clipped, tokens/s, MFU; every probe_every steps: update RMS per module; every stats_every steps: the largest attention logit and the mean attention entropy per layer from an explicit-score probe, since the fused kernel returns no scores, and log_z; every val_every steps: validation), checkpoints, full states (state_steps: the resumable states a later replay or branch starts from), branches; the DDP and state plumbing lives in the library. -->
+<!-- Placeholder (prose): what the loop logs and when (every step: loss, pre-clip norm, clipped, tokens/s, MFU; every probe_every steps: update RMS per module; every stats_every steps: the largest attention logit and the mean attention entropy per layer from an explicit-score probe, since the fused kernel returns no scores (the entropy is the mean over the queries and heads of one packed training sequence, rank 0's first row, so it carries some packing noise: a document's first query has entropy 0), and log_z; every val_every steps: validation), checkpoints, full states (state_steps: the resumable states a later replay or branch starts from), branches; the DDP and state plumbing lives in the library. -->
 
 ```{.python .input #reference-model-pretrain}
 %%tab pytorch
@@ -787,6 +788,8 @@ def make_bad_batch(batch, kind='random', vocab=32768, seed=0, k=None,
                        ('doc_ids', 0), ('pos_ids', pos[0])):
             bad[key][rows] = torch.as_tensor(v).to(bad[key])
         return bad
+    if kind not in ('random', 'repeat'):
+        raise ValueError(f'unknown bad-batch kind {kind!r}')
     ids = (torch.randint(32, vocab, (B, T + 1), generator=g) if kind ==
            'random' else torch.full((B, T + 1), 32 + seed % (vocab - 32)))
     return dict(input_ids=ids[:, :-1].contiguous(), labels=ids[:, 1:].clone(),

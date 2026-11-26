@@ -11644,7 +11644,7 @@ class PretrainConfig:
     eps: float = 1e-8
     wd: float = 0.1
     clip: float = 1.0           # None: log the gradient norm, never clip
-    clip_from: int = None       # clipping starts at this step (None: 0)
+    clip_from: int = None       # clip after this many updates (None: all)
     z_loss: float = 1e-4
     dtype: str = 'bf16'
     compile: bool = True
@@ -11752,8 +11752,9 @@ def param_groups(model, wd):
 def pretrain_step(model, optimizer, micro_batches, cfg, n_valid, step=None):
     """One step on this rank's micro-batches; n_valid is the step's global
     count of valid targets, so the gradient is the token-weighted mean over
-    every rank and micro-batch. Clipping at cfg.clip starts at step
-    cfg.clip_from. Returns loss, pre-clip norm, clipped and the mean
+    every rank and micro-batch. step counts the updates before this one,
+    as state_steps does, so clipping at cfg.clip starts at log step
+    cfg.clip_from + 1. Returns loss, pre-clip norm, clipped and the mean
     log-partition log_z of the output softmax.
 
     Defined in :numref:`sec_lm_reference_model`"""
@@ -11774,8 +11775,8 @@ def pretrain_step(model, optimizer, micro_batches, cfg, n_valid, step=None):
     norm = torch.nn.utils.clip_grad_norm_(params, clip)
     optimizer.step()
     optimizer.zero_grad(set_to_none=True)
-    return dict(loss=d2l._all_reduce_sum(nll) / n_valid, grad_norm=norm,
-                clipped=norm > clip, log_z=d2l._all_reduce_sum(lse) / n_valid)
+    loss, log_z = d2l._all_reduce_sum(torch.stack([nll, lse])) / n_valid
+    return dict(loss=loss, grad_norm=norm, clipped=norm > clip, log_z=log_z)
 
 def pretrain(model, stream, cfg, val_fn=None, hooks=(), resume=None):
     """Train model on stream under cfg, then each of cfg.branches from its
@@ -11852,6 +11853,8 @@ def make_bad_batch(batch, kind='random', vocab=32768, seed=0, k=None,
                        ('doc_ids', 0), ('pos_ids', pos[0])):
             bad[key][rows] = torch.as_tensor(v).to(bad[key])
         return bad
+    if kind not in ('random', 'repeat'):
+        raise ValueError(f'unknown bad-batch kind {kind!r}')
     ids = (torch.randint(32, vocab, (B, T + 1), generator=g) if kind ==
            'random' else torch.full((B, T + 1), 32 + seed % (vocab - 32)))
     return dict(input_ids=ids[:, :-1].contiguous(), labels=ids[:, 1:].clone(),
@@ -22605,7 +22608,10 @@ def _peak_flops(device):
         return None
     return GPU_PEAK_BF16.get(torch.cuda.get_device_name(device))
 
-_CFG_ADDED = {'clip_from': None}  # fields added after runs were committed
+# Fields added after runs were committed, each with its default then: a
+# field is left out of _cfg_json only while it equals that value, so if a
+# default here ever changes, the committed configurations change with it.
+_CFG_ADDED = {'clip_from': None}
 
 def _cfg_json(cfg):
     """A PretrainConfig as JSON values (the arch as a dict); a field added
@@ -23935,21 +23941,36 @@ SpikeReplay = collections.namedtuple('SpikeReplay',
 
 class _BadBatchStream(d2l.PackedStream):
     """A PackedStream whose batch of log step bad_step (1-based, as the log
-    counts) is make_bad_batch(kind); skipping that step removes it, and
-    bad_step=None gives the plain stream.
+    counts; clip_from=bad_step - 1 clips that step) is make_bad_batch(kind,
+    k, period); skipping that step removes it, and bad_step=None gives the
+    plain stream. make_bad_batch sees this rank's rows only, so 'ngram' (k
+    rows of one n-gram) is refused under more than one rank.
 
     Defined in :numref:`sec_lm_reference_model`"""
     def __init__(self, shards, seq_len, global_batch, bad_step, kind, vocab,
-                 **kw):
+                 k=None, period=None, **kw):
         super().__init__(shards, seq_len, global_batch, **kw)
+        if kind not in ('random', 'repeat', 'ngram'):
+            raise ValueError(f'unknown bad-batch kind {kind!r}')
+        if kind == 'ngram' and not (
+                isinstance(period, int) and 1 <= period <= 13
+                and (k is None or 1 <= k <= global_batch)):
+            raise ValueError(f'ngram needs 1 <= period <= 13 and 1 <= k <= '
+                             f'{global_batch} (k=None: all rows); got '
+                             f'k={k}, period={period}')
+        if kind == 'ngram' and self.world > 1:
+            raise ValueError("'ngram' replaces k of this rank's rows; one "
+                             'rank only')
         self.bad_step, self.kind, self.vocab = bad_step, kind, vocab
+        self.k, self.period = k, period
 
     def batch(self, step):
         b = super().batch(step)
         if (self.bad_step is not None
                 and self.physical_index(step) == self.bad_step - 1):
             b = d2l.make_bad_batch(b, self.kind, self.vocab,
-                                   seed=self.bad_step)
+                                   seed=self.bad_step, k=self.k,
+                                   period=self.period)
         return b
 
 def _spike(cfg, bad_step, kind, replays, steps=400, window=(200, 400),
@@ -23963,6 +23984,10 @@ def _spike(cfg, bad_step, kind, replays, steps=400, window=(200, 400),
     import shutil
     if device is None and not torch.cuda.is_available():
         raise RuntimeError('the spike protocol trains on a GPU')
+    if cfg.clip_from is not None and cfg.clip_from >= bad_step:
+        raise ValueError(f'clip_from={cfg.clip_from} leaves the bad batch '
+                         f'(log step {bad_step}) unclipped; clip_from counts '
+                         f'updates, so use at most {bad_step - 1}')
     device = device or 'cuda'
     shards, folder = _train_shards(cfg), os.path.join(_job_root(), 'spike')
     shutil.rmtree(folder, ignore_errors=True)  # this driver's own states
@@ -25293,7 +25318,11 @@ def _cpt_lr(step, cfg, peak):
     return final + (peak - final) * 0.5 * (1 + math.cos(math.pi * t))
 
 def _cpt_step(model, optimizer, micro_batches, cfg, n_valid, chunk=2048):
-    """pretrain_step on one GPU with the loss chunk of a large vocabulary."""
+    """pretrain_step on one GPU with the loss chunk of a large vocabulary;
+    it clips from the first step, so cfg.clip_from must be None."""
+    if cfg.clip_from is not None:
+        raise ValueError('_cpt_step clips from the first step; clip_from '
+                         f'must be None, not {cfg.clip_from}')
     nll = 0.0
     for mb in micro_batches:
         ctx = d2l.PackCtx(mb['doc_ids'], mb['pos_ids'])

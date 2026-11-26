@@ -14,18 +14,23 @@ vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
 (losses 1e-6) and a branch from a saved state; the stats-step columns
 `entropy_<l>` and `log_z` (finite; `log_z` the explicit mean logsumexp
 1e-5; only at stats steps, absent without stats); `clip_from` (clipping
-starts at that step; losses before it equal an unclipped run's);
+after that many updates; losses before it equal an unclipped run's;
+clip_from = bad_step - 1 clips the bad batch, `_spike` refuses a later
+one; `_cpt_step` refuses clip_from);
 `_cfg_json` of a default config equal to the committed `lm-r2-config-v1`;
 `attn_logit_stats` against the explicit softmax input; the `qk_clip_`
 contract; `softcap`; `make_bad_batch` ('ngram': shape, period, one n-gram
-of the batch's own ids, untouched rows bit-identical); `lr_sensitivity`; `_pretrain_result` and
+of the batch's own ids, untouched rows bit-identical; an unknown kind
+raises); `_BadBatchStream` argument checks (kind, period 1-13, k, one
+rank for 'ngram'); `lr_sensitivity`; `_pretrain_result` and
 `_pretrain_merged` with a temporary registry (regenerate with the config
 stored, load, configuration mismatch, absent in a normal run, pending,
 two regeneration names with other calls in the same process, D2L_RERUN=1
 refused); `t_interval` against `scipy.stats.t` (dof 1-10, 1e-4);
 `packed_to_hf` against `LlamaForCausalLM` (fp32 1e-5);
 `load_reference_model` before the checkpoints are registered; a 2-process
-gloo DDP `pretrain` equal to one process at the same global batch (1e-5).
+gloo DDP `pretrain` equal to one process at the same global batch (loss and
+`log_z`, 1e-5).
 """
 import collections
 import contextlib
@@ -439,6 +444,12 @@ class PretrainTest(unittest.TestCase):
         out = d2l.pretrain_step(m, opt, [b], toy_config(clip=tiny,
                                                          clip_from=5), n)
         self.assertTrue(bool(out['clipped']))
+        # the continued-pretraining step clips from the start: it refuses
+        # clip_from instead of ignoring it
+        with self.assertRaisesRegex(ValueError, 'clip_from'):
+            d2l._cpt_step(m, opt, [b], toy_config(clip_from=5), n)
+        out = d2l._cpt_step(m, opt, [b], toy_config(clip=tiny), n)
+        self.assertTrue(bool(out['clipped']))
 
     def test_attn_logit_stats(self):
         m = toy_model().eval()
@@ -604,7 +615,7 @@ def _ddp_worker(rank, world, shard_dir, out, port):
     shards = d2l.TokenShards(shard_dir)
     stream = d2l.PackedStream(shards, TOY.T, 8, seed=1, rank=rank,
                               world=world)
-    cfg = toy_config(steps=10, ddp=True, micro_batch=2)
+    cfg = toy_config(steps=10, ddp=True, micro_batch=2, stats_every=5)
     log = d2l.pretrain(toy_model(), stream, cfg)
     if rank == 0:
         log.to_json(out)
@@ -620,7 +631,8 @@ class DDPTest(unittest.TestCase):
             shards = dp.fixture_shards(shard_dir, n_docs=600)
             stream = d2l.PackedStream(shards, TOY.T, 8, seed=1)
             ref = d2l.pretrain(toy_model(), stream,
-                               toy_config(steps=10, micro_batch=4))
+                               toy_config(steps=10, micro_batch=4,
+                                          stats_every=5))
             out = os.path.join(d, 'log.json')
             env = dict(os.environ)
             os.environ['CUDA_VISIBLE_DEVICES'] = ''  # gloo on the CPU
@@ -635,6 +647,13 @@ class DDPTest(unittest.TestCase):
             log = pd.read_json(out)
         self.assertLess(np.abs(log['loss'].values - ref['loss'].values)
                         .max(), 1e-5)
+        # log_z: the mean over both ranks' targets (one stacked all-reduce
+        # with the loss), at the stats steps only
+        self.assertEqual(log['log_z'].notna().tolist(),
+                         ref['log_z'].notna().tolist())
+        self.assertEqual(int(log['log_z'].notna().sum()), 2)
+        self.assertLess(np.nanmax(np.abs(log['log_z'].values
+                                         - ref['log_z'].values)), 1e-5)
 
 
 def toy_log(steps=600, every=10, layers=2, seed=0):
@@ -733,6 +752,51 @@ class MeasurementTest(unittest.TestCase):
         none = d2l._BadBatchStream(self.shards, TOY.T, 8, None, 'repeat', 512)
         self.assertTrue(torch.equal(none.batch(4)['input_ids'],
                                     plain.batch(4)['input_ids']))
+        # 'ngram' passes k and period through; the other rows are the plain
+        # stream's
+        ng = d2l._BadBatchStream(self.shards, TOY.T, 8, 5, 'ngram', 512, k=3,
+                                 period=4)
+        ref = d2l.make_bad_batch(plain.batch(4), 'ngram', 512, seed=5, k=3,
+                                 period=4)
+        got = ng.batch(4)
+        self.assertTrue(all(torch.equal(got[k], ref[k]) for k in ref))
+        hit = (got['input_ids'] != plain.batch(4)['input_ids']).any(1)
+        self.assertEqual(int(hit.sum()), 3)
+        # arguments that would give an arm of another configuration
+        for kind, kw in (('n-gram', {}), ('ngrams', {}),
+                         ('ngram', dict(period=None)),
+                         ('ngram', dict(period=0)),
+                         ('ngram', dict(period=14)),
+                         ('ngram', dict(period=7, k=0)),
+                         ('ngram', dict(period=7, k=9)),
+                         ('ngram', dict(period=7, rank=0, world=2))):
+            with self.assertRaises(ValueError, msg=(kind, kw)):
+                d2l._BadBatchStream(self.shards, TOY.T, 8, 5, kind, 512, **kw)
+        with self.assertRaisesRegex(ValueError, 'unknown bad-batch kind'):
+            d2l.make_bad_batch(plain.batch(0), 'n-gram')
+        d2l._BadBatchStream(self.shards, TOY.T, 8, 5, 'ngram', 512, k=8,
+                            period=13)  # the bounds themselves are fine
+
+    def test_clip_from_and_bad_step(self):
+        """clip_from counts updates, bad_step log steps: clip_from = bad_step
+        - 1 clips the bad step, clip_from = bad_step does not (and the
+        spike driver refuses it)."""
+        tiny = 1e-3  # every step's norm is above it
+
+        def clipped(clip_from):
+            stream = d2l._BadBatchStream(self.shards, TOY.T, 8, 5, 'ngram',
+                                         512, k=4, period=3, seed=1)
+            cfg = toy_config(steps=7, clip=tiny, clip_from=clip_from)
+            with contextlib.redirect_stdout(io.StringIO()):
+                log = d2l.pretrain(toy_model(), stream, cfg)
+            return log.set_index('step')['clipped']
+        on = clipped(4)
+        self.assertEqual(on.tolist(), [False] * 4 + [True] * 3)
+        self.assertTrue(on[5])  # the bad batch's update is clipped
+        self.assertFalse(clipped(5)[5])
+        with self.assertRaisesRegex(ValueError, 'at most 7'):
+            d2l._spike(self.toy_cfg(clip=1.0, clip_from=8), 8, 'random', (),
+                       steps=14, device='cpu')
 
     def toy_cfg(self, **kw):
         return toy_config(preset='t1', compile=False, warmup=2, **kw)

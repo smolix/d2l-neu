@@ -638,7 +638,11 @@ def _cpt_lr(step, cfg, peak):
     return final + (peak - final) * 0.5 * (1 + math.cos(math.pi * t))
 
 def _cpt_step(model, optimizer, micro_batches, cfg, n_valid, chunk=2048):
-    """pretrain_step on one GPU with the loss chunk of a large vocabulary."""
+    """pretrain_step on one GPU with the loss chunk of a large vocabulary;
+    it clips from the first step, so cfg.clip_from must be None."""
+    if cfg.clip_from is not None:
+        raise ValueError('_cpt_step clips from the first step; clip_from '
+                         f'must be None, not {cfg.clip_from}')
     nll = 0.0
     for mb in micro_batches:
         ctx = d2l.PackCtx(mb['doc_ids'], mb['pos_ids'])

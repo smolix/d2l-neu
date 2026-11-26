@@ -283,10 +283,18 @@ def _peak_flops(device):
     return GPU_PEAK_BF16.get(torch.cuda.get_device_name(device))
 
 #@save
+_CFG_ADDED = {'clip_from': None}  # fields added after runs were committed
+
+#@save
 def _cfg_json(cfg):
-    """A PretrainConfig as JSON values (the arch as a dict)."""
+    """A PretrainConfig as JSON values (the arch as a dict); a field added
+    after runs were committed is left out at its default, so the stored
+    configurations of those runs still match."""
     out = d2l._jsonable(cfg)
     out['arch'] = cfg.arch._asdict()
+    for k, default in _CFG_ADDED.items():
+        if out.get(k) == default:
+            del out[k]
     return out
 
 #@save
@@ -397,6 +405,7 @@ class _PretrainRun:
     def record(self, seg, row, batch, before, wait, t0):
         """Complete row in place (one host sync), probe, validate, save."""
         cfg, done = self.cfg, row['step']
+        log_z = row.pop('log_z', None)  # logged at the stats steps only
         for k, v in row.items():
             if torch.is_tensor(v):
                 row[k] = v.item()
@@ -418,8 +427,13 @@ class _PretrainRun:
         if before is not None:
             row.update(d2l._update_rms(self.raw, before, self.optimizer))
         if cfg.stats_every and done % cfg.stats_every == 0:
-            for l, s in d2l.attn_logit_stats(self.raw, batch).items():
+            stats = d2l.attn_logit_stats(self.raw, batch)
+            for l, s in stats.items():
                 row[f'max_logit_{l}'] = float(s.max_logit.max())
+            for l, s in stats.items():  # mean over heads, this rank's probe
+                row[f'entropy_{l}'] = float(s.entropy.mean())
+            if log_z is not None:
+                row['log_z'] = float(log_z)
         last = done == seg.total
         if self.val_fn is not None and self.rank == 0 and (
                 last or (cfg.val_every and done % cfg.val_every == 0)):

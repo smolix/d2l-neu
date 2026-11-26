@@ -11,9 +11,14 @@ overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
 `_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
 chapter's 35 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
 vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
-(losses 1e-6) and a branch from a saved state; `attn_logit_stats` against
-the explicit softmax input; the `qk_clip_` contract; `softcap`;
-`make_bad_batch`; `lr_sensitivity`; `_pretrain_result` and
+(losses 1e-6) and a branch from a saved state; the stats-step columns
+`entropy_<l>` and `log_z` (finite; `log_z` the explicit mean logsumexp
+1e-5; only at stats steps, absent without stats); `clip_from` (clipping
+starts at that step; losses before it equal an unclipped run's);
+`_cfg_json` of a default config equal to the committed `lm-r2-config-v1`;
+`attn_logit_stats` against the explicit softmax input; the `qk_clip_`
+contract; `softcap`; `make_bad_batch` ('ngram': shape, period, one n-gram
+of the batch's own ids, untouched rows bit-identical); `lr_sensitivity`; `_pretrain_result` and
 `_pretrain_merged` with a temporary registry (regenerate with the config
 stored, load, configuration mismatch, absent in a normal run, pending,
 two regeneration names with other calls in the same process, D2L_RERUN=1
@@ -78,6 +83,14 @@ def toy_config(**kw):
                 z_loss=1e-4)
     args.update(kw)
     return d2l.PretrainConfig(**args)
+
+
+PRE_F04_FIELDS = (  # PretrainConfig's fields when the runs were committed
+    'preset', 'arch', 'steps', 'global_batch', 'micro_batch', 'peak_lr',
+    'warmup', 'decay', 'final_lr', 'betas', 'eps', 'wd', 'clip', 'z_loss',
+    'dtype', 'compile', 'ddp', 'probe_every', 'stats_every', 'val_every',
+    'val_tokens', 'ckpt_steps', 'state_steps', 'state_every', 'branches',
+    'data', 'data_seed', 'seed', 'out_dir')
 
 
 def toy_model(seed=0):
@@ -227,6 +240,35 @@ class ConfigTest(unittest.TestCase):
     def test_cfg_json_round_trip(self):
         c = d2l.r2_config('ladder-54m', seed=2)
         self.assertEqual(d2l._cfg_from_json(d2l._cfg_json(c)), c)
+        c = d2l.r2_config('t1', clip_from=250)
+        self.assertEqual(d2l._cfg_json(c)['clip_from'], 250)
+        self.assertEqual(d2l._cfg_from_json(d2l._cfg_json(c)), c)
+
+    def test_cfg_json_identity_of_committed_runs(self):
+        # fields added later (clip_from) are left out at their default, so
+        # the configurations stored with committed runs still match
+        self.assertEqual(set(d2l._cfg_json(d2l.r2_config('r2'))), set(
+            PRE_F04_FIELDS))
+        self.assertNotIn('clip_from', d2l._cfg_json(d2l.r2_config('t1')))
+        root = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'data', 'lm')
+        key = 'lm-r2-config-v1'
+        paths = [os.path.join(root, key, key + '.json'),
+                 os.path.join(root, 'rerun', key + '.json')]
+        path = next((p for p in paths if os.path.exists(p)), None)
+        if path is None:
+            self.skipTest(f'{key} is not on disk')
+        import hashlib
+        import json
+        with open(path, 'rb') as f:
+            raw = f.read()
+        self.assertEqual(hashlib.sha1(raw).hexdigest(), d2l.DATA_HUB[key][1])
+        stored = json.loads(raw)['jobs']['r2-s0']['pretrain_config']
+        mine = d2l._cfg_json(d2l.r2_config('r2', ddp=True))
+        mine.pop('out_dir')
+        self.assertEqual(mine, stored)
+        self.assertEqual(d2l._cfg_from_json(dict(stored, out_dir=None)),
+                         d2l.r2_config('r2', ddp=True))
 
     def test_load_reference_model_unregistered(self):
         with uncommitted(), self.assertRaises(KeyError) as cm:
@@ -338,6 +380,66 @@ class PretrainTest(unittest.TestCase):
         self.assertIn('max_logit_0', log.columns)
         self.assertTrue(log['rms_W_q'].iloc[[1, 3]].notna().all())
 
+    def test_entropy_and_log_z(self):
+        log = self.run_toy(toy_config(steps=3, stats_every=1))
+        cols = ['entropy_0', 'entropy_1', 'log_z']
+        self.assertTrue(set(cols) <= set(log.columns))
+        vals = log[cols].to_numpy()
+        self.assertTrue(np.isfinite(vals).all())
+        ent = log[['entropy_0', 'entropy_1']].to_numpy()
+        self.assertTrue(((ent >= 0) & (ent <= math.log(TOY.T))).all())
+        # log_z of step 1: the mean logsumexp of the initial model's logits
+        # over the valid targets of batch 0
+        m, b = toy_model(), self.stream().batch(0)
+        with torch.no_grad():
+            H, W = m(b['input_ids'], d2l.PackCtx(b['doc_ids'], b['pos_ids']),
+                     return_hidden=True)
+            lse = torch.logsumexp(torch.nn.functional.linear(H, W), -1)
+        valid = b['labels'] != -100
+        self.assertLess(abs(log['log_z'].iloc[0] - lse[valid].mean().item()),
+                        1e-5)
+        # the last step's entropy: attn_logit_stats' mean over heads of
+        # the trained model on that step's batch
+        m = toy_model()
+        with contextlib.redirect_stdout(io.StringIO()):
+            d2l.pretrain(m, self.stream(), toy_config(steps=3, stats_every=3))
+        stats = d2l.attn_logit_stats(m, self.stream().batch(2))
+        for l, s in stats.items():
+            self.assertAlmostEqual(log[f'entropy_{l}'].iloc[2],
+                                   float(s.entropy.mean()), places=5)
+        # stats every 2 steps: the columns only at steps 2, 4
+        log = self.run_toy(toy_config(steps=4, stats_every=2))
+        for c in cols + ['max_logit_0']:
+            self.assertEqual(log[c].notna().tolist(),
+                             [False, True, False, True], c)
+        # no stats: none of the new columns (the old logs' columns)
+        log = self.run_toy(toy_config(steps=3))
+        self.assertFalse({'log_z', 'entropy_0', 'max_logit_0'}
+                         & set(log.columns))
+
+    def test_clip_from(self):
+        tiny = 1e-3  # every step's norm is above it
+        free = self.run_toy(toy_config(steps=10, clip=None))
+        late = self.run_toy(toy_config(steps=10, clip=tiny, clip_from=5))
+        always = self.run_toy(toy_config(steps=10, clip=tiny))
+        # steps 0-4 (log steps 1-5) unclipped, from step 5 on clipped
+        self.assertEqual(late['clipped'].tolist(), [False] * 5 + [True] * 5)
+        self.assertTrue(always['clipped'].all())
+        self.assertFalse(free['clipped'].any())
+        self.assertTrue(np.array_equal(late['loss'][:6], free['loss'][:6]))
+        self.assertTrue(np.array_equal(late['grad_norm'][:6],
+                                       free['grad_norm'][:6]))
+        self.assertGreater(abs(late['loss'].iloc[6] - free['loss'].iloc[6]),
+                           1e-6)
+        # pretrain_step without a step: clipping from cfg.clip, as before
+        m = toy_model()
+        opt = torch.optim.AdamW(d2l.param_groups(m, 0.1), lr=1e-3)
+        b = self.stream().batch(0)
+        n = (b['labels'] != -100).sum()
+        out = d2l.pretrain_step(m, opt, [b], toy_config(clip=tiny,
+                                                         clip_from=5), n)
+        self.assertTrue(bool(out['clipped']))
+
     def test_attn_logit_stats(self):
         m = toy_model().eval()
         b = self.stream().batch(0)
@@ -423,6 +525,51 @@ class PretrainTest(unittest.TestCase):
             self.assertTrue((bad['doc_ids'] == 0).all())
         self.assertEqual(len(set(d2l.make_bad_batch(b, 'repeat')[
             'input_ids'].flatten().tolist())), 1)
+        # random: unchanged by the n-gram kind (fixed ids for seed 1)
+        g = torch.Generator().manual_seed(1)
+        ref = torch.randint(32, 512, (8, TOY.T + 1), generator=g)
+        self.assertTrue(torch.equal(d2l.make_bad_batch(
+            b, 'random', vocab=512, seed=1)['input_ids'], ref[:, :-1]))
+
+    def test_make_bad_batch_ngram(self):
+        b = d2l.PackedStream(self.shards, TOY.T, 16, seed=1).batch(0)
+        bad = d2l.make_bad_batch(b, 'ngram', seed=3, k=8, period=7)
+        self.assertEqual(set(bad), set(b))
+        for key in b:
+            self.assertEqual(bad[key].shape, b[key].shape, key)
+            self.assertEqual(bad[key].dtype, b[key].dtype, key)
+        hit = [r for r in range(16) if not torch.equal(bad['input_ids'][r],
+                                                       b['input_ids'][r])]
+        self.assertEqual(len(hit), 8)
+        rest = [r for r in range(16) if r not in hit]
+        for key in b:  # untouched rows: every field bit-identical
+            self.assertTrue(torch.equal(bad[key][rest], b[key][rest]), key)
+        X, Y = bad['input_ids'][hit], bad['labels'][hit]
+        self.assertTrue(torch.equal(X[:, 7:], X[:, :-7]))  # period 7
+        self.assertTrue(torch.equal(Y[:, :-1], X[:, 1:]))  # shifted targets
+        self.assertTrue(torch.equal(Y[:, -1], X[:, -7]))
+        self.assertTrue((X == X[0]).all())  # one n-gram in every row
+        gram = X[0, :7]
+        self.assertTrue((gram >= 32).all())
+        self.assertTrue(set(gram.tolist()) <= set(b['input_ids'].flatten()
+                                                  .tolist()))
+        self.assertTrue((bad['doc_ids'][hit] == 0).all())
+        self.assertTrue(torch.equal(bad['pos_ids'][hit], torch.arange(
+            TOY.T, dtype=b['pos_ids'].dtype).expand(8, -1)))
+        # deterministic per seed; k=None replaces every row; period 1
+        again = d2l.make_bad_batch(b, 'ngram', seed=3, k=8, period=7)
+        self.assertTrue(all(torch.equal(again[k], bad[k]) for k in b))
+        every = d2l.make_bad_batch(b, 'ngram', seed=3, period=13)
+        self.assertTrue((every['input_ids'] == every['input_ids'][0]).all())
+        X = every['input_ids']
+        self.assertTrue(torch.equal(X[:, 13:], X[:, :-13]))
+        one = d2l.make_bad_batch(b, 'ngram', seed=0, k=1, period=1)
+        r = [i for i in range(16) if not torch.equal(one['input_ids'][i],
+                                                     b['input_ids'][i])]
+        self.assertEqual(len(r), 1)
+        self.assertEqual(len(set(one['input_ids'][r[0]].tolist())), 1)
+        self.assertTrue(torch.equal(b['input_ids'], d2l.PackedStream(
+            self.shards, TOY.T, 16, seed=1).batch(0)['input_ids']))
         self.assertAlmostEqual(d2l.lr_sensitivity(
             [3.0, 2.5, float('nan'), 4.5], 4.0), (0.5 + 0 + 1.5 + 1.5) / 4)
 

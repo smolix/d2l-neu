@@ -309,6 +309,13 @@ class LossTest(unittest.TestCase):
         z = 1e-2
         s3, _, nll = d2l.chunked_lm_loss_and_nll(H, W, y, chunk=8, z_loss=z)
         s4, _ = d2l.chunked_lm_loss(H, W, y, chunk=8, z_loss=z)
+        # return_lse: the same three values, then the summed logsumexp
+        s5, n5, nll5, lse_sum = d2l.chunked_lm_loss_and_nll(
+            H, W, y, chunk=8, z_loss=z, return_lse=True)
+        self.assertTrue(torch.equal(s5, s3) and torch.equal(nll5, nll))
+        self.assertEqual(int(n5), int((y != -100).sum()))
+        lse_ref = torch.logsumexp(F.linear(H, W), -1)[y != -100].sum()
+        self.assertLess(abs(lse_sum - lse_ref), 1e-6)
         self.assertLess(abs(s4 - s3), 1e-9)
         logits = F.linear(H, W)
         valid = y != -100

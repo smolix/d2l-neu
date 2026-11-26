@@ -11644,12 +11644,13 @@ class PretrainConfig:
     eps: float = 1e-8
     wd: float = 0.1
     clip: float = 1.0           # None: log the gradient norm, never clip
+    clip_from: int = None       # clipping starts at this step (None: 0)
     z_loss: float = 1e-4
     dtype: str = 'bf16'
     compile: bool = True
     ddp: bool = False
     probe_every: int = 50       # update RMS per module
-    stats_every: int = 50       # largest attention logit per layer
+    stats_every: int = 50       # attention logit and entropy, log Z
     val_every: int = 250
     val_tokens: int = 2 ** 21
     ckpt_steps: tuple = ()      # bf16 weights after these steps
@@ -11748,29 +11749,33 @@ def param_groups(model, wd):
     return [dict(params=[p for _, p in g], names=[n for n, _ in g],
                  weight_decay=w) for g, w in ((decay, wd), (rest, 0.0))]
 
-def pretrain_step(model, optimizer, micro_batches, cfg, n_valid):
+def pretrain_step(model, optimizer, micro_batches, cfg, n_valid, step=None):
     """One step on this rank's micro-batches; n_valid is the step's global
     count of valid targets, so the gradient is the token-weighted mean over
-    every rank and micro-batch. Returns loss, pre-clip norm and clipped.
+    every rank and micro-batch. Clipping at cfg.clip starts at step
+    cfg.clip_from. Returns loss, pre-clip norm, clipped and the mean
+    log-partition log_z of the output softmax.
 
     Defined in :numref:`sec_lm_reference_model`"""
-    world, nll = d2l._rank_world()[1], 0.0
+    world, nll, lse = d2l._rank_world()[1], 0.0, 0.0
     for k, mb in enumerate(micro_batches):
         ctx = d2l.PackCtx(mb['doc_ids'], mb['pos_ids'])
         with d2l._no_sync(model, k < len(micro_batches) - 1):  # sync last
             with torch.autocast(mb['input_ids'].device.type, torch.bfloat16,
                                 enabled=cfg.dtype == 'bf16'):
                 H, W = model(mb['input_ids'], ctx, return_hidden=True)
-                loss, _, part = d2l.chunked_lm_loss_and_nll(
-                    H, W, mb['labels'], z_loss=cfg.z_loss)
+                loss, _, part, part_lse = d2l.chunked_lm_loss_and_nll(
+                    H, W, mb['labels'], z_loss=cfg.z_loss, return_lse=True)
             (loss * world / n_valid).backward()  # DDP averages the ranks
-        nll = nll + part.detach()
+        nll, lse = nll + part.detach(), lse + part_lse.detach()
+    on = step is None or cfg.clip_from is None or step >= cfg.clip_from
+    clip = (cfg.clip if on else None) or math.inf
     params = [p for g in optimizer.param_groups for p in g['params']]
-    norm = torch.nn.utils.clip_grad_norm_(params, cfg.clip or math.inf)
+    norm = torch.nn.utils.clip_grad_norm_(params, clip)
     optimizer.step()
     optimizer.zero_grad(set_to_none=True)
     return dict(loss=d2l._all_reduce_sum(nll) / n_valid, grad_norm=norm,
-                clipped=norm > (cfg.clip or math.inf))
+                clipped=norm > clip, log_z=d2l._all_reduce_sum(lse) / n_valid)
 
 def pretrain(model, stream, cfg, val_fn=None, hooks=(), resume=None):
     """Train model on stream under cfg, then each of cfg.branches from its
@@ -11789,7 +11794,8 @@ def pretrain(model, stream, cfg, val_fn=None, hooks=(), resume=None):
             batch, micro, n_valid = run.batch(step)  # this rank's part
             t1 = time.perf_counter()
             before = run.snapshot(step)  # weights before, at probe steps
-            out = pretrain_step(run.model, run.optimizer, micro, cfg, n_valid)
+            out = pretrain_step(run.model, run.optimizer, micro, cfg, n_valid,
+                                step)
             row = dict(step=step + 1, tokens=(step + 1) * run.step_tokens,
                        lr=lr, **out)
             run.record(seg, row, batch, before, t1 - t0, t0)
@@ -11824,16 +11830,30 @@ def softcap(x, c):
     Defined in :numref:`sec_lm_reference_model`"""
     return c * torch.tanh(x / c)
 
-def make_bad_batch(batch, kind='random', vocab=32768, seed=0):
-    """A batch shaped like batch of one-document windows: uniform random ids
-    >= 32 ('random') or one repeated id ('repeat'), targets shifted ids.
+def make_bad_batch(batch, kind='random', vocab=32768, seed=0, k=None,
+                   period=None):
+    """A batch shaped like batch of one-document windows, targets shifted
+    ids: uniform random ids >= 32 ('random'), one repeated id ('repeat'),
+    or ('ngram') k of batch's rows (all if k is None; the others untouched)
+    replaced by one n-gram of period of batch's own ids >= 32, repeated.
 
     Defined in :numref:`sec_lm_reference_model`"""
     B, T = batch['input_ids'].shape
     g = torch.Generator().manual_seed(seed)
+    pos = torch.arange(T, dtype=torch.int32).expand(B, T).contiguous()
+    if kind == 'ngram':  # OLMo 2's spike shape
+        pool = batch['input_ids'].flatten().cpu()
+        pool = pool[pool >= 32]
+        start = int(torch.randint(len(pool) - period + 1, (), generator=g))
+        ids = pool[start:start + period].repeat(T // period + 1)[:T + 1]
+        rows = torch.randperm(B, generator=g)[:k]
+        bad = {key: v.clone() for key, v in batch.items()}
+        for key, v in (('input_ids', ids[:-1]), ('labels', ids[1:]),
+                       ('doc_ids', 0), ('pos_ids', pos[0])):
+            bad[key][rows] = torch.as_tensor(v).to(bad[key])
+        return bad
     ids = (torch.randint(32, vocab, (B, T + 1), generator=g) if kind ==
            'random' else torch.full((B, T + 1), 32 + seed % (vocab - 32)))
-    pos = torch.arange(T, dtype=torch.int32).expand(B, T).contiguous()
     return dict(input_ids=ids[:, :-1].contiguous(), labels=ids[:, 1:].clone(),
                 doc_ids=torch.zeros_like(pos), pos_ids=pos)
 
@@ -21699,17 +21719,34 @@ def reference_shards(which='100m', **kwargs):
     with _quiet():
         return d2l.fwedu_shards(which, **kwargs)
 
+def _lm_loss_terms_lse(h, W, y, ignore_index=-100):
+    """lm_loss_terms (summed NLL and logsumexp^2) and the summed logsumexp
+    over the valid targets y, from the same fp32 logits.
+
+    Defined in :numref:`sec_lm_data_path`"""
+    logits = F.linear(h, W)
+    logits = logits.to(torch.promote_types(logits.dtype, torch.float32))
+    lse, valid = torch.logsumexp(logits, -1), y != ignore_index
+    nll = lse - logits.gather(-1, y.clamp(min=0)[:, None])[:, 0]
+    return torch.stack([torch.where(valid, nll, 0.0).sum(),
+                        torch.where(valid, lse ** 2, 0.0).sum(),
+                        torch.where(valid, lse, 0.0).sum()])
+
 def chunked_lm_loss_and_nll(hidden, weight, labels, chunk=8192, z_loss=0.0,
-                            ignore_index=-100):
+                            ignore_index=-100, return_lse=False):
     """chunked_lm_loss's (sum_loss, n_valid) and the summed NLL without the
-    z-loss term, from the same chunks.
+    z-loss term, from the same chunks; with return_lse also the summed
+    log-partition logsumexp over the valid targets (no gradient needed).
 
     Defined in :numref:`sec_lm_data_path`"""
     H, y = hidden.flatten(0, -2), labels.flatten()
-    nll, z = sum(torch.utils.checkpoint.checkpoint(
-        d2l.lm_loss_terms, H[i:i + chunk], weight, y[i:i + chunk],
-        ignore_index, use_reentrant=False) for i in range(0, len(y), chunk))
-    return nll + z_loss * z, (y != ignore_index).sum(), nll
+    terms = _lm_loss_terms_lse if return_lse else d2l.lm_loss_terms
+    parts = sum(torch.utils.checkpoint.checkpoint(
+        terms, H[i:i + chunk], weight, y[i:i + chunk], ignore_index,
+        use_reentrant=False) for i in range(0, len(y), chunk))
+    nll, z = parts[0], parts[1]
+    out = (nll + z_loss * z, (y != ignore_index).sum(), nll)
+    return out + (parts[2],) if return_lse else out
 
 def _rope_tables(pos, head_dim, theta, inv_freq=None, mscale=1.0):
     """Cosines and sines of the RoPE angles of positions pos, (T,) or (B, T),
@@ -22568,12 +22605,19 @@ def _peak_flops(device):
         return None
     return GPU_PEAK_BF16.get(torch.cuda.get_device_name(device))
 
+_CFG_ADDED = {'clip_from': None}  # fields added after runs were committed
+
 def _cfg_json(cfg):
-    """A PretrainConfig as JSON values (the arch as a dict).
+    """A PretrainConfig as JSON values (the arch as a dict); a field added
+    after runs were committed is left out at its default, so the stored
+    configurations of those runs still match.
 
     Defined in :numref:`sec_lm_reference_model`"""
     out = d2l._jsonable(cfg)
     out['arch'] = cfg.arch._asdict()
+    for k, default in _CFG_ADDED.items():
+        if out.get(k) == default:
+            del out[k]
     return out
 
 def _cfg_from_json(d):
@@ -22679,6 +22723,7 @@ class _PretrainRun:
     def record(self, seg, row, batch, before, wait, t0):
         """Complete row in place (one host sync), probe, validate, save."""
         cfg, done = self.cfg, row['step']
+        log_z = row.pop('log_z', None)  # logged at the stats steps only
         for k, v in row.items():
             if torch.is_tensor(v):
                 row[k] = v.item()
@@ -22700,8 +22745,13 @@ class _PretrainRun:
         if before is not None:
             row.update(d2l._update_rms(self.raw, before, self.optimizer))
         if cfg.stats_every and done % cfg.stats_every == 0:
-            for l, s in d2l.attn_logit_stats(self.raw, batch).items():
+            stats = d2l.attn_logit_stats(self.raw, batch)
+            for l, s in stats.items():
                 row[f'max_logit_{l}'] = float(s.max_logit.max())
+            for l, s in stats.items():  # mean over heads, this rank's probe
+                row[f'entropy_{l}'] = float(s.entropy.mean())
+            if log_z is not None:
+                row['log_z'] = float(log_z)
         last = done == seg.total
         if self.val_fn is not None and self.rank == 0 and (
                 last or (cfg.val_every and done % cfg.val_every == 0)):

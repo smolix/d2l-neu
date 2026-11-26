@@ -110,12 +110,13 @@ class PretrainConfig:
     eps: float = 1e-8
     wd: float = 0.1
     clip: float = 1.0           # None: log the gradient norm, never clip
+    clip_from: int = None       # clipping starts at this step (None: 0)
     z_loss: float = 1e-4
     dtype: str = 'bf16'
     compile: bool = True
     ddp: bool = False
     probe_every: int = 50       # update RMS per module
-    stats_every: int = 50       # largest attention logit per layer
+    stats_every: int = 50       # attention logit and entropy, log Z
     val_every: int = 250
     val_tokens: int = 2 ** 21
     ckpt_steps: tuple = ()      # bf16 weights after these steps
@@ -316,37 +317,41 @@ print(f'lr at steps {", ".join(map(str, steps))}: '
 
 ### One Step
 
-<!-- Placeholder (prose): token-weighted accumulation (each micro-batch's summed loss over the step's global count n_valid), z-loss (restate subsec_practice-nan in one sentence), the pre-clip norm logged because clipping hides the growth that precedes a spike. -->
+<!-- Placeholder (prose): token-weighted accumulation (each micro-batch's summed loss over the step's global count n_valid), z-loss (restate subsec_practice-nan in one sentence), the pre-clip norm logged because clipping hides the growth that precedes a spike; clip_from turns clipping on mid-run (the spike arms switch it on at their branch step); log_z, the mean log-partition of the output softmax over the step's targets, comes from the logits the loss already has (what z-loss pulls to zero). -->
 
 ```{.python .input #reference-model-step}
 %%tab pytorch
 #@save
-def pretrain_step(model, optimizer, micro_batches, cfg, n_valid):
+def pretrain_step(model, optimizer, micro_batches, cfg, n_valid, step=None):
     """One step on this rank's micro-batches; n_valid is the step's global
     count of valid targets, so the gradient is the token-weighted mean over
-    every rank and micro-batch. Returns loss, pre-clip norm and clipped."""
-    world, nll = d2l._rank_world()[1], 0.0
+    every rank and micro-batch. Clipping at cfg.clip starts at step
+    cfg.clip_from. Returns loss, pre-clip norm, clipped and the mean
+    log-partition log_z of the output softmax."""
+    world, nll, lse = d2l._rank_world()[1], 0.0, 0.0
     for k, mb in enumerate(micro_batches):
         ctx = d2l.PackCtx(mb['doc_ids'], mb['pos_ids'])
         with d2l._no_sync(model, k < len(micro_batches) - 1):  # sync last
             with torch.autocast(mb['input_ids'].device.type, torch.bfloat16,
                                 enabled=cfg.dtype == 'bf16'):
                 H, W = model(mb['input_ids'], ctx, return_hidden=True)
-                loss, _, part = d2l.chunked_lm_loss_and_nll(
-                    H, W, mb['labels'], z_loss=cfg.z_loss)
+                loss, _, part, part_lse = d2l.chunked_lm_loss_and_nll(
+                    H, W, mb['labels'], z_loss=cfg.z_loss, return_lse=True)
             (loss * world / n_valid).backward()  # DDP averages the ranks
-        nll = nll + part.detach()
+        nll, lse = nll + part.detach(), lse + part_lse.detach()
+    on = step is None or cfg.clip_from is None or step >= cfg.clip_from
+    clip = (cfg.clip if on else None) or math.inf
     params = [p for g in optimizer.param_groups for p in g['params']]
-    norm = torch.nn.utils.clip_grad_norm_(params, cfg.clip or math.inf)
+    norm = torch.nn.utils.clip_grad_norm_(params, clip)
     optimizer.step()
     optimizer.zero_grad(set_to_none=True)
     return dict(loss=d2l._all_reduce_sum(nll) / n_valid, grad_norm=norm,
-                clipped=norm > (cfg.clip or math.inf))
+                clipped=norm > clip, log_z=d2l._all_reduce_sum(lse) / n_valid)
 ```
 
 ### The Loop
 
-<!-- Placeholder (prose): what the loop logs and when (every step: loss, pre-clip norm, clipped, tokens/s, MFU; every probe_every steps: update RMS per module; every stats_every steps: largest attention logit per layer from an explicit-score probe, since the fused kernel returns no scores; every val_every steps: validation), checkpoints, full states, branches; the DDP and state plumbing lives in the library. -->
+<!-- Placeholder (prose): what the loop logs and when (every step: loss, pre-clip norm, clipped, tokens/s, MFU; every probe_every steps: update RMS per module; every stats_every steps: the largest attention logit and the mean attention entropy per layer from an explicit-score probe, since the fused kernel returns no scores, and log_z; every val_every steps: validation), checkpoints, full states (state_steps: the resumable states a later replay or branch starts from), branches; the DDP and state plumbing lives in the library. -->
 
 ```{.python .input #reference-model-pretrain}
 %%tab pytorch
@@ -366,7 +371,8 @@ def pretrain(model, stream, cfg, val_fn=None, hooks=(), resume=None):
             batch, micro, n_valid = run.batch(step)  # this rank's part
             t1 = time.perf_counter()
             before = run.snapshot(step)  # weights before, at probe steps
-            out = pretrain_step(run.model, run.optimizer, micro, cfg, n_valid)
+            out = pretrain_step(run.model, run.optimizer, micro, cfg, n_valid,
+                                step)
             row = dict(step=step + 1, tokens=(step + 1) * run.step_tokens,
                        lr=lr, **out)
             run.record(seg, row, batch, before, t1 - t0, t0)
@@ -761,14 +767,28 @@ def softcap(x, c):
     return c * torch.tanh(x / c)
 
 #@save
-def make_bad_batch(batch, kind='random', vocab=32768, seed=0):
-    """A batch shaped like batch of one-document windows: uniform random ids
-    >= 32 ('random') or one repeated id ('repeat'), targets shifted ids."""
+def make_bad_batch(batch, kind='random', vocab=32768, seed=0, k=None,
+                   period=None):
+    """A batch shaped like batch of one-document windows, targets shifted
+    ids: uniform random ids >= 32 ('random'), one repeated id ('repeat'),
+    or ('ngram') k of batch's rows (all if k is None; the others untouched)
+    replaced by one n-gram of period of batch's own ids >= 32, repeated."""
     B, T = batch['input_ids'].shape
     g = torch.Generator().manual_seed(seed)
+    pos = torch.arange(T, dtype=torch.int32).expand(B, T).contiguous()
+    if kind == 'ngram':  # OLMo 2's spike shape
+        pool = batch['input_ids'].flatten().cpu()
+        pool = pool[pool >= 32]
+        start = int(torch.randint(len(pool) - period + 1, (), generator=g))
+        ids = pool[start:start + period].repeat(T // period + 1)[:T + 1]
+        rows = torch.randperm(B, generator=g)[:k]
+        bad = {key: v.clone() for key, v in batch.items()}
+        for key, v in (('input_ids', ids[:-1]), ('labels', ids[1:]),
+                       ('doc_ids', 0), ('pos_ids', pos[0])):
+            bad[key][rows] = torch.as_tensor(v).to(bad[key])
+        return bad
     ids = (torch.randint(32, vocab, (B, T + 1), generator=g) if kind ==
            'random' else torch.full((B, T + 1), 32 + seed % (vocab - 32)))
-    pos = torch.arange(T, dtype=torch.int32).expand(B, T).contiguous()
     return dict(input_ids=ids[:, :-1].contiguous(), labels=ids[:, 1:].clone(),
                 doc_ids=torch.zeros_like(pos), pos_ids=pos)
 

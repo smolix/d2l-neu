@@ -1521,8 +1521,8 @@ function reflowJensenStraightening() {
 
   o += titledPanel(280, 68, 240, 138, 'Round 2: Reflowed Pairs (Z₀, Z₁)', D.green, [
     { t: 'Deterministic ODE endpoints never cross:', fs: 12, fill: C.ink },
-    { t: 'Crossing floor C drops 1.37 → ≈0.001–0.003', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
-    { t: 'Trajectories become 20–35× straighter;', fs: 12.5, fill: C.ink },
+    { t: 'Crossing floor C drops 1.37 → below 0.001', mono: true, fs: 12.5, fw: 700, fill: D.green.dark },
+    { t: 'Trajectories become about 50× straighter;', fs: 12.5, fill: C.ink },
     { t: '1 Euler step matches 32 steps!', fs: 13, fw: 700, fill: D.green.dark },
   ]);
 

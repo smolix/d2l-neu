@@ -860,7 +860,7 @@ By Lagrangian duality, minimizing $L(\mathbf{w}) + \frac{\lambda}{2}\|\mathbf{w}
 ::: {.cols .vc}
 ::: {.col}
 - **$\ell_2$ Ridge (smooth disk $\|\mathbf{w}\|_2 \leq r$):** Expanding elliptical contours of $L(\mathbf{w})$ centered at $\hat{\mathbf{w}}$ meet the smooth circle tangentially away from the axes, keeping all coordinates nonzero and preferring $(1, 1)^\top$ over $(2, 0)^\top$.
-- **$\ell_1$ Lasso (sharp diamond $\|\mathbf{w}\|_1 \leq r$):** The $\ell_1$ ball $\sum_j |w_j| \leq r$ has sharp corners sitting directly on the coordinate axes; loss contours frequently hit a corner first, setting $w_1 = 0$ (**sparsity** / feature selection).
+- **$\ell_1$ Lasso (sharp diamond $\|\mathbf{w}\|_1 \leq r$):** The $\ell_1$ ball $\sum_j |w_j| \leq r$ has sharp corners sitting directly on the coordinate axes; loss contours frequently hit a corner first, setting $w_2 = 0$ (**sparsity** / feature selection).
 :::
 
 ::: {.col .fig .big}
@@ -915,7 +915,7 @@ For $\sigma = 1.0, n = 300, \tau = 0.1$, the Gaussian prior formula prescribes $
 @!weight-decay-training-with-and-without-the-penalty-2
 
 - **Without penalty ($\lambda = 0$):** Training loss drops to $\sim 0.25$ (far below the $0.50$ noise floor), while validation loss climbs to $1.1$–$1.9$, no better than the trivial constant predictor at $1.50$.
-- **With penalty ($\lambda = 1/3$):** Validation loss stabilizes at $0.8$–$1.0$ and $\|\hat{\mathbf{w}}\|_2 \approx 1.2$ stays compact.
+- **With penalty ($\lambda = 1/3$):** Validation loss stabilizes at roughly $0.75$–$1.05$ and $\|\hat{\mathbf{w}}\|_2 \approx 1.2$ stays compact.
 :::
 
 ::: {.col .fig}
@@ -1015,7 +1015,7 @@ Because framework MSE omits the $\frac{1}{2}$ factor on the data loss, its data 
 @!weight-decay-concise-implementation-3
 
 - **Halve `lr`, double `wd`:** To preserve both the data step $-\eta \nabla L$ and the per-step multiplicative decay factor $(1 - \eta\lambda) = 1 - 0.05 \times \frac{1}{3} = 1 - \frac{1}{60}$, we set `lr = 0.025` ($\eta/2$) and `wd = 2 * lambd` ($2/3$).
-- **Identical solution:** The concise run recovers the exact same weight norm $\|\hat{\mathbf{w}}\|_2 \approx 1.2$ and validation accuracy.
+- **Same solution:** The concise run recovers the same weight norm $\|\hat{\mathbf{w}}\|_2 \approx 1.2$; its validation MSE is twice the from-scratch loss, exactly the missing $\frac{1}{2}$.
 :::
 
 ::: {.col .fig}

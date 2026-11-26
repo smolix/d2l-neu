@@ -514,7 +514,7 @@ The results confirm the analysis for the GRU and for every delay $T \ge 50$, and
 ### Gated Networks on Text
 :label:`subsec_deep-rnn`
 
-In :numref:`subsec_gpt-rnn-baseline`, a single wide plain RNN fell behind a multi-block GPT after the first 16 bytes of context. To compare sequence mixers on equal footing, without confounding recurrence against residual depth and positionwise MLPs, we place every mixer in this chapter inside the same pre-norm residual backbone (`SeqLM`), matching :numref:`sec_transformer-block`: token embedding, a stack of blocks each applying `H = H + mixer(norm(H))` followed by a two-layer GELU MLP `H = H + mlp(H)`, and a final layer norm and linear output head (:numref:`fig_seqlm_backbone`).
+In :numref:`subsec_gpt-rnn-baseline`, a single wide plain RNN fell behind a multi-block GPT after the first few bytes of context and never caught up. To compare sequence mixers on equal footing, without confounding recurrence against residual depth and positionwise MLPs, we place every mixer in this chapter inside the same pre-norm residual backbone (`SeqLM`), matching :numref:`sec_transformer-block`: token embedding, a stack of blocks each applying `H = H + mixer(norm(H))` followed by a two-layer GELU MLP `H = H + mlp(H)`, and a final layer norm and linear output head (:numref:`fig_seqlm_backbone`).
 
 ![The shared backbone `SeqLM`. A block adds the output of a mixer, and then of an MLP, to the residual stream, each after its own layer normalization. Only the mixer changes from one model of this chapter to the next; the language models stack $L = 4$ blocks.](../img/mdl-modernrnn-seqlm-backbone.svg)
 :label:`fig_seqlm_backbone`

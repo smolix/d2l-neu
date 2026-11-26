@@ -1401,7 +1401,7 @@ Reproducibility, Debugging, and Model Inspection<br>**PRNG seeds & keys · data-
 :::
 :::
 
-::: {.slide title="Seeding Repeats a Training Trajectory Bit for Bit"}
+::: {.slide title="Seeding Repeats a Training Trajectory Bit for Bit" except="tensorflow"}
 [Global Seeds vs. Explicit Keys]{.kicker}
 
 When we seed every PRNG the loop touches, two runs with `seed=0` produce identical losses and weights down to the last bit:
@@ -1409,6 +1409,16 @@ When we seed every PRNG the loop touches, two runs with `seed=0` produce identic
 @!reproducibility-inspection-seeds-and-randomness
 
 - **Coverage caveat:** A framework seed does **not** seed Python's `random` or NumPy's `np.random`—if your dataset uses NumPy, seed it explicitly too.
+:::
+
+::: {.slide title="Seeding Repeats a Training Trajectory Bit for Bit" only="tensorflow"}
+[Global Seeds vs. Explicit Keys]{.kicker}
+
+When we seed every PRNG the loop touches, two runs with `seed=0` produce identical losses and weights down to the last bit:
+
+@!reproducibility-inspection-seeds-and-randomness
+
+- **Coverage caveat:** `tf.keras.utils.set_random_seed` seeds Python's `random`, NumPy's `np.random` and TensorFlow together; a bare `tf.random.set_seed` covers only TensorFlow.
 :::
 
 ::: {.slide title="Private Generator Objects Prevent Stream Coupling"}

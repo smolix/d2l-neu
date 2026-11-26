@@ -1031,7 +1031,7 @@ Because $\hat{A}^{\textrm{GAE}}_t = \delta_t + \gamma\lambda\, \hat{A}^{\textrm{
 ::: {.col}
 - With GAE, the critic fits the **$\lambda$-return** $G^\lambda_t = \hat{A}^{\textrm{GAE}}_t + \hat{V}(s_t)$; the actor uses standardized advantages.
 - On a short budget (50 updates of 4 episodes, 5 seeds), heavily bootstrapped estimators ($\lambda = 0$ and $\lambda = 0.5$) stall at median returns of $150$–$250$.
-- Longer-horizon mixtures ($\lambda \in \{0.9, 0.95, 1.0\}$) reach nearly $500$, because downweighting the young critic's bias outweighs the extra reward noise.
+- Longer-horizon mixtures ($\lambda \in \{0.9, 0.95, 1.0\}$) reach about twice as high (medians of roughly $350$–$450$), because downweighting the young critic's bias outweighs the extra reward noise.
 :::
 
 ::: {.col .narrow}

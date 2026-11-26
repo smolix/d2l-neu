@@ -531,7 +531,7 @@ A **Transformer block** separates **token mixing** (multi-head attention across 
 
 3. **QK-Norm inside `TransformerBlock`.** Write an `attn_factory` that wraps `d2l.MultiHeadAttention` and applies an RMSNorm of width `d // h` to queries and keys per head before computing attention scores. Verify on a 16-block stack with projection weights multiplied by $4\times$ (or $16\times$) that attention entropy remains bounded away from zero.
 
-4. **Stream variance budget across depth.** In the pre-norm arrangement, every sublayer adds an update to the residual stream. Run `signal_stats(pre_norm=True, std=0.02 / math.sqrt(2 * L), num_blks=L)` for $L \in \{8, 16, 32, 64\}$ and compare against unscaled `std=None`. Verify that the final stream standard deviation at block $L$ grows as $\sqrt{L}$ without scaling but remains near a constant independent of $L$ under the $1/\sqrt{2L}$ rule.
+4. **Stream variance budget across depth.** In the pre-norm arrangement, every sublayer adds an update to the residual stream. Modify `signal_stats` so that `W_o` and `W_2` are drawn with std $0.02/\sqrt{2L}$ and all other matrices with std $0.02$, and compare against all matrices at std $0.02$ for $L \in \{8, 16, 32, 64\}$. Verify that the final stream RMS grows with $L$ without the scaling but stays near a constant under the $1/\sqrt{2L}$ rule.
    :exlabel:`ex_transformer-block-stream-variance`
 
 5. **Rate of token collapse.** The prediction :eqref:`eq_collapse-rate` has no factor for the FFN, on the argument that only the attention sublayer mixes across tokens while the FFN acts position-wise.
@@ -768,7 +768,7 @@ Without `QK-Norm`, a $16\times$ weight growth inflates logit standard deviation 
 
 ::: {.cols .vc}
 ::: {.col}
-- Writing the two-layer FFN in terms of rows $\mathbf{w}_{1,j} \in \mathbb{R}^d$ of $\mathbf{W}_1$ and columns $\mathbf{w}_{2,j} \in \mathbb{R}^d$ of $\mathbf{W}_2$ reveals a content-addressed memory bank (Geva et al., 2021):
+- Writing the two-layer FFN in terms of columns $\mathbf{w}_{1,j} \in \mathbb{R}^d$ of $\mathbf{W}_1$ and rows $\mathbf{w}_{2,j} \in \mathbb{R}^d$ of $\mathbf{W}_2$ reveals a content-addressed memory bank (Geva et al., 2021):
   $$\mathrm{FFN}_{\mathrm{GELU}}(\mathbf{x}) = \sum_{j=1}^{4d} \mathrm{GELU}(\mathbf{x}^\top \mathbf{w}_{1,j})\, \mathbf{w}_{2,j}$$
 - **Dominant parameter share:** Two $d \times 4d$ matrices hold $8d^2$ parameters ($3{,}072$ detector slots per block in GPT-2 Small).
 :::

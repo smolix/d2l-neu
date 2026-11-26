@@ -252,7 +252,7 @@ show_trace(f_cos, *[xs[:11] for xs in runs.values()],
            legend=['$f$', r'$\eta = 0.5$', r'$\eta = 2$'])
 ```
 
-Starting from $x = 10$, the run with $\eta = 0.5$ ($2/\eta = 4 > 1.81$) converges rapidly into the deep minimum at $x = 7.269$. At $\eta = 2$ ($2/\eta = 1 < 1.81$), the deep minimum is unstable ($1 - \eta f'' = -2.62$), and the iterate settles instead into the flatter minimum at $x = -1.821$, where $f'' = 0.98 < 2/\eta$.
+Starting from $x = 10$, the run with $\eta = 0.5$ ($2/\eta = 4 > 1.81$) converges rapidly into the deep minimum at $x = 7.269$. At $\eta = 2$ ($2/\eta = 1 < 1.81$), the deep minimum is unstable ($1 - \eta f'' = -2.62$), and the iterate settles instead into the flatter minimum near $x = -1.83$, where $f'' = 0.98 < 2/\eta$.
 
 ## The Edge of Stability
 :label:`subsec_gd-edge-of-stability`
@@ -360,7 +360,7 @@ This experiment used full-batch gradient descent, whereas the rest of the chapte
 ### Second-Order Steps and Newton's Method
 :label:`subsec_gd-newton`
 
-Why does gradient descent struggle on the valley :eqref:`eq_opt-intro-valley`? At $(-5, -2)$, the negative gradient $(1, 8)$ points almost directly across the steep wall rather than toward the origin $(0, 0)$. The steep coordinate $x_2$ requires $\eta \le 0.25$ to reach the valley floor in one step, whereas the flat coordinate $x_1$ requires $\eta = 1/0.2 = 5$.
+Why does gradient descent struggle on the valley :eqref:`eq_opt-intro-valley`? At $(-5, -2)$, the negative gradient $(1, 8)$ points almost directly across the steep wall rather than toward the origin $(0, 0)$. The steep coordinate $x_2$ requires $\eta = 1/4 = 0.25$ to reach the valley floor in one step, whereas the flat coordinate $x_1$ requires $\eta = 1/0.2 = 5$.
 
 **Newton's method** supplies each direction with the inverse of its own local curvature by minimizing the second-order Taylor approximation around $\mathbf{x}$:
 
@@ -506,7 +506,7 @@ Consider the axis-aligned valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$ with gradie
 - At $\eta = 0.45$ (just below the stability ceiling $2/\lambda_2 = 0.5$), the two coordinates evolve at vastly different rates from $(-5, -2)$:
   - **Steep wall ($x_2$):** Multiplier $1 - 4(0.45) = -0.80$ flips sign on every step, overshooting the valley floor while shrinking by $20\%$ per step.
   - **Flat floor ($x_1$):** Multiplier $1 - 0.2(0.45) = 0.91$ creeps monotonically without sign flips; after $30$ steps, $x_1 \approx -5 \times 0.91^{30} \approx -0.30$.
-- The negative gradient $(-1, -8)$ at $(-5, -2)$ points almost perpendicular to the direction toward the origin.
+- The negative gradient $(1, 8)$ at $(-5, -2)$ points almost directly across the steep wall, not toward the origin.
 :::
 
 ::: {.col .fig}
@@ -641,7 +641,7 @@ At any critical point ($\nabla f(\mathbf{x}) = \mathbf{0}$), the eigenvalues of 
 ::: {.col}
 - Starting from $x_0 = 10$ on $f(x) = x\cos(0.15\pi x)$:
   - **$\eta = 0.5$ ($2/\eta = 4 > 1.81$):** Rapidly converges into the deep, sharper minimum at $x = 7.269$.
-  - **$\eta = 2.0$ ($2/\eta = 1 < 1.81$):** The deep minimum is unstable ($1 - \eta f'' = -2.62$), so the iterate is catapulted out of the deep basin and settles in the shallower, flatter minimum at $x = -1.821$ ($f'' = 0.98 < 1$).
+  - **$\eta = 2.0$ ($2/\eta = 1 < 1.81$):** The deep minimum is unstable ($1 - \eta f'' = -2.62$), so the iterate is catapulted out of the deep basin and settles in the shallower, flatter minimum near $x = -1.83$ ($f'' = 0.98 < 1$).
 - **Key principle:** The learning rate $\eta$ filters solutions by their **curvature ($\lambda_{\max} \le 2/\eta$)**, not by their loss depth.
 :::
 

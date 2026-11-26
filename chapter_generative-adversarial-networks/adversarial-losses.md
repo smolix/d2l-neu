@@ -729,7 +729,7 @@ $$\mathbb{E}_\vartheta\big[\sin(\omega n + \vartheta)\big] = \frac{\sin a}{a}\,\
 | **MMD (§{sec_gan_objectives})** | Kernel-smoothed $p - q$ | Difference of means | RKHS unit ball (no critic net) | Nonzero within kernel bandwidth $s$ |
 | **Wasserstein-1 (§{sec_gan_objectives})** | Kantorovich potential | Difference of means | 1-Lipschitz ball (WGAN-GP) | Constant unit slope at all distances |
 | **RpGAN (§{sec_gan_relativistic})** | $\log(p/q) + c$ | Pairwise Bradley–Terry ranking | Unconstrained | Saturates ($d_{\mathrm{Rp}} = \log 2$) |
-| **R3GAN (§{sec_gan_convergence}–§{num:sec_gan_conditional})** | $\log(p/q)$ filtered above $2\sqrt{\gamma}$ | Pairwise Bradley–Terry ranking | Zero-centered $R_1 + R_2$ on $p, q$ | Smooth interpolation via damped critic |
+| **R3GAN (§{sec_gan_convergence}–§{num:sec_gan_conditional})** | $\log(p/q)$ low-pass filtered below scale $2\sqrt{\gamma}$ | Pairwise Bradley–Terry ranking | Zero-centered $R_1 + R_2$ on $p, q$ | Smooth interpolation via damped critic |
 :::
 
 ::: {.slide title="Concept Check: Blurring, Distillation, and Phase"}

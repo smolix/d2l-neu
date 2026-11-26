@@ -1083,7 +1083,7 @@ On the planar spiral $\mathbf{A} = -\frac{1}{2}\mathbf{I} + \mathbf{K}$ ($\lambd
 ::: {.cols .vc}
 ::: {.col}
 - **Adaptive step control (Dormand–Prince RK45):** Compares embedded orders $p$ and $p+1$ on the same stages ($\Delta = \|\hat{\mathbf{x}} - \mathbf{x}\|$) and scales $h \leftarrow 0.9\,h(\text{tol}/\Delta)^{1/(p+1)}$.
-- **Symplectic Euler & Leapfrog (HMC):** Updating $q_{n+1} = q_n + h p_n$ then $p_{n+1} = p_n - h q_{n+1}$ on Hamiltonian oscillators preserves phase-space area exactly ($\det\mathbf{S}_h = 1$) for all time when $h < 2$.
+- **Symplectic Euler & Leapfrog (HMC):** Updating $q_{n+1} = q_n + h p_n$ then $p_{n+1} = p_n - h q_{n+1}$ on Hamiltonian oscillators preserves phase-space area exactly ($\det\mathbf{S}_h = 1$) at every $h$, and keeps orbits bounded for $h < 2$.
 :::
 
 ::: {.col .fig .big}
@@ -1137,7 +1137,7 @@ Comparing forward and backward Euler on $\dot{\mathbf{x}} = \mathrm{diag}(-50, -
 @!odes-solvers-stiffness-sweep
 
 ::: {.d2l-note .rule}
-At $h = 0.10$, both solvers track the slow mode $e^{-1} \approx 0.3679$ to within $5\%$ ($0.3487$ and $0.3855$), but forward Euler blows up the fast mode to $1.0 \times 10^6$ while backward Euler damps it to $1.0 \times 10^{-8}$.
+At $h = 0.10$, both solvers track the slow mode $e^{-1} \approx 0.3679$ to within $5\%$ ($0.3487$ and $0.3855$), but forward Euler blows up the fast mode to $1.0 \times 10^6$ while backward Euler damps it to $1.7 \times 10^{-8}$.
 :::
 :::
 

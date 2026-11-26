@@ -235,12 +235,12 @@ class MuMLP(MLP):
     def __init__(self, width, base_width=8192):
         super().__init__(width)
         self.m = width / base_width
-        # Rule 1: output init variance 1/base_width at every width
+        # Rule 3: output init variance 1/base_width at every width
         with torch.no_grad():
             self.fc_out.weight.mul_(self.m ** 0.5)
 
     def forward(self, X):
-        # Rule 2: scale the output matrix's logits; the bias is untouched
+        # Rule 3: scale the output matrix's logits; the bias is untouched
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
@@ -249,7 +249,7 @@ class MuMLP(MLP):
                 if not any(p is q for q in hidden)]
         return torch.optim.Adam([
             {'params': rest, 'lr': lr},
-            {'params': hidden, 'lr': lr / self.m}])  # Rule 3: hidden LR / m
+            {'params': hidden, 'lr': lr / self.m}])  # Rule 2: hidden LR / m
 ```
 
 ```{.python .input #scaling-the-rules}
@@ -259,11 +259,11 @@ class MuMLP(MLP):
     def __init__(self, width, base_width=8192, *, rngs):
         super().__init__(width, rngs=rngs)
         self.m = width / base_width
-        # Rule 1: output init variance 1/base_width at every width
+        # Rule 3: output init variance 1/base_width at every width
         self.fc_out.kernel[...] *= self.m ** 0.5
 
     def __call__(self, X):
-        # Rule 2: scale the output matrix's logits; the bias is untouched
+        # Rule 3: scale the output matrix's logits; the bias is untouched
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
@@ -271,7 +271,7 @@ class MuMLP(MLP):
             name = jax.tree_util.keystr(path)
             return 'hidden' if 'fc_h' in name and 'kernel' in name else 'rest'
         tx = optax.multi_transform(
-            {'hidden': optax.adam(lr / self.m),  # Rule 3: hidden LR / m
+            {'hidden': optax.adam(lr / self.m),  # Rule 2: hidden LR / m
              'rest': optax.adam(lr)},
             lambda params: jax.tree_util.tree_map_with_path(label, params))
         return nnx.Optimizer(self, tx, wrt=nnx.Param)
@@ -349,7 +349,7 @@ d2l.plot(check_widths, list(mup_acts), 'width', 'mean |activation|',
          legend=['layer 1', 'layer 2', 'layer 3', 'logits'])
 ```
 
-Under SP (`MLP`), layer $2$ grows as $O(n)$, layer $3$ compounds to $O(n^2)$, and the output logits explode as $O(n^3)$ (increasing $1{,}000\times$ from width $128$ to width $8{,}192$ after a single step). Under $\mu\text{P}$ (`MuMLP`), every layer's activation and logit scale remains flat across all seven widths.
+Under SP (`MLP`), layer $2$, layer $3$ and the output logits approach $O(n)$, $O(n^2)$ and $O(n^3)$ growth at the widest widths (the logits rise about $1{,}000\times$ from width $128$ to width $8{,}192$ after a single step). Under $\mu\text{P}$ (`MuMLP`), every layer's activation and logit scale remains flat across all seven widths.
 
 Repeating the $400$-step learning-rate sweep under $\mu\text{P}$ confirms that the optimal learning rate aligns across the entire $64\times$ width range:
 
@@ -453,7 +453,7 @@ Width Parameterization and μP Scaling<br>**standard parametrization drift · co
 
 ::: {.cols .vc}
 ::: {.col}
-- **Standard Parametrization (SP) drift:** Tuning Adam on a narrow proxy ($n = 128$, $\eta^\star \approx 3.9 \times 10^{-3}$) and transferring to a $64\times$ wider network ($n = 8{,}192$) wipes out the entire $1{,}000\times$ parameter increase ($\approx 0.33$ vs. retuned $\approx 0.22$ loss) because $\eta^\star$ drifted down $16\times$.
+- **Standard Parametrization (SP) drift:** Tuning Adam on a narrow proxy ($n = 128$, $\eta^\star \approx 3.9 \times 10^{-3}$) and transferring to a $64\times$ wider network ($n = 8{,}192$) wipes out the entire $1{,}000\times$ parameter increase ($\approx 0.34$ vs. retuned $\approx 0.23$ loss) because $\eta^\star$ drifted down $16\times$.
 - **Maximal Update Parametrization ($\mu\text{P}$, Yang et al., 2022):** Scales layer LRs and readout multipliers by $m = n/n_{\text{base}}$ so $\eta^\star$ transfers zero-shot across widths.
 :::
 
@@ -571,9 +571,9 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 ::: {.cols .vc}
 ::: {.col}
 - Setting `base_width=8192` ($m = 1$ at $n = 8{,}192$) makes `MuMLP` identical to `MLP` at the widest network so both sweeps share the exact same anchor at $n = 8{,}192$:
-  - **Rule 1 (`__init__`):** Multiply `fc_out` weights (initialized at std $1/\sqrt{n}$) by $\sqrt{m} = \sqrt{n / n_{\text{base}}}$ so variance becomes $\frac{1}{n} \cdot \frac{n}{n_{\text{base}}} = \frac{1}{n_{\text{base}}}$.
-  - **Rule 2 (`forward`):** Divide features entering `fc_out` by $m$.
-  - **Rule 3 (`configure_adam`):** Set hidden matrix learning rate to `lr / self.m`.
+  - **Rule 3 (`__init__`):** Multiply `fc_out` weights (initialized at std $1/\sqrt{n}$) by $\sqrt{m} = \sqrt{n / n_{\text{base}}}$ so variance becomes $\frac{1}{n} \cdot \frac{n}{n_{\text{base}}} = \frac{1}{n_{\text{base}}}$.
+  - **Rule 3 (`forward`):** Divide features entering `fc_out` by $m$.
+  - **Rule 2 (`configure_adam`):** Set hidden matrix learning rate to `lr / self.m`.
 :::
 
 ::: {.col .fig}
@@ -592,7 +592,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
   - **Layer 1 (`fc_in`, fan-in $784$):** Flat across all widths ($\Theta(1)$).
   - **Layer 2 (`fc_h1`, fan-in $n$):** Grows linearly with width as **$O(n)$** (slope $+1$).
   - **Layer 3 (`fc_h2`):** Compounds Layer 2's input blow-up with its own $O(n)$ update to grow as **$O(n^2)$** (slope $+2$).
-  - **Output logits (`fc_out`):** Explodes $1{,}000\times$ across the width range as **$O(n^3)$** (slope $+3$).
+  - **Output logits (`fc_out`):** Rise about $1{,}000\times$ across the width range, approaching **$O(n^3)$** (slope $+3$) at the widest widths.
 :::
 
 ::: {.col .fig}
@@ -625,7 +625,7 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 ::: {.col}
 - Repeating the $400$-step learning-rate sweep across $n \in \{128, 512, 2048, 8192\}$ under $\mu\text{P}$:
   - The U-shaped curves now **align vertically** across the entire $64\times$ width range (135K to 141M parameters).
-  - The log–log slope of $\eta^\star(n)$ collapses from about $-0.7$ under SP to **near $0.0$** (the optimum stays at $2.4 \times 10^{-4}$ or within one grid step at every width).
+  - The log–log slope of $\eta^\star(n)$ collapses from about $-0.7$ under SP to **near zero**, at most about $0.2$ (the optimum stays at $2.4 \times 10^{-4}$ or within one grid step at every width).
   - Wider networks achieve strictly lower training loss at the exact same shared learning rate.
 :::
 
@@ -639,8 +639,8 @@ Because all $n$ terms $|h_j| > 0$ add with the same sign, a single Adam step cha
 [Cost of Proxy-to-Target Transfer]{.kicker}
 
 - How much loss do we pay at width $8{,}192$ when we use the learning rate tuned on the $1{,}000\times$ smaller width-$128$ proxy instead of retuning at width $8{,}192$?
-  - **Under SP:** Loses **$0.09\text{--}0.15$ nats** ($\approx 0.33$ vs. $\approx 0.22$), no better than the narrow width-$128$ proxy itself.
-  - **Under $\mu\text{P}$:** Loses **$\le 0.003$ nats** ($\approx 0.22$ either way), completely indistinguishable from seed noise.
+  - **Under SP:** Loses **$0.09\text{--}0.15$ nats** ($\approx 0.34$ vs. $\approx 0.23$), no better than the narrow width-$128$ proxy itself.
+  - **Under $\mu\text{P}$:** Loses **$\le 0.003$ nats** ($\approx 0.23$ either way), completely indistinguishable from seed noise.
 - Notice also that under $\mu\text{P}$, narrower proxy networks rise sooner on the right of $\eta^\star$ (where step size $\eta/m$ reaches initial weight size $1/\sqrt{n}$ at $\eta = \sqrt{n}/n_{\text{base}}$), so a rate stable on the narrow proxy is guaranteed to be stable on the wide target.
 
 @!scaling-learning-rate-transfer-1

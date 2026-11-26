@@ -876,7 +876,7 @@ Running greedy decoding for 50 tokens after `'The Time Traveller'` and `'It seem
 @!decoding-greedy-decoding
 
 - **Deterministic state-space attractors:** In an autoregressive RNN under greedy decoding, both $\mathbf{H}_t = g(\mathbf{H}_{t-1}, x_t)$ and $x_t = \operatorname*{argmax} \mathbf{O}_{t-1}$ are deterministic mappings. Once the trajectory lands near a hidden state it visited a few tokens earlier, it is mathematically locked into a periodic limit cycle forever.
-- **Not just a small-RNN artifact:** Holtzman et al. (2020) proved that the exact same **neural text degeneration** afflicts 1.5B-parameter GPT-2 Transformers whenever open-ended text is decoded by likelihood maximization.
+- **Not just a small-RNN artifact:** Holtzman et al. (2020) showed the same **neural text degeneration** in GPT-2 Large (774M parameters) whenever open-ended text is decoded by likelihood maximization.
 :::
 
 ::: {.slide title="Beam Search: Retaining the Top-w Partial Hypotheses"}
@@ -996,9 +996,9 @@ Plotting our trained RNN's sorted next-token probabilities after `'The Time Trav
 
 ::: {.cols .vc}
 ::: {.col}
-- **Head vs. tail structure:** Probabilities decay gently across ranks $1\text{--}50$ ($0.15 \to 10^{-3}$) before plunging into a 900-token noise tail.
+- **Head vs. tail structure:** Probabilities decay gently across ranks $1\text{--}100$ ($\approx 0.1 \to 10^{-3}$) before plunging into a 900-token noise tail.
 - **Vertical vs. horizontal cutoffs:**
-  - **Top-$k$ ($k = 20$, orange):** Fixed vertical wall at rank 20.
+  - **Top-$k$ ($k = 20$, magenta dashed):** Fixed vertical wall at rank 20.
   - **Top-$p$ ($p = 0.9$, green):** Vertical wall placed dynamically where cumulative area reaches $90\%$.
   - **Min-$p$ ($p_{\min} = 0.05$, red):** Horizontal floor at $5\%$ of the rank-1 peak ($0.05\,P(x_{(1)})$); everything below the bar is pruned.
 :::
@@ -1037,7 +1037,7 @@ To quantify the trade-off between **model likelihood** (mean log-probability per
 
 @!decoding-evaluating-generated-text
 
-- **The maximization collapse:** Greedy and beam search ($w = 4$) achieve the highest per-token log-probability ($\approx -1.4$ to $-1.6$ nats), yet their `distinct-3` scores collapse ($\approx 0.15\text{--}0.30$) because over $70\%$ of their output consists of repeated 3-grams.
+- **The maximization collapse:** Greedy and beam search ($w = 4$) achieve the highest per-token log-probability ($\approx -1.5$ to $-2.2$ nats, beam above greedy), yet their `distinct-3` scores collapse ($\approx 0.15\text{--}0.30$) because over $70\%$ of their output consists of repeated 3-grams.
 - **The truncated sampling sweet spot:** Pure sampling ($\tau = 1$) reaches `distinct-3` $\approx 0.99$ but suffers low likelihood ($\approx -4.0$ nats); `top-k=20` and `min-p=0.05` preserve nearly identical diversity (`distinct-3` $\approx 0.97\text{--}0.99$) while boosting per-token log-probability by a full nat ($\approx -2.9$ nats).
 :::
 

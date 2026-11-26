@@ -102,8 +102,8 @@ Deep Reinforcement Learning: Sample Efficiency and Function Approximation<br>**b
 
 ::: {.cols .vc}
 ::: {.col}
-- **Continuous Pendulum-v1 ($\ge -200$ goal):** Sample cost drops from $\sim 300\text{k}$ steps (REINFORCE) to $2.4\text{k}$–$11\text{k}$ (SAC, §{sec_sac}) and $200$–$600$ steps (World-Model MPC, §{sec_model_based}).
-- **Discrete CartPole-v1 ($500$ ceiling):** Multi-epoch PPO (§{sec_ppo}) halves the sample cost of 1-step Actor–Critic ($\sim 60\text{k} \to \sim 25\text{k}$ steps), with DQN (§{sec_dqn}) solving in $\sim 40\text{k}$ steps.
+- **Continuous Pendulum-v1 ($\ge -200$ goal):** Sample cost drops from $\sim 300\text{k}$ steps (REINFORCE) to $2.4\text{k}$–$11\text{k}$ (SAC, §{sec_sac}) and $200$–$800$ steps (World-Model MPC, §{sec_model_based}).
+- **Discrete CartPole-v1 ($500$ ceiling):** Multi-epoch PPO (§{sec_ppo}) halves the sample cost of single-epoch updates ($\gtrsim 50\text{k} \to \sim 25\text{k}$ steps), with DQN (§{sec_dqn}) solving in $\sim 40\text{k}$ steps.
 - **Exact tabular & verifier audits:** Diagnose reward hacking (§{sec_regularized}, §{sec_rl_sequences}) and offline overestimation (§{sec_offline}) against closed-form optima.
 :::
 

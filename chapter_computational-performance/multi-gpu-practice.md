@@ -12,7 +12,7 @@ compile a single sharded program across all GPUs, and they group gradients into 
 soon as each bucket fills during the backward pass. To test how much of the
 gradient exchange can be hidden behind backward compute, we move from LeNet to
 ResNet-18 on $64 \times 64$ Fashion-MNIST images (2.2G multiply-adds per
-image, ~50 FLOPs per byte of its 45 MB gradient, keeping one RTX 4090 busy for
+image, ~300 training FLOPs per byte of its 45 MB gradient, keeping one RTX 4090 busy for
 ~100 ms per 256-image step). We verify what the parallel step computes via a
 one-step check and measure weak and strong scaling across one, two, and four
 GPUs against our cost model.
@@ -1026,8 +1026,8 @@ $$t_{\textrm{exposed (ideal)}} \;=\; \frac{2(k-1)}{k}\, S_{\textrm{last\_bucket}
 
 PyTorch DDP closes the first bucket at $1\text{ MiB}$ (so communication starts almost immediately) and subsequent buckets at `bucket_cap_mb = 25` ($25\text{ MiB} = 26.2\text{ MB}$):
 
-- **ResNet-18 bucket layout ($S = 44.7\text{ MB}$ total):** Walking `reversed(list(net.parameters()))` forms three buckets of **$9.4\text{ MB}$, $26.2\text{ MB}$, and $9.0\text{ MB}$** (a single $9.4\text{ MB}$ late-stage `Conv2d` weight tensor overshoots the $1\text{ MiB}$ first cap on its own).
-- **Ideal overlap prediction:** If the first two buckets ($9.4$ and $26.2\text{ MB}$) finish behind backpropagation, only the final **$S_{\textrm{last}} = 9.0\text{ MB}$** bucket (holding the earliest layers, computed last) remains exposed, cutting exposed communication by **$5\times$**.
+- **ResNet-18 bucket layout ($S = 44.7\text{ MB}$ total):** Walking `reversed(list(net.parameters()))` forms three buckets of **$9.5\text{ MB}$, $26.5\text{ MB}$, and $8.7\text{ MB}$** (a single $9.4\text{ MB}$ late-stage `Conv2d` weight tensor overshoots the $1\text{ MiB}$ first cap on its own).
+- **Ideal overlap prediction:** If the first two buckets ($9.5$ and $26.5\text{ MB}$) finish behind backpropagation, only the final **$S_{\textrm{last}} = 8.7\text{ MB}$** bucket (holding the earliest layers, computed last) remains exposed, cutting exposed communication by **$5\times$**.
 :::
 
 ::: {.slide title="Asynchronous Allreduce Combining in XLA (30 MiB)" only="jax"}

@@ -429,7 +429,7 @@ holding bf16 copies of the weights during the step increases fixed parameter
 memory from $16N = 15.1$ GiB to $18N = 17.0$ GiB, leaving only 7.0 GiB for
 activations. The activation savings and extra weight copies largely offset
 each other, expanding the maximum token capacity on a 24 GiB card by only
-15–25%.
+15–27%.
 
 The primary benefit of bf16 mixed precision is speed rather than capacity: on
 the RTX 4090, bf16 tensor cores run at 165 TFLOP/s, twice the 82.6 TFLOP/s of
@@ -567,9 +567,10 @@ for name, (fixed, per_token) in budgets.items():  # M(n) <= M_gpu
 
 With per-block checkpointing, the 18 blocks together store only
 $18 \times 8 = 144$ KiB/token (less than the output layer and loss alone), raising
-the token budget more than threefold (to 10,000–15,000 tokens). Notice that under checkpointing, bf16 actually fits slightly *fewer*
-tokens than fp32 because the extra $2N$ bytes of bf16 weight copies outweigh
-the activation savings on the single recomputed block. At that point, the
+the token budget more than threefold (to 10,000–15,000 tokens). Notice that under checkpointing, bf16 actually fits *fewer*
+tokens than fp32: the extra $2N$ bytes of bf16 weight copies, together with
+(in PyTorch) a larger bf16 output layer and loss, outweigh the activation
+savings on the single recomputed block. At that point, the
 output logits and cross-entropy loss dominate per-token memory; computing the
 output projection and loss in token chunks inside a checkpoint of its own
 eliminates that bottleneck for only $2dV / (6N) \approx 3\%$ extra FLOPs
@@ -1089,7 +1090,7 @@ In `bfloat16` mixed precision, the two residual-stream inputs per block remain i
 
 @!memory-precision-mixed-precision-1
 
-- **Why total token capacity barely grows ($\sim 15\text{--}25\%$):** Caching `bfloat16` weight copies during the step raises fixed parameter memory from $16N = 15.1\text{ GiB}$ to $18N = 17.0\text{ GiB}$ (shrinking activation headroom from $8.9 \to 7.0\text{ GiB}$), and the large `float32` loss log-probabilities ($a_{\textrm{out}}$) do not shrink.
+- **Why total token capacity barely grows ($\sim 15\text{--}27\%$):** Caching `bfloat16` weight copies during the step raises fixed parameter memory from $16N = 15.1\text{ GiB}$ to $18N = 17.0\text{ GiB}$ (shrinking activation headroom from $8.9 \to 7.0\text{ GiB}$), and the large `float32` loss log-probabilities ($a_{\textrm{out}}$) do not shrink.
 :::
 
 ::: {.slide title="Tensor Core Speedup: Scalar fp32 vs. tf32 vs. bf16"}
@@ -1099,7 +1100,7 @@ Mixed precision is primarily a **speed** optimization. Benchmarking one SGD step
 
 @!memory-precision-mixed-precision
 
-- **Scalar `fp32` $\to$ Tensor Core `tf32` ($1.45\times$):** Same $82.6\text{ TFLOP/s}$ theoretical ceiling and 32-bit storage, but Tensor Core tile instructions reach $\sim 90\%$ utilization vs. $\sim 60\%$ on scalar ALUs.
+- **Scalar `fp32` $\to$ Tensor Core `tf32` ($\sim 1.5\times$):** Same $82.6\text{ TFLOP/s}$ theoretical ceiling and 32-bit storage, but Tensor Core tile instructions reach $\sim 90\%$ utilization vs. $\sim 60\%$ on scalar ALUs.
 - **Tensor Core `tf32` $\to$ `bf16` ($1.5\text{--}1.75\times$):** Matmul time halves to $\sim 6.7\text{ ms}$, while the bandwidth-bound `fp32` SGD update ($1.3\text{ ms}$) and weight casts remain constant.
 :::
 
@@ -1128,7 +1129,7 @@ Evaluating $M(n) \le 24\text{ GiB}$ for our 18-block, 1B-parameter GPT shows how
 @!memory-precision-activation-checkpointing-1
 
 - **More than $3\times$ larger micro-batches:** Per-block checkpointing expands capacity from $\sim 2{,}800$ tokens to **$\sim 10{,}000\text{--}15{,}000$ tokens**.
-- **Surprising interaction:** Under full per-block checkpointing, `bf16` fits slightly *fewer* tokens than `fp32` because its extra $2N = 1.9\text{ GiB}$ of `bf16` weight copies outweigh the $60\text{ KiB/token}$ saved on the single currently recomputed block.
+- **Surprising interaction:** Under full per-block checkpointing, `bf16` fits *fewer* tokens than `fp32` because its extra $2N = 1.9\text{ GiB}$ of `bf16` weight copies (and, in PyTorch, a larger output layer and loss) outweigh what the single recomputed block saves.
 :::
 
 ::: {.slide title="Measuring Checkpointing: 40 KiB/Token and +25% Time"}

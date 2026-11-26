@@ -848,7 +848,7 @@ print(f'full attention:            loss {full:.2f}, '
 3. **Prefix sharing across $K$ completions.** Suppose $K = 16$ sequences in a batch share a common system prompt of $n_{\textrm{shared}} = 4096$ tokens and each has generated $n_{\textrm{unique}} = 256$ unique tokens. Modify the denominator of :eqref:`eq_kv-cache-batch-throughput` when the shared prefix KV cache is stored and read **once** per step for all $K$ sequences, and compute the resulting throughput speedup at $K = 16$ for the 70B GQA model.
    :exlabel:`ex_kv-cache-shared-reads`
 
-4. **INT8 / FP8 KV cache quantization.** Store the cached keys and values of GPT-2 in `forward_blocks` using symmetric per-token 8-bit integer quantization: for each token vector $\mathbf{u} \in \mathbb{R}^d$, compute scale $s = \max_j |u_j| / 127$, quantize $\tilde{\mathbf{u}} = s \cdot \textrm{round}(\mathbf{u} / s)$, and use $\tilde{\mathbf{u}}$ in attention. Measure the change in `tail_loss` on `x` when quantizing keys and values to 8 bits ($2\times$ cache byte reduction) versus 4 bits (`max / 7`, $4\times$ reduction).
+4. **INT8 / FP8 KV cache quantization.** Store the cached keys and values of GPT-2 in `forward_blocks` using symmetric per-token 8-bit integer quantization: for each token vector $\mathbf{u} \in \mathbb{R}^d$, compute scale $s = \max_j |u_j| / 127$, quantize $\tilde{\mathbf{u}} = s \cdot \textrm{round}(\mathbf{u} / s)$, and use $\tilde{\mathbf{u}}$ in attention. Measure the change in `tail_loss` on `x` when quantizing keys and values to 8 bits ($4\times$ smaller than our FP32 cache, $2\times$ smaller than BF16) versus 4 bits (`max / 7`, $8\times$ / $4\times$).
    :exlabel:`ex_kv-cache-quantization`
 
 5. **Attention sinks and a virtual sink logit ($\textrm{softmax}_1$).** :citet:`Xiao.Tian.Chen.ea.2024` and gpt-oss (:numref:`tab_modern-recipe`) note that a head needs an attention sink because standard softmax forces attention weights to sum to $1$.
@@ -969,7 +969,7 @@ Passing `donate_argnames=('ks', 'vs')` to `@jax.jit` around `jax.lax.fori_loop` 
 ::: {.slide title="Verifying Exact Logit Equivalence"}
 [Correctness Verification]{.kicker}
 
-KV caching is **not an approximation**: prefilling $16$ tokens and then stepping through $32$ one by one gives the **same logits** as one uncached pass over all $48$ (to rounding, $\sim 10^{-7}$), for rotary and learned positions alike:
+KV caching is **not an approximation**: prefilling $16$ tokens and then stepping through $32$ one by one gives the **same logits** as one uncached pass over all $48$ (to rounding, $\sim 10^{-6}$), for rotary and learned positions alike:
 
 @kv-cache-same-logits-measured-1
 :::
@@ -1015,7 +1015,7 @@ KV caching is **not an approximation**: prefilling $16$ tokens and then stepping
 ::: {.cols .vc}
 ::: {.col}
 - **Compute vs. memory transfer:** On GPT-2 Small ($B = 1$), $2N \approx 2.5 \times 10^8\text{ FLOPs}$ takes $0.003\text{ ms}$ at $83\text{ TFLOP/s}$, yet streaming $498\text{ MB}$ of FP32 weights across $1\text{ TB/s}$ HBM imposes a hard **$0.50\text{ ms/token}$** transfer floor.
-- **Measured latency ($0.8\text{--}1.3\text{ ms/token}$):** Sits within $1.6\text{--}2\times$ of the physical HBM bandwidth limit.
+- **Measured latency ($0.8\text{--}1.3\text{ ms/token}$):** Sits within about $1.6\text{--}2.6\times$ of the weight-streaming floor (less once cache bytes at long contexts are counted).
 :::
 
 ::: {.col .fig .big}

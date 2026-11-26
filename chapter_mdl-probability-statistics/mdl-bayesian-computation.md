@@ -1947,7 +1947,7 @@ $$\log p(\mathcal{D}) = \underbrace{\mathbb{E}_{q_{\boldsymbol{\psi}}}\bigl[\log
 
 ::: {.cols .vc}
 ::: {.col}
-- **Reverse KL ($D_{\mathrm{KL}}(q \,\|\, p) = \int q \log\frac{q}{p}$, used by VI):** Blows up to $+\infty$ wherever $p(\boldsymbol{\theta} \mid \mathcal{D}) \approx 0$ and $q(\boldsymbol{\theta}) > 0$. This **zero-avoiding** penalty forces $q$ to lock onto a single mode and underestimate support width.
+- **Reverse KL ($D_{\mathrm{KL}}(q \,\|\, p) = \int q \log\frac{q}{p}$, used by VI):** Blows up to $+\infty$ wherever $p(\boldsymbol{\theta} \mid \mathcal{D}) \approx 0$ and $q(\boldsymbol{\theta}) > 0$. This **zero-forcing** (mode-seeking) penalty forces $q$ to lock onto a single mode and underestimate support width.
 - **Forward KL ($D_{\mathrm{KL}}(p \,\|\, q) = \int p \log\frac{p}{q}$):** Blows up wherever $p > 0$ and $q \approx 0$. This **mass-covering** penalty forces $q$ to bridge across all modes (putting its peak in an empty valley), and requires expectations under the intractable $p$.
 :::
 

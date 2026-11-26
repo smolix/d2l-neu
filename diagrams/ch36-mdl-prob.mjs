@@ -1141,8 +1141,8 @@ function pairedVsUnpaired() {
   o += tx(138, 126, "Var(θ̂_B − θ̂_A) = Var(A) + Var(B)", { mono: true, fs: 11, fw: 700, fill: C.ink });
   o += tx(138, 152, "SE = √(0.90² + 0.85²)% = 1.24%", { mono: true, fs: 11.5, fw: 700, fill: D.red.dark });
   o += tx(138, 182, "Gap / SE = 0.9 / 1.24 = 0.73 se", { mono: true, fs: 11, fw: 600, fill: C.ink });
-  o += tx(138, 210, "Needs 27,000 total questions", { fs: 12, fw: 700, fill: D.red.dark });
-  o += tx(138, 232, "for 80% power at 1% gap!", { fs: 11.5, fill: C.muted });
+  o += tx(138, 210, "Planning (90% vs 91%, 4% disagree):", { fs: 11.5, fill: C.muted });
+  o += tx(138, 232, "27,000 total questions", { fs: 12, fw: 700, fill: D.red.dark });
 
   // Right: Paired shared test set
   o += box(282, 78, 240, 172, C.lgreen, C.green, 8, 2);
@@ -1150,8 +1150,8 @@ function pairedVsUnpaired() {
   o += tx(402, 126, "959 agreements (dᵢ = 0) drop out!", { fs: 12, fw: 700, fill: C.ink });
   o += tx(402, 152, "Only 41 disagreements (25 vs 16)", { mono: true, fs: 11.5, fw: 700, fill: D.green.dark });
   o += tx(402, 182, "Var(B−A) = Var(A)+Var(B)−2Cov(A,B)", { mono: true, fs: 10.5, fw: 600, fill: C.ink });
-  o += tx(402, 210, "Needs only 3,100 paired questions", { fs: 12, fw: 700, fill: D.green.dark });
-  o += tx(402, 232, "9× reduction in labeling cost!", { fs: 11.5, fw: 700, fill: D.green.dark });
+  o += tx(402, 210, "Same planning case: 9× fewer labels", { fs: 11.5, fill: C.muted });
+  o += tx(402, 232, "only 3,100 paired questions", { fs: 12, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }
 
@@ -1899,7 +1899,7 @@ function threeIntervals() {
     ["1. Asymptotic CLT", "±0.54% (δ=0.05)", "±1.35% (δ=10⁻⁶)", "Exact only as n→∞; plug-in σ̂", C.lblue, C.blue, D.blue.dark],
     ["2. Chebyshev (σ²/nt²)", "±2.24% (δ=0.05)", "±500% (USELESS!)", "1/δ scaling explodes at 10⁻⁶", D.red.tint, D.red.base, D.red.dark],
     ["3. Hoeffding (2e⁻²ⁿᵗ²)", "±1.36% (δ=0.05)", "±2.69% (δ=10⁻⁶)", "Finite-n guarantee; √log(2/δ)", C.lamber, C.amber, D.orange.dark],
-    ["4. Bernstein (Var-Aware)", "±0.79% (δ=0.05)", "±1.62% (δ=10⁻⁶)", "Finite-n + uses small p(1−p)!", C.lgreen, C.green, D.green.dark],
+    ["4. Bernstein (Var-Aware)", "±0.79% (δ=0.05)", "±1.66% (δ=10⁻⁶)", "Finite-n + uses small p(1−p)!", C.lgreen, C.green, D.green.dark],
   ];
   rows.forEach(([m, c95, c1m, note, fill, st, dk], i) => {
     const y = 64 + i * 48;

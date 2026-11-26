@@ -1226,7 +1226,7 @@ is an affine function of the observed block $\mathbf x_2$, and the conditional
 covariance does not depend on the observed value at all. In our running
 example, $\mathbf B=\tfrac12$, so observing $x_2=2$ gives conditional mean
 $\tfrac12\cdot2=1$ and conditional variance $2-1\cdot\tfrac12\cdot1=\tfrac32$.
-Thus $x_1\mid x_2=2\sim\mathcal N(1,\tfrac32)$, matching the vertical slice
+Thus $x_1\mid x_2=2\sim\mathcal N(1,\tfrac32)$, matching the horizontal slice at $x_2=2$
 shown in :numref:`fig_mdl-prob-mvn-contours` (right).
 
 Notice how $\mathbf B$ is the linear regression matrix predicting

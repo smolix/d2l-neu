@@ -600,7 +600,7 @@ Two invariants confirm the array construction: every $(s, a)$ slice of `P` sums 
 
 @!mdp-states-actions-and-the-transition-kernel-4
 
-- **Boundary reflection:** At corner cells, two perpendicular slips can hit walls and stay put, accumulating $2/3$ probability on the current cell.
+- **Boundary reflection:** At corner cells, a command into a wall and one of its slips can both hit walls, so $2/3$ of the probability stays on the current cell.
 - **Expected reward at cell 14:** Commanding *down*, *right*, or *up* from cell 14 enters goal cell 15 with probability $1/3$, giving expected reward $r(14, a) = 1/3$, while *left* never reaches the goal.
 :::
 
@@ -684,7 +684,7 @@ Gymnasium distinguishes physical episode endings (`terminated=True`) from artifi
 Representing terminal states consistently keeps matrix equations and finite-horizon rollouts aligned:
 
 - **Absorbing-state convention:** `TabularMDP` models each hole and the goal as a self-loop ($P(s \mid s, a) = 1$) with $r(s, a) = 0$, ensuring every row of $P$ sums to $1$ without altering trajectory returns.
-- **When $\gamma = 1$ is well-defined:** If every policy terminates in finitely many steps, or if total reward is bounded above (FrozenLake pays at most $1$ per episode), undiscounted returns remain finite.
+- **When $\gamma = 1$ is well-defined:** If every policy terminates in finitely many steps, or if rewards are nonnegative and every trajectory collects a bounded total (FrozenLake pays at most $1$ per episode), undiscounted returns remain finite.
 - **When $\gamma = 1$ diverges:** Adding a $+0.05$ per-step survival bonus makes the cyclic always-*up* policy collect infinite undiscounted return, forcing continuing tasks to use $\gamma < 1$.
 :::
 

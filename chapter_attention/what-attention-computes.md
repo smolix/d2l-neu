@@ -739,7 +739,7 @@ d2l.plot([jnp.arange(1, 64), [24, 24]], [acc, [0, 1]],
 
 Accuracy jumps from $1/64$ on the first copy (and at the restart boundary
 $t = 24$, where content matching has not yet seen a repeated token) to
-more than $0.9$ from position $25$ onward.
+about $0.8$ at position $25$ and above $0.9$ a few positions later.
 
 What accounts for the remaining error after the restart? When a
 token appears $K > 1$ times within the $L$-token pattern with different
@@ -1294,7 +1294,7 @@ Correlation in attention maps or weights is not causation. To test which heads a
 ::: {.col}
 - With $64^{24} \approx 2.2 \times 10^{43}$ possible patterns of length $24$, the model has never seen any test pattern during training, and all token transitions are equally likely a priori.
 - **First Copy ($t < 24$):** Accuracy sits at the chance baseline $1/64 \approx 0.016$.
-- **Second Copy ($t \ge 25$):** Jumps immediately above $0.90$ from a *single* in-context exposure. (At the exact restart $t = 24$, content matching has not yet seen a repeated token.)
+- **Second Copy ($t \ge 25$):** Jumps to about $0.8$ at once and above $0.90$ within a few positions, from a *single* in-context exposure. (At the exact restart $t = 24$, content matching has not yet seen a repeated token.)
 :::
 
 ::: {.col .fig}

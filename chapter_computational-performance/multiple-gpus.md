@@ -1154,7 +1154,7 @@ Increasing the per-GPU batch size $b$ from $256 \to 4{,}096 \to 32{,}768$ pushes
 
 @!multiple-gpus-larger-minibatches
 
-- **Three distinct regimes:** At $b = 256$, $t_{\textrm{dev}} \ll h_{\textrm{step}}$ (no gain); at $b = 4{,}096$, $t_{\textrm{dev}}$ begins to overtake $h_{\textrm{step}}$; at $b = 32{,}768$, device compute dominates both host dispatch and the $247\text{ KB}$ allreduce, achieving **$\sim 1.9\times$ weak-scaling speedup** on two GPUs.
+- **Three distinct regimes:** At $b = 256$, $t_{\textrm{dev}} \ll h_{\textrm{step}}$ (no gain); at $b = 4{,}096$, $t_{\textrm{dev}}$ begins to overtake $h_{\textrm{step}}$; at $b = 32{,}768$, device compute dominates both host dispatch and the $247\text{ KB}$ allreduce, achieving a **$\sim 2\times$ ($1.97\text{--}1.98\times$) weak-scaling speedup** on two GPUs.
 :::
 
 ::: {.slide title="Concept Check: Allreduce Traffic and Multi-GPU Speedup"}

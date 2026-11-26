@@ -1370,9 +1370,9 @@ Comparing the six independent seeds of two-time `distillation` against teacher-f
 | Method & Step Budget | Max Mode Weight Error (6 Seeds) | Stray Fraction ($>3s$) | Within-Mode Spread | Key Finding |
 | :--- | :--- | :--- | :--- | :--- |
 | **True Mixture Data** | $0.005$ (sampling noise) | $1.1\%$ | **$0.474$** | *(Ground-truth target)* |
-| **Teacher (50 Euler steps)** | $0.002$ | $1.5\%$ | **$0.471$** | Matches data distribution closely |
+| **Teacher (50 Euler steps)** | $0.003$ | $1.5\%$ | **$0.46$** | Matches data distribution closely |
 | **Consistency ($s=0$), 1 jump** | $0.002$–$0.006$ | $1.9\%$–$2.1\%$ | **$0.453$–$0.463$** | Accurate 1-step weights & spread |
-| **Distillation ($s \le t$), 1 / 2 / 4 jumps** | $0.001$–$0.006$ (all seeds) | $2.0\% \to \mathbf{1.0\%}$ | **$0.452$–$0.463$** | Preserves spread & deterministic map |
+| **Distillation ($s \le t$), 1 / 2 / 4 jumps** | $0.001$–$0.006$ (all seeds) | $2.0\% \to \mathbf{1.0\%}$ | **$0.45$–$0.47$** | Preserves spread & deterministic map |
 | **MeanFlow (no teacher), 1 / 4 jumps** | $\le 0.007 \to$ up to $\mathbf{0.02}$ | $\approx 4\% \to \approx 1\%$ | **$0.31$–$0.34 \to 0.35$–$0.39$** | **Contracts mode spread by $\approx 30\%$ (1 jump), $15$–$25\%$ (4 jumps)** |
 
 ::: {.d2l-note .warn}
@@ -1424,7 +1424,7 @@ Evaluating the teacher ($1$ to $50$ Euler steps) and two distilled students (`se
 @!few-step-on-images-4
 
 - **Row 1 vs. Row 2 (Teacher 50 vs. 2 Euler steps):** Two Euler steps produce blurry, low-contrast ghosts that often fail to commit to the right garment category.
-- **Row 3 vs. Row 4 (Student 1 vs. 2 jumps):** Even a **single jump** (Row 3) recovers the 50-step teacher's garment silhouette and shade in every column; **two jumps** (Row 4) sharpen edges and textures to near-teacher quality.
+- **Row 3 vs. Row 4 (Student 1 vs. 2 jumps):** Even a **single jump** (Row 3) recovers the 50-step teacher's garment silhouette and shade in almost every column; **two jumps** (Row 4) sharpen edges and textures to near-teacher quality.
 :::
 
 ::: {.slide title="Distribution Matching Distillation (DMD) and Critics"}

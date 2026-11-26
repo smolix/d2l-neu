@@ -1284,12 +1284,12 @@ function actorCriticMlps() {
 
   o += box(174, 42, 368, 82, D.purple.tint, C.purple, 8, 2);
   o += tx(358, 64, 'Actor Network π_θ (opt_pi: 1 step / batch)', { fs: 13.5, fw: 700, fill: D.purple.dark });
-  o += tx(358, 88, 'dense d→64 → tanh → dense 64→64 → tanh → head', { mono: true, fs: 11, fill: C.ink });
+  o += tx(358, 88, 'dense d→64 → tanh → dense 64→head', { mono: true, fs: 11, fill: C.ink });
   o += tx(358, 108, 'Outputs discrete logits or Gaussian (μ_θ(s), log σ)', { fs: 11.8, fw: 600, fill: D.purple.dark });
 
   o += box(174, 142, 368, 82, C.lgreen, C.green, 8, 2);
   o += tx(358, 164, 'Critic Baseline V̂_w (opt_v: 40 steps / batch)', { fs: 13.5, fw: 700, fill: D.green.dark });
-  o += tx(358, 188, 'dense d→64 → tanh → dense 64→64 → tanh → scalar', { mono: true, fs: 11, fill: C.ink });
+  o += tx(358, 188, 'dense d→64 → tanh → dense 64→1', { mono: true, fs: 11, fill: C.ink });
   o += tx(358, 208, '40 MSE passes explain ~99% of return variance!', { fs: 11.8, fw: 700, fill: D.green.dark });
   return svg(W, H, o);
 }

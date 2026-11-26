@@ -754,7 +754,9 @@ $e^{-d\varepsilon/8}$ (Exercise
 :exref:`ex_mdl-concentration-generalization-chi-square-tail`). The norm itself
 keeps a Gaussian tail at every scale: exceeding $(1+\varepsilon)\sqrt d$ forces
 the squared norm above $(1+2\varepsilon+\varepsilon^2)d$, whose probability is
-at most $e^{-d(2\varepsilon+\varepsilon^2)/8}\leq e^{-d\varepsilon^2/8}$.
+at most $e^{-d\min(s,s^2)/8}$ with $s=2\varepsilon+\varepsilon^2$; since
+$s\geq\varepsilon^2$ and $s^2\geq4\varepsilon^2$, this is at most
+$e^{-d\varepsilon^2/8}$.
 
 How thick is this shell of typical norms? Since $\mathbb{E}[x^4]=3$, each
 coordinate square has $\textrm{Var}(x^2)=3-1=2$, giving
@@ -1176,7 +1178,7 @@ Concentration Inequalities and High-Dimensional Measure<br>**Chernoff method · 
 ::: {.col}
 - **Asymptotic CLT ($\pm 0.54\%$ at $95\%$):** Narrow, but exact only as $n \to \infty$ and reliant on plug-in $\hat{\sigma}$.
 - **Chebyshev's polynomial tail ($\sigma^2 / nt^2 \le \delta$):** Gives $\pm 2.24\%$ at $\delta = 0.05$, and explodes to a useless **$\pm 500\%$** at $\delta = 10^{-6}$.
-- **Exponential concentration (Hoeffding & Bernstein):** Certifies **$\pm 1.36\%$** at $\delta = 0.05$ and **$\pm 2.69\%$** at $\delta = 10^{-6}$ (tightened by variance-aware Bernstein to **$\pm 0.79\%$** and **$\pm 1.62\%$**).
+- **Exponential concentration (Hoeffding & Bernstein):** Certifies **$\pm 1.36\%$** at $\delta = 0.05$ and **$\pm 2.69\%$** at $\delta = 10^{-6}$ (tightened by variance-aware Bernstein to **$\pm 0.79\%$** and **$\pm 1.66\%$**).
 :::
 
 ::: {.col .fig .big}
@@ -1266,7 +1268,7 @@ Setting the failure probability $2\exp\bigl(-\frac{2nt^2}{(b-a)^2}\bigr) = \delt
 $$\bigl\lvert\bar{X} - \mathbb{E}[\bar{X}]\bigr\rvert \le (b-a)\sqrt{\frac{\log(2/\delta)}{2n}}, \qquad n \ge \frac{(b-a)^2\log(2/\delta)}{2t^2}$$
 
 - **Benchmark test-set sizing ($[a,b] = [0,1]$):** Certifying an error rate within $t = \pm 0.01$ ($1\%$) at $95\%$ confidence ($\delta = 0.05$) requires $n = \frac{\log 40}{2 \cdot 10^{-4}} = 18{,}445$ test examples (roughly twice the asymptotic Gaussian figure of $9{,}604$).
-- **Logarithmic cost of extreme confidence:** Raising reliability from $\delta = 0.05$ to $\delta = 10^{-6}$ increases $\log(2/\delta)$ by less than $4\times$ ($n = 72{,}413$ examples), whereas Chebyshev's $1/\delta$ scaling would demand $2.5 \times 10^9$ examples.
+- **Logarithmic cost of extreme confidence:** Raising reliability from $\delta = 0.05$ to $\delta = 10^{-6}$ increases $\log(2/\delta)$ by less than $4\times$ ($n = 72{,}544$ examples), whereas Chebyshev's $1/\delta$ scaling would demand $2.5 \times 10^9$ examples.
 :::
 
 ::: {.slide title="The Tail Race in Code: Exact Binomial vs. Hoeffding"}
@@ -1275,7 +1277,7 @@ $$\bigl\lvert\bar{X} - \mathbb{E}[\bar{X}]\bigr\rvert \le (b-a)\sqrt{\frac{\log(
 ::: {.cols .vc}
 ::: {.col}
 - **Parallel exponential decay:** On a logarithmic axis, Hoeffding's bound $2e^{-2nt^2}$ and the exact binomial tail trace nearly parallel straight lines.
-- **Per-flip decay rate:** Hoeffding drops by $2t^2 = 0.0200$ nats per flip, matching the exact Cramér–Chernoff KL rate $D_{\mathrm{KL}}(0.6 \,\|\, 0.5) = 0.0201$ nats per flip to within $0.5\%$.
+- **Per-flip decay rate:** Hoeffding drops by $2t^2 = 0.0200$ nats per flip, matching the exact Cramér–Chernoff KL rate $D_{\mathrm{KL}}(0.6 \,\|\, 0.5) = 0.0201$ nats per flip to within $1\%$.
 - **Small-$n$ regime ($n \le 13$):** For $9$ heads in $13$ flips ($t = 2.5/13$), Hoeffding gives $0.77$ and the exact tail is $0.27$—no inequality can manufacture evidence from $13$ flips.
 :::
 

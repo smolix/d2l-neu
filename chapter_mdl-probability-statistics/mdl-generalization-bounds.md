@@ -1529,7 +1529,7 @@ $$\mathbf{w} = \boldsymbol{\Phi}^+\mathbf{y} = \sum_{i=1}^{\min(n,p)} \frac{\lan
 ::: {.col}
 - **Setup ($n = 40, d_{\mathrm{in}} = 15, \sigma_\xi = 0.1$):** Sweeping $p \in [2, 400]$ nested random ReLU features across $20$ trials traces the complete double-descent curve.
 - **Underparameterized ($p < 40$):** Classical U-curve dipping near $p = 15$ ($\mathrm{MSE} \approx 0.7$) before rising toward the threshold while $\|\mathbf{w}\|_2$ grows.
-- **Interpolation peak ($p = n = 40$) & second descent ($p > 40$):** Test MSE spikes by $10\text{--}50\times$ at $p = 40$, then drops monotonically to $\approx 0.06$ at $p = 400$ as $\|\mathbf{w}\|_2$ shrinks to $0.4$.
+- **Interpolation peak ($p = n = 40$) & second descent ($p > 40$):** Test MSE spikes to roughly $10\text{--}70$ at $p = 40$, one to two orders of magnitude above the U-curve minimum, then drops monotonically to $\approx 0.06$ at $p = 400$ as $\|\mathbf{w}\|_2$ shrinks to $0.4$.
 :::
 
 ::: {.col .fig}

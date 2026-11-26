@@ -1470,8 +1470,8 @@ Why is the unconditional FD ($\gamma = 0$, $\mathrm{FD} \approx 2.75$) more than
 
 @!image-diffusion-classifier-free-guidance-3
 
-- **Class skew accounts for $< 15\%$ of the gap:** Although $\gamma = 0$ overproduces pullovers ($13\%$–$14\%$) and underproduces sandals ($6\%$–$7\%$), resampling $5{,}000$ real images to that exact skewed histogram raises real FD by only $0.2$–$0.3$ (from $0.19$ to $0.4$–$0.5$).
-- **The true cause ($> 85\%$ of the gap):** Trained on only $10\%$ of minibatches without class hints, $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ produces more ambiguous, blended garments—and its errors enter every guided step with weight $(1 - \gamma)$.
+- **Class skew accounts for less than a sixth of the gap:** Although $\gamma = 0$ overproduces pullovers ($13\%$–$14\%$) and underproduces sandals ($6\%$–$7\%$), resampling $5{,}000$ real images to that exact skewed histogram raises real FD by only $0.2$–$0.3$ (from $0.19$ to $0.4$–$0.5$).
+- **The true cause (more than five sixths of the gap):** Trained on only $10\%$ of minibatches without class hints, $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ produces more ambiguous, blended garments—and its errors enter every guided step with weight $(1 - \gamma)$.
 :::
 
 ::: {.slide title="Theory: Why Guided ODE Trajectories Overshoot the Tilt"}
@@ -1532,7 +1532,7 @@ Test your grasp of U-Net design, Fréchet distance calibration, and classifier-f
 | Component | Mechanism / Formula | Quantitative Finding on Fashion-MNIST | Best-Practice Guideline |
 | :--- | :--- | :--- | :--- |
 | **Denoising U-Net** | $28 \to 14 \to 7$ encoder–decoder + skips | $80\%$ params at low res; $57\%$ MACs at $28 \times 28$ | Put channel capacity at low resolution; use GroupNorm |
-| **Weight EMA** | $\bar{\boldsymbol\theta} \leftarrow \bar{\boldsymbol\theta} + (1 - 2^{-1/n_{1/2}})(\boldsymbol\theta - \bar{\boldsymbol\theta})$ | Lowers FD by **$0.45$–$0.55$** vs. final iterate | Always sample from EMA weights ($n_{1/2} \approx 10^3$–$10^4$) |
+| **Weight EMA** | $\bar{\boldsymbol\theta} \leftarrow \bar{\boldsymbol\theta} + (1 - 2^{-1/n_{1/2}})(\boldsymbol\theta - \bar{\boldsymbol\theta})$ | Lowers FD by **$0.4$–$0.6$** vs. final iterate | Always sample from EMA weights ($n_{1/2} \approx 10^3$–$10^4$) |
 | **Fréchet Distance (FD)** | $\|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2 + \operatorname{tr}(\boldsymbol\Sigma_p + \boldsymbol\Sigma_q - 2(\boldsymbol\Sigma_p^{1/2}\boldsymbol\Sigma_q\boldsymbol\Sigma_p^{1/2})^{1/2})$ | Real floor drops $5\times$ from $0.87$ ($1\text{k}$) to $0.17$ ($5\text{k}$) | Always report sample size $n$ and real-vs.-real floor |
 | **Label Dropout** | Replace label $c \leftarrow \varnothing$ with $p_{\textrm{drop}} = 0.1$ | Trains $\mathbf{u}_c$ ($90\%$) and $\mathbf{u}_\varnothing$ ($10\%$) jointly | $p_{\textrm{drop}} \in [0.1, 0.2]$ suffices for the unconditional baseline |
 | **Classifier-Free Guidance** | $\tilde{\mathbf{u}} = \mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$ | $\gamma = 1.25$ lifts agreement $89\% \to 94\%$ at flat FD | Mild $\gamma \approx 1.25$ for distribution FD; $\gamma > 2$ for typicality |

@@ -528,14 +528,14 @@ Three quantitative findings stand out from the reversal capacity table:
 
 Test your understanding with these three questions:
 
-1. Why does sentence-level BLEU with $k = 4$ assign a score of exactly $0.0$ to any 3-word translation, even if all 3 words match a 3-word reference identically?
+1. Why does sentence-level BLEU with $k = 4$ give exactly $0.0$ to the six-word near miss *we will visits our grandparents tomorrow*, although five of its six words are right?
 2. Why do we evaluate string reversal accuracy under teacher forcing when measuring the capacity of the encoder state $\mathbf{c}$?
 3. If a width-$64$ encoder achieves $100\%$ reversal accuracy on random strings of length $T = 8$ over a $16$-letter alphabet, how many effective bits per state coordinate is it transmitting?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. A 3-word sentence has zero word 4-grams (or `min(k, len_pred)` stops at $n=3$; if $k=4$ is enforced without clipping to `len_pred`, $p_4 = 0$; even when clipped, any 4+ word candidate with a mismatch on word 3 of 6 has zero matching 4-grams and $p_4 = 0$).
+1. Every word 4-gram of a six-word sentence contains word 3, so the wrong *visits* leaves no 4-gram matching and $p_4 = 0$, which zeroes the product.
 2. Under free-running decoding, a single wrong token at step $t'=1$ shifts the decoder's recurrent trajectory and corrupts later steps; because the random letters are independent, teacher forcing leaks zero information about $y_{t'}$ while isolating what $\mathbf{c}$ contains.
 3. Each letter carries $\log_2 16 = 4$ bits, so $8$ letters carry $32$ bits across $64$ floats: **$0.5\text{ effective bits per float}$** (out of $32$ raw bits).
 :::

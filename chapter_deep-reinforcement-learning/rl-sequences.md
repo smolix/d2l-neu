@@ -507,7 +507,7 @@ To restrain the policy from collapsing onto the loophole, `kl_group_step` folds 
 $$\frac{\pi^\star(y_{\textrm{hedge}} \mid x)}{\pi^\star(y_{\textrm{ord}} \mid x)} = \frac{\pi_{\textrm{ref}}(y_{\textrm{hedge}} \mid x)}{\pi_{\textrm{ref}}(y_{\textrm{ord}} \mid x)}\, e^{(1 - 0)/\beta} = e^{1/\beta - 4}$$
 
 - **Reference odds:** Under $\pi_{\textrm{ref}}$, the hedge has logit $-4$ vs. $0$ for ordinary replies ($e^{-4} \approx 0.018$).
-- **Critical threshold ($\beta = 1/4 = 0.25$):** The hedge dominates unsolvable prompts for $\beta < 0.25$ and is suppressed for **$\beta > 0.25$**.
+- **Critical threshold ($\beta = 1/4$):** For $\beta < 0.25$ the hedge is more probable than each ordinary reply on the unsolvable prompts (it holds half their mass only below $\beta \approx 0.16$), and for **$\beta > 0.25$** it is less probable.
 :::
 
 ::: {.col .fig}

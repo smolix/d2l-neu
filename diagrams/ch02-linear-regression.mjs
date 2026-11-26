@@ -1334,7 +1334,7 @@ function sampleScale() {
 
   o += box(16, 46, 254, 196, C.lamber, C.amber);
   o += tx(143, 70, 'Degree 1 (High Bias)', { fs: 14.5, fw: 700, fill: D.orange.dark });
-  o += tx(143, 102, 'n = 20:    Test MSE ≈ 1.8–2.1', { mono: true, fs: 12.5, fill: C.ink });
+  o += tx(143, 102, 'n = 20:    Test MSE ≈ 2', { mono: true, fs: 12.5, fill: C.ink });
   o += tx(143, 128, 'n = 100:   Test MSE ≈ 1.7–2.0', { mono: true, fs: 12.5, fill: C.ink });
   o += tx(143, 154, 'n = 1,000: Test MSE ≈ 1.7–1.9', { mono: true, fs: 12.5, fw: 700, fill: D.orange.dark });
   o += box(30, 176, 226, 48, '#FFFFFF', C.amber, 6, 1.5);
@@ -1342,8 +1342,8 @@ function sampleScale() {
 
   o += box(290, 46, 254, 196, C.lgreen, C.green);
   o += tx(417, 70, 'Degree 19 (High Variance)', { fs: 14.5, fw: 700, fill: D.green.dark });
-  o += tx(417, 102, 'n = 20:    Test MSE > 10⁸', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
-  o += tx(417, 128, 'n = 100:   Test MSE ≈ 0.01–0.2', { mono: true, fs: 12.5, fill: C.ink });
+  o += tx(417, 102, 'n = 20:    Test MSE ≥ 10⁴', { mono: true, fs: 12.5, fw: 700, fill: D.red.dark });
+  o += tx(417, 128, 'n = 100:   Test MSE ≈ 0.01–0.5', { mono: true, fs: 12.5, fill: C.ink });
   o += tx(417, 154, 'n = 1,000: Test MSE ≈ 0.010', { mono: true, fs: 12.5, fw: 700, fill: D.green.dark });
   o += box(304, 176, 226, 48, '#FFFFFF', C.green, 6, 1.5);
   o += tx(417, 200, 'Variance ∝ p/n → matches cubic!', { fs: 12, fw: 700, fill: D.green.dark });

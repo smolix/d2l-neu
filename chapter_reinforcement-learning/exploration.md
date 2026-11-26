@@ -847,7 +847,7 @@ Multi-Armed Bandits and Exploration<br>**cumulative regret · greedy & epsilon-g
 
 ::: {.cols .vc}
 ::: {.col}
-- **Cost of blind exploration on FrozenLake:** Forcing the optimal policy $\pi^*$ to act randomly with probability $\epsilon = 0.05$ drops its 100-step success rate from **$73.0\%$ to $54.2\%$**.
+- **Cost of blind exploration on FrozenLake:** Forcing the optimal policy $\pi^*$ to act randomly with probability $\epsilon = 0.05$ drops its 100-step success rate from **$73.0\%$ to $53.7\%$**.
 - **Blind vs. directed exploration:** $\epsilon$-greedy wastes trials on actions already known to be disastrous as often as on promising alternatives.
 - **Exploration in LLM post-training:** When all $K$ sampled responses to a prompt receive the same verifier score, the relative group update vanishes.
 :::
@@ -865,7 +865,7 @@ Multi-Armed Bandits and Exploration<br>**cumulative regret · greedy & epsilon-g
 ::: {.col}
 $$\textrm{Regret}(t) = \sum_{u=1}^{t} \big(\mu^* - \mu_{a_u}\big) = \sum_{a=1}^{m} \Delta_a\,n_t(a)$$
 
-- **10-armed benchmark:** Best arm $\mu^* = \mu_2 = 0.90$ and smallest gap $\Delta_{\min} = 0.90 - 0.60 = 0.30$ (arm 6).
+- **10-armed benchmark:** Best arm $\mu^* = \mu_3 = 0.90$ and smallest gap $\Delta_{\min} = 0.90 - 0.60 = 0.30$ (arm 7).
 - **Linear vs. sublinear regret:** Pulling a $0.50$ arm forever loses $\Delta_a = 0.40$ per pull; sublinear regret ($\textrm{Regret}(t)/t \to 0$) requires pulling suboptimal arms ever more rarely.
 :::
 
@@ -913,7 +913,7 @@ Given a row of estimated values $\hat{Q}(s, \cdot) = (0.20, 0.90, 0.55, 0.10)$, 
 $$\mathbb{E}\big[\textrm{Regret}_{\textrm{greedy}}(2000)\big] \approx 2000 \sum_{a=1}^{m} \frac{\mu_a}{\sum_b \mu_b}\,\Delta_a \approx 707$$
 
 - **The first-win lottery:** Starting at $\hat{\mu}_0(a) = 0$, once any arm $a$ returns $1$, its empirical mean $\hat{\mu}(a) > 0$ beats every untried arm ($0$) forever.
-- **Lottery odds:** Best arm $\mu_2 = 0.90$ wins the initial draw in only $0.90 / 4.87 \approx 18.5\%$ of runs.
+- **Lottery odds:** Best arm $\mu_3 = 0.90$ wins the initial draw in only $0.90 / 4.87 \approx 18.5\%$ of runs.
 :::
 
 ::: {.col .fig}
@@ -952,7 +952,7 @@ After pulling each arm once to initialize $n(a) \geq 1$, UCB concentrates almost
 ::: {.cols .vc}
 ::: {.col}
 - **Shrinking uncertainty bars:** In panel (a), the bonus $\kappa\sqrt{\log t / n(a)}$ decays as $n(a)^{-1/2}$ with pulls and grows only as $\sqrt{\log t}$ while idle.
-- **Self-balancing indices:** In panel (b), after $2{,}000$ pulls with $\kappa = 0.5$, arm 2 ($\mu^* = 0.90$) receives $1{,}852$ pulls, while bad arms stop once their upper confidence bound drops below $0.90$.
+- **Self-balancing indices:** In panel (b), after $2{,}000$ pulls with $\kappa = 0.5$, arm 3 ($\mu^* = 0.90$) receives $1{,}951$ pulls, while bad arms stop once their upper confidence bound drops below $0.90$.
 :::
 
 ::: {.col .fig}
@@ -1012,7 +1012,7 @@ Lai and Robbins (1985) proved that any consistent bandit algorithm must pull eac
 
 $$\liminf_{t \to \infty} \frac{\mathbb{E}[n_t(a)]}{\ln t} \geq \frac{1}{D(\mu_a \,\|\, \mu^*)}, \qquad D(p \,\|\, q) = p\ln\frac{p}{q} + (1 - p)\ln\frac{1 - p}{1 - q}$$
 
-- **Distinguishing near-optimal arms:** For the second-best arm ($\mu_6 = 0.60$ vs. $\mu^* = 0.90$), $D(0.60 \,\|\, 0.90) = 0.311$, requiring at least $\ln(2000)/0.311 \approx 24.4$ pulls ($\approx 7.3$ regret) by $t = 2000$.
+- **Distinguishing near-optimal arms:** For the second-best arm ($\mu_7 = 0.60$ vs. $\mu^* = 0.90$), $D(0.60 \,\|\, 0.90) = 0.311$, requiring at least $\ln(2000)/0.311 \approx 24.4$ pulls ($\approx 7.3$ regret) by $t = 2000$.
 - **Rate optimality:** Summing $\Delta_a n_t(a)$ shows $\textrm{Regret}(t) = \Omega(\ln t)$ is unimprovable; both UCB and Thompson sampling achieve this optimal $\Theta(\ln t)$ growth rate.
 :::
 

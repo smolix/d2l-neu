@@ -1065,7 +1065,7 @@ Each iteration: roll out, freeze advantages and old log-probabilities, refit the
 ::: {.cols .vc}
 ::: {.col}
 - Because policy-gradient loss stays near zero regardless of performance, we monitor the **clip fraction** and **approximate KL** across the 20 epochs inside a batch.
-- At epoch 1, $\rho_t = 1$ so both are $0$. In clipped PPO, the out-of-band fraction peaks around epoch 5–6 ($\sim 7\%$) and **falls back by half** by epoch 20.
+- At epoch 1, $\rho_t = 1$ so both are $0$. In clipped PPO, the out-of-band fraction peaks around epoch 5–6 ($\sim 8$–$10\%$) and **falls back by half** by epoch 20.
 - **Why does it fall?** Samples that cross the band on the *losing* side ($\rho < 0.8$ for $\hat{A} > 0$) retain their unclipped gradient and are pulled back inside.
 :::
 

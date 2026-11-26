@@ -602,7 +602,7 @@ All four steps fit exclusively on `train` and transform `*others` (`val` or `tes
 ::: {.slide title="Shared 5-Fold Cross-Validation Without Leakage"}
 [Model Selection Protocol]{.kicker}
 
-With only $1{,}460$ labeled houses, a single $20\%$ validation split ($292$ houses) has a sampling standard error of $\sim 0.015$ in log-RMSE, larger than the gap between competing models.
+With only $1{,}460$ labeled houses, a single $20\%$ validation split ($292$ houses) has a fold-to-fold standard error of several hundredths in log-RMSE, larger than the gap between competing models.
 
 ::: {.cols .vc}
 ::: {.col}
@@ -708,7 +708,7 @@ Test your mastery of end-to-end tabular modeling:
 | **Type Hygiene** | Drop `Id`; cast `MSSubClass` to `str` | Row IDs are arbitrary; numeric codes are nominal categories | Prevents memorizing row order or treating duplex code $90 = 4.5 \times 20$ |
 | **Numeric Scaling** | $x_{ij} \leftarrow (x_{ij} - \hat{\mu}_{\textrm{train}}) / \hat{s}_{\textrm{train}}$, then `fillna(0)` | Equalizes feature scales for SGD & $\ell_2$ penalty; $0 =$ train mean | Computing $\hat{\mu}, \hat{s}$ on full table leaks validation/test distribution |
 | **Categoricals** | `get_dummies(dummy_na=True)` + `reindex` | Binary indicator per category + explicit `_nan` column ($345$ cols) | Preserves informative missingness (e.g., `PoolQC = NaN` means no pool) |
-| **Model Selection** | 5-fold CV on shared folds (`k_fold`) | Averages $5$ validation splits ($292$ homes each); paired differences | Single $292$-home split has $\pm 0.015$ noise; unregularized MLP overfits ($0.16$) |
+| **Model Selection** | 5-fold CV on shared folds (`k_fold`) | Averages $5$ validation splits ($292$ homes each); paired differences | Single $292$-home split varies by several hundredths; unregularized MLP overfits ($0.16$) |
 | **Submission** | Retrain with `wd = best` on all $1{,}460$ homes | $\hat{y} = \exp(\hat{z} + \bar{z}_{\textrm{train}})$ restores dollar scale | Training error of retrained model is not a valid generalization estimate |
 :::
 

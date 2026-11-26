@@ -786,7 +786,7 @@ Across 5 seeds of $4{,}000$ episodes on slippery FrozenLake, the 200-episode mov
 ::: {.cols .vc}
 ::: {.col}
 - **What the curve actually measures:** Training returns grade the *behavior policy* $\pi_e$, which still takes a random action one step in twenty ($\epsilon = 0.05$) after episode $2{,}000$.
-- **The exploration tax:** Even the exact optimal policy $\pi^*$, when forced to act randomly at $\epsilon = 0.05$, sees its 100-step success rate drop from **$73.0\%$ to $54.2\%$**.
+- **The exploration tax:** Even the exact optimal policy $\pi^*$, when forced to act randomly at $\epsilon = 0.05$, sees its 100-step success rate drop from **$73.0\%$ to $53.7\%$**.
 :::
 
 ::: {.col .fig}

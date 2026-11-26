@@ -325,7 +325,7 @@ $\eta = 0.3$ raises the floor to $V = 0.176$ (a little more than three times as
 high, with a loss floor of $0.088$). Starting from $x_0 = 3$ ($e_0 = 9$), the
 transient $e_k - V$ drops below a tenth of $V$ after $36$ steps at $\eta = 0.1$
 ($\rho^2 = 0.81$), compared with just $9$ steps at $\eta = 0.3$
-($\rho^2 = 0.49$). Cutting the step size by a third cuts the floor by roughly a
+($\rho^2 = 0.49$). Cutting the step size to a third cuts the floor to roughly a
 third, but demands four times as many steps to reach it. Every method in the
 rest of this section is a different way of navigating this trade-off between
 speed and accuracy.
@@ -1585,7 +1585,7 @@ Returning a uniformly drawn iterate $\mathbf{x}_R$ ($R \sim \mathrm{Uniform}\{0,
 $$\mathbb{E}\big[\|\nabla f(\mathbf{x}_R)\|^2\big] \le \frac{2L\Delta}{K} + 2\sigma\sqrt{\frac{2L\Delta}{K}}$$
 
 - **Why random stopping?** SGD cannot observe exact $\|\nabla f(\mathbf{x}_k)\|$ to pick the best iterate, so sampling $R$ turns the average into an expectation.
-- **$O(1/\epsilon^4)$ sample complexity:** Halving $\mathbb{E}\|\nabla f\|^2$ by $100\times$ (so RMS gradient drops $10\times$) requires $10^4\times$ more steps.
+- **$O(1/\epsilon^4)$ sample complexity:** Cutting $\mathbb{E}\|\nabla f\|^2$ by $100\times$ (so the RMS gradient drops $10\times$) requires $10^4\times$ more steps.
 :::
 
 ::: {.col .fig}

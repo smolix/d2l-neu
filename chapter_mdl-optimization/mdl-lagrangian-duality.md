@@ -1027,7 +1027,7 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-svm-primal`
 
-Because the signed distance from a point $\mathbf{x}$ to the hyperplane is
+Because the distance from a point $\mathbf{x}$ to the hyperplane is
 $|\mathbf{w}^\top\mathbf{x} + b| / \|\mathbf{w}\|$
 (:numref:`sec_mdl-geometry-linear-algebraic-ops`), the two margin hyperplanes
 $\mathbf{w}^\top\mathbf{x} + b = \pm 1$ sit at distance $1/\|\mathbf{w}\|$ on

@@ -1548,7 +1548,7 @@ On the aligned valley ($\beta_1 = 0, \eta = 0.1, \epsilon = 0$), Adam discovers 
 
 ::: {.cols .vc}
 ::: {.col}
-On $x \in [-1, 1]$, consider the 3-periodic convex losses $(+4x, -x, -x)$ with average slope $+2$ and unique optimum $x^\star = -1$:
+On $x \in [-1, 1]$, consider the 3-periodic convex losses $(+4x, -x, -x)$, whose slopes sum to $+2$ over each period, with unique optimum $x^\star = -1$:
 
 - **Short EMA memory ($\beta_2 = 1/17, \beta_1 = 0$):** Across $(+4, -1, -1)$, $\sqrt{v_t}$ settles to $(3.89, 1.35, 1.02)$, producing normalized steps $-1.03\eta, +0.74\eta, +0.98\eta$ (net drift **$+0.69\eta > 0$** toward the worst point $x = +1$).
 - **AMSGrad fix:** Using the running maximum $\tilde{v}_t = \max(\tilde{v}_{t-1}, v_t)$ pins $\sqrt{\tilde{v}_t} = 3.89$, restoring net drift $-0.51\eta$ to $x^\star = -1$.
@@ -1590,7 +1590,7 @@ Simulate two groups of $10^4$ weights initialized at $w_0 = 1$ receiving pure ze
 
 @!adaptive-stochastic-methods-adamw
 
-- Coupled Adam decays the quiet weights $100\times$ faster ($10^{-3}$ vs $10^{-5}$ per step, ending at $0.031$ vs $0.961$), whereas AdamW shrinks both groups uniformly to $(1 - \eta\lambda)^T \approx \exp(-0.4) \approx 0.670$.
+- Coupled Adam decays the quiet weights $100\times$ faster ($10^{-3}$ vs $10^{-5}$ per step, ending at about $0.03$ vs $0.96$), whereas AdamW shrinks both groups uniformly to $(1 - \eta\lambda)^T \approx \exp(-0.4) \approx 0.670$.
 :::
 
 ::: {.slide title="Exact-Gradient Fixed Points: MAP vs. ℓ∞ Box"}

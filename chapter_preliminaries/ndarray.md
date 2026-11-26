@@ -1218,7 +1218,7 @@ $$\textrm{index}(i_0, \ldots, i_{k-1}) = \textrm{offset} + \sum_{r=0}^{k-1} i_r 
 
 ::: {.cols .vc}
 ::: {.col}
-- **Flattening with `-1`:** `images.reshape(-1, 784)` infers batch size $\textrm{size}/784 = 256$ and survives smaller final epoch batches.
+- **Flattening with `-1`:** `images.reshape(256, -1)` infers the row length $\textrm{size}/256 = 784$; `reshape(-1, 784)` instead infers the batch size and so also survives a smaller final batch.
 - **Singleton axes (`None` / `squeeze`):** `None` inserts a length-1 axis for batching or broadcasting; `squeeze` drops length-1 axes.
 
 @ndarray-reshaping-1
@@ -1254,14 +1254,14 @@ Given `images` of shape `(256, 1, 28, 28)`, predict the output shape and memory 
 
 1. `images[5]` versus `images[5:6]`
 2. `images[:64, :, ::2, ::2]`
-3. `images.reshape(256, -1)` versus `images.reshape(-1, 784)` on a final epoch batch of 96 images `(96, 1, 28, 28)`
+3. `images.reshape(256, -1)` versus `images.reshape(-1, 784)` on a final epoch batch of 100 images `(100, 1, 28, 28)`
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. `images[5]` has shape **`(1, 28, 28)`** (axis 0 removed); `images[5:6]` has shape **`(1, 1, 28, 28)`** (axis 0 kept with length 1). Both are $O(1)$ zero-copy views.
 2. **`(64, 1, 14, 14)`**: takes 64 images and every second row/column by doubling spatial strides, still a strided slice.
-3. `reshape(256, -1)` **raises an error** ($96 \times 784$ is not divisible by 256); `reshape(-1, 784)` safely infers **`(96, 784)`**.
+3. `reshape(256, -1)` **raises an error** ($100 \times 784$ is not divisible by 256); `reshape(-1, 784)` safely infers **`(100, 784)`**.
 :::
 :::
 

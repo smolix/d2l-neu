@@ -465,7 +465,7 @@ Structured State Space Models (S4D)<br>**continuous-time dynamics · zero-order-
 ::: {.col}
 - **Three Orders of Magnitude:** Language spans 10-token syntax, 200-token paragraph topics, and 1,000+ token entity persistence.
 - **Zero-Bias Underflow:** Gates at $\sigma(0) = 0.5$ attenuate a 1,000-step signal by $2^{-1000} = 0$ in `float32`.
-- **Structured State Bank:** Continuous-time SSMs give each channel $N$ log-spaced decay rates $\lambda_1, \ldots, \lambda_N$ scaled by $\Delta$.
+- **Structured State Bank:** Continuous-time SSMs give each channel $N$ decay rates $\lambda_n = -n$, scaled by a log-uniform step size $\Delta$.
 :::
 
 ::: {.col .fig .big}
@@ -669,7 +669,7 @@ Test accuracy (chance $= 0.125$) and post-training slowest half-life ($\ln 2 / \
 
 Look closely at the bottom rows of the output table (`slowest half-life after training`):
 
-- **At $T = 100$ (`S4D, short timescales` succeeds):** With slowest initial rate $\Delta|\lambda_1| = 0.1$, the initial signal attenuation over $99$ filler steps is $e^{-0.1 \times 99} = e^{-9.9} \approx \mathbf{5 \times 10^{-5}}$. Because $5 \times 10^{-5}$ is well above `float32` precision ($\sim 10^{-7}$), Adam receives a nonzero gradient and stretches the slowest half-life from **$7$ steps to $107$–$170$ steps**.
+- **At $T = 100$ (`S4D, short timescales` succeeds):** With slowest initial rate $\Delta|\lambda_1| = 0.1$, the initial signal attenuation over $99$ filler steps is $e^{-0.1 \times 99} = e^{-9.9} \approx \mathbf{5 \times 10^{-5}}$. Because $5 \times 10^{-5}$ is well above `float32` precision ($\sim 10^{-7}$), Adam receives a nonzero gradient and stretches the slowest half-life from **$7$ steps to about $100$–$200$ steps**.
 - **At $T = 1{,}000$ (`S4D, short timescales` freezes):** Over $999$ steps, initial attenuation is $e^{-0.1 \times 999} \approx \mathbf{4 \times 10^{-44}}$—underflowing `float32` gradient accumulation completely, so the slowest half-life stays frozen at **$7$ steps**.
 :::
 

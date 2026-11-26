@@ -810,7 +810,7 @@ the body layer), whereas the untied version adds a second $100 \times 16$ table
 for 3472 parameters in all.
 
 :begin_tab:`mxnet, pytorch`
-Both `collect_params()` and `state_dict()` retain both keys (`emb.weight` and `head.weight`) pointing to the shared storage:
+Both `collect_params()` and `state_dict()` retain both keys (`emb.weight` and `head.weight`) pointing to the shared storage (PyTorch's `named_parameters()`, printed below, lists the shared tensor only once):
 :end_tab:
 ```{.python .input #parameters-state-memory-tied-parameters-3}
 %%tab mxnet

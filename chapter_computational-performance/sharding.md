@@ -811,7 +811,7 @@ Running our 36-block, $1.92\text{B}$-parameter GPT step on two $24\text{ GiB}$ R
 ::: {.cols .vc}
 ::: {.col}
 - **Host-staged PCIe 4.0 ($\sim 2.2\text{ GB/s}$):** Moving $1.5\,S = 11.5\text{ GB}$ takes $\sim 5.0\text{ s}$ vs. $0.40\text{ s}$ compute, leaving the step deeply link-bound ($\sim 7\%$ compute share).
-- **NVLink 4/5 ($450\text{--}900\text{ GB/s}$):** The same $11.5\text{ GB}$ finishes in $13\text{--}26\text{ ms}$, matching or beating block compute time ($14\text{--}32\text{ ms}$).
+- **NVLink 4/5 ($450\text{--}900\text{ GB/s}$):** The same $11.5\text{ GB}$ finishes in $13\text{--}26\text{ ms}$, below the whole step's compute time on those GPUs ($14\text{--}32\text{ ms}$ at B200/H100 `bf16` peak).
 - **Block prefetching:** Overlapping block $\ell+1$'s all-gather with block $\ell$'s compute hides communication completely when $g \le c$.
 :::
 

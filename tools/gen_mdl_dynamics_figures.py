@@ -1579,9 +1579,9 @@ def fig_ddim_strides():
     (N = 1000): each clean-point/noise pair owns one forward curve
     sqrt(abar_t) x0 + sqrt(1 - abar_t) eps.  One pair (blue) crossed the
     valley.  From the SAME noise end, DDIM with the exact noise prediction
-    E[eps | x_t] of the mixture (10 strides, orange dots; 1000 strides,
-    dashed) follows the probability-flow ODE into the other mode: the sampler
-    never sees the sample's own curve.
+    E[eps | x_t] of the mixture (10 strides, orange dots; 999 strides, one
+    per level, dashed) follows the probability-flow ODE into the other mode:
+    the sampler never sees the sample's own curve.
     (b) Unit-variance Gaussian data: the exact probability-flow paths are
     horizontal (the flow is the identity), while ten DDIM strides with the
     exact noise prediction sqrt(1 - abar_t) x_t shrink every sample by the
@@ -1632,9 +1632,9 @@ def fig_ddim_strides():
     axa.plot(np.zeros(7), x0s, "o", color=GREEN, ms=5, zorder=5)
 
     xN = xb[-1]
-    idx1k, fine = ddim_path(xN, 1000, eps_hat)
+    idx_fine, fine = ddim_path(xN, 999, eps_hat)   # one stride per level
     idx10, coarse = ddim_path(xN, 10, eps_hat)
-    axa.plot(idx1k / N, fine, color=ORANGE, lw=1.6, ls=(0, (4, 2.5)), zorder=5)
+    axa.plot(idx_fine / N, fine, color=ORANGE, lw=1.6, ls=(0, (4, 2.5)), zorder=5)
     axa.plot(idx10 / N, coarse, "-o", color=ORANGE, lw=1.4, ms=6, zorder=6)
 
     axa.text(0.02, 2.35, "data end $x_0$", color=GREEN, fontsize=13,

@@ -194,7 +194,7 @@ print('masked loss at step 500/1000/2000: ' + '/'.join(
 ### Loss by Available Context
 :label:`subsec_mlm-loss-by-position`
 
-In :numref:`subsec_gpt-rnn-baseline`, a causal language model's per-position validation loss decreased monotonically from left ($t = 1$, no context) to right ($t = T$, full prefix context). What does `loss_by_position` look like for a bidirectional `MaskedLM` when we evaluate reconstruction loss at each window position $t \in \{0, \dots, n-1\}$?
+In :numref:`subsec_gpt-rnn-baseline`, a causal language model's per-position validation loss decreased monotonically from left ($t = 0$, one byte of context) to right ($t = T - 1$, full prefix context). What does `loss_by_position` look like for a bidirectional `MaskedLM` when we evaluate reconstruction loss at each window position $t \in \{0, \dots, n-1\}$?
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-1}
 %%tab pytorch
@@ -863,7 +863,7 @@ The probe masks one byte at a time and prints the encoder's top three guesses fo
 ::: {.cols .vc}
 ::: {.col}
 - **Teacher-forced decoder input (`dec_in`):** Prepends `<bos>` (`id = 16`) and shifts the reversed target right by one slot: `dec_in` $= (\texttt{<bos>}, x_T, \dots, x_2)$ predicts `tgt` $= (x_T, \dots, x_1)$.
-- **Exact ground-truth alignment:** To emit target position $t$, the decoder must retrieve source token $x_{T - 1 - t}$ along the **anti-diagonal** $(t, T - 1 - t)$.
+- **Exact ground-truth alignment:** To emit target position $t$, the decoder must retrieve the source token at position $T - 1 - t$ (that is, $x_{T - t}$) along the **anti-diagonal** $(t, T - 1 - t)$.
 :::
 
 ::: {.col .fig}
@@ -913,7 +913,7 @@ def forward(self, X, enc, mask=None, cross_mask=None):
 ```
 
 ::: {.d2l-note}
-During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence—so they are computed **once per prompt** and reused at every target decoding step.
+During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence, so they can be computed **once per prompt** and cached (our `reverse` recomputes them at each step for simplicity; only the encoder runs once).
 :::
 :::
 
@@ -933,7 +933,7 @@ def __call__(self, X, enc, mask=None, cross_mask=None):
 ```
 
 ::: {.d2l-note}
-During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence—so they are computed **once per prompt** and reused at every target decoding step.
+During autoregressive inference, `enc = self.encoder(src)` and its cross-attention key–value projections depend only on the source sequence, so they can be computed **once per prompt** and cached (our `reverse` recomputes them at each step for simplicity; only the encoder runs once).
 :::
 :::
 
@@ -1067,7 +1067,7 @@ Work through these three architectural questions:
 **Answers:**
 
 1. **Full encoder:** $6 \times 8192^2 \approx \mathbf{4.03 \times 10^8}$ score pairs/head. **Perceiver:** $64 \times 8192 + 6 \times 64^2 = 524{,}288 + 24{,}576 \approx \mathbf{5.49 \times 10^5}$ score pairs/head (**$734\times$ fewer**).
-2. **Exactly once** (right after the encoder finishes), because $\mathbf{H}_{\text{enc}}$ never changes as target tokens are generated.
+2. **Once**, if cached right after the encoder finishes, because $\mathbf{H}_{\text{enc}}$ never changes as target tokens are generated (a naive loop like our `reverse` recomputes them at every step).
 3. **Encoder-only:** every token benefits from full bidirectional context, and each description is embedded in a single parallel forward pass with no autoregressive decoding loop.
 :::
 :::

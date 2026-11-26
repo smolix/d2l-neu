@@ -844,7 +844,7 @@ Selective State Space Models (Mamba)<br>**selective copying · input-dependent s
 ::: {.cols .vc}
 ::: {.col}
 - **What `MinGRU` (§{sec_linear-recurrence}) Has:** Input-dependent gate $\mathbf{z}_t(\mathbf{x}_t)$, but only $N = 1$ scalar per channel starting at $\tau_{1/2} = 1$.
-- **What `S4D` (§{sec_ssm}) Has:** $N = 16$ log-spaced decay modes per channel ($\tau_{1/2} \in [0.4, 693]$), but fixed LTI step size $\Delta_c$.
+- **What `S4D` (§{sec_ssm}) Has:** $N = 16$ decay rates $-1, \ldots, -16$ per channel with log-uniform channel steps (half-lives $0.4$ to $693$ across channels), but fixed LTI step size $\Delta_c$.
 - **What `Mamba` (§{sec_mamba}) Unifies:** Token-dependent $(\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t)$ over an $H \times N$ multi-timescale state trained via parallel + adjoint scans.
 :::
 

@@ -1687,7 +1687,7 @@ Numerical Stability and Conditioning<br>**IEEE floating point · max-shifted sof
 ::: {.cols .vc}
 ::: {.col}
 - **Unstable algorithm on an easy problem:** Naive softmax on $\mathbf{z} = (1000, 1001, 1002)$ overflows $e^{1000} = \infty \implies \text{NaN}$, cured completely by the max-shift rewrite $\mathbf{z} - \max(\mathbf{z})$.
-- **Stable solver on an ill-conditioned problem:** On a $12 \times 12$ Hilbert system ($\kappa \approx 1.7 \times 10^{16}$), `np.linalg.solve` has backward error $\omega \approx 10^{-17}$ yet returns an answer off by $30\%$—requiring problem regularization.
+- **Stable solver on an ill-conditioned problem:** On a $12 \times 12$ Hilbert system ($\kappa \approx 1.7 \times 10^{16}$), `np.linalg.solve` has backward error $\omega \approx 10^{-16}$ yet returns an answer off by $30\%$—requiring problem regularization.
 :::
 
 ::: {.col .fig .big}
@@ -2008,7 +2008,7 @@ The Hilbert matrix $H_{ij} = \frac{1}{i + j - 1}$ has $\kappa(\mathbf{H})$ growi
 
 @!numerical-stability-conditioning-hilbert
 
-- At $n = 12$ ($\kappa \approx 1.7 \times 10^{16}$), `np.linalg.solve` has backward error $\omega \approx 10^{-17}$, and an *exact* rational solve of the stored `fp64` system has the exact same $30\%$ forward error: the digits were already lost when $\mathbf{b} = \mathbf{H}\mathbf{1}$ was rounded to `fp64`.
+- At $n = 12$ ($\kappa \approx 1.7 \times 10^{16}$), `np.linalg.solve` has backward error $\omega \approx 10^{-16}$, and an *exact* rational solve of the stored `fp64` system still misses $\mathbf{1}$ by $14\%$, the same order as the $30\%$ forward error: the digits were already lost when $\mathbf{b} = \mathbf{H}\mathbf{1}$ was rounded to `fp64`.
 :::
 
 ::: {.slide title="Why the Normal Equations Square κ(A)"}

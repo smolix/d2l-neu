@@ -453,6 +453,9 @@ def _write_quarto_yml(dst, framework, files):
 
 book:
   title: {_yaml_str(i18n.t('book.title'))}
+  # Fixed name: build_one_pdf.sh looks for Dive-into-Deep-Learning.tex, and
+  # Quarto would otherwise derive it from the (possibly translated) title.
+  output-file: Dive-into-Deep-Learning
   subtitle: {_yaml_str(i18n.t('pdf.subtitle', fw=fw_display))}
   author:
     - Alexander J. Smola

@@ -506,7 +506,7 @@ data_shuffled.visualize(next(iter(data_shuffled.val_dataloader())))
 
 An MLP is completely blind to this permutation, and we do not even need to
 retrain it to prove why: permuting the input coordinates merely reorders the
-columns of its first weight matrix $\mathbf{W}^{(1)}$. Since every weight is
+rows of its first weight matrix $\mathbf{W}^{(1)}$. Since every weight is
 initialized identically and independently, training on shuffled pixels is
 statistically identical to training on the original images, yielding the same
 ~87% accuracy. For LeNet, however, shuffling destroys spatial locality: every
@@ -800,7 +800,7 @@ We Xavier-initialize all weights and stack the encoder and dense head in one `Se
 ::: {.col}
 @lenet-training
 
-- **Trajectory:** After a 1–3 epoch sigmoid plateau at $\mathcal{L} \approx 2.30$, validation accuracy reaches **$\approx 88\text{--}90\%$** ($3.3\times$ fewer parameters than the MLP).
+- **Trajectory:** After an initialization-dependent plateau at $\mathcal{L} \approx 2.30$ (none to a few epochs), validation accuracy reaches **$\approx 88\text{--}90\%$** ($3.3\times$ fewer parameters than the MLP).
 :::
 
 ::: {.col .fig}

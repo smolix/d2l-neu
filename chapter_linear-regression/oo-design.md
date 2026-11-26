@@ -1417,7 +1417,7 @@ return metrics.mean()
 ::: {.slide title="End-to-End Check: Training LinearRegressionScratch"}
 [Reproducing the Scratch Benchmark]{.kicker}
 
-`Trainer(max_epochs=10)` on `LinearRegressionScratch(2, lr=0.03)` reproduces the $7\times$-per-epoch convergence and $10^{-4}$ parameter recovery:
+`Trainer(max_epochs=10)` on `LinearRegressionScratch(2, lr=0.03)` reproduces the $7\times$-per-epoch convergence and parameter recovery to within about $10^{-3}$:
 
 ::: {.cols .vc}
 ::: {.col}

@@ -1321,7 +1321,7 @@ $$e^{\mathbf{A}t} = e^{-t/2}\begin{pmatrix}\cos t & -\sin t \\ \sin t & \cos t\e
 
 Taking $n$ short steps of length $t/n$ along the linear field gives the compound-interest approximation $(\mathbf{I} + t\mathbf{A}/n)^n \approx e^{\mathbf{A}t}$, whose error on each eigenvalue is governed by $\log(1 + z) = z - z^2/2 + \cdots$:
 
-$$\left(1 + \frac{\lambda t}{n}\right)^n \approx e^{\lambda t}\left(1 - \frac{(\lambda t)^2}{2n}\right) \;\Longrightarrow\; \text{error at } t = 2 \text{ is } \frac{|\lambda t|^2}{2n}e^{-1} = \frac{2.5\,e^{-1}}{n} \approx \frac{0.90}{n}$$
+$$\left(1 + \frac{\lambda t}{n}\right)^n \approx e^{\lambda t}\left(1 - \frac{(\lambda t)^2}{2n}\right) \;\Longrightarrow\; \text{error at } t = 2 \text{ is } \frac{|\lambda t|^2}{2n}e^{-1} = \frac{2.5\,e^{-1}}{n} \approx \frac{0.92}{n}$$
 
 @!odes-solvers-matrix-exponential
 :::

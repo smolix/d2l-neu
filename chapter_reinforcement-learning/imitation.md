@@ -789,7 +789,7 @@ Deploying the fitted clone either greedily ($\mathrm{argmax}_a \pi_{\textrm{bc}}
 @!imitation-what-the-reduction-quietly-assumes-1
 
 - **Why greedy deployment succeeds $100\%$:** On every cell of the 6-move path, the expert action has the highest probability ($0.818 > 0.061$), so `argmax` stays on the tube forever.
-- **Why sampling deployment drops to $66.0\%$:** With $\varepsilon = 0.182$ per step, the chance of 6 error-free moves in a row is only $0.818^6 \approx 0.300$, and off-path cells have uniform $1/4$ policies.
+- **Why sampling deployment drops to $66.0\%$:** A wrong action ($\varepsilon = 0.182$ per step) is fatal only next to holes 5 and 12; elsewhere it bumps a wall, steps back onto the path, or leaves for cells 1 and 10, whose rows are uniform $1/4$.
 :::
 
 ::: {.slide title="Diagnosing Policy-Induced Distribution Shift"}
@@ -900,7 +900,7 @@ Running 4 rounds of DAgger (10 learner episodes per round across 10 seeds) close
 
 @!imitation-dataset-aggregation-1
 
-- **Why DAgger reaches $0.735$ and stops there:** Once the learner visits and receives expert labels at cells 1, 2, 6, and 10, every reachable state has $\varepsilon = 0.182$; the remaining gap ($0.735$ vs. $1.000$) is the classifier's per-step error $\varepsilon$.
+- **Why DAgger reaches $0.735$ and stops there:** Once the learner visits and receives expert labels at cells 1, 2, 3, 6, and 10, every reachable state has $\varepsilon = 0.182$; the remaining gap ($0.735$ vs. $1.000$) is the classifier's per-step error $\varepsilon$.
 :::
 
 ::: {.slide title="Supervised Fine-Tuning and On-Policy Distillation"}

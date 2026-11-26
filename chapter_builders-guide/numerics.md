@@ -1372,7 +1372,7 @@ We can inspect `max` (largest finite value), `tiny` (smallest positive normal nu
 ::: {.col}
 @numerics-rounding-of-small-updates
 
-- **Master weights rule:** Near $w = 1.0$, `bf16` spacing is $2^{-7} \approx 0.0078$, so any update $|\Delta w| < 0.0039$ snaps back to $1.0$ unless accumulated in `fp32`.
+- **Master weights rule:** Near $w = 1.0$, `bf16` spacing is $2^{-7} \approx 0.0078$ above 1 (half that below), so any increment below $0.0039$ (decrement below $0.0020$) snaps back to $1.0$ unless accumulated in `fp32`.
 :::
 
 ::: {.col .fig}

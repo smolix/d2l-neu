@@ -543,7 +543,7 @@ Offline Reinforcement Learning: Distribution Shift and Pessimism<br>**fixed data
 ::: {.cols .vc}
 ::: {.col}
 - **Purely Offline Settings:** Clinical logs, recommenders, and robot teleoperation logs provide a fixed dataset $\mathcal{D}$ with **zero further environment interaction**.
-- **Unchecked Maximization Bias:** On 100 narrow FrozenLake episodes ($V^*(s_0) = 0.180$), naive offline Q-learning predicts **$0.25$** while earning only **$0.10$** because no rollout ever refutes lucky thin-support actions.
+- **Unchecked Maximization Bias:** On 100 narrow FrozenLake episodes ($V^*(s_0) = 0.180$), naive offline Q-learning predicts **$0.25$** while earning only **$0.11$** because no rollout ever refutes lucky thin-support actions.
 :::
 
 ::: {.col .fig .big}
@@ -599,7 +599,7 @@ Because every sweep revisits the exact same logged transitions, incremental Q-le
 ::: {.slide title="Certainty Equivalence: Solving the Empirical MDP (check)"}
 [The Empirical Fixed Point]{.kicker}
 
-On a 500-transition log from the uniform policy, the incremental sweeps and the direct solve agree:
+On a 500-episode log (about 4,000 transitions) from the uniform policy, the incremental sweeps and the direct solve agree:
 
 @offline-rl-distribution-shift-against-the-exact-optimum-2
 :::
@@ -629,7 +629,7 @@ Comparing what each learner **predicts** at the start cell ($\max_a \hat{Q}(s_0,
 @!offline-rl-the-experiment-with-a-behavior-cloning-bar-5
 
 - **Trajectory Stitching on Uniform Logs:** Behavior cloning copies a random walk and earns **$0.01$**, whereas naive Q-learning stitches good segments from different random episodes to earn **$0.14$** (beating the clone on $40/40$ logs).
-- **Overestimation on Narrow Logs:** Naive Q-learning predicts **$0.25 > V^* = 0.18$** on $39/40$ narrow logs while earning only **$0.10$** (barely edging out the clone's $0.09$ on $27/40$ logs).
+- **Overestimation on Narrow Logs:** Naive Q-learning predicts **$0.25 > V^* = 0.18$** on $39/40$ narrow logs while earning only **$0.11$** (barely edging out the clone's $0.09$ on $27/40$ logs).
 :::
 
 ::: {.slide title="Where the Inflated Predictions Come From"}
@@ -768,7 +768,7 @@ Test your grasp of offline RL fundamentals:
 | :--- | :--- | :---: | :--- | :--- |
 | **Behavior Cloning (BC)** | Supervised $\max_\pi \mathbb{E}_{\mathcal{D}}[\log \pi(a \mid s)]$ | **None** | Complete (stays on $\hat{\pi}_e$) | Strong on narrow expert logs ($0.09$), fails on uniform ($0.01$) |
 | **Offline SARSA** | On-policy TD $r + \gamma Q(s', a'_{\textrm{log}})$ | **None** | Evaluates $Q^{\pi_e}$ only | Converges to collector's value without improvement |
-| **Naive Offline Q** | Empirical Bellman $\max_{a'} \hat{Q}(s', a')$ | **High** | **None** (picks thin lucky pairs) | Excels on uniform ($0.14$), overestimates on narrow ($0.25$ vs. $0.10$) |
+| **Naive Offline Q** | Empirical Bellman $\max_{a'} \hat{Q}(s', a')$ | **High** | **None** (picks thin lucky pairs) | Excels on uniform ($0.14$), overestimates on narrow ($0.25$ vs. $0.11$) |
 | **Pessimistic Q / CQL** | Penalizes backup by $-\kappa/\sqrt{n}$ or log-sum-exp | **High** | **Strong** (suppresses thin pairs) | Wins on narrow logs ($0.14$, beats BC on $39/40$); hurts if over-applied |
 | **Return Conditioning (DT)** | Autoregressive $\pi(a_t \mid s_{\le t}, g_{\le t})$ | **Limited** | Avoids $\max_{a'}$ operator | Vulnerable to stochastic "lucky trajectory" bias |
 :::

@@ -51,73 +51,73 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-sweep-1.svg",
-          "bytes": 31272,
-          "sha256": "sha256:31f468bda21fe6962fb688bfd222e80adf2c39cbc593252d651d18b552e37e59"
+          "bytes": 31273,
+          "sha256": "sha256:d8363b53d7a9d54edbcaa7fba68510dc5e2bbca0b2af75ba993ea6c500f520f9"
         }
       ]
     },
     "scaling-the-rules": {
-      "code_fingerprint": "sha256:e91659696b48e366780faee380b87c717ae0cc15cfc2cce63f9874ec8d777498",
+      "code_fingerprint": "sha256:8271909b98b907ae6dd12844f6dd371a12394449750fb6b0f0042683f33446f3",
       "kind": "text",
       "outputs": []
     },
     "scaling-the-coordinate-check-1": {
-      "code_fingerprint": "sha256:68eb41145977ffbb0a84517ad1f1ce88124680b66367adcdfe1cd06c7a7491ae",
+      "code_fingerprint": "sha256:34e68a4ed2f4c76485fe639743b75ad7f32f5afc360e8aed588c32682b92c0e2",
       "kind": "text",
       "outputs": []
     },
     "scaling-the-coordinate-check-2": {
-      "code_fingerprint": "sha256:91054352acfc569fb241fbb69ae13c08d0ed0ee5aa55dd196cec061ba299c900",
+      "code_fingerprint": "sha256:f95e09c8f8a800eaeb1dc1a1d8deb7b8e8f0cbc0c130f0a1dd17beee1ccc7d24",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
-          "bytes": 37426,
-          "sha256": "sha256:eeceb48e8657916a3ca256abeee413f821014db1e7081010ff25e1e825f84c5c"
+          "bytes": 37428,
+          "sha256": "sha256:1208f02b484c250a09cac4cb3bdabc6c1880ccb6ab205f93ac2a49da20ee2c2a"
         }
       ]
     },
     "scaling-the-coordinate-check-3": {
-      "code_fingerprint": "sha256:4952d60ccd71e3f265fd0b86456cb4bcfaa7cca035468f7ab9e167e80b1b2153",
+      "code_fingerprint": "sha256:991ae69a47c114cf7bc27e3039702b3c567e0ca55b1e76fadae4beee2a0718ba",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
-          "bytes": 37446,
-          "sha256": "sha256:284fed7d73c59799171c4eec94d84783e8ee5ad7878d1323a9af1c8778fcf2b9"
+          "bytes": 37454,
+          "sha256": "sha256:a30061e332de7d359aa16922b220e2c773d8e9803692e88d505b10ad9e638245"
         }
       ]
     },
     "scaling-learning-rate-transfer": {
-      "code_fingerprint": "sha256:e2b1050583700fa8413b8643243402e77998ff7f452c005c06751cf65c68ff94",
+      "code_fingerprint": "sha256:48b991b501d0d88cf2aa4d74eb5ee090493e77ed3a1099039d51705f2556b9a0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best lr: 2.4e-04  2.4e-04  1.2e-04  2.4e-04    slope -0.05\n"
+          "text": "best lr: 2.4e-04  2.4e-04  2.4e-04  2.4e-04    slope +0.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-learning-rate-transfer-1.svg",
-          "bytes": 31089,
-          "sha256": "sha256:40295065295a0c9fb9a9aaa2802e950ad5e0c8d674adf707011317f40c5abe78"
+          "bytes": 31023,
+          "sha256": "sha256:c5aef75ee6f9dc9870309a8ea2e26cea407097515c68224955507e9b1de49614"
         }
       ]
     },
     "scaling-learning-rate-transfer-1": {
-      "code_fingerprint": "sha256:2b707b683d94b43b22108706c99de2ef7ebcab59cb563ea47ff4add2b6fa1e4a",
+      "code_fingerprint": "sha256:12bc2b26c0d2de9bd2a45d16c8b87c6533d3ef77ed0a2c8ff57212d8a05ec9ef",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SP  best loss per width: 0.323  0.300  0.259  0.222\n    width 8192 at the width-128 lr 0.333  (seeds 0.330  0.337)\n    width 8192 at its own lr       0.222  (seeds 0.222  0.222)\nmuP best loss per width: 0.327  0.261  0.237  0.222\n    width 8192 at the width-128 lr 0.222  (seeds 0.222  0.222)\n    width 8192 at its own lr       0.222  (seeds 0.222  0.222)\n"
+          "text": "SP  best loss per width: 0.323  0.298  0.262  0.230\n    width 8192 at the width-128 lr 0.355  (seeds 0.382  0.329)\n    width 8192 at its own lr       0.230  (seeds 0.232  0.228)\nmuP best loss per width: 0.335  0.265  0.241  0.230\n    width 8192 at the width-128 lr 0.230  (seeds 0.232  0.228)\n    width 8192 at its own lr       0.230  (seeds 0.232  0.228)\n"
         }
       ]
     }

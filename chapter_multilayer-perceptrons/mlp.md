@@ -356,7 +356,7 @@ $$\mathbf{O} = \mathbf{X}\underbrace{\mathbf{W}^{(1)}\mathbf{W}^{(2)}}_{\mathbf{
 
 - **Zero gain in expressive power:** Without $\phi$, any stack of linear layers multiplies out to a single $d \times q$ affine map that still fails on XOR.
 - **Low-rank bottleneck:** If $h_k < \min(d, q)$, then $\mathrm{rank}(\mathbf{W}) \le h_k$, strictly *shrinking* the linear model class.
-- **Nonlinearity blocks associativity:** Elementwise $\mathrm{ReLU}(z) = \max(z, 0)$ prevents $(\mathbf{X}\mathbf{W}^{(1)})\mathbf{W}^{(2)}$ from factoring into $\mathbf{X}(\mathbf{W}^{(1)}\mathbf{W}^{(2)})$.
+- **Nonlinearity blocks associativity:** Elementwise $\mathrm{ReLU}(z) = \max(z, 0)$ prevents $\mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)})\mathbf{W}^{(2)}$ from factoring into $\mathbf{X}(\mathbf{W}^{(1)}\mathbf{W}^{(2)})$.
 :::
 
 ::: {.col .fig}

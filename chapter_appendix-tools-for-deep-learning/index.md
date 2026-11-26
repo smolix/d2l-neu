@@ -140,7 +140,7 @@ $$M_{\text{train}} \approx 16 N + M_{\text{act}}, \qquad \text{tok/s} \lesssim \
 ::: {.cols .vc}
 ::: {.col}
 - **Reproducible setups & economics (§{sec_interactive_development}–§{num:sec_cloud_instances}):** `uv pip sync`, environment fingerprints, and engineer-inclusive cloud cost models across 4090 / A100 / H100.
-- **Sizing & verification (§{sec_hardware_buyers}–§{num:sec_software_ecosystem}):** 7B training memory ($86\text{ GiB}$ vs. $4\text{ GiB}$ QLoRA), decode bounds, Bradley-Terry SE ($347/\sqrt{v}$), and frozen manifests.
+- **Sizing & verification (§{sec_hardware_buyers}–§{num:sec_software_ecosystem}):** 7B training state ($78\text{ GiB}$ full vs. $\sim 4\text{ GiB}$ QLoRA), decode bounds, Bradley-Terry SE ($347/\sqrt{v}$), and frozen manifests.
 - **Distributed training, serving & the build (§{sec_training_systems}–§{num:sec_developers_guide}):** 8-GPU FSDP2 ($22\text{ GiB}$ vs. $95\text{ GiB}$ DDP), continuous batching simulators, and prefix output hashing.
 :::
 

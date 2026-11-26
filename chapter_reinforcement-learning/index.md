@@ -113,7 +113,7 @@ Our first running benchmark is $4 \times 4$ `FrozenLake-v1`, small enough to sol
 ::: {.col}
 - **Slippery transition kernel:** Each command moves in the intended direction with probability $1/3$ and slips perpendicularly to each side with probability $1/3$.
 - **Shortest path vs. slip-aware optimum:** Following the 6-move calm-ice shortest path succeeds in only **$4.5\%$** of episodes because slips drop it into adjacent holes.
-- **Risk-minimizing control:** The optimal policy $\pi^*$ reaches the goal in **$73.0\%$** of episodes—pointing *away* from the goal in four cells to eliminate hole risk.
+- **Risk-minimizing control:** The optimal policy $\pi^*$ reaches the goal in **$73.0\%$** of episodes—pointing *away* from the goal in four cells to minimize hole risk.
 :::
 
 ::: {.col .fig}

@@ -629,14 +629,14 @@ Running both `mlp_backward` and framework `autograd` in 64-bit floating point (`
 :::
 :::
 
-::: {.slide title="Arithmetic Cost: Why Backward Costs ~2× Forward"}
+::: {.slide title="Arithmetic Cost: Why Backward Costs ~2× Forward in Deep Networks"}
 [Systems Cost · FLOPs]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 - **Forward pass ($203{,}264$ MACs / image):** Computes one matrix product per layer ($\mathbf{X}\mathbf{W}^{(1)}$ and $\mathbf{H}\mathbf{W}^{(2)}$).
 - **Backward pass ($205{,}824$ MACs / image):** Every interior forward matmul $\mathbf{H}^{(k-1)}\mathbf{W}^{(k)}$ spawns **two** backward matmuls of identical FLOP count ($\mathbf{H}^{(k-1)\top}\mathbf{G}$ and $\mathbf{G}\mathbf{W}^{(k)\top}$).
-- **3× rule of thumb:** Backward costs $\approx 2\times$ forward FLOPs, so a full training step costs $\approx 3\times$ inference FLOPs.
+- **3× rule of thumb:** In our 2-layer MLP backward ≈ forward (the first layer skips $\partial J/\partial \mathbf{X}$); in deep stacks nearly every layer is interior, so backward costs $\approx 2\times$ forward FLOPs and a full training step costs $\approx 3\times$ inference FLOPs.
 :::
 
 ::: {.col .fig .big}

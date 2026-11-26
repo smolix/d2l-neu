@@ -104,8 +104,8 @@ Sequence Models and Recurrent Neural Networks<br>**autoregression · BPE subword
 
 ::: {.cols .vc}
 ::: {.col}
-- **Rollout drift & subword compression (§§{sec_sequence}–§{num:sec_text-sequence}):** Linear AR($4$) achieves $0.05$ 1-step MSE on a noisy sine wave but degrades $5\times$ to $0.25$ on 64-step rollout; BPE-1024 compresses *The Time Machine* to $2.78$ bytes/token with zero OOVs.
-- **Count vs. neural language models (§§{sec_language-model}–§{num:sec_rnn}):** Kneser–Ney cuts word trigram PPL from $2{,}481 \to 300$ ($1.90$ bpb on BPE-1024); clipped `RNNLMScratch` ($512$-byte state, $89\%$ params in vocabulary layers) reaches $2.12$ bpb.
+- **Rollout drift & subword compression (§§{sec_sequence}–§{num:sec_text-sequence}):** Linear AR($4$) achieves $0.05$ 1-step MSE on a noisy sine wave but degrades $5\times$ to $0.25$ on 64-step rollout; BPE-1024 compresses *The Time Machine* to $2.72$ bytes/token with zero OOVs.
+- **Count vs. neural language models (§§{sec_language-model}–§{num:sec_rnn}):** Kneser–Ney cuts word trigram PPL from $2{,}481 \to 300$ ($1.90$ bpb on lowercased BPE-1024 text); on raw text, clipped `RNNLMScratch` ($512$-byte state, $89\%$ params in vocabulary layers) reaches $2.12$ bpb, tying a Kneser–Ney trigram ($2.09$).
 - **Gradient horizon & generation (§§{sec_bptt}–§{num:sec_decoding}):** Despite $\rho(\mathbf{W}_{\textrm{hh}}) \approx 1.80$, $\tanh'$ contraction ($\approx 0.27$) decays gradients below $1\%$ within $8$ steps; truncated samplers restore `distinct-3` $\approx 0.99$.
 :::
 

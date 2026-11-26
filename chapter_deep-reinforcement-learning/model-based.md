@@ -985,7 +985,7 @@ Why did seeds 3 and 4 score $\sim -1{,}500$ after the first random episode (200 
 ::: {.cols .vc}
 ::: {.col}
 - **Short branched rollouts (Janner et al., 2019):** Branch $k = 3$-step rollouts from real buffer states inside $\hat{f}_\phi$ so synthetic data stay anchored near the true state distribution without long-horizon drift.
-- **Matched-UTD ablation (Chen et al., 2021):** At a matched `UTD = 10`, $100\%$ real replay transitions match $95\%$ imagined rollouts ($1{,}500$–$2{,}500$ real steps to $-200$) without risking model bias.
+- **Matched-UTD ablation (our runs):** At a matched `UTD = 10`, $95\%$ imagined batches took $1{,}500$–$3{,}000$ real steps to $-200$ and real replay alone $1{,}500$–$2{,}500$: the model did not reduce real steps. A model-free high-UTD critic ensemble (REDQ, Chen et al., 2021) likewise matched MBPO.
 :::
 
 ::: {.col .fig .big}

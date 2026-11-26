@@ -1005,7 +1005,7 @@ Plotting a 1D slice of the value function before and after a single $+0.50$ upda
 ![](../img/mdl-rl-table-vs-network.svg){.nostretch width=62%}
 
 - **Generalization (the positive bump around $x_0$):** Experience at $x_0$ immediately informs nearby states without visiting them.
-- **Interference and the deadly triad:** Fitting batches of upright CartPole states alters $\hat{V}_w(s)$ at large tilt angles; when combined with bootstrapping and off-policy data (the **deadly triad** of Tsitsiklis & Van Roy, 1997), global parameter coupling can cause value iteration to diverge.
+- **Interference and the deadly triad:** Fitting batches of upright CartPole states alters $\hat{V}_w(s)$ at large tilt angles; when combined with bootstrapping and off-policy data (the **deadly triad** of §{sec_dqn}; Tsitsiklis & Van Roy, 1997, showed the divergence), global parameter coupling can make bootstrapped value learning diverge.
 :::
 
 ::: {.slide title="Synthesis: Roadmap of Chapter §{num:chap_reinforcement_learning} and Chapter §{num:chap_deep_rl}"}

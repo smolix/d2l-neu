@@ -1261,7 +1261,7 @@ $$J(\beta) = -\log \beta\, \mathbb{E}_{s \sim \mathcal{D},\, a \sim \pi_\theta}\
 ::: {.slide title="Executing One Complete SAC Update Step" layout="tight" only="pytorch"}
 [The Update Step]{.kicker}
 
-Each call to `sac_step` regresses both critics onto the shared twin-minimum soft target $y$, updates the actor via the pathwise gradient of $\beta \log \pi_\theta - \min_j Q_{w_j}$, updates $\log \beta$ toward $\bar{H} = -1$, and blends the target networks by $\nu = 0.005$:
+Each call to `sac_step` regresses both critics onto the shared twin-minimum soft target $y$, updates the actor via the pathwise gradient of $\beta \log \pi_\theta - \min_j Q_{w_j}$, updates $\log \beta$ so that the policy entropy tracks $\bar{H} = -1$, and blends the target networks by $\nu = 0.005$:
 
 @-sac-one-update-1[1-16]
 :::
@@ -1269,7 +1269,7 @@ Each call to `sac_step` regresses both critics onto the shared twin-minimum soft
 ::: {.slide title="Executing One Complete SAC Update Step (cont.)" layout="tight" only="pytorch"}
 [The Update Step]{.kicker}
 
-The temperature step moves $\log \beta$ toward the target entropy, and Polyak averaging drifts the target critics:
+The temperature step adjusts $\log \beta$ to push the policy entropy toward its target, and Polyak averaging drifts the target critics:
 
 @sac-one-update-1[17-]
 :::
@@ -1277,7 +1277,7 @@ The temperature step moves $\log \beta$ toward the target entropy, and Polyak av
 ::: {.slide title="Executing One Complete SAC Update Step" layout="tight" only="jax"}
 [The Update Step]{.kicker}
 
-Each call to `sac_step` regresses both critics onto the shared twin-minimum soft target $y$, updates the actor via the pathwise gradient of $\beta \log \pi_\theta - \min_j Q_{w_j}$, updates $\log \beta$ toward $\bar{H} = -1$, and blends the target networks by $\nu = 0.005$:
+Each call to `sac_step` regresses both critics onto the shared twin-minimum soft target $y$, updates the actor via the pathwise gradient of $\beta \log \pi_\theta - \min_j Q_{w_j}$, updates $\log \beta$ so that the policy entropy tracks $\bar{H} = -1$, and blends the target networks by $\nu = 0.005$:
 
 @-sac-one-update-1[1-13]
 :::
@@ -1285,7 +1285,7 @@ Each call to `sac_step` regresses both critics onto the shared twin-minimum soft
 ::: {.slide title="Executing One Complete SAC Update Step (cont.)" layout="tight" only="jax"}
 [The Update Step]{.kicker}
 
-The temperature step moves $\log \beta$ toward the target entropy, and Polyak averaging drifts the target critics:
+The temperature step adjusts $\log \beta$ to push the policy entropy toward its target, and Polyak averaging drifts the target critics:
 
 @sac-one-update-1[14-]
 :::
@@ -1338,8 +1338,8 @@ Why do returns drop from the random policy's $-1{,}200$ down to $-1{,}700$ aroun
 
 ::: {.cols .vc}
 ::: {.col}
-- **Learned $\beta$ (blue):** Smoothly brings policy entropy from $+1.1\text{ nats}$ down onto the target $\bar{H} = -1.0\text{ nat}$ and holds it flat from $15{,}000$ steps onward.
-- **Fixed $\beta = 0.2$ (orange):** Entropy dips to $-1.3\text{ nats}$ during swing-up learning, then **rebounds upward** once balancing is mastered—because a balanced critic has flat curvature $h$, and a quadratic critic's optimal Gaussian variance scales as $\sigma^2 = \beta / h$.
+- **Learned $\beta$ (blue):** Smoothly brings policy entropy from about $+1.3\text{ nats}$ down onto the target $\bar{H} = -1.0\text{ nat}$ and holds it flat from $15{,}000$ steps onward.
+- **Fixed $\beta = 0.2$ (orange):** Entropy dips to a few tenths of a nat below zero during swing-up learning, then **rebounds upward** once balancing is mastered—because a balanced critic has flat curvature $h$, and a quadratic critic's optimal Gaussian variance scales as $\sigma^2 = \beta / h$.
 :::
 
 ::: {.col .fig}
@@ -1384,7 +1384,7 @@ Comparing the start-state prediction $\min_j Q_{w_j}(s_0, a_0)$ against the real
 @!sac-honest-promises-predicted-against-delivered
 
 ::: {.d2l-note}
-While both reach $-200$ on Pendulum, the **single critic systematically overestimates** the true soft return on nearly every seed, whereas the **twin minimum** provides a conservative lower bound.
+While both reach $-200$ on Pendulum, the **single critic systematically overestimates** the true soft return on nearly every seed, whereas the **twin minimum** sits below the realized return on almost every run (at most a few points above).
 :::
 :::
 
@@ -1414,6 +1414,6 @@ Test your understanding of SAC's mathematical mechanics:
 | **Soft Critic Target** | $r + \gamma(1-\textrm{term})\big(\min_j Q_{w_j^-}(s', \tilde{a}') - \beta \log \pi_\theta(\tilde{a}' \mid s')\big)$ | Off-policy value estimation without importance ratios | Evaluates reward + future entropy from 1 fresh draw $\tilde{a}'$ |
 | **Pathwise Actor Loss** | $\mathbb{E}_{s, z}\big[\beta \log \pi_\theta(\tilde{a}_\theta \mid s) - \min_j Q_{w_j}(s, \tilde{a}_\theta)\big]$ | High variance of score-function gradients | Direct $\partial Q / \partial a$ slope; $\sim 50\times$ fewer steps than REINFORCE |
 | **Tanh Log-Det Jacobian** | $-2\big(\log 2 - u - \operatorname{softplus}(-2u)\big) - \log c$ | Undefined density & dead gradients of hard clipping | Density integrates to $1.000000$ without `float32` underflow |
-| **Twin Critics + Polyak** | $\min(Q_{w_1^-}, Q_{w_2^-})$, $w_j^- \leftarrow 0.005 w_j + 0.995 w_j^-$ | Continuous maximization bias as actor climbs $Q$ | Keeps predicted soft values calibrated below realized returns |
+| **Twin Critics + Polyak** | $\min(Q_{w_1^-}, Q_{w_2^-})$, $w_j^- \leftarrow 0.005 w_j + 0.995 w_j^-$ | Continuous maximization bias as actor climbs $Q$ | Keeps predicted soft values at or below realized returns on almost every run |
 | **Dual Temperature ($\beta$)** | $\min_{\log\beta} -\log\beta\, \mathbb{E}[\log \pi_\theta(a \mid s) + \bar{H}]$ | Sensitivity of fixed $\beta$ to reward scale and critic curvature | Locks policy entropy at $\bar{H} = -1\text{ nat}$ as critic flattens |
 :::

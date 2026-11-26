@@ -86,7 +86,7 @@ The recursion runs backward once, from $\mathbf{P}_H = \mathbf{Q}_H$, and needs 
 
 Three properties of :eqref:`eq_lqr_gain` and :eqref:`eq_riccati_recursion` deserve emphasis:
 
-1. **No curse of dimensionality:** Each Bellman backup replaces a maximization over an infinite action space $\mathbb{R}^m$ and all states $\mathbb{R}^d$ by $O(d^3 + m^3)$ matrix operations on $\mathbf{P}_{t+1}$.
+1. **No curse of dimensionality:** Each Bellman backup replaces a minimization over an infinite action space $\mathbb{R}^m$ and all states $\mathbb{R}^d$ by $O(d^3 + m^3)$ matrix operations on $\mathbf{P}_{t+1}$.
 2. **Linear feedback gain:** The optimal policy $\pi_t^*(\mathbf{x}) = -\mathbf{K}_t \mathbf{x}$ is linear in the state, and the gain matrix $\mathbf{K}_t \in \mathbb{R}^{m \times d}$ depends only on $(\mathbf{A}, \mathbf{B}, \mathbf{Q}, \mathbf{R})$, not on the initial state $\mathbf{x}_0$.
 3. **Certainty equivalence:** Even if zero-mean independent noise $\mathbf{w}_t$ with covariance $\boldsymbol{\Sigma}$ is added to the transition ($\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t + \mathbf{w}_t$), the cross term $\mathbb{E}[\mathbf{w}_t^\top \mathbf{P}_{t+1}(\mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t)]$ vanishes, adding only the constant $\textrm{tr}(\mathbf{P}_{t+1}\boldsymbol{\Sigma})$ to the value function while leaving the optimal feedback matrix $\mathbf{K}_t$ unchanged (exercise :exref:`ex_optimal-control-certainty-equivalence`).
 

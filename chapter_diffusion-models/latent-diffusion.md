@@ -1354,7 +1354,7 @@ Latent diffusion factors image generation into a frozen **perceptual autoencoder
 $$\mathcal{L}_{\textrm{AE}}(\mathbf{x}) = \frac{1}{784}\|\mathbf{x} - \mathcal{D}(\mathbf{z})\|^2 + \frac{\beta}{196}\sum_{j=1}^{196} \frac{1}{2}\big(\mu_j^2 + s_j^2 - 1 - \log s_j^2\big)$$
 
 - **Three requirements for diffusable latents:** (1) unit scale matching $\boldsymbol\epsilon \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$, (2) no heavy-tailed outliers, and (3) a smooth decoding manifold via $\mathbf{z} = \boldsymbol\mu + \mathbf{s} \odot \boldsymbol\xi$.
-- **Light KL weighting ($\beta = 10^{-4}$):** Anchors scale near $1$ and prevents posterior collapse ($s_j \to 0$) while preserving sharp reconstructions.
+- **Light KL weighting ($\beta = 10^{-4}$):** Anchors scale near $1$ and keeps the encoder's noise from collapsing to zero ($s_j \to 0$) while preserving sharp reconstructions.
 :::
 
 ::: {.col .fig}

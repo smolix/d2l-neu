@@ -778,7 +778,7 @@ Comparing $10{,}000$ independent $K = 16$ group estimates against the exact 9-te
 
 @!policy-gradient-the-reinforce-estimator-5
 
-- **Exact match with $\sqrt{(1-p)/(Kp)}$:** At $p \approx 1/8$ and $K = 16$, one group estimate has RMS relative error $\sqrt{7 / 16} = 0.66$, and averaging $M$ groups shrinks the error at the exact $0.66/\sqrt{M}$ rate with zero bias floor.
+- **Exact match with $\sqrt{(1-p)/(Kp)}$:** At $p \approx 1/8$ and $K = 16$, one group estimate has RMS relative error $\sqrt{7 / 16} = 0.66$, and averaging $M$ groups shrinks the error roughly as $0.66/\sqrt{M}$ (a single average can land up to about twice above it), with no bias floor.
 - **Unsolvable prompts receive zero gradient:** On `8*8` and `9*9` ($r = 0$ for all candidates), $100\%$ of groups produce $\hat{u} = \mathbf{0}$.
 :::
 

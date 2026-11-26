@@ -1623,7 +1623,7 @@ In practice, MaskGIT (Chang et al., 2022) and LLaDA (Nie et al., 2025) draw cand
 @!discrete-diffusion-diffusion-language-models-in-practice
 
 - **Fixed order (1 token/step):** Zero independence error ($\mathrm{TV} = 0.000$), recovering the exact entropy $4.840$ nats and mode weights $[0.500, 0.300, 0.200]$.
-- **Confidence remasking ($\mathrm{TV} = 0.179$, worse than 2 random jumps at $0.157$):** Because draws from the lightest mode ($\pi_3 = 0.20$) have lower marginal probability, they lose the confidence contest and get overwritten—collapsing mode 3's weight from **$0.200$ to $0.068$** and dropping entropy to $4.41$ nats.
+- **Confidence remasking ($\mathrm{TV} = 0.179$, worse than 2 random jumps at $0.157$):** Because draws from the lightest mode ($\pi_3 = 0.20$) have lower marginal probability, they lose the confidence contest and get overwritten—collapsing mode 3's weight from **$0.200$ to $0.072$** and dropping entropy to $4.41$ nats.
 :::
 
 ::: {.slide title="The ELBO Floor of Any Factorized Denoiser"}
@@ -1667,7 +1667,7 @@ Thresholding Fashion-MNIST to binary pixels $\{0, 1\}$ with mask token $[\textrm
 ::: {.col}
 @!discrete-diffusion-images-as-binary-tokens-3
 
-- **$4\times$ compression over independent pixels:** The variational bound reaches **$\approx 0.171\text{ bits/pixel}$** ($\approx 134$ bits per garment image) vs. $0.697\text{ bits/pixel}$ ($\approx 546$ bits) for independent pixel marginals.
+- **$4\times$ compression over independent pixels:** The variational bound reaches **$\approx 0.170\text{ bits/pixel}$** ($\approx 133$ bits per garment image) vs. $0.702\text{ bits/pixel}$ ($\approx 550$ bits) for independent pixel marginals.
 - **100-step generation ($\approx 8$ pixels unmasked per jump):** Produces coherent binary garment silhouettes.
 :::
 

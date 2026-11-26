@@ -827,7 +827,7 @@ Splitting the $10{,}000$ CIFAR-10 test images into a $5{,}000$-image reference s
 
 @!conditional-measuring-condition-alignment-4
 
-- The generated set scores $\mathrm{FD} \approx 1.6\text{--}2.0$ ($10\text{--}12\times$ the finite-sample real floor of $0.16$) and $\mathrm{MMD}^2 \approx 0.11$, with a second latent draw shifting FD by $< 0.1$. Less than $1\%$ of raw generator outputs fall outside $[-1, 1]$ before clamping.
+- The generated set scores $\mathrm{FD} \approx 1.6\text{--}2.0$ ($10\text{--}12\times$ the finite-sample real floor of $\approx 0.15$) and $\mathrm{MMD}^2 \approx 0.11$, with a second latent draw shifting FD by $< 0.1$. Less than $1\%$ of raw generator outputs fall outside $[-1, 1]$ before clamping.
 :::
 
 ::: {.slide title="Per-Class Precision and Recall on CIFAR-10"}

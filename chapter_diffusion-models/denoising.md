@@ -1021,7 +1021,7 @@ Removing Gaussian noise $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma\boldsymbol\e
 ::: {.cols .vc}
 ::: {.col}
 - **Nonlinear manifold projection:** At noise level $\sigma = 0.5$ ($\textrm{MSE} = 0.25$ per pixel), a 4-layer convnet reduces Fashion-MNIST test error to **$0.031$**—beating the optimal $784 \times 784$ linear Wiener filter ($0.045$) by $30\%$.
-- **Denoising $\iff$ score estimation:** By Tweedie's formula, the optimal least-squares denoiser $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$ is directly proportional to the gradient of the log-density $\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}})$.
+- **Denoising $\iff$ score estimation:** By Tweedie's formula, the optimal least-squares denoiser $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$ equals $\tilde{\mathbf{x}} + \sigma^2\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}})$: its correction to $\tilde{\mathbf{x}}$ is $\sigma^2$ times the score.
 - **The single-level question:** If a denoiser implicitly learns the score vector field $\nabla \log p_\sigma$, can we generate fresh images by following that field uphill from noise?
 :::
 
@@ -1228,8 +1228,8 @@ Training `TimeMLP` models across seven noise levels $\sigma \in [0.05, 1.0]$ and
 
 ::: {.cols .vc}
 ::: {.col}
-- **Bias-dominated regime ($\sigma \ge 0.3$):** Both training seeds lock tightly onto the analytical smoothing bias curve—the network learns $\nabla \log p_\sigma$ accurately, but $p_\sigma \neq p$.
-- **Variance-dominated regime ($\sigma \le 0.1$):** Smoothing bias vanishes, but $1/\sigma$ target noise causes test error to rebound sharply and vary widely across seeds.
+- **Bias-dominated regime ($\sigma \ge 0.5$):** Both training seeds lie within about $0.1$ of the analytical smoothing bias curve—the network learns $\nabla \log p_\sigma$ accurately, but $p_\sigma \neq p$.
+- **Variance-dominated regime ($\sigma < 0.1$):** Smoothing bias vanishes, but $1/\sigma$ target noise causes test error to rebound sharply and vary widely across seeds.
 - **Single-level sweet spot:** Error is minimized near $\sigma \approx s/3 \in [0.1, 0.2]$ (around $0.15$–$0.25$).
 :::
 

@@ -1711,7 +1711,7 @@ Test your understanding of fast diffusion solvers and deterministic inversion:
 
 | Method / Tool | Update Rule in $(\bar{\mathbf{x}}, \bar\sigma) = (\mathbf{x}/\alpha, \sigma/\alpha)$ | Order & Cost per Step | Key Empirical Result & Role |
 | :--- | :--- | :--- | :--- |
-| **DDIM ($\eta = 0$)** | $\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\hat{\boldsymbol\epsilon}_t$ | 1st-order ($O(h)$), 1 NFE | Exact Euler on flow ODE; reaches plateau in $50$ NFE |
+| **DDIM ($\eta = 0$)** | $\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\hat{\boldsymbol\epsilon}_t$ | 1st-order ($O(h)$), 1 NFE | Exact Euler on flow ODE; needs $50$–$100$ NFE to reach the plateau |
 | **Stochastic DDIM ($\eta > 0$)** | $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sqrt{\sigma_s^2 - \tilde\sigma^2}\hat{\boldsymbol\epsilon} + \tilde\sigma\boldsymbol\xi$ | 1st-order SDE, 1 NFE | $\eta = 1$ uses posterior variance; trails $\eta = 0$ at $\le 200$ steps |
 | **Heun's Method** | Average of Euler start & trial slopes | 2nd-order ($O(h^2)$), 2 NFE | Reaches asymptotic FD plateau in **$20$ NFE** on linear grid |
 | **Multistep (AB2 / DPM++)** | $\bar{\mathbf{x}}_t + \Delta\big(\hat{\boldsymbol\epsilon}_t + \frac{\Delta}{2\Delta'}(\hat{\boldsymbol\epsilon}_t - \hat{\boldsymbol\epsilon}')\big)$ | 2nd-order ($O(h^2)$), 1 NFE | Reuses previous slope; best solver under CFG ($\gamma = 2$) |

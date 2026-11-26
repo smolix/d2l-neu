@@ -950,7 +950,7 @@ Comparing the on-mode sample fraction against the critic loss across all $8$ che
 @!convergence-mode-coverage-on-25-gaussians-6
 
 ::: {.d2l-note .warn}
-**Why an equilibrium critic loss does not certify convergence:** In every penalized run, the critic loss sits at its exact equilibrium value ($2\log 2 \approx 1.38$ for `NS`; $\log 2 \approx 0.69$ for `pairing`) from the very first checkpoint at step $1{,}250$—when only **$1\text{--}3\%$** of generated samples lie on a mode. Because $R_1 + R_2$ forces $D(x)$ to remain nearly flat everywhere, an equilibrium critic loss only confirms that the critic is damped, never that $q$ matches $p$.
+**Why an equilibrium critic loss does not certify convergence:** In every penalized run, the critic loss sits at its exact equilibrium value ($2\log 2 \approx 1.39$ for `NS`; $\log 2 \approx 0.69$ for `pairing`) from the very first checkpoint at step $1{,}250$—when only **$1\text{--}3\%$** of generated samples lie on a mode. Because $R_1 + R_2$ forces $D(x)$ to remain nearly flat everywhere, an equilibrium critic loss only confirms that the critic is damped, never that $q$ matches $p$.
 :::
 :::
 

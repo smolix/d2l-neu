@@ -1009,7 +1009,7 @@ Work through these three design questions:
 
 1. (a) No **function approximation**; (b) No **bootstrapping** and no **off-policy data**; (c) No **bootstrapping**.
 2. With $n = 49$ syncs, $(1 - 0.99^{49}) / 0.01 \approx \mathbf{38.9}$—a very slow target sync stabilizes regression but starves value propagation.
-3. The expected maximum of $m = 10^5$ unit-variance noise variables is $\approx \sqrt{2 \ln 10^5} \approx \mathbf{4.4\sigma}$ (and $Q_{w^-}$ remains heavily correlated with $Q_w$), creating massive maximization bias across $10^5$ heads.
+3. The expected maximum of $m = 10^5$ unit-variance noise variables is $\approx \mathbf{4.4\sigma}$ (bounded by $\sqrt{2 \ln 10^5} \approx 4.8\sigma$, and $Q_{w^-}$ remains heavily correlated with $Q_w$), creating massive maximization bias across $10^5$ heads.
 :::
 :::
 

@@ -1125,8 +1125,8 @@ Evaluating the discrete ELBO weights $\omega_k$ for $\nu_k = \beta_k$ and $\nu_k
 
 @!design-space-from-the-bound-to-weighted-regression
 
-- **Massive weight spike near clean data ($k \le 10$):** Because $\sigma_k^2$ starts near zero, the log-SNR drops by $\approx 0.78$ at $k = 2$ and $\approx 0.16$ at $k = 10$, vs. $\le 0.01$ for $k \ge 100$.
-- **Why $L_{\textrm{simple}}$ sets all weights to $1$:** The true ELBO spends most of its gradient budget on imperceptible low-noise pixel perturbations ($k \le 20$), whereas uniform step weighting focuses capacity on intermediate noise levels where global image structure forms.
+- **Massive weight spike near clean data ($k \le 10$):** Because $\sigma_k^2$ starts near zero, the log-SNR drops by $\approx 0.78$ at $k = 2$ and $\approx 0.16$ at $k = 10$, vs. about $0.01$–$0.02$ for $k \ge 100$.
+- **Why $L_{\textrm{simple}}$ sets all weights to $1$:** The true ELBO puts about a fifth of its weight on the first 20 of 1,000 steps ($k \le 20$), about ten times the share uniform weighting gives them, and these steps are imperceptible low-noise pixel perturbations; uniform step weighting focuses capacity on intermediate noise levels where global image structure forms.
 :::
 
 ::: {.slide title="Exact Flow Likelihood vs. Continuous ELBO"}
@@ -1191,7 +1191,7 @@ Computing $w(\lambda) = 2\,c(t)\,|dt/d\lambda|$ numerically via forward-mode AD 
 ::: {.col}
 - **Step-function basis:** A step weighting $w_\mu(\lambda) = \mathbf{1}\{\lambda \le \mu\}$ is the exact continuous ELBO for data pre-corrupted to log-SNR level $\mu$.
 - **Monotone decreasing $w(\lambda)$ = mixture of bounds (Kingma & Gao, 2023):** Any $w'(\lambda) \le 0$ decomposes as $\int w_\mu(\lambda)\,(-w'(\mu))\,d\mu$—an average of ELBOs over noise-augmented data.
-- **Time sampling $p(t)$ as a multiplier:** Drawing $\operatorname{logit}(t) \sim \mathcal{N}(m, s^2)$ multiplies $w(\lambda)$ by a bell curve centered at $m$.
+- **Time sampling $p(t)$ as a multiplier:** Drawing $\operatorname{logit}(t) \sim \mathcal{N}(m, s^2)$ multiplies $w(\lambda)$ by a bell curve in $\lambda$ centered at $\lambda = -2m$ (on the linear path $\lambda = -2\operatorname{logit} t$).
 :::
 
 ::: {.col .fig .big}
@@ -1319,7 +1319,7 @@ Test your command of the diffusion likelihood bound and design space:
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. $L_0 = \log(2\pi \times 10^{-4}) + \frac{1}{2}(2) \approx -7.37 + 1.00 = \mathbf{-6.37\text{ nats}}$ (a differential log-density term). Added to the log-SNR integral ($\approx +8.84$ nats), the total bound is $\approx \mathbf{+2.47\text{ nats}}$.
+1. $L_0 = \log(2\pi \times 10^{-4}) + \frac{1}{2}(2) \approx -7.37 + 1.00 = \mathbf{-6.37\text{ nats}}$ (a differential log-density term). Added to the measured log-SNR integral ($\approx +8.75$ nats; at the cell's actual $e^{-\lambda_{\max}} \approx 1.1 \times 10^{-4}$ the end terms are $\approx -6.3$ nats), the total bound is $\approx \mathbf{+2.47\text{ nats}}$.
 2. **The velocity loss ($w(\lambda) \propto e^{-\lambda/2}$):** Because $e^{-\lambda/2}$ is **monotonically decreasing** in $\lambda$, it is a positive mixture of step-function ELBOs on noise-augmented data; $\operatorname{sech}^2(\lambda/4)$ peaks at $\lambda = 0$.
 :::
 :::

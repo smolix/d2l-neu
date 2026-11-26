@@ -230,7 +230,7 @@ def _emit_functions(functions):
     return lines
 
 
-def generate_markdown(all_apis):
+def generate_markdown(all_apis, headings=('Classes', 'Functions')):
     """Generate tabbed Markdown for all frameworks.
 
     all_apis: list of (display_name, classes, functions) tuples
@@ -238,7 +238,7 @@ def generate_markdown(all_apis):
     lines = []
 
     # Classes section with per-framework tabs
-    lines.append('## Classes\n')
+    lines.append(f'## {headings[0]}\n')
     lines.append(':::: {.panel-tabset group="framework"}\n')
     for display_name, classes, _ in all_apis:
         lines.append(f'### {display_name}\n')
@@ -249,7 +249,7 @@ def generate_markdown(all_apis):
     lines.append('::::\n')
 
     # Functions section with per-framework tabs
-    lines.append('\n## Functions\n')
+    lines.append(f'\n## {headings[1]}\n')
     lines.append(':::: {.panel-tabset group="framework"}\n')
     for display_name, _, functions in all_apis:
         lines.append(f'### {display_name}\n')
@@ -262,15 +262,23 @@ def generate_markdown(all_apis):
     return '\n'.join(lines)
 
 
+# The page's two (empty) level-2 sections, Classes then Functions. Matched by
+# position, not by their English text, so a translated page keeps working.
+_SECTIONS = re.compile(r'^## (.+?)[ \t]*\n(.*?)^## (.+?)[ \t]*\n(.*?)\Z',
+                       re.DOTALL | re.MULTILINE)
+
+
+def find_sections(qmd_path):
+    """Return (match, (classes_heading, functions_heading)) or (None, None)."""
+    text = Path(qmd_path).read_text(encoding='utf-8')
+    m = _SECTIONS.search(text)
+    return (m, (m.group(1), m.group(3))) if m else (None, None)
+
+
 def inject_into_qmd(qmd_path, markdown_content):
     """Replace the empty Classes/Functions sections in the .qmd file."""
     text = Path(qmd_path).read_text(encoding='utf-8')
-
-    pattern = re.compile(
-        r'(## Classes\s*\n)(.*?)(## Functions\s*\n)(.*?)(\Z)',
-        re.DOTALL)
-
-    m = pattern.search(text)
+    m, _ = find_sections(qmd_path)
     if not m:
         print(f'WARNING: Could not find Classes/Functions sections in {qmd_path}')
         return False
@@ -307,7 +315,8 @@ def main():
         print('ERROR: No library files found. Run build_lib.py first.')
         return 1
 
-    markdown = generate_markdown(all_apis)
+    _, headings = find_sections(args.qmd)
+    markdown = generate_markdown(all_apis, headings or ('Classes', 'Functions'))
     if inject_into_qmd(args.qmd, markdown):
         print(f'Injected API documentation into {args.qmd}')
     return 0

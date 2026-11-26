@@ -371,7 +371,7 @@ Verify the arithmetic directly: $2 x_1^{(1)} - 3.4 x_2^{(1)} + 4.2$ matches the 
 ::: {.col}
 If $\sigma = 0.01$ is tiny, why does plotting $y$ against $x_1$ and $x_2$ show thick vertical clouds several units wide rather than razor-thin lines?
 
-- **Omitted-variable projection:** In 3D space $(x_1, x_2, y)$, all $1{,}000$ points lie within $\pm 0.03$ of the tilted plane $y = 2x_1 - 3.4x_2 + 4.2$.
+- **Omitted-variable projection:** In 3D space $(x_1, x_2, y)$, all but a handful of the $1{,}000$ points lie within $\pm 0.03$ ($3\sigma$) of the tilted plane $y = 2x_1 - 3.4x_2 + 4.2$.
 - **Unplotted feature variance:** Projecting onto $(x_2, y)$ folds each point's unplotted coordinate $2x_1 \sim \mathcal{N}(0, 4)$ into the vertical spread ($\textrm{std} = 2.0$), while projecting onto $(x_1, y)$ folds in $-3.4x_2$ ($\textrm{std} = 3.4$).
 :::
 

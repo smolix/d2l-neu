@@ -513,7 +513,7 @@ Concise Implementation of Linear Regression<br>
 ::: {.slide title="Training and Parameter Recovery With Framework Parts"}
 [End-to-End Concise Execution]{.kicker}
 
-Fitting `LinearRegression(lr=0.015)` with `d2l.Trainer(max_epochs=10)` reproduces the exact $7\times$-per-epoch convergence and $O(10^{-4})$ parameter recovery:
+Fitting `LinearRegression(lr=0.015)` with `d2l.Trainer(max_epochs=10)` reproduces the exact $7\times$-per-epoch convergence and parameter recovery to within about $10^{-3}$:
 
 ::: {.cols .vc}
 ::: {.col}

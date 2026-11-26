@@ -581,14 +581,14 @@ class SoftmaxRegression(d2l.Classifier):  #@save
 Why does `SoftmaxRegression.forward` stop at the logits instead of returning probabilities? Recall the twin floating-point hazards of computing $\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o})$ first and $-\log \hat{y}_y$ second in `float32`:
 
 1. **Overflow:** $\exp(o)$ overflows to `inf` for $o > 88.7$. Subtracting $o_{\max} = \max_k o_k$ from every logit fixes overflow because every shifted exponent $o_k - o_{\max}$ is $\leq 0$.
-2. **Underflow:** Even after shifting by $o_{\max}$, any class whose logit sits more than $104$ below $o_{\max}$ (such as class 1 in $\mathbf{o} = (0, -200, 0)$) has $\exp(o_y - o_{\max})$ underflow to exact `0.0` in float32. Taking $\log(0.0)$ then produces `-inf` (or, with our scratch `1e-12` clamp, caps the loss at $27.6$ and **zeroes out the gradient**, leaving the model unable to learn from a confident blunder).
+2. **Underflow:** Even after shifting by $o_{\max}$, any class whose logit sits more than $104$ below $o_{\max}$ (such as the second class, label 1 in code, in $\mathbf{o} = (0, -200, 0)$) has $\exp(o_y - o_{\max})$ underflow to exact `0.0` in float32. Taking $\log(0.0)$ then produces `-inf` (or, with our scratch `1e-12` clamp, caps the loss at $27.6$ and **zeroes out the gradient**, leaving the model unable to learn from a confident blunder).
 
 We avoid both overflow and underflow by *never materializing intermediate probabilities at all*. Combining the logarithm and the shifted softmax algebraically via the *LogSumExp trick* turns the division into a subtraction:
 
 $$l(y, \mathbf{o}) = \log \sum_{k=1}^q \exp(o_k) - o_y = o_{\max} + \log \sum_{k=1}^q \exp(o_k - o_{\max}) - o_y.$$
 :eqlabel:`eq_softmax-concise-lse-loss`
 
-Because every shifted exponent $o_k - o_{\max}$ is $\leq 0$ and at least one equals $0$, the sum inside the logarithm is trapped strictly inside $[1, q]$, and its logarithm lies strictly inside $[0, \log q]$. Neither overflow nor $\log 0$ can occur, and automatic differentiation yields the finite gradient $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$.
+Because every shifted exponent $o_k - o_{\max}$ is $\leq 0$ and at least one equals $0$, the sum inside the logarithm lies in $[1, q]$, and its logarithm in $[0, \log q]$. Neither overflow nor $\log 0$ can occur, and automatic differentiation yields the finite gradient $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$.
 
 Every framework provides this fused log-sum-exp cross-entropy. We install it once on `d2l.Classifier.loss` so every classifier in the rest of the book inherits it:
 
@@ -967,7 +967,7 @@ We train `SoftmaxRegressionScratch` for $10$ epochs on Fashion-MNIST with miniba
 ::: {.slide title="Inspecting Individual Misclassified Garments"}
 [Qualitative Error Analysis]{.kicker}
 
-In the first validation minibatch of $256$ images, roughly $40$ garments are misclassified. Plotting the first eight mistakes (`true → predicted`) reveals a clear visual pattern:
+In the first validation minibatch of $256$ images, about $35$ to $40$ garments are misclassified. Plotting the first eight mistakes (`true → predicted`) reveals a clear visual pattern:
 
 @!softmax-regression-scratch-prediction-1
 

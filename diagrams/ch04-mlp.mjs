@@ -1579,7 +1579,7 @@ function dropoutSummary() {
     { y: 12,  theme: 'blue',   t1: 'Inverted Mask',     t2: 'h\'_j = ξ_j h_j / (1 − p)  with ξ_j ~ Bernoulli(1 − p)  ⇒  E[h\'_j] = h_j' },
     { y: 62,  theme: 'purple', t1: 'Test-Time Identity', t2: 'Disable mask at eval (h\'_j = h_j): zero test FLOP or memory overhead' },
     { y: 112, theme: 'orange', t1: 'Injected Variance',  t2: 'Var[h\'_j] = (p / (1 − p)) h_j²   (std = |h_j| at p = 0.5; 2|h_j| at p = 0.8)' },
-    { y: 162, theme: 'green',  t1: 'Noisy-Label Gain',   t2: 'On 40%-corrupted Fashion-MNIST (n=1,000), p=0.5 boosts val acc by +3 to +5 pts' },
+    { y: 162, theme: 'green',  t1: 'Noisy-Label Gain',   t2: 'On 40%-corrupted Fashion-MNIST (n=1,000), p=0.5 boosts val acc by +3 to +6 pts' },
     { y: 212, theme: 'red',    t1: 'Mode-Switch Guard',  t2: 'Always switch to evaluation mode for validation so it is deterministic' },
   ];
   rows.forEach((r) => {

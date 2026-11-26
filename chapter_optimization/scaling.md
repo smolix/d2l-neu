@@ -235,12 +235,12 @@ class MuMLP(MLP):
     def __init__(self, width, base_width=8192):
         super().__init__(width)
         self.m = width / base_width
-        # Rule 1: output init variance 1/base_width at every width
+        # Rule 3: output init variance 1/base_width at every width
         with torch.no_grad():
             self.fc_out.weight.mul_(self.m ** 0.5)
 
     def forward(self, X):
-        # Rule 2: scale the output matrix's logits; the bias is untouched
+        # Rule 3: scale the output matrix's logits; the bias is untouched
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
@@ -249,7 +249,7 @@ class MuMLP(MLP):
                 if not any(p is q for q in hidden)]
         return torch.optim.Adam([
             {'params': rest, 'lr': lr},
-            {'params': hidden, 'lr': lr / self.m}])  # Rule 3: hidden LR / m
+            {'params': hidden, 'lr': lr / self.m}])  # Rule 2: hidden LR / m
 ```
 
 ```{.python .input #scaling-the-rules}
@@ -259,11 +259,11 @@ class MuMLP(MLP):
     def __init__(self, width, base_width=8192, *, rngs):
         super().__init__(width, rngs=rngs)
         self.m = width / base_width
-        # Rule 1: output init variance 1/base_width at every width
+        # Rule 3: output init variance 1/base_width at every width
         self.fc_out.kernel[...] *= self.m ** 0.5
 
     def __call__(self, X):
-        # Rule 2: scale the output matrix's logits; the bias is untouched
+        # Rule 3: scale the output matrix's logits; the bias is untouched
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
@@ -271,7 +271,7 @@ class MuMLP(MLP):
             name = jax.tree_util.keystr(path)
             return 'hidden' if 'fc_h' in name and 'kernel' in name else 'rest'
         tx = optax.multi_transform(
-            {'hidden': optax.adam(lr / self.m),  # Rule 3: hidden LR / m
+            {'hidden': optax.adam(lr / self.m),  # Rule 2: hidden LR / m
              'rest': optax.adam(lr)},
             lambda params: jax.tree_util.tree_map_with_path(label, params))
         return nnx.Optimizer(self, tx, wrt=nnx.Param)

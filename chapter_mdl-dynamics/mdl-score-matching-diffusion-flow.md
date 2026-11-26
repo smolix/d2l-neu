@@ -1140,15 +1140,15 @@ changes along it. Holding it fixed across a stride removes too much signal,
 by the factor above.
 
 The corollary gives the factor of one stride. Over a sampling run the
-factors multiply, and we compute the product for 10, 50 and 1,000 equally
-spaced strides of the DDPM schedule (at 1,000, one stride per level, since
-rounding leaves one of them empty). How much of this error survives on data
-that are not Gaussian? To see, DDIM runs on the standardized mixture with
+factors multiply, and we compute the product for 10, 50 and 999 equally
+spaced strides of the DDPM schedule; 999 strides step through its 1,000
+levels one at a time. How much of this error survives on data that are not
+Gaussian? To see, DDIM runs on the standardized mixture with
 its exact noise prediction
 $\hat{\epsilon} = -\sqrt{1 - \bar\alpha_t}\, \nabla \log p_t$, where the
 noised law at level $t$ has modes $\pm\sqrt{\bar\alpha_t}\, m$ and component
 variance $\bar\alpha_t v_0 + 1 - \bar\alpha_t$, with $m = 0.970$ and
-$v_0 = 0.243^2$ the clean values. We compare 10 and 50 strides with 1,000
+$v_0 = 0.243^2$ the clean values. We compare 10 and 50 strides with 999
 from the same initial draws in two ways: by the mean distance between paired
 endpoints, and by the Kolmogorov–Smirnov (KS) statistic of the two samples,
 the largest gap between their empirical distribution functions.
@@ -1161,7 +1161,7 @@ def ks(a, b):                                           # two-sample Kolmogorov-
                   - np.searchsorted(np.sort(b), q, 'right') / len(b)).max()
 def strides(K):                                         # K equal strides from level N to level 1
     return np.linspace(N - 1, 0, K + 1).round().astype(int)
-for K in (10, 50, 1000):                                # the Gaussian corollary
+for K in (10, 50, 999):                                 # the Gaussian corollary
     a = alpha_bar[strides(K)]
     print(f'N(0,1) data, {K:4d} strides: every sample times '
           f'{np.prod(np.sqrt(a[:-1] * a[1:]) + np.sqrt((1 - a[:-1]) * (1 - a[1:]))):.3f}')
@@ -1176,24 +1176,24 @@ def ddim(z, K, eps_fn):                                 # K DDIM strides from no
         xt = np.sqrt(a2) * (xt - np.sqrt(1 - a1) * e) / np.sqrt(a1) + np.sqrt(1 - a2) * e
     return xt
 z = rng.standard_normal(8000)                           # one draw, shared by every stride count
-x_ref = ddim(z, 1000, eps_hat)
+x_ref = ddim(z, 999, eps_hat)
 for K in (10, 50):
     x_K = ddim(z, K, eps_hat)
-    print(f'mixture, {K:3d} strides vs 1000: mean |gap| {np.abs(x_K - x_ref).mean():.3f}, '
+    print(f'mixture, {K:3d} strides vs 999: mean |gap| {np.abs(x_K - x_ref).mean():.3f}, '
           f'KS {ks(x_K, x_ref):.3f}')
 ```
 
 Ten strides shrink unit-variance Gaussian data by the factor $0.832$, fifty
-by $0.964$, and a thousand by $0.998$. These factors are deterministic and
+by $0.964$, and 999 by $0.998$. These factors are deterministic and
 measure the Euler error alone, since the noise prediction is exact. Five
 times as many strides cut the shortfall from $0.17$ to $0.04$, as a
 first-order method should. The mixture behaves the same way. Ten strides
-land on average $0.08$ from the thousand-stride result, on a scale where the
+land on average $0.08$ from the 999-stride result, on a scale where the
 modes sit at $\pm 0.97$, and the KS statistic is $0.08$ as well. Fifty
 strides reduce both numbers to about $0.02$.
 :numref:`fig_mdl-dyn-ddim-strides` draws both experiments.
 
-![(a) Each forward pair $(x_0,\epsilon)$ of the standardized mixture owns one curve; the blue pair crossed the valley. From the same noise end, DDIM with the exact noise prediction follows the probability-flow ODE (10 strides, dots; 1,000 strides, dashed) into the other mode: it never sees the sample's own curve. (b) For unit-variance Gaussian data the exact flow is the identity (dashed); ten DDIM strides with the exact noise prediction shrink every sample by $0.83$, the Euler error of the Gaussian corollary.](../img/mdl-dyn-ddim-strides.svg)
+![(a) Each forward pair $(x_0,\epsilon)$ of the standardized mixture owns one curve; the blue pair crossed the valley. From the same noise end, DDIM with the exact noise prediction follows the probability-flow ODE (10 strides, dots; 999 strides, one per level, dashed) into the other mode: it never sees the sample's own curve. (b) For unit-variance Gaussian data the exact flow is the identity (dashed); ten DDIM strides with the exact noise prediction shrink every sample by $0.83$, the Euler error of the Gaussian corollary.](../img/mdl-dyn-ddim-strides.svg)
 :label:`fig_mdl-dyn-ddim-strides`
 
 Panel (a) answers the literal reading of the update. The sample travels
@@ -1906,9 +1906,9 @@ Because DDIM is a first-order Euler solver in the $\bar{\sigma}$ clock, its stri
 :::
 
 ::: {.slide title="Measuring DDIM Stride Contraction and Convergence"}
-[10 vs. 50 vs. 1,000 Strides]{.kicker}
+[10 vs. 50 vs. 999 Strides]{.kicker}
 
-Comparing 10, 50, and 1,000 equally spaced DDIM strides with the exact noise prediction $\hat{\epsilon} = -\sqrt{1-\bar{\alpha}_t}\nabla\log p_t$ on $\mathcal{N}(0, 1)$ data and on the standardized bimodal mixture:
+Comparing 10, 50, and 999 (one per level) equally spaced DDIM strides with the exact noise prediction $\hat{\epsilon} = -\sqrt{1-\bar{\alpha}_t}\nabla\log p_t$ on $\mathcal{N}(0, 1)$ data and on the standardized bimodal mixture:
 
 @!mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed
 

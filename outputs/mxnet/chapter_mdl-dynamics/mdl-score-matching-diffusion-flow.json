@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "implicit score matching picks w = 1.99  (v = 2.0)\n"
+          "text": "implicit score matching picks w = 1.95  (v = 2.0)\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error of the conditional mean -xt/1.25: 3.218  (floor 3.2)\nleast-squares slope of x on xt: 0.799  (0.8)\n"
+          "text": "mean squared error of the conditional mean -xt/1.25: 3.187  (floor 3.2)\nleast-squares slope of x on xt: 0.801  (0.8)\n"
         }
       ]
     },
@@ -42,14 +42,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean squared error: fit 2.14, exact score 2.14, population floor 2.11\nexcess risk 0.010; fit at x = 8: -11.1, exact score -12 (no pairs there)\n"
+          "text": "mean squared error: fit 2.10, exact score 2.10, population floor 2.11\nexcess risk 0.007; fit at x = 8: +6.3, exact score -12 (no pairs there)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
-          "bytes": 97115,
-          "sha256": "sha256:b106319af22c2992cec7633c6c256ea5f31d9a202098578cd4fae2f61f2274ed"
+          "bytes": 98690,
+          "sha256": "sha256:14f070b951e6ca68593f466e2550fea2aed2bae339dbc779662104ec70d2e0e0"
         }
       ]
     },
@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact score over 20 draws: mean squared error 2.12, sd 0.035\nfit at x = 1 over 20 draws: from +1.8 to +2.1 (exact score +2.0)\nfit at x = 8 over 20 draws: from -13.4 to +12.2 (exact score -12.0)\n"
+          "text": "exact score over 20 draws: mean squared error 2.11, sd 0.033\nfit at x = 1 over 20 draws: from +1.9 to +2.1 (exact score +2.0)\nfit at x = 8 over 20 draws: from -12.4 to +12.7 (exact score -12.0)\n"
         }
       ]
     },
@@ -71,17 +71,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "broad start: P(X > 0) = 0.479, E[X^2] = 4.25  (truth 0.2, 4.25)\n"
+          "text": "broad start: P(X > 0) = 0.480, E[X^2] = 4.22  (truth 0.2, 4.25)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "all chains at -2 (weight 0.8): 0.006 end on the other side\n"
+          "text": "all chains at -2 (weight 0.8): 0.005 end on the other side\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "all chains at +2 (weight 0.2): 0.026 end on the other side\n"
+          "text": "all chains at +2 (weight 0.2): 0.021 end on the other side\n"
         }
       ]
     },
@@ -97,50 +97,50 @@
       ]
     },
     "mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed": {
-      "code_fingerprint": "sha256:1c072c63721470ac19c083317abc54b696cd1d811f1d2388be94f99bb6388a30",
+      "code_fingerprint": "sha256:ad275dda6697f59984e9417bdb31e996799db92f2329b544ede680add54188fc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N(0,1) data,   10 strides: every sample times 0.832\nN(0,1) data,   50 strides: every sample times 0.964\nN(0,1) data, 1000 strides: every sample times 0.998\n"
+          "text": "N(0,1) data,   10 strides: every sample times 0.832\nN(0,1) data,   50 strides: every sample times 0.964\nN(0,1) data,  999 strides: every sample times 0.998\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mixture,  10 strides vs 1000: mean |gap| 0.084, KS 0.078\nmixture,  50 strides vs 1000: mean |gap| 0.015, KS 0.021\n"
+          "text": "mixture,  10 strides vs 999: mean |gap| 0.084, KS 0.080\nmixture,  50 strides vs 999: mean |gap| 0.015, KS 0.018\n"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-denoising-diffusion-implicit-models-1": {
-      "code_fingerprint": "sha256:7c7556625508cbe949171c802dc877b85288f6bf34c1fed49dccd0790e8d6a55",
+      "code_fingerprint": "sha256:bdcf630ffeb175348ff89b1b352f1809eb3ffda761b26fef491f21f28008db73",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact  scores: light mode 0.195, means -0.96 +0.95, widths 0.229 0.247, KS to p0 0.03\nfitted scores: light mode 0.198, means -0.96 +0.94, widths 0.226 0.280, KS to p0 0.02\ntruth: light mode 0.2, means -0.97 +0.97, widths 0.243; KS between the clouds 0.01\n"
+          "text": "exact  scores: light mode 0.197, means -0.96 +0.95, widths 0.226 0.234, KS to p0 0.03\nfitted scores: light mode 0.198, means -0.95 +0.93, widths 0.231 0.252, KS to p0 0.03\ntruth: light mode 0.2, means -0.97 +0.97, widths 0.243; KS between the clouds 0.02\n"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule": {
-      "code_fingerprint": "sha256:95e8345b640dbf29cdb4d5e5524725c9ee1412cd6d528f28fdfd6c97a6508c03",
+      "code_fingerprint": "sha256:5d11e2c52e5de165934561d9de28e4a2c4ce1c678f24ce48fa86edd5c545a372",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma =  1.0: mass right of 0 1.000, mean 0.973, std 0.243\n"
+          "text": "gamma =  1.0: mass right of 0 1.000, mean 0.972, std 0.243\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma =  3.0: mass right of 0 1.000, mean 1.030, std 0.236\n"
+          "text": "gamma =  3.0: mass right of 0 1.000, mean 1.030, std 0.234\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma = 10.0: mass right of 0 1.000, mean 1.079, std 0.232\nexact conditional: mean 0.970, std 0.243\n"
+          "text": "gamma = 10.0: mass right of 0 1.000, mean 1.069, std 0.232\nexact conditional: mean 0.970, std 0.243\n"
         }
       ]
     }

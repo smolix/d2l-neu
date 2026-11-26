@@ -420,7 +420,7 @@ class LadderTest(unittest.TestCase):
 
     def test_simulated(self):
         with mock.patch.object(d2l, 'PRETRAIN_PENDING',
-                               d2l.PRETRAIN_PENDING | C1), \
+                               d2l.PRETRAIN_PENDING | C1), uncommitted(), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
             a, b = d2l.ladder_points(), d2l.ladder_points()
         self.assertIn('simulated at the Hoffmann fit', out.getvalue())
@@ -438,7 +438,7 @@ class LadderTest(unittest.TestCase):
     def test_absent_raises(self):
         pending = d2l.PRETRAIN_PENDING - C1
         with mock.patch.object(d2l, 'PRETRAIN_PENDING', pending), \
-                mock.patch.dict(os.environ, {'D2L_RERUN': ''}):
+                uncommitted(), mock.patch.dict(os.environ, {'D2L_RERUN': ''}):
             with self.assertRaises(KeyError):
                 d2l.ladder_points()
 

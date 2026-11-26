@@ -40,9 +40,10 @@ binary tree, the INFO digest on a sample, the forced-pair fits and the
 measured and predicted crossover, the tuner check in noise units, the
 opening's symptoms, alpha_beta.json's records, the hierarchical display.
 Section 22.8: energy_per_token (trapezoid), the clock-event fractions,
-dvfs_fit (the plan's synthetic numbers exactly, a noisy sweep recovered),
-plot_dvfs's lines, hw_clock_sweep (PermissionError without root, -rgc
-restored after a failing workload), cap_effect pending and its table, the
+dvfs_fit (the plan's synthetic numbers exactly, a noisy sweep recovered,
+a box-like sweep at the clock as run), plot_dvfs's lines, E4's edge rule,
+clock_effect (E5's floor, decode slow everywhere, the cap arm's table),
+the page's E4/E5 cells on a fixture and the short page sweep, the
 decode knee slopes, the cost functions (6 N D / (MFU P 3600) exactly, the
 serving cost), owned_vs_rented's identity, owned_inputs from the price table,
 u_star_interval (deterministic, brackets u*), the tornado order (rent
@@ -56,6 +57,15 @@ Fix pass F2: the claim lines computed from the committed data: K3's spill
 summary (synthetic and committed), M1's plateau label and M2's per-bridge
 line, S1's staged-copy fraction, S2's NODE/PHB sentence, C1's simulator
 sentence (from the committed table), C2's fit residuals near the crossover.
+Fix pass F3 (TestClockSweep): the clock sweep on mocks: sudo only for
+-lgc/-rgc with D2L_HW_SUDO=1, -pl refused without the cap arm, a dry run;
+the guard on a foreign process at a window's end and the 1 Hz watchdog on
+one mid-window (reset at once, window discarded, resume; with the cap arm
+also the default limit), the 2 h bound; the reset after a failing window
+and after SIGTERM (a subprocess); the configurations and their checks; the
+driver's order on mocks; tools/hw_clock_sweep.sh (bash -n, pass-through,
+busy card refused, TERM resets before the job stops); hw_regen.py's smoke
+rule.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -68,6 +78,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -83,7 +94,8 @@ CHAPTER = os.path.join(REPO, 'chapter_lm-hardware')
 
 # The regeneration column of the chapter spec, part 2.
 REGEN_NAMES = ('box-microbench', 'box-workloads', 'box-moe', 'box-storage',
-               'box-p2p', 'box-net', 'box-coll', 'box-power')
+               'box-p2p', 'box-net', 'box-coll', 'box-power',
+               'box-clocksweep')
 
 Point = d2l.collections.namedtuple('Point', ['x', 'y'])
 
@@ -325,7 +337,7 @@ class TestRegistries(unittest.TestCase):
         self.assertEqual(set(d2l.HW_ARTIFACTS), set(REGEN_NAMES))
         self.assertEqual(set(d2l.HW_JOBS), set(REGEN_NAMES))
         for name, (driver, kwargs) in d2l.HW_JOBS.items():
-            self.assertTrue(driver.startswith('regen_'), name)
+            self.assertRegex(driver, r'^(regen_\w+|hw_clock_regen)$', name)
             self.assertIsInstance(kwargs(), dict)
         for name, (key, kind) in d2l.HW_ARTIFACTS.items():
             self.assertTrue(key.startswith('lm-hw-buildbox-'), key)
@@ -3649,26 +3661,50 @@ PRICES = os.path.join(REPO, 'tools', 'lm_data', 'hw', 'prices.csv')
 
 
 def sweep_log(P_s=80.0, k=80.0, clocks=(0.6, 0.76, 0.92, 1.08, 1.24, 1.4),
-              noise=0.0, seed=0, caps=False):
-    """A clock (and power-cap) sweep of known parameters, as the root
-    script writes it."""
+              noise=0.0, seed=0):
+    """The plan's synthetic clock sweep of a compute-bound workload (the
+    test fixture of E4; the page never shows it): power P_s + k f^3,
+    throughput proportional to the clock, every lock held."""
     rng = np.random.default_rng(seed)
     f = np.array(clocks)
     P = (P_s + k * f**3) * (1 + noise * rng.standard_normal(len(f)))
     df = pd.DataFrame(dict(kind='clock', setting=f * 1e3,
                            workload='matmul-8192', sm_mhz=f * 1e3,
                            power_w=P, rate=f * 1e14, unit='FLOP'))
+    df.attrs.update(source='measured on a test card')
+    return df
+
+
+def clock_log(lowest=600, cap=2.5, decode_knee=1.2, caps=False,
+              P_s=60.0, k=20.0):
+    """A box-like sweep: the default clocks and locks from lowest to 3,000
+    MHz in steps of 300 for the three workloads. The product runs at
+    min(lock, cap) GHz with power P_s + k f^3 and rate ~ f; the training
+    step's time ~ 1 / f; batch-1 decode keeps its time down to decode_knee
+    GHz and slows below it. With caps, a power-cap arm too."""
+    rows = []
+
+    def add(kind, setting, f):
+        rows.append(dict(kind=kind, setting=setting, workload='matmul-8192',
+                         sm_mhz=f * 1e3, power_w=P_s + k * f**3,
+                         rate=f * 1e14, step_ms=20 / f, step_mad_ms=0.1,
+                         unit='FLOP', discarded=0))
+        rows.append(dict(kind=kind, setting=setting, workload='decode-b1',
+                         sm_mhz=f * 1e3, power_w=150.0, rate=300.0,
+                         step_ms=3.0 * (1 + 0.5 * max(0, decode_knee / f - 1)),
+                         step_mad_ms=0.03, unit='token', discarded=0))
+        rows.append(dict(kind=kind, setting=setting, workload='train-8192',
+                         sm_mhz=f * 1e3, power_w=P_s + k * f**3,
+                         rate=8192 / (0.1 * cap / f), step_ms=100 * cap / f,
+                         step_mad_ms=1.0, unit='token', discarded=0))
+    add('default', math.nan, cap)
+    for lock in range(lowest, 3001, 300):
+        add('clock', float(lock), min(lock / 1e3, cap))
     if caps:
-        rows = []
-        for cap in (150, 225, 300, 450):
-            rows.append(dict(kind='cap', setting=cap, workload='train-8192',
-                             step_ms=100 * 450 / cap, step_mad_ms=1.0,
-                             power_w=min(cap, 355.0)))
-            rows.append(dict(kind='cap', setting=cap, workload='decode-b1',
-                             step_ms=3.0 * max(1.0, 190 / cap),
-                             step_mad_ms=0.03, power_w=min(cap, 190.0)))
-        df = pd.concat([df, pd.DataFrame(rows)], ignore_index=True)
-    df.attrs.update(source='measured on a test card', synthetic=False)
+        for w in (300.0, 450.0):
+            add('cap', w, cap * (w / 450) ** (1 / 3))
+    df = pd.DataFrame(rows)
+    df.attrs.update(gpu='RTX 4090', n_proc=3)
     return df
 
 
@@ -3727,109 +3763,145 @@ class TestEnergyCost(unittest.TestCase):
         self.assertTrue(math.isnan(d2l._throttle_fractions([])['thr_idle']))
 
     def test_dvfs_plan_numbers(self):
-        with mock.patch.dict(d2l.DATA_HUB, {}, clear=True):
-            log = d2l.hw_clock_sweep_log()
-        self.assertTrue(log.attrs['synthetic'])
-        fit = d2l.dvfs_fit(log)
+        """The plan's worked case (a test fixture; no page fallback)."""
+        fit = d2l.dvfs_fit(sweep_log())
         self.assertAlmostEqual(fit.P_s, 80, places=6)
         self.assertAlmostEqual(fit.k, 80, places=6)
         self.assertAlmostEqual(fit.f_star, 0.5 ** (1 / 3), places=6)
         self.assertAlmostEqual(fit.f_star, 0.79, places=2)
+        self.assertEqual(fit.f_min, 0.76)  # the lock nearest f*
+        self.assertAlmostEqual(fit.step, 0.16)
+        self.assertFalse(fit.edge)
         width, lines, _ = max_width(d2l.plot_dvfs, fit)
-        self.assertLessEqual(width, 79)
-        self.assertIn('P(f*) = 120 W', lines[0])
-        self.assertIn('1.4x the work per joule', lines[1])
-        self.assertIn('0.57x the throughput of 1.40 GHz', lines[1])
-        self.assertIn('synthetic', lines[2])
+        self.assertLessEqual(width, 100)
+        self.assertIn('P_s = 80 W, k = 80 W/GHz^3', lines[0])
+        self.assertIn('f* = 0.79 GHz; least energy per FLOP at the 0.76 GHz '
+                      'lock (step 0.16 GHz)', lines[1])
+        self.assertTrue(lines[2].endswith('GHz: none'))
+        self.assertEqual(lines[3], 'measured on a test card; a notebook '
+                         'never locks clocks')
+        self.assertEqual(lines[4], 'A100: no sweep')
 
     def test_dvfs_noisy_recovery(self):
         fit = d2l.dvfs_fit(sweep_log(P_s=60, k=90, noise=0.01))
         self.assertAlmostEqual(fit.P_s / 60, 1, delta=0.1)
         self.assertAlmostEqual(fit.k / 90, 1, delta=0.05)
-        self.assertFalse(fit.synthetic)
-        self.assertAlmostEqual(fit.step, 0.16)
-        # measured: the swept minimum of power / rate is the clock nearest f*
         f = np.array([0.6, 0.76, 0.92, 1.08, 1.24, 1.4])
         self.assertEqual(fit.f_min, f[np.argmin((60 + 90 * f**3) / f)])
+
+    def test_dvfs_box_sweep(self):
+        """On a box-like sweep: the fit uses the clock as run (the product's
+        power cap holds it at 2.5 GHz above that lock), the least energy is
+        the 1.2 GHz lock, f* lies within one step (E4), and the capped
+        locks are named; the A100 line is the campaign's status."""
+        log = clock_log()
+        log.attrs['source'] = 'committed sweep on the RTX 4090 (3 processes)'
+        log.attrs['a100'] = d2l.CampaignPending('a100-clocksweep', 'C-T2',
+                                                'A100 PCIe 40 GB')
+        fit = d2l.dvfs_fit(log)
+        self.assertAlmostEqual(fit.P_s, 60, places=6)
+        self.assertAlmostEqual(fit.k, 20, places=6)
+        self.assertEqual(fit.f_min, 1.2)
+        self.assertAlmostEqual(fit.step, 0.3)
+        self.assertLessEqual(abs(fit.f_star - fit.f_min), fit.step)  # E4
         width, lines, _ = max_width(d2l.plot_dvfs, fit)
-        self.assertLessEqual(width, 79)
-        self.assertIn('measured energy minimum', lines[-3])
-        self.assertIn('inside the swept clocks', lines[-2])
-        self.assertEqual(lines[-1], 'measured on a test card')
-        # a sweep that stops above f*: the model extrapolates
-        fit = d2l.dvfs_fit(sweep_log(P_s=60, k=90, clocks=(1.0, 1.2, 1.4)))
-        self.assertGreater(min(fit.clocks), fit.f_star)
-        width, lines, _ = max_width(d2l.plot_dvfs, fit)
-        self.assertIn('the model extrapolates', lines[-2])
-        self.assertLessEqual(width, 79)
+        self.assertLessEqual(width, 100)
+        self.assertLessEqual(len(lines), 15)
+        self.assertIn('2.70 -> 2.50, 3.00 -> 2.50', lines[2])
+        self.assertEqual(lines[4], 'A100 PCIe 40 GB: campaign C-T2 not run '
+                         'yet')
+        # a committed A100 sweep gets its own fit line
+        log.attrs['a100'] = sweep_log()
+        width, lines, _ = max_width(d2l.plot_dvfs, d2l.dvfs_fit(log))
+        self.assertIn('A100 (C-T2): P_s = 80 W', lines[4])
+        self.assertLessEqual(width, 100)
 
-    def test_clock_sweep_needs_root(self):
-        refused = d2l.HWRun([], 4, '', 'denied', 0.1, 'exit status 4')
-        calls = []
+    def test_clock_edge_rule(self):
+        """E4's pre-registered edge rule: a least energy at the lowest lock
+        asks for one step lower; the later processes follow the first."""
+        clocks = tuple(range(600, 3001, 300))
+        edge = clock_log(P_s=5, k=80)  # f* = 0.32 GHz, below the locks
+        self.assertEqual(d2l._clock_edge(edge.to_dict('records'), clocks,
+                                         300), [300])
+        self.assertEqual(d2l._clock_edge(clock_log().to_dict('records'),
+                                         clocks, 300), [])
+        self.assertEqual(d2l._clock_edge(edge.to_dict('records'), clocks,
+                                         None), [])
+        # after the extra step: "at or below 300 MHz" and the page's E4 test
+        fit = d2l.dvfs_fit(clock_log(lowest=300, P_s=5, k=80))
+        self.assertTrue(fit.edge)
+        self.assertEqual(fit.f_min, 0.3)
+        self.assertTrue(fit.f_star <= fit.f_min + fit.step)
+        _, lines, _ = max_width(d2l.plot_dvfs, fit)
+        self.assertIn('the lowest lock, 0.30 GHz: at or below it', lines[1])
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+                os.environ, {'D2L_HW_OUT': tmp, 'D2L_HW_PROC': '1'}):
+            folder = os.path.join(tmp, 'lm-hw-buildbox-clocksweep-v1')
+            first = clock_log(lowest=300, P_s=5, k=80)
+            d2l._hw_write(os.path.join(folder, 'proc0', 'sweep.json.gz'),
+                          first, {})
+            with mock.patch.dict(d2l.DATA_HUB, {}):
+                self.assertEqual(d2l._clock_edge(
+                    clock_log().to_dict('records'), clocks, 300), [300])
+                d2l._hw_write(os.path.join(folder, 'proc0', 'sweep.json.gz'),
+                              clock_log(), {})
+                self.assertEqual(d2l._clock_edge(
+                    edge.to_dict('records'), clocks, 300), [])
 
-        def run(cmd, timeout_s, **kw):
-            calls.append(cmd)
-            return refused
-        with mock.patch.object(d2l, 'hw_run', run), mock.patch.object(
-                d2l, '_hw_visible_uuids', lambda: ['GPU-x']):
-            with self.assertRaisesRegex(PermissionError, 'root'):
-                d2l.hw_clock_sweep([1000, 2000], ['matmul-8192'])
-            with self.assertRaisesRegex(ValueError, 'visible GPU 0'):
-                d2l.hw_clock_sweep([1000], ['matmul-8192'], device=1)
-        self.assertEqual(len(calls), 1)  # nothing after the refusal
+    def test_clock_effect(self):
+        width, lines, t = max_width(d2l.clock_effect, clock_log())
+        self.assertLessEqual(width, 100)
+        self.assertLessEqual(len(lines), 15)
+        self.assertEqual(list(t['clock MHz']),
+                         list(range(3000, 599, -300)))  # top lock first
+        self.assertEqual(t.attrs['decode_floor'], 1200)
+        row = t.set_index('clock MHz').loc[1200]
+        self.assertAlmostEqual(row['train x'], 2.5 / 1.2)
+        self.assertAlmostEqual(row['decode x'], 1.0)
+        self.assertAlmostEqual(row['decode 3MAD'], 3 * 0.03 / 3.0)
+        self.assertAlmostEqual(row['train 3MAD'], 0.03)
+        self.assertIn('within its noise down to 1,200 MHz', lines[-1])
+        self.assertIn('2.08x as long', lines[-1])
+        self.assertIn('training 100 ms at 2,500 MHz, decode 3.00 ms',
+                      lines[-3])
+        # decode slower at every lowered clock: no floor, said so
+        slow = clock_log()
+        lowered = (slow.kind == 'clock') & (slow.workload == 'decode-b1')
+        slow.loc[lowered, 'step_ms'] *= 1.1
+        _, lines, t = max_width(d2l.clock_effect, slow)
+        self.assertIsNone(t.attrs['decode_floor'])
+        self.assertIn('slows beyond its noise at every lowered clock',
+                      lines[-1])
+        # the power-cap arm, if it ever runs, gets its own table
+        width, lines, t = max_width(d2l.clock_effect, clock_log(caps=True))
+        self.assertEqual(list(t.attrs['caps']['cap W']), [450, 300])
+        self.assertLessEqual(width, 100)
+        log = clock_log()
+        with self.assertRaisesRegex(ValueError, 'no train-8192 rows'):
+            d2l.clock_effect(log[log.workload != 'train-8192'])
 
-    def test_clock_sweep_restores(self):
-        ok = d2l.HWRun([], 0, '', '', 0.1, None)
-        calls = []
-
-        def run(cmd, timeout_s, **kw):
-            calls.append(cmd[3:])
-            return ok
-
-        def rows(kind, setting, workloads, seconds=10):
-            if setting == 2000:
-                raise RuntimeError('workload failed')
-            return [dict(kind=kind, setting=setting, workload=w)
-                    for w in workloads]
-        with mock.patch.object(d2l, 'hw_run', run), mock.patch.object(
-                d2l, '_hw_visible_uuids', lambda: ['GPU-x']), \
-                mock.patch.object(d2l, '_sweep_rows', rows):
-            df = d2l.hw_clock_sweep([1000, 1500], ['a', 'b'])
-            self.assertEqual(len(df), 4)
-            self.assertEqual(calls[-1], ['-rgc'])
-            calls.clear()
-            with self.assertRaises(RuntimeError):
-                d2l.hw_clock_sweep([1000, 2000], ['a'])
-            self.assertEqual(calls[-1], ['-rgc'])
-            self.assertIn(['-lgc', '2000,2000'], calls)
-
-    def test_cap_effect(self):
-        width, lines, out = max_width(d2l.cap_effect, sweep_log())
-        self.assertEqual(len(out), 0)
-        self.assertEqual(len(lines), 1)
-        self.assertIn('not measured yet', lines[0])
-        self.assertNotIn('C-box', lines[0])
-        # the page's E5 check holds on the empty table
-        above = out[out['cap W'] > 1.1 * out.attrs['decode_w']]
-        self.assertTrue((above['decode ratio'] - 1 < above['noise']).all())
-        width, lines, t = max_width(d2l.cap_effect, sweep_log(caps=True))
-        self.assertLessEqual(width, 79)
-        self.assertEqual(list(t['cap W']), [150, 225, 300])
-        np.testing.assert_allclose(t['train ratio'], [3, 2, 1.5])
-        np.testing.assert_allclose(t['decode ratio'], [190 / 150, 1, 1])
-        np.testing.assert_allclose(t['noise'], 0.03)  # 3 x 0.01 < floor
-        self.assertEqual(t.attrs['decode_w'], 190.0)
-        self.assertIn('measured on a test card', lines[-1])
-        self.assertIn('decode draws 190 W', lines[-1])
-        # E5 holds above decode's draw, and the 150 W cap below it is out
-        above = t[t['cap W'] > 1.1 * t.attrs['decode_w']]
-        self.assertEqual(list(above['cap W']), [225, 300])
-        self.assertTrue((above['decode ratio'] - 1 < above['noise']).all())
-        log = sweep_log(caps=True)
-        log = log[~log.workload.str.startswith('train')]
-        log.attrs.update(source='x', synthetic=False)
-        with self.assertRaisesRegex(ValueError, 'no train workload'):
-            d2l.cap_effect(log)
+    def test_page_claim_cells(self):
+        """The page's E4 and E5 cells run on the box-like fixture."""
+        text = read(os.path.join(CHAPTER, 'energy-cost.md'))
+        cells = {i: re.search(r'```\{\.python \.input #' + i + r'\}\n'
+                              r'(.*?)```', text, re.S).group(1)
+                 for i in ('energy-cost-dvfs', 'energy-cost-cap-effect',
+                           'energy-cost-clock-sweep-def')}
+        log = clock_log()
+        log.attrs.update(source='committed sweep', a100=None)
+        scope = dict(d2l=d2l, np=np, pd=pd)
+        with mock.patch.object(d2l, 'hw_clock_sweep_log', lambda: log), \
+                quiet():
+            for i in ('energy-cost-dvfs', 'energy-cost-cap-effect'):
+                exec(cells[i].replace('%%tab pytorch\n', ''), scope)
+        d2l.plt.close('all')
+        self.assertEqual(scope['floor'], 1200)
+        # the method on the page stays short: no guard, poll or retry code
+        sweep = cells['energy-cost-clock-sweep-def']
+        self.assertLessEqual(len(sweep.splitlines()), 16)
+        for word in ('_clock_guard', 'sleep', 'while', 'sudo -n nvidia'):
+            self.assertNotIn(word, sweep)
+        self.assertIn('finally:', sweep)
 
     def test_quiet_window_discards_contended(self):
         flags = iter([1.0, 1.0, 0.0])
@@ -3876,19 +3948,16 @@ class TestEnergyCost(unittest.TestCase):
             return refused
         with mock.patch.object(d2l, 'hw_run', run), mock.patch.object(
                 d2l, '_hw_visible_uuids', lambda: ['GPU-x']), \
+                mock.patch.object(d2l, '_card_pids', lambda uuid: set()), \
                 mock.patch.object(d2l, '_hw_gpu_limits',
                                   lambda: {'power_default_limit': 450.0}):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf), \
-                    self.assertRaisesRegex(PermissionError, 'root'):
+                    self.assertRaisesRegex(PermissionError, 'refused'):
                 d2l._cap_sweep([300], ['decode-b1'])
-        self.assertEqual(calls, [['-pl', '300'], ['-pl', '450']])
-        self.assertIn('-pl 450 failed', buf.getvalue())  # one line
-        self.assertEqual(len(buf.getvalue().splitlines()), 1)
-        with mock.patch.object(d2l.os, 'geteuid', lambda: 0), \
-                mock.patch.dict(os.environ, {'HF_HOME': ''}):
-            with self.assertRaisesRegex(RuntimeError, 'HF_HOME'):
-                d2l.hw_root_sweep()
+        self.assertEqual(calls, [['-pl', '300'], ['-rgc'], ['-pl', '450']])
+        self.assertIn('-pl 450 failed', buf.getvalue())  # one line each
+        self.assertEqual(len(buf.getvalue().splitlines()), 2)
 
     def test_decode_slopes_and_display(self):
         e = decode_frame()
@@ -4102,8 +4171,378 @@ class TestEnergyCost(unittest.TestCase):
         self.assertIn('box-power', d2l.HW_JOBS)
         self.assertEqual(d2l.HW_STATIC['hw-prices'][0], 'lm-hw-prices-v1')
         self.assertIn('lm-hw-prices-v1', d2l.DATA_HUB)
-        for name in ('box-clocksweep', 'mfu-table', 'par-goodput'):
+        self.assertIn('box-clocksweep', d2l.HW_ARTIFACTS)
+        for name in ('mfu-table', 'par-goodput'):
             self.assertIn(name, d2l.HW_CAMPAIGNS)
+
+
+OK_RUN = d2l.HWRun([], 0, '', '', 0.0, None)
+
+
+class TestClockSweep(unittest.TestCase):
+    """Section 22.8's clock sweep on mocks (fix pass F3, ruling H1): sudo
+    only for the clock commands with D2L_HW_SUDO=1, -pl only with the cap
+    arm, the foreign-process guard before a window and the 1 Hz watchdog
+    during one (both reset the card and discard the window, then resume),
+    the reset on an exception and on SIGTERM, the configurations, the
+    wrapper's argument pass-through and traps, and hw_regen.py's smoke
+    rule."""
+
+    def setUp(self):
+        self.calls, self.events, self.windows = [], [], 0
+        self.foreign = set()
+        stack = contextlib.ExitStack()
+        self.addCleanup(stack.close)
+        stack.enter_context(mock.patch.object(d2l, 'hw_run', self.fake_run))
+        stack.enter_context(mock.patch.object(
+            d2l, '_hw_visible_uuids', lambda: ['GPU-x']))
+        stack.enter_context(mock.patch.object(
+            d2l, '_card_pids', lambda uuid: {os.getpid()} | self.foreign))
+        stack.enter_context(mock.patch.object(
+            d2l, '_power_load', lambda name: (None, 1, 'FLOP')))
+        stack.enter_context(mock.patch.object(d2l, 'lm_free', lambda: None))
+        stack.enter_context(mock.patch.dict(d2l._HW_GUARD, dict(
+            poll_s=0.0, max_wait_s=5.0, watch_s=30.0)))
+        stack.enter_context(mock.patch.dict(os.environ, {}))
+        for name in ('D2L_HW_SUDO', 'D2L_HW_DRYRUN', 'D2L_HW_PROC'):
+            os.environ.pop(name, None)
+        del d2l._HW_SMI_CALLS[:], d2l._HW_GUARD_EVENTS[:]
+
+    def fake_run(self, cmd, timeout_s, **kw):
+        self.calls.append(list(cmd))
+        self.events.append(' '.join(cmd[cmd.index('-i') + 2:]))
+        return OK_RUN
+
+    def args(self):
+        return [c[c.index('-i') + 2:] for c in self.calls]
+
+    def window(self, during=None, n_foreign=0):
+        """A mocked traced window; window `during` sees a foreign process
+        for 0.3 s (the watchdog's case) or leaves one for the next
+        n_foreign checks (the guard's case)."""
+        def run(step, work, **kw):
+            self.windows += 1
+            n = self.windows
+            self.events.append(f'window {n} start')
+            if n == during and not n_foreign:
+                self.foreign = {999}
+                time.sleep(0.3)
+                self.foreign = set()
+            elif n == during:
+                self.foreign = {999}
+                self.left = n_foreign
+            self.events.append(f'window {n} end')
+            return dict(contended=0.0, trace={}, power_w=100.0, rate=1.0,
+                        step_ms=1.0, step_mad_ms=0.01, sm_mhz=1500.0)
+        return run
+
+    def counted_pids(self, uuid):
+        if self.foreign and self.left > 0:
+            self.left -= 1
+            if not self.left:
+                foreign, self.foreign = self.foreign, set()
+                return {os.getpid()} | foreign
+        return {os.getpid()} | self.foreign
+
+    def test_sudo_only_for_clock_commands(self):
+        smi = d2l.hw_smi_card(0)
+        smi('-lgc', '1500,1500')
+        smi.restore('-rgc')
+        self.assertEqual([c[0] for c in self.calls], ['nvidia-smi'] * 2)
+        os.environ['D2L_HW_SUDO'] = '1'
+        smi('-lgc', '1500,1500')
+        smi.restore('-rgc')
+        smi('-q', '-d', 'CLOCK')
+        self.assertEqual(self.calls[2][:3], ['sudo', '-n', 'nvidia-smi'])
+        self.assertEqual(self.calls[3][:4], ['sudo', '-n', 'nvidia-smi',
+                                             '-i'])
+        self.assertEqual(self.calls[4][0], 'nvidia-smi')  # a query: no sudo
+        with self.assertRaisesRegex(PermissionError, 'power-cap arm'):
+            smi('-pl', '300')
+        self.assertEqual(len(self.calls), 5)  # refused before nvidia-smi
+        capped = d2l.hw_smi_card(0, default_limit=450.0)
+        capped('-pl', '300')
+        capped.reset()
+        self.assertEqual(self.calls[5][:3], ['sudo', '-n', 'nvidia-smi'])
+        self.assertEqual(self.args()[-2:], [['-rgc'], ['-pl', '450']])
+        # a dry run prints the sudo commands and runs none
+        os.environ['D2L_HW_DRYRUN'] = '1'
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            smi('-lgc', '900,900')
+        self.assertEqual(len(self.calls), 8)
+        self.assertEqual(buf.getvalue(),
+                         '+ sudo -n nvidia-smi -i GPU-x -lgc 900,900\n')
+
+    def test_refused_lock_one_line(self):
+        refused = d2l.HWRun([], 4, '', 'denied', 0.1, 'exit status 4')
+        with mock.patch.object(d2l, 'hw_run', lambda *a, **k: refused):
+            with self.assertRaises(PermissionError) as e:
+                d2l.hw_clock_sweep([1000, 2000], ['matmul-8192'])
+        self.assertEqual(len(str(e.exception).splitlines()), 1)
+        with self.assertRaisesRegex(ValueError, 'visible GPU 0'):
+            d2l.hw_clock_sweep([1000], ['matmul-8192'], device=1)
+
+    def test_reset_after_a_failing_window(self):
+        def rows(kind, setting, workloads, smi=None, seconds=10):
+            if setting == 2000:
+                raise RuntimeError('workload failed')
+            return [dict(kind=kind, setting=setting, workload=w)
+                    for w in workloads]
+        with mock.patch.object(d2l, '_sweep_rows', rows):
+            self.assertEqual(len(d2l.hw_clock_sweep([1000, 1500],
+                                                    ['a', 'b'])), 4)
+            self.assertEqual(self.args()[-1], ['-rgc'])
+            self.calls.clear()
+            with self.assertRaises(RuntimeError):
+                d2l.hw_clock_sweep([1000, 2000], ['a'])
+        self.assertIn(['-lgc', '2000,2000'], self.args())
+        self.assertEqual(self.args()[-1], ['-rgc'])
+
+    def guard_case(self, smi, kind, setting, relock):
+        with mock.patch.object(d2l, '_power_window',
+                               self.window(during=2, n_foreign=2)), \
+                mock.patch.object(d2l, '_card_pids', self.counted_pids):
+            rows = d2l._sweep_rows(kind, setting, ['a', 'b', 'c'], smi)
+        self.assertEqual([r['workload'] for r in rows], ['a', 'b', 'c'])
+        self.assertEqual([r['discarded'] for r in rows], [0, 1, 0])
+        self.assertEqual(self.windows, 4)  # window 2 measured again
+        i = self.events.index('window 2 end')
+        after = self.events[i + 1:self.events.index('window 3 start')]
+        return after
+
+    def test_guard_before_window(self):
+        """A foreign process on the card at a window's end (before the next
+        one): reset at once, discard, wait, re-lock, resume."""
+        after = self.guard_case(d2l.hw_smi_card(0), 'clock', 1500, None)
+        self.assertEqual(after, ['-rgc', '-lgc 1500,1500'])
+        self.assertEqual([e['by'] for e in d2l._HW_GUARD_EVENTS], ['guard'])
+
+    def test_guard_before_window_cap_arm(self):
+        after = self.guard_case(d2l.hw_smi_card(0, default_limit=450.0),
+                                'cap', 300, None)
+        self.assertEqual(after, ['-rgc', '-pl 450', '-pl 300'])
+
+    def watchdog_case(self, smi, kind, setting):
+        d2l._HW_GUARD['watch_s'] = 0.01
+        with mock.patch.object(d2l, '_power_window', self.window(during=2)):
+            rows = d2l._sweep_rows(kind, setting, ['a', 'b', 'c'], smi)
+        self.assertEqual([r['discarded'] for r in rows], [0, 1, 0])
+        self.assertEqual(self.windows, 4)
+        start, end = (self.events.index(f'window 2 {x}')
+                      for x in ('start', 'end'))
+        during = self.events[start + 1:end]
+        self.assertEqual(during[0], '-rgc')  # the watchdog, mid-window
+        by = [e['by'] for e in d2l._HW_GUARD_EVENTS]
+        self.assertEqual(by, ['watchdog'])  # one trip, no reset per poll
+        return during, self.events[end + 1:self.events.index(
+            'window 3 start')]
+
+    def test_watchdog_mid_window(self):
+        during, after = self.watchdog_case(d2l.hw_smi_card(0), 'clock', 1500)
+        self.assertEqual(during, ['-rgc'])
+        self.assertEqual(after, ['-rgc', '-lgc 1500,1500'])  # then re-lock
+
+    def test_watchdog_mid_window_cap_arm(self):
+        during, after = self.watchdog_case(
+            d2l.hw_smi_card(0, default_limit=450.0), 'cap', 300)
+        self.assertEqual(during, ['-rgc', '-pl 450'])
+        self.assertEqual(after, ['-rgc', '-pl 450', '-pl 300'])
+
+    def test_guard_gives_up(self):
+        self.foreign = {999}
+        d2l._HW_GUARD['max_wait_s'] = 0.0
+        with self.assertRaisesRegex(RuntimeError, 'the card is reset'):
+            d2l._clock_guard(d2l.hw_smi_card(0), ('-lgc', '900,900'))
+        self.assertEqual(self.args(), [['-rgc']])  # reset, never re-locked
+        self.foreign = set()
+        with mock.patch.object(d2l, '_card_pids', lambda uuid: None):
+            self.assertEqual(d2l._card_foreign(d2l.hw_smi_card(0)), [-1])
+
+    def test_configurations(self):
+        c = d2l._HW_CLOCK_CONFIGS
+        self.assertEqual(c['box']['clocks'], tuple(range(600, 3001, 300)))
+        self.assertEqual(c['box']['edge'], 300)
+        self.assertEqual(set(c['box']['workloads']),
+                         {'matmul-8192', 'decode-b1', 'train-8192'})
+        self.assertEqual(c['smoke']['clocks'], (1500,))
+        self.assertEqual(set(c['smoke']['workloads']),
+                         {'decode-b1', 'matmul-8192'})
+        for name, cfg in c.items():  # H1 covers clocks only: no -pl
+            self.assertEqual(cfg['caps'], (), name)
+        self.assertEqual(d2l.HW_ARTIFACTS['box-clocksweep'],
+                         ('lm-hw-buildbox-clocksweep-v1', 'tar'))
+        self.assertEqual(d2l.HW_JOBS['box-clocksweep'][0], 'hw_clock_regen')
+        self.assertEqual(d2l.HW_CONFIG_LOGS[('box-clocksweep', 't2')],
+                         'a100-clocksweep')
+        self.assertNotIn('box-clocksweep', d2l.HW_CAMPAIGNS)
+        for name in ('cap_effect', 'hw_root_sweep', '_synthetic_sweep'):
+            self.assertFalse(hasattr(d2l, name), name)
+        os.environ.pop('D2L_HW_CONFIG', None)
+        os.environ.pop('D2L_HW_OUT', None)
+        with self.assertRaisesRegex(ValueError, 'folder of its own'):
+            d2l._clock_config_check('smoke')
+        os.environ['D2L_HW_OUT'] = '/nowhere'
+        d2l._clock_config_check('smoke')
+        d2l._clock_config_check('box')
+        with self.assertRaisesRegex(ValueError, 'D2L_HW_CONFIG=t2'):
+            d2l._clock_config_check('t2')
+        with self.assertRaisesRegex(ValueError, 'no clock-sweep'):
+            d2l._clock_config_check('fast')
+
+    def test_regen_order(self):
+        """hw_clock_regen on mocks: default clocks first, every lock, the
+        reset after the last; the record of the settings in attrs."""
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.dict(os.environ, {
+                    'D2L_HW_OUT': tmp, 'D2L_RERUN': 'box-clocksweep'}), \
+                mock.patch.dict(d2l.DATA_HUB, {}), \
+                mock.patch.object(d2l, '_power_window', self.window()), \
+                mock.patch.object(d2l.torch.cuda, 'is_available',
+                                  lambda: True), \
+                mock.patch.object(d2l, '_hw_check_hardware',
+                                  lambda *a: None), \
+                mock.patch.object(d2l, '_stop_on_signals', lambda: None), \
+                mock.patch.object(d2l, '_hw_frame', pd.DataFrame), \
+                mock.patch.object(d2l, '_power_limits', dict), \
+                mock.patch.object(d2l, '_hw_env', dict), \
+                mock.patch.object(d2l, '_hw_contention', lambda: (0, 0)):
+            os.environ.pop('D2L_HW_CONFIG', None)
+            with quiet():
+                df = d2l.hw_clock_regen('smoke')
+            saved, meta = d2l._hw_read(os.path.join(
+                tmp, 'lm-hw-buildbox-clocksweep-v1', 'sweep.json.gz'))
+        self.assertEqual(list(df.kind), ['default'] * 2 + ['clock'] * 2)
+        self.assertEqual(self.args(), [['-rgc'], ['-lgc', '1500,1500'],
+                                       ['-lgc', '1500,1500'], ['-rgc']])
+        self.assertEqual(len(df.attrs['smi']), 4)
+        self.assertEqual(meta['config']['config'], 'smoke')
+        self.assertEqual(len(saved), 4)
+
+    def test_sigterm_resets(self):
+        """A plain kill of the regeneration process runs the reset."""
+        script = '''
+import os, sys, time
+from unittest import mock
+from d2l import torch as d2l
+log = open(sys.argv[1], 'a', buffering=1)
+def run(cmd, timeout_s, **kw):
+    log.write(' '.join(cmd[3:]) + '\\n')
+    return d2l.HWRun(cmd, 0, '', '', 0.0, None)
+def window(step, work, **kw):
+    time.sleep(0.2)
+    return dict(contended=0.0, trace={}, power_w=1.0, rate=1.0,
+                sm_mhz=1.0, step_ms=1.0, step_mad_ms=0.1)
+with mock.patch.object(d2l, 'hw_run', run), \\
+        mock.patch.object(d2l, '_hw_visible_uuids', lambda: ['GPU-x']), \\
+        mock.patch.object(d2l.torch.cuda, 'is_available', lambda: True), \\
+        mock.patch.object(d2l, '_hw_check_hardware', lambda *a: None), \\
+        mock.patch.object(d2l, '_power_load', lambda n: (None, 1, 'FLOP')), \\
+        mock.patch.object(d2l, '_power_window', window), \\
+        mock.patch.object(d2l, '_card_pids', lambda u: set()), \\
+        mock.patch.object(d2l, 'lm_free', lambda: None), \\
+        mock.patch.object(d2l, '_hw_env', dict), \\
+        mock.patch.object(d2l, '_hw_contention', lambda: (0, 0)):
+    log.write('start\\n')
+    d2l.hw_clock_regen('box')
+'''
+        import signal
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            path, log = (os.path.join(tmp, f) for f in ('job.py', 'calls'))
+            with open(path, 'w') as f:
+                f.write(script)
+            env = dict(os.environ, D2L_RERUN='box-clocksweep',
+                       D2L_HW_OUT=tmp, PYTHONPATH=REPO)
+            env.pop('D2L_HW_CONFIG', None)
+            proc = subprocess.Popen([sys.executable, path, log], env=env,
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL)
+            t0 = time.time()
+            while time.time() - t0 < 300:
+                if os.path.exists(log) and '-lgc 900,900' in read(log):
+                    break  # locked, inside the second lock's windows
+                time.sleep(0.1)
+            proc.send_signal(signal.SIGTERM)
+            self.assertEqual(proc.wait(timeout=60), 1)
+            lines = read(log).splitlines()
+        self.assertIn('-lgc 900,900', lines)
+        self.assertEqual(lines[-1], '-rgc')
+
+    def test_wrapper(self):
+        """tools/hw_clock_sweep.sh in a dry run with a fake nvidia-smi and
+        a fake job: arguments pass through, a busy card is refused, and
+        TERM resets the card before the job is stopped."""
+        import signal
+        import subprocess
+        wrapper = os.path.join(REPO, 'tools', 'hw_clock_sweep.sh')
+        self.assertEqual(subprocess.run(['bash', '-n', wrapper]).returncode,
+                         0)
+        scratch = os.path.join(REPO, '.cache')  # the fakes must be
+        os.makedirs(scratch, exist_ok=True)  # executable: /tmp may be noexec
+        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+            smi, py = os.path.join(tmp, 'smi'), os.path.join(tmp, 'py')
+            with open(smi, 'w') as f:
+                f.write('#!/bin/bash\ncase "$*" in\n'
+                        '  *--query-gpu=uuid*) echo GPU-fake ;;\n'
+                        '  *--query-compute-apps*)'
+                        ' cat "$BUSY" 2>/dev/null; true ;;\n'
+                        '  *) echo "smi $*" ;;\nesac\n')
+            with open(py, 'w') as f:
+                f.write('#!/bin/bash\nif [ "$1" = - ]; then cat >/dev/null; '
+                        'echo 0; exit 0; fi\necho "job: $*"\n'
+                        '[ -n "$LOOP" ] || exit 0\n'
+                        'trap \'echo "job: TERM"; exit 143\' TERM\n'
+                        'while true; do sleep 0.05; done\n')
+            for p in (smi, py):
+                os.chmod(p, 0o755)
+            env = dict(os.environ, D2L_HW_DRYRUN='1', D2L_HW_PYTHON=py,
+                       D2L_HW_NVIDIA_SMI=smi, BUSY=os.path.join(tmp, 'busy'))
+            env.pop('CUDA_VISIBLE_DEVICES', None)
+            r = subprocess.run(['bash', wrapper, '0', '--processes', '1',
+                                '--config', 'smoke', '--out', '/x'],
+                               env=env, capture_output=True, text=True,
+                               timeout=60)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn('job: tools/hw_regen.py box-clocksweep --processes'
+                          ' 1 --config smoke --out /x', r.stdout)
+            self.assertIn('+ sudo -n nvidia-smi -rgc -i GPU-fake', r.stdout)
+            self.assertIn('smi -q -d CLOCK -i GPU-fake', r.stdout)
+            self.assertNotIn('-pl', r.stdout)  # the cap arm is off
+            r = subprocess.run(['bash', wrapper, '0'], env=env, text=True,
+                               capture_output=True, timeout=60)
+            self.assertIn('--processes 3 --config box', r.stdout)
+            with open(env['BUSY'], 'w') as f:
+                f.write('GPU-fake, 4242\n')
+            r = subprocess.run(['bash', wrapper, '0'], env=env, text=True,
+                               capture_output=True, timeout=60)
+            self.assertEqual(r.returncode, 3)
+            self.assertNotIn('job:', r.stdout)
+            os.remove(env['BUSY'])
+            proc = subprocess.Popen(['bash', wrapper, '0'],
+                                    env=dict(env, LOOP='1'), text=True,
+                                    stdout=subprocess.PIPE)
+            out = []
+            for line in proc.stdout:
+                out.append(line)
+                if line.startswith('job: tools'):
+                    break
+            proc.send_signal(signal.SIGTERM)
+            rest, _ = proc.communicate(timeout=60)
+            out = ''.join(out) + rest
+            self.assertEqual(proc.returncode, 143)
+            reset = out.index('+ sudo -n nvidia-smi -rgc -i GPU-fake')
+            self.assertLess(reset, out.index('job: TERM'))  # reset first
+
+    def test_regen_smoke_needs_out(self):
+        import subprocess
+        tool = os.path.join(REPO, 'tools', 'hw_regen.py')
+        for args in (['box-clocksweep', '--config', 'smoke'],
+                     ['box-power', '--config', 'smoke', '--out', '/x']):
+            r = subprocess.run([sys.executable, tool, *args],
+                               capture_output=True, text=True, timeout=120)
+            self.assertEqual(r.returncode, 2, args)
+            self.assertEqual(len(r.stderr.splitlines()), 1)
 
 
 def collections_counter(tree):

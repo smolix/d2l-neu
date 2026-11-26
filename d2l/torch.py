@@ -14227,40 +14227,44 @@ def hier_allreduce(tensor, intra_group, inter_group):
     return tensor
 
 DVFSFit = collections.namedtuple('DVFSFit', [
-    'P_s', 'k', 'f_star', 'f_min', 'step', 'clocks', 'power', 'synthetic',
-    'source'])
+    'P_s', 'k', 'f_star', 'f_min', 'step', 'edge', 'locks', 'clocks',
+    'power', 'rate', 'source', 'a100'])
 
 def dvfs_fit(log):
-    """Fit P(f) = P_s + k f^3 (f in GHz) by least squares to the clock
-    sweep of the compute-bound workload; f* = (P_s / (2k))^(1/3) maximizes
-    the work per joule, f_min is the swept clock of least energy per unit
-    of work, step the sweep's largest clock step.
+    """Fit P(f) = P_s + k f^3 (f in GHz: the clock each window ran at) by
+    least squares to the locked-clock windows of the compute-bound
+    workload; f* = (P_s / (2k))^(1/3) maximizes the work per joule. f_min
+    is the lock of least energy per unit of work, step the sweep's largest
+    step, edge whether f_min is the lowest lock.
 
     Defined in :numref:`sec_lm_energy_cost`"""
     s = log[(log.kind == 'clock') & log.workload.str.startswith('matmul')]
+    s = s.sort_values('setting')
     f = s.sm_mhz.to_numpy() / 1e3  # the clock it ran at, GHz
     A = np.stack([np.ones_like(f), f**3], axis=1)  # P is linear in 1, f^3
     (P_s, k), *_ = np.linalg.lstsq(A, s.power_w.to_numpy(), rcond=None)
-    f_star = (P_s / (2 * k)) ** (1 / 3)
-    f_min = f[np.argmin(s.power_w.to_numpy() / s.rate.to_numpy())]
-    return DVFSFit(P_s, k, f_star, f_min, np.diff(np.sort(f)).max(), f,
-                   s.power_w.to_numpy(), log.attrs['synthetic'],
-                   log.attrs['source'])
+    lock = s.setting.to_numpy() / 1e3
+    i = int(np.argmin(s.power_w.to_numpy() / s.rate.to_numpy()))  # J/FLOP
+    return DVFSFit(P_s, k, (P_s / (2 * k)) ** (1 / 3), lock[i],
+                   np.diff(lock).max() if len(lock) > 1 else math.nan,
+                   i == 0, lock, f, s.power_w.to_numpy(),
+                   s.rate.to_numpy(), log.attrs.get('source', ''),
+                   log.attrs.get('a100'))
 
 def hw_clock_sweep(clocks, workloads, device=0):
     """Board power, clocks and work rate of each named workload with the SM
-    clock locked at each of clocks (MHz) on visible GPU `device` (0: the
-    card the power trace reads); needs root, restores the default clocks.
+    clock locked at each of clocks (MHz) on visible GPU `device`; needs
+    permission to lock clocks (sudo -n inside the regeneration).
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    smi = d2l.hw_smi_card(device)  # nvidia-smi on that card (by UUID)
+    smi = d2l.hw_smi_card(device)  # nvidia-smi on that card, guarded
     if smi('-lgc', f'{clocks[0]},{clocks[0]}').refused:
-        raise PermissionError('locking the SM clock needs root')
+        raise PermissionError('the driver refused to lock the SM clock')
     rows = []
     try:
         for f in clocks:
             smi('-lgc', f'{f},{f}')  # minimum = maximum: the clock is pinned
-            rows += d2l._sweep_rows('clock', f, workloads)
+            rows += d2l._sweep_rows('clock', f, workloads, smi)
     finally:
         smi.restore('-rgc')  # back to the default clocks, or say it failed
     return pd.DataFrame(rows)
@@ -37945,9 +37949,7 @@ d2l.DATA_HUB['lm-hw-buildbox-power-v1'] = (
 
 d2l.HW_STATIC['hw-prices'] = ('lm-hw-prices-v1', 'csv')
 d2l.HW_ARTIFACTS['box-power'] = ('lm-hw-buildbox-power-v1', 'tar')
-d2l.HW_CAMPAIGNS['box-clocksweep'] = (
-    'lm-hw-buildbox-clocksweep-v1', 'tar', 'C-box-root',
-    'RTX 4090 (this box, with root)')
+d2l.HW_ARTIFACTS['box-clocksweep'] = ('lm-hw-buildbox-clocksweep-v1', 'tar')
 d2l.HW_CAMPAIGNS['mfu-table'] = (
     'lm-mfu-table-v1', 'json', 'chapter 23', 'measured MFU per layout')
 d2l.HW_CAMPAIGNS['par-goodput'] = (
@@ -37955,6 +37957,9 @@ d2l.HW_CAMPAIGNS['par-goodput'] = (
 
 d2l.HW_JOBS['box-power'] = (
     'regen_power', lambda: dict(config='box'))
+d2l.HW_JOBS['box-clocksweep'] = (
+    'hw_clock_regen', lambda: dict(config='box'))
+d2l.HW_CONFIG_LOGS[('box-clocksweep', 't2')] = 'a100-clocksweep'
 
 _HW_POWER = dict(model='Qwen/Qwen3-0.6B', L=512, micro_batch=2, hz=10,
                  warm_s=2.0, decode_s=5.0)
@@ -38161,23 +38166,6 @@ def _split_traces(rows, key):
     Defined in :numref:`sec_lm_energy_cost`"""
     traces = {str(key(r)): r.pop('trace') for r in rows}
     return rows, traces
-
-def _sweep_rows(kind, setting, workloads, seconds=10):
-    """One row per workload at one sweep setting (a locked clock in MHz or
-    a power cap in W): the traced window with its median step time and
-    that time's median absolute deviation.
-
-    Defined in :numref:`sec_lm_energy_cost`"""
-    rows = []
-    for name in workloads:
-        step, work, unit = _power_load(name)
-        w = _quiet_window(step, work, seconds=seconds)
-        w.pop('trace')
-        rows.append(dict(kind=kind, setting=setting, workload=name,
-                         unit=unit, **w))
-        del step
-        d2l.lm_free()
-    return rows
 
 def _power_limits():
     """The card's power limit (W) and top SM clock (MHz).
@@ -38431,206 +38419,412 @@ def train_energy(arch, tokens_per_step, micro_batch, seconds=10):
         entry='train', live_check=_train_live, show=_show_train_energy,
         live_label='training steps, 3 s')
 
-_HW_SYNTHETIC_DVFS = dict(P_s=80.0, k=80.0,  # W, W/GHz^3 (the plan's case)
-                          clocks_ghz=(0.6, 0.76, 0.92, 1.08, 1.24, 1.4))
+_HW_CLOCK_CONFIGS = {  # caps=(): no power limit is set (H1 covers clocks)
+    'box': dict(clocks=tuple(range(600, 3001, 300)), edge=300,
+                workloads=('matmul-8192', 'decode-b1', 'train-8192'),
+                caps=()),  # with -pl allowed: (150, 225, 300, 375, 450)
+    'smoke': dict(clocks=(1500,), edge=None,
+                  workloads=('decode-b1', 'matmul-8192'), caps=()),
+    't2': dict(clocks=tuple(range(360, 1411, 150)), edge=210,  # A100 PCIe
+               workloads=('matmul-8192', 'decode-b1', 'train-8192'),
+               caps=())}
 
-def _synthetic_sweep():
-    """The plan's synthetic clock sweep of a compute-bound workload: power
-    P_s + k f^3 exactly, throughput proportional to f (1 at the top clock).
+_HW_GUARD = dict(poll_s=60, max_wait_s=7200, watch_s=1.0, tries=10)
 
-    Defined in :numref:`sec_lm_energy_cost`"""
-    s = _HW_SYNTHETIC_DVFS
-    f = np.array(s['clocks_ghz'])
-    df = pd.DataFrame(dict(kind='clock', setting=f * 1e3,
-                           workload='matmul-8192', sm_mhz=f * 1e3,
-                           power_w=s['P_s'] + s['k'] * f**3,
-                           rate=f / f.max(), unit='relative'))
-    df.attrs.update(source=f'synthetic numbers (P_s = {s["P_s"]:.0f} W, '
-                    f'k = {s["k"]:.0f} W/GHz^3): no measured sweep yet',
-                    synthetic=True)
-    return df
+_HW_SMI_CALLS = []  # every nvidia-smi setting of this process: the record
 
-def hw_clock_sweep_log():
-    """The clock and power-cap sweep to fit: the box's root sweep when
-    committed, else campaign C-T2's A100 sweep, else the synthetic set;
-    attrs['source'] says which, attrs['synthetic'] whether it is one.
+_HW_GUARD_EVENTS = []  # every foreign process the guards saw
+
+def _card_pids(uuid):
+    """PIDs of the compute processes on the card with this UUID (NVML,
+    else nvidia-smi), or None when neither can be read.
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    for name in ('box-clocksweep', 'a100-clocksweep'):
-        log = hw_campaign_log(name)
-        if log:
-            df = log['sweep']
-            df.attrs.update(source=f'measured on {d2l.HW_CAMPAIGNS[name][3]}',
-                            synthetic=False)
-            return df
-    return _synthetic_sweep()
+    try:
+        import pynvml
+        pynvml.nvmlInit()
+        try:
+            h = pynvml.nvmlDeviceGetHandleByUUID(uuid)
+            return {p.pid for p in
+                    pynvml.nvmlDeviceGetComputeRunningProcesses(h)}
+        finally:
+            pynvml.nvmlShutdown()
+    except Exception:
+        rows = _hw_smi('--query-compute-apps=gpu_uuid,pid')
+        if not rows and not _hw_smi('--query-gpu=uuid'):
+            return None  # nvidia-smi fails too
+        return {int(r[1]) for r in rows
+                if len(r) > 1 and r[0] == uuid and r[1].isdigit()}
+
+def _card_foreign(smi):
+    """Compute processes on smi's card other than this one ([-1] when they
+    cannot be read: an unknown card counts as busy).
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    pids = _card_pids(smi.uuid)
+    if pids is None:
+        return [-1]
+    return sorted(p for p in pids if p != os.getpid())
+
+def _clock_guard(smi, relock=None, dog=None):
+    """True when smi's card holds no compute process but this one and the
+    watchdog dog (if any) has not tripped. Else reset the card at once
+    (smi.reset), wait in polls until it is free (at most max_wait_s, then
+    raise with the card reset), apply relock (nvidia-smi arguments, the
+    window's setting), re-arm dog and return False: the caller discards
+    its window.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    if smi is None:
+        return True
+    pids = _card_foreign(smi)
+    if not pids and not (dog is not None and dog.tripped):
+        return True
+    smi.reset()
+    t0 = time.monotonic()
+    if pids:  # (else the watchdog tripped and recorded its sighting)
+        _HW_GUARD_EVENTS.append(dict(t=time.time(), by='guard', pids=pids))
+    while pids:
+        if time.monotonic() - t0 > _HW_GUARD['max_wait_s']:
+            raise RuntimeError(f'a foreign process stayed on the card for '
+                               f'{_HW_GUARD["max_wait_s"] / 3600:g} h; the '
+                               'card is reset')
+        time.sleep(_HW_GUARD['poll_s'])
+        pids = _card_foreign(smi)
+    if relock:
+        smi(*relock)
+    if dog is not None:
+        dog.rearm()
+    return False
+
+class _ClockWatchdog:
+    """While a setting is applied: once every watch_s seconds the card's
+    compute processes; a foreign one resets the card at once (smi.reset)
+    and trips the dog, which then stays tripped (no further resets) until
+    _clock_guard re-arms it on a free, re-locked card. trips counts the
+    trips, so a window that saw one is known. smi=None: a dog that never
+    trips.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    def __init__(self, smi):
+        import threading
+        self.smi, self.trips = smi, 0
+        self._armed, self._stop = threading.Event(), threading.Event()
+        self._armed.set()
+        self._thread = None
+        if smi is not None:
+            self._thread = threading.Thread(target=self._run, daemon=True)
+            self._thread.start()
+
+    @property
+    def tripped(self):
+        return not self._armed.is_set()
+
+    def rearm(self):
+        self._armed.set()
+
+    def _run(self):
+        while not self._stop.wait(_HW_GUARD['watch_s']):
+            if self._armed.is_set():
+                pids = _card_foreign(self.smi)
+                if pids:
+                    self.smi.reset()
+                    self._armed.clear()
+                    self.trips += 1
+                    _HW_GUARD_EVENTS.append(dict(t=time.time(), by='watchdog',
+                                                 pids=pids))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=30)
+
+def _sweep_relock(kind, setting):
+    """The nvidia-smi arguments that apply a sweep row's setting (None for
+    the default clocks).
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    if kind == 'clock':
+        return ('-lgc', f'{int(setting)},{int(setting)}')
+    if kind == 'cap':
+        return ('-pl', str(int(setting)))
+    return None
+
+def _sweep_rows(kind, setting, workloads, smi=None, seconds=10):
+    """One row per workload at one sweep setting (kind 'clock': a locked
+    clock in MHz, 'cap': a power limit in W, 'default': the default
+    clocks): the traced window with its median step time and that time's
+    median absolute deviation. With smi (the card's nvidia-smi), the
+    guards run: a window that a foreign process shared, before, during or
+    at its end, is discarded (column 'discarded' counts them) and measured
+    again once the card is free and the setting re-applied.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    relock, rows = _sweep_relock(kind, setting), []
+    with _ClockWatchdog(smi) as dog:
+        for name in workloads:
+            step, work, unit = _power_load(name)
+            discarded = 0
+            while True:
+                _clock_guard(smi, relock, dog)
+                trips = dog.trips
+                w = _power_window(step, work, seconds=seconds)
+                if (dog.trips == trips and not w['contended']
+                        and _clock_guard(smi, relock, dog)):
+                    break
+                discarded += 1
+                if discarded >= _HW_GUARD['tries']:
+                    raise RuntimeError(f'{discarded} windows in a row shared '
+                                       'the card: regenerate when it is free')
+            w.pop('trace')
+            rows.append(dict(kind=kind, setting=setting, workload=name,
+                             unit=unit, discarded=discarded, **w))
+            del step
+            d2l.lm_free()
+    return rows
 
 class _HWSmi:
-    """nvidia-smi on one visible GPU, addressed by its UUID. A call returns
-    the HWRun (a refusal is a result here, not an error); restore() runs a
-    reset command and prints one line if it failed, so a card is never left
-    locked or capped without a word.
+    """nvidia-smi on one visible GPU, addressed by its UUID. smi(*args)
+    applies a setting (-lgc, or -pl while the power-cap arm runs) after
+    _clock_guard has found the card free, and returns the HWRun (a refusal
+    is a result here, not an error); smi.restore(*args) runs a reset and
+    prints one line if it failed; smi.reset() puts the card back at once
+    (-rgc, and the default power limit when default_limit is set, which
+    only the cap arm does). With D2L_HW_SUDO=1 (set only by
+    tools/hw_clock_sweep.sh) -lgc and -rgc, and -pl with the arm on, run
+    as `sudo -n nvidia-smi`; -pl without the arm is refused here.
+    D2L_HW_DRYRUN=1 prints each sudo command instead of running it.
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    def __init__(self, device=0):
+    def __init__(self, device=0, default_limit=None):
         if device != 0:
             raise ValueError('make the card visible GPU 0 '
                              '(CUDA_VISIBLE_DEVICES): the power trace reads '
                              'that one')
         self.uuid = _hw_visible_uuids()[device]
+        self.default_limit = default_limit
+
+    def _run(self, *args):
+        if args[0] == '-pl' and self.default_limit is None:
+            raise PermissionError('setting a power limit: the power-cap arm '
+                                  'is off in this configuration')
+        cmd = ['nvidia-smi', '-i', self.uuid, *args]
+        if (os.environ.get('D2L_HW_SUDO') == '1'
+                and args[0] in ('-lgc', '-rgc', '-pl')):
+            cmd = ['sudo', '-n', *cmd]
+        if cmd[0] == 'sudo' and os.environ.get('D2L_HW_DRYRUN') == '1':
+            print('+ ' + ' '.join(cmd), flush=True)
+            run = HWRun(cmd, 0, '', '', 0.0, None)
+        else:
+            run = hw_run(cmd, 60, record=True)
+        _HW_SMI_CALLS.append(dict(t=time.time(), args=list(args),
+                                  refused=run.refused))
+        return run
 
     def __call__(self, *args):
-        return hw_run(['nvidia-smi', '-i', self.uuid, *args], 60,
-                      record=True)
+        if args[0] == '-lgc' or (args[0] == '-pl' and self.default_limit
+                                 and float(args[1]) != self.default_limit):
+            _clock_guard(self)
+        return self._run(*args)
 
     def restore(self, *args):
-        run = self(*args)
+        run = self._run(*args)
         if run.refused:
             print(f'nvidia-smi {" ".join(args)} failed ({run.refused}): '
                   'reset the card by hand')
         return run
 
-def hw_smi_card(device=0):
+    def reset(self):
+        runs = [self.restore('-rgc')]
+        if self.default_limit:
+            runs.append(self.restore('-pl', f'{self.default_limit:g}'))
+        return runs
+
+def hw_smi_card(device=0, default_limit=None):
     """nvidia-smi on visible GPU device (which must be 0, the card the power
-    trace reads): smi(*args) runs it, smi.restore(*args) resets loudly.
+    trace reads), guarded (_HWSmi): smi(*args) applies a setting,
+    smi.restore(*args) and smi.reset() reset loudly.
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    return _HWSmi(device)
+    return _HWSmi(device, default_limit)
 
 def _cap_sweep(caps, workloads, seconds=10):
     """Rows (kind 'cap') of each workload under each power limit (W) on
-    visible GPU 0, the default limit restored at the end (root). Refuses to
-    start while the default limit is unknown (no way back).
+    visible GPU 0 at the default clocks, the default limit restored at the
+    end and by every guard's reset. Refuses to start while the default
+    limit is unknown (no way back).
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    smi = hw_smi_card(0)
     default = _hw_gpu_limits().get('power_default_limit')
     if not default:
         raise RuntimeError('the default power limit is unknown: no cap is '
                            'set without a way back')
+    smi = hw_smi_card(0, default_limit=float(default))
     rows = []
     try:
         for cap in caps:
             if smi('-pl', str(int(cap))).refused:
-                raise PermissionError('setting the power limit needs root')
-            rows += _sweep_rows('cap', cap, workloads, seconds)
+                raise PermissionError('the driver refused the power limit')
+            rows += _sweep_rows('cap', cap, workloads, smi, seconds)
     finally:
-        smi.restore('-pl', str(int(default)))
+        smi.reset()
     return rows
 
-def hw_root_sweep(clocks=None, caps=(150, 225, 300, 375, 450),
-                  workloads=('matmul-8192', 'decode-b1', 'train-8192')):
-    """The author's root sweep on visible GPU 0 (clocks in MHz, by default
-    six from 25% to 100% of the top clock, so that the energy-optimal clock
-    of a 4090-like card lies inside the swept range; power caps in W): one
-    table of both sweeps, written as the entry 'sweep' under D2L_HW_OUT for
-    the campaign package to pack and upload. Needs root; restores the
-    clocks and the limit on exit. sudo drops HF_HOME and PYTHONPATH, so the
-    package passes them (sudo env HF_HOME=... PYTHONPATH=...); as root
-    without HF_HOME this raises rather than fill root's cache.
+def _least_energy_lock(log):
+    """The locked clock (MHz) at which the matrix product used the least
+    energy per unit of work (W / rate), or None without such rows.
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    if os.geteuid() == 0 and not os.environ.get('HF_HOME'):
-        raise RuntimeError('running as root without HF_HOME: pass it '
-                           '(sudo env HF_HOME=... PYTHONPATH=...)')
-    if clocks is None:
-        top = _hw_gpu_limits()['clocks_max_sm']
-        clocks = [int(15 * round(top * x / 15))
-                  for x in np.linspace(0.25, 1.0, 6)]
-    rows = d2l.hw_clock_sweep(clocks, workloads).to_dict('records')
-    rows += _cap_sweep(caps, workloads)
-    df = _hw_frame(rows)
-    key = d2l.HW_CAMPAIGNS['box-clocksweep'][0]
-    _hw_write(os.path.join(_hw_rerun_root(), key, _hw_entry_file('sweep')),
-              df, dict(name='box-clocksweep', entry='sweep', env=_hw_env(),
-                       config=dict(clocks=list(clocks), caps=list(caps),
-                                   workloads=list(workloads))))
-    return df
+    s = log[(log.kind == 'clock') & log.workload.str.startswith('matmul')]
+    if not len(s):
+        return None
+    return float(s.setting.iloc[int(np.argmin(s.power_w / s.rate))])
+
+def _clock_edge(rows, clocks, edge):
+    """E4's edge rule: [edge] when the matrix product's least energy per
+    FLOP lies at the lowest of clocks, else []. Only the first process of
+    a regeneration decides; the others repeat its choice (read from its
+    entry), so their tables combine row by row.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    if edge is None:
+        return []
+    proc = os.environ.get('D2L_HW_PROC')
+    if proc not in (None, '0'):
+        first = os.path.join(os.path.dirname(_hw_regen_dir('box-clocksweep')),
+                             'proc0', _hw_entry_file('sweep'))
+        done = _hw_read(first)[0]
+        return [edge] if ((done.kind == 'clock')
+                          & (done.setting == edge)).any() else []
+    least = _least_energy_lock(pd.DataFrame(rows))
+    return [edge] if least == min(clocks) else []
+
+def hw_clock_sweep_log():
+    """The committed clock sweep of the box (box-clocksweep, entry 'sweep'),
+    with campaign C-T2's A100 sweep in attrs['a100'] once committed (else
+    its CampaignPending) and the run in attrs['source']. Absent as every box
+    result (hw_box_log).
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    log = hw_box_log('box-clocksweep', 'sweep')
+    a100 = hw_campaign_log('a100-clocksweep')
+    log.attrs['a100'] = a100.get('sweep') if a100 else a100
+    if len(log):
+        n = log.attrs.get('n_proc', 1)
+        log.attrs['source'] = (f'committed sweep on the {log.attrs["gpu"]} '
+                               f'({n} process{"es" if n > 1 else ""})')
+    return log
 
 def plot_dvfs(fit):
-    """Power (left) and throughput per watt relative to the top clock
-    (right, dashed) against the SM clock: the sweep's points, the fitted
-    model, f* dotted; prints the fit, the predicted against the measured
-    energy minimum and whether f* lies inside the swept clocks (else the
-    model extrapolates), or that the set is synthetic.
+    """Board power (left) and work per joule relative to the top lock
+    (right, squares; the model dashed) against the SM clock each window
+    ran at: the sweep's points, the fitted model, f* dotted, the least
+    energy marked. Prints the fit, f* against the least-energy lock and
+    the sweep step, the locks the product ran below (its power cap), and
+    the source.
 
     Defined in :numref:`sec_lm_energy_cost`"""
     f = np.linspace(min(fit.clocks) * 0.9, max(fit.clocks) * 1.05, 200)
-    f_top = max(fit.clocks)
     power = lambda x: fit.P_s + fit.k * x**3
-    eta_top = f_top / power(f_top)  # throughput per watt, throughput ~ f
+    top = int(np.argmax(fit.locks))
+    eta = fit.rate / fit.power / (fit.rate[top] / fit.power[top])
+    model = f / power(f) / (fit.clocks[top] / power(fit.clocks[top]))
     d2l.plot([f, fit.clocks], [power(f), fit.power],
-             xlabel='SM clock (GHz)', ylabel='board power (W)',
-             fmts=['C0-', 'C0o'], legend=['P_s + k f^3', 'sweep'],
-             figsize=(5, 3.5))
+             xlabel='SM clock as run (GHz)', ylabel='board power (W)',
+             fmts=['C0-', 'C0o'], legend=['P_s + k f^3', 'power'],
+             figsize=(5, 3.5), legend_loc='lower right')
     ax = d2l.plt.gca()
     ax.axvline(fit.f_star, color='k', ls=':', lw=1)
     ax2 = ax.twinx()
-    ax2.plot(f, f / power(f) / eta_top, 'C1--')
-    ax2.set_ylim(0, 1.2 * max(f / power(f) / eta_top))  # clear of the legend
-    ax2.set_ylabel('work per joule (top clock = 1), dashed')
-    gain = fit.f_star / power(fit.f_star) / eta_top
-    print(f'fit: P_s = {fit.P_s:.0f} W, k = {fit.k:.0f} W/GHz^3; f* = '
-          f'{fit.f_star:.2f} GHz, P(f*) = {power(fit.f_star):.0f} W')
-    print(f'at f*: {gain:.1f}x the work per joule and '
-          f'{fit.f_star / f_top:.2f}x the throughput of {f_top:.2f} GHz')
-    if not fit.synthetic:
-        inside = min(fit.clocks) <= fit.f_star <= f_top
-        print(f'measured energy minimum at {fit.f_min:.2f} GHz (sweep step '
-              f'{fit.step:.2f} GHz)')
-        print(f'f* = {fit.f_star:.2f} GHz lies ' + (
-            'inside the swept clocks' if inside else
-            'outside the swept clocks: the model extrapolates'))
-    print(fit.source)
+    ax2.plot(f, model, 'C1--', lw=1)
+    ax2.plot(fit.clocks, eta, 'C1s', ms=4)
+    i = int(np.argmax(eta))
+    ax2.plot(fit.clocks[i], eta[i], 'k*', ms=10)  # the least energy
+    ax2.set_ylim(0, 1.2 * max(model.max(), eta.max()))
+    ax2.set_ylabel('work per joule (top lock = 1)')
+    print(f'fit to the clock as run: P_s = {fit.P_s:.0f} W, k = '
+          f'{fit.k:.3g} W/GHz^3')
+    where = (f'the lowest lock, {fit.f_min:.2f} GHz: at or below it'
+             if fit.edge else f'the {fit.f_min:.2f} GHz lock')
+    print(f'f* = {fit.f_star:.2f} GHz; least energy per FLOP at {where} '
+          f'(step {fit.step:.2f} GHz)')
+    below = [f'{a:.2f} -> {b:.2f}' for a, b in zip(fit.locks, fit.clocks)
+             if b < a - 0.03]
+    print('below its lock (power cap), GHz: ' + (', '.join(below) or 'none'))
+    print(f'{fit.source}; a notebook never locks clocks')
+    if not isinstance(fit.a100, pd.DataFrame):
+        print(hw_status_line(fit.a100) or 'A100: no sweep')
+    else:
+        a = d2l.dvfs_fit(fit.a100)
+        print(f'A100 (C-T2): P_s = {a.P_s:.0f} W, k = {a.k:.3g} W/GHz^3, '
+              f'f* = {a.f_star:.2f} GHz, least energy at {a.f_min:.2f} GHz')
 
-def _cap_column(caps, kind):
-    """Step times of the first workload of kind ('train', 'decode') under
-    each cap, by cap, with the uncapped (top) row; raises if the sweep has
-    no such workload.
+def _clock_column(log, kind, workload):
+    rows = log[(log.kind == kind) & (log.workload == workload)]
+    if not len(rows):
+        raise ValueError(f'the sweep log has no {workload} rows of kind '
+                         f'{kind!r}')
+    return rows.set_index('setting').sort_index(ascending=False)
 
-    Defined in :numref:`sec_lm_energy_cost`"""
-    names = sorted(w for w in set(caps.workload) if w.startswith(kind))
-    if not names:
-        raise ValueError(f'the sweep log has no {kind} workload under a cap')
-    return caps[caps.workload == names[0]].set_index('setting').sort_index()
-
-_HW_CAP_COLUMNS = ('cap W', 'train ms', 'train ratio', 'decode ms',
-                   'decode ratio', 'noise')
-
-def cap_effect(log, floor=0.02):
-    """The power-cap rows of a sweep log: training and batch-1 decode step
-    times (medians) under each cap and their ratios to the uncapped
-    (highest) limit; noise is 3 median absolute deviations of the capped
-    decode window's step times as a ratio, at least floor (windows also
-    drift between each other). attrs['decode_w']: decode's uncapped power.
-    Prints the table and the log's source, or one line while no root sweep
-    exists, and then returns an empty table.
+def _effect_table(log, kind, train, decode):
+    """Per setting of kind (descending): the training step's clock as run,
+    power and step time, the batch-1 decode step time, each time as a
+    ratio x to the default-clock run, and its noise: 3 x the larger median
+    absolute deviation (the setting's or the default's) as a ratio.
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    caps = log[log.kind == 'cap']
-    if not len(caps):
-        print('power-cap sweep not measured yet (setting a power limit '
-              'needs root)')
-        table = pd.DataFrame({c: pd.Series(dtype=float)
-                              for c in _HW_CAP_COLUMNS})
-        table.attrs['decode_w'] = math.nan
-        return table
-    top = caps.setting.max()
-    train, decode = (_cap_column(caps, k) for k in ('train', 'decode'))
-    lower = [c for c in train.index if c < top]
-    table = pd.DataFrame({
-        'cap W': lower, 'train ms': train.step_ms[lower].values,
-        'train ratio': (train.step_ms[lower] / train.step_ms[top]).values,
-        'decode ms': decode.step_ms[lower].values,
-        'decode ratio': (decode.step_ms[lower] / decode.step_ms[top]).values,
-        'noise': np.maximum(3 * decode.step_mad_ms[lower].values
-                            / decode.step_ms[top], floor)})
-    table.attrs['decode_w'] = float(decode.power_w[top])
-    d2l.show_table(table, digits={'cap W': 0, 'train ms': 0,
-                                  'train ratio': 2, 'decode ms': 2,
-                                  'decode ratio': 2, 'noise': 2}, width=79)
-    print(f'uncapped: {top:.0f} W; decode draws {table.attrs["decode_w"]:.0f}'
-          f' W; {log.attrs.get("source", "")}')
+    t, d = _clock_column(log, kind, train), _clock_column(log, kind, decode)
+    t0 = _clock_column(log, 'default', train).iloc[0]
+    d0 = _clock_column(log, 'default', decode).iloc[0]
+    noise = lambda g, g0: 3 * np.maximum(g.step_mad_ms, g0.step_mad_ms) / (
+        g0.step_ms)
+    return pd.DataFrame({
+        'clock MHz' if kind == 'clock' else 'cap W': t.index.astype(int),
+        'train MHz': t.sm_mhz.values, 'train W': t.power_w.values,
+        'train ms': t.step_ms.values,
+        'train x': (t.step_ms / t0.step_ms).values,
+        'train 3MAD': noise(t, t0).values,
+        'decode ms': d.step_ms.reindex(t.index).values,
+        'decode x': (d.step_ms / d0.step_ms).reindex(t.index).values,
+        'decode 3MAD': noise(d, d0).reindex(t.index).values}), t0, d0
+
+_HW_EFFECT_DIGITS = {'clock MHz': 0, 'cap W': 0, 'train MHz': 0,
+                     'train W': 0, 'train ms': 1, 'train x': 2,
+                     'train 3MAD': 2, 'decode ms': 2, 'decode x': 2,
+                     'decode 3MAD': 2}
+
+def clock_effect(log, train='train-8192', decode='decode-b1'):
+    """What a lower SM clock costs (E5): the training step and batch-1
+    decode at each locked clock against the default-clock run (and, if
+    the power-cap arm ran, the same under each cap). attrs['decode_floor']:
+    the lowest lock down to which every lock keeps decode within its
+    noise (None if decode slows at every lowered clock).
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    table, t0, d0 = _effect_table(log, 'clock', train, decode)
+    d2l.show_table(table, digits=_HW_EFFECT_DIGITS)
+    print(f'x: step time over the default clocks\' (training {t0.step_ms:.0f}'
+          f' ms at {t0.sm_mhz:,.0f} MHz, decode {d0.step_ms:.2f} ms)')
+    print('3MAD: 3 x the larger median absolute deviation, as a ratio')
+    floor = None
+    for _, r in table.iterrows():  # from the top lock down
+        if r['decode x'] - 1 > r['decode 3MAD']:
+            break
+        floor = int(r['clock MHz'])
+    table.attrs['decode_floor'] = floor
+    if floor is None:
+        print('decode at b = 1 slows beyond its noise at every lowered clock')
+    else:
+        r = table.set_index('clock MHz').loc[floor]
+        print(f'decode at b = 1 within its noise down to {floor:,} MHz; the '
+              f'training step there takes {r["train x"]:.2f}x as long')
+    if (log.kind == 'cap').any():
+        caps = _effect_table(log, 'cap', train, decode)[0]
+        d2l.show_table(caps, digits=_HW_EFFECT_DIGITS)
+        table.attrs['caps'] = caps
     return table
 
 _HW_PRICE_COLUMNS = ('item', 'chip', 'value', 'unit', 'kind', 'source_url',
@@ -38961,6 +39155,81 @@ def regen_power(config='box'):
                               ('train_energy', tr, ('tokens_per_step',))):
             for rec in df.to_dict('records'):
                 log.record(cmd, {k: rec[k] for k in keys}, rec)
+
+def _clock_config_check(config):
+    """Raise unless config is a clock-sweep configuration this process may
+    run: 'box' and 't2' as tools/hw_regen.py sets D2L_HW_CONFIG, 'smoke'
+    only into a folder of its own (--out).
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    if config not in _HW_CLOCK_CONFIGS:
+        raise ValueError(f'no clock-sweep configuration {config!r}; one of '
+                         f'{sorted(_HW_CLOCK_CONFIGS)}')
+    run = os.environ.get('D2L_HW_CONFIG') or 'box'
+    if config == 'smoke':
+        if run != 'box' or not os.environ.get('D2L_HW_OUT'):
+            raise ValueError('the smoke configuration writes only into a '
+                             'folder of its own (tools/hw_regen.py --config '
+                             'smoke --out DIR)')
+    elif config != run:
+        raise ValueError(f'config {config!r} needs D2L_HW_CONFIG={config} '
+                         '(tools/hw_regen.py --config)')
+
+def _stop_on_signals():
+    """SIGTERM, SIGHUP and SIGINT end this process through sys.exit, so every
+    finally (the clock reset) runs; a second signal is ignored, so it cannot
+    interrupt the reset.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    import signal
+
+    def stop(signum, frame):
+        for s in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            signal.signal(s, signal.SIG_IGN)
+        sys.exit(1)
+    for s in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+        signal.signal(s, stop)
+
+def _clock_sweep_compute(cfg):
+    """The sweep of one configuration on visible GPU 0: the default clocks,
+    every lock of cfg (and E4's edge lock if the rule asks for it), then
+    the power-cap arm if cfg['caps'] is not empty.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    del _HW_SMI_CALLS[:], _HW_GUARD_EVENTS[:]
+    smi, work = hw_smi_card(0), list(cfg['workloads'])
+    if smi.restore('-rgc').refused:
+        raise PermissionError('the driver refused to reset the SM clock: run '
+                              'tools/hw_clock_sweep.sh')
+    rows = _sweep_rows('default', math.nan, work, smi)
+    rows += d2l.hw_clock_sweep(list(cfg['clocks']), work).to_dict('records')
+    edge = _clock_edge(rows, cfg['clocks'], cfg['edge'])
+    if edge:
+        rows += d2l.hw_clock_sweep(edge, work).to_dict('records')
+    if cfg['caps']:
+        rows += _cap_sweep(cfg['caps'], work)
+    df = _hw_frame(rows)
+    df.attrs.update(edge=bool(edge), field='power.draw (NVML, 1 s average)',
+                    hz=_HW_POWER['hz'], **_power_limits(),
+                    smi=list(_HW_SMI_CALLS), guard=list(_HW_GUARD_EVENTS))
+    return df
+
+def hw_clock_regen(config='box'):
+    """Driver of box-clocksweep (only tools/hw_clock_sweep.sh runs it,
+    through tools/hw_regen.py, with D2L_HW_SUDO=1): the entry 'sweep' of
+    _clock_sweep_compute on the configuration's clocks and workloads;
+    config 't2' is campaign C-T2's A100 sweep and runs only on that chip,
+    'smoke' one lock into a folder of its own.
+
+    Defined in :numref:`sec_lm_energy_cost`"""
+    if not torch.cuda.is_available():
+        raise RuntimeError('box-clocksweep needs a CUDA GPU')
+    _clock_config_check(config)
+    _hw_check_hardware('box-clocksweep', 't2' if config == 't2' else 'box')
+    _stop_on_signals()
+    cfg = _HW_CLOCK_CONFIGS[config]
+    return _hw_result('box-clocksweep', lambda: _clock_sweep_compute(cfg),
+                      dict(config=config, **cfg), entry='sweep')
 
 
 ones_like = torch.ones_like

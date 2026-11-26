@@ -6,7 +6,9 @@ without a notebook.
     python tools/hw_regen.py --prefetch
 
 `<name>` is a key of `d2l.HW_ARTIFACTS` (box-microbench, box-workloads,
-box-moe, box-storage, box-p2p, box-net, box-coll, box-power). The script
+box-moe, box-storage, box-p2p, box-net, box-coll, box-power,
+box-clocksweep; the last only through tools/hw_clock_sweep.sh, which
+locks clocks with `sudo -n nvidia-smi`). The script
 changes into chapter_lm-hardware (data paths are `../data/...` as in the
 notebooks), sets `D2L_RERUN=<name>` and calls the name's driver from
 `d2l.HW_JOBS` with its keyword arguments (the page's calls on the full
@@ -38,18 +40,25 @@ writes under DIR instead of ../data/lm/rerun/ch22 (the campaign launcher).
 output is the campaign log that `d2l.HW_CONFIG_LOGS[(name, C)]` names (for
 example `box-microbench --config t2` writes `lm-hw-a100-microbench-v1`), its
 records carry that configuration's tier, and the driver refuses a GPU that
-is not the campaign's chip-table row.
+is not the campaign's chip-table row. `--config box` is the default (no
+configuration). `--config smoke` (box-clocksweep only) is a short test run:
+it needs `--out`, and its folder is combined but never packed, so a smoke
+never reaches an upload. SIGTERM, SIGINT and SIGHUP are passed on to the
+running process (once), so its `finally` blocks run (box-clocksweep resets
+the clock there) before this script exits.
 """
 import argparse
 import hashlib
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHAPTER = os.path.join(REPO, 'chapter_lm-hardware')
+SMOKE_NAMES = ('box-clocksweep',)  # names whose driver has a 'smoke' config
 
 
 def sha1(path):
@@ -83,6 +92,8 @@ def child(d2l, name):
     kw = kwargs()
     if os.environ.get('D2L_HW_CONFIG'):
         kw['config'] = os.environ['D2L_HW_CONFIG']
+    elif os.environ.get('D2L_HW_SMOKE') == '1':
+        kw['config'] = 'smoke'
     getattr(d2l, driver)(**kw)
     return 0
 
@@ -123,13 +134,28 @@ def main():
     p.add_argument('--config', help='a campaign configuration of the driver')
     p.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
     a = p.parse_args()
+    if a.config == 'box':
+        a.config = None  # the default: the box run
+    smoke = a.config == 'smoke'
+    if smoke and not a.child:
+        if a.name not in SMOKE_NAMES:
+            print(f'{a.name} has no smoke configuration', file=sys.stderr)
+            return 2
+        if not a.out:
+            print('--config smoke writes only under --out DIR', file=sys.stderr)
+            return 2
     os.chdir(CHAPTER)
     if a.out:
         os.environ['D2L_HW_OUT'] = os.path.abspath(os.path.join(REPO, a.out))
-    if a.config:
+    if smoke:
+        os.environ.pop('D2L_HW_CONFIG', None)
+        os.environ['D2L_HW_SMOKE'] = '1'
+    elif a.config:
         os.environ['D2L_HW_CONFIG'] = a.config
     elif not a.child:
         os.environ.pop('D2L_HW_CONFIG', None)
+    if not a.child and not smoke:
+        os.environ.pop('D2L_HW_SMOKE', None)
     if a.prefetch:
         os.environ.pop('D2L_RERUN', None)
         from d2l import torch as d2l
@@ -147,7 +173,8 @@ def main():
         print(f'{a.name}: driver d2l.{driver} is not defined yet',
               file=sys.stderr)
         return 2
-    if a.config and (a.name, a.config) not in d2l.HW_CONFIG_LOGS:
+    if (a.config and not smoke
+            and (a.name, a.config) not in d2l.HW_CONFIG_LOGS):
         print(f'{a.name} has no campaign configuration {a.config!r}',
               file=sys.stderr)
         return 2
@@ -166,15 +193,39 @@ def main():
         if os.path.exists(out):
             os.remove(out)
     t = time.time()
+    running, signalled = [], []
+
+    def forward(signum, frame):  # once: the process's own reset must finish
+        if signalled:
+            return
+        signalled.append(signum)
+        for proc in running:
+            if proc.poll() is None:
+                proc.send_signal(signum)
+    for s in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(s, forward)
     for i in range(a.processes):
+        if signalled:
+            break
         env = dict(os.environ, D2L_RERUN=a.name, D2L_HW_PROC=str(i))
         print(f'{a.name}: process {i + 1} of {a.processes}', flush=True)
-        r = subprocess.run([sys.executable, os.path.abspath(__file__),
-                            a.name, '--child'], env=env)
-        if r.returncode != 0:
-            print(f'{a.name}: process {i + 1} failed (exit {r.returncode})',
+        proc = subprocess.Popen([sys.executable, os.path.abspath(__file__),
+                                 a.name, '--child'], env=env)
+        running[:] = [proc]
+        if signalled:  # it came between the check and the start
+            proc.send_signal(signalled[0])
+        returncode = proc.wait()
+        if signalled:
+            print(f'{a.name}: stopped by signal {signalled[0]} in process '
+                  f'{i + 1} (exit {returncode})', file=sys.stderr)
+            return 128 + signalled[0]
+        if returncode != 0:
+            print(f'{a.name}: process {i + 1} failed (exit {returncode})',
                   file=sys.stderr)
             return 1
+    if signalled:
+        print(f'{a.name}: stopped by signal {signalled[0]}', file=sys.stderr)
+        return 128 + signalled[0]
     prepare = getattr(d2l, f'{driver}_prepare', None)
     if prepare is not None:  # make the processes' entries combinable
         prepare(folder, a.processes)
@@ -187,6 +238,10 @@ def main():
     finish = getattr(d2l, f'{driver}_finish', None)
     if finish is not None:  # files written from the combined entries
         finish(folder)
+    if smoke:
+        print(f'{a.name} (smoke): {len(entries)} entries in {folder}; not '
+              'packed', flush=True)
+        return 0
     d2l._hw_pack(folder, kind, out)
     print(f'{a.name}: {len(entries)} entries in {(time.time() - t) / 60:.1f} '
           f'min', flush=True)

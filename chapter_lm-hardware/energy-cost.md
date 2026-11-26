@@ -121,7 +121,8 @@ joule f / (P_s + k f^3) has its maximum where P_s + k f^3 = 3 k f^3, so
 f* = (P_s / (2k))^(1/3) and P(f*) = 1.5 P_s. Numeric case (the plan's):
 P_s = 80 W and P(1.4 GHz) = 300 W give k = 80 W/GHz^3, f* = 0.79 GHz,
 P(f*) = 120 W, and 1.4x the work per joule at 0.57x the throughput of the
-top clock (the cell prints these from the fit). A bandwidth-bound step's
+top clock (a worked example in the prose only; the cells below fit the
+box's measured sweep). A bandwidth-bound step's
 throughput does not depend on f, so its energy per token falls with the
 clock until the clock itself bounds the memory pipeline. The function fits
 (P_s, k) by least squares on the compute-bound series: P is linear in 1 and
@@ -131,87 +132,106 @@ f^3. -->
 %%tab pytorch
 #@save
 DVFSFit = collections.namedtuple('DVFSFit', [
-    'P_s', 'k', 'f_star', 'f_min', 'step', 'clocks', 'power', 'synthetic',
-    'source'])
+    'P_s', 'k', 'f_star', 'f_min', 'step', 'edge', 'locks', 'clocks',
+    'power', 'rate', 'source', 'a100'])
 
 def dvfs_fit(log):  #@save
-    """Fit P(f) = P_s + k f^3 (f in GHz) by least squares to the clock
-    sweep of the compute-bound workload; f* = (P_s / (2k))^(1/3) maximizes
-    the work per joule, f_min is the swept clock of least energy per unit
-    of work, step the sweep's largest clock step."""
+    """Fit P(f) = P_s + k f^3 (f in GHz: the clock each window ran at) by
+    least squares to the locked-clock windows of the compute-bound
+    workload; f* = (P_s / (2k))^(1/3) maximizes the work per joule. f_min
+    is the lock of least energy per unit of work, step the sweep's largest
+    step, edge whether f_min is the lowest lock."""
     s = log[(log.kind == 'clock') & log.workload.str.startswith('matmul')]
+    s = s.sort_values('setting')
     f = s.sm_mhz.to_numpy() / 1e3  # the clock it ran at, GHz
     A = np.stack([np.ones_like(f), f**3], axis=1)  # P is linear in 1, f^3
     (P_s, k), *_ = np.linalg.lstsq(A, s.power_w.to_numpy(), rcond=None)
-    f_star = (P_s / (2 * k)) ** (1 / 3)
-    f_min = f[np.argmin(s.power_w.to_numpy() / s.rate.to_numpy())]
-    return DVFSFit(P_s, k, f_star, f_min, np.diff(np.sort(f)).max(), f,
-                   s.power_w.to_numpy(), log.attrs['synthetic'],
-                   log.attrs['source'])
+    lock = s.setting.to_numpy() / 1e3
+    i = int(np.argmin(s.power_w.to_numpy() / s.rate.to_numpy()))  # J/FLOP
+    return DVFSFit(P_s, k, (P_s / (2 * k)) ** (1 / 3), lock[i],
+                   np.diff(lock).max() if len(lock) > 1 else math.nan,
+                   i == 0, lock, f, s.power_w.to_numpy(),
+                   s.rate.to_numpy(), log.attrs.get('source', ''),
+                   log.attrs.get('a100'))
 ```
 
-<!-- Placeholder (prose): locking clocks needs root, so no notebook does
-it: the box's sweep is a script the author runs with sudo (C-box-root), and
-campaign C-T2 sweeps the A100. Until either log is committed the fit runs on
-synthetic numbers (the plan's worked case), and the output says so. Read the
-plot: power grows as the cube of the clock past a static floor, the work per
-joule (dashed) peaks at f*. Claim E4 (pending): the predicted f* within one
-sweep step of the measured energy minimum when f* lies inside the swept
-clocks; otherwise the output says the model extrapolates, and the text says
-so. Pending: part of the root sweep and the A100 campaign. -->
-<!-- campaign: lm-hw-buildbox-clocksweep-v1 -->
+<!-- Placeholder (prose): how the sweep is measured, in a few sentences.
+Locking a clock needs the driver's permission (sudo -n nvidia-smi -lgc f,f
+inside the box-clocksweep regeneration, which holds the card's lock with no
+other user's process on it and resets with -rgc on any exit), so no
+notebook locks a clock: the cell reads the committed sweep (9 locks from
+600 to 3,000 MHz plus the default clocks, three workloads, 10 s windows
+after a warm-up, NVML at 10 Hz, three processes). The fit uses the clock
+each window ran at: above about 2.5 GHz the product hits the 450 W limit
+and runs below its lock (the third printed line names those locks). Read
+the plot: power grows as the cube of the clock past a static floor; the
+squares are the measured work per joule, the dashed line the model's, the
+star the least energy. Claim E4: f* within one sweep step of the lock of
+least energy per FLOP (quote both and the step from the printed line;
+if the least is at the lowest lock, the job swept one step lower and the
+text says "at or below" that lock). The A100 sweep (campaign C-T2) is
+pending; the last line says so. -->
 
 ```{.python .input #energy-cost-dvfs}
 %%tab pytorch
-fit = d2l.dvfs_fit(d2l.hw_clock_sweep_log())
+sweep = d2l.hw_clock_sweep_log()  # committed: a notebook never locks clocks
+fit = d2l.dvfs_fit(sweep)
 d2l.plot_dvfs(fit)
-inside = min(fit.clocks) <= fit.f_star <= max(fit.clocks)  # else extrapolated
-measured = not fit.synthetic and inside
-assert not measured or abs(fit.f_star - fit.f_min) <= fit.step  # E4
+near = abs(fit.f_star - fit.f_min) <= fit.step  # within one sweep step
+assert near or (fit.edge and fit.f_star <= fit.f_min + fit.step)  # E4
 ```
 
-<!-- Placeholder (prose): the sweep the root script runs, shown because it
+<!-- Placeholder (prose): the sweep the regeneration runs, shown because it
 is the method: lock the SM clock at each setting (minimum = maximum), run
 each workload in a traced window, then restore the default clocks whatever
-happens. Without root nvidia-smi refuses and the function raises one
-PermissionError; the power-cap sweep (nvidia-smi -pl) of the same script
-lives in the library. -->
+happens. hw_smi_card returns a guarded nvidia-smi: before every lock and at
+each window's start and end it checks the card's compute processes, and a
+watchdog checks them once a second while the clock is locked; another
+process on the card resets the clock at once and the window is measured
+again once the card is free (one sentence; the code is in the library).
+Without the permission nvidia-smi refuses and the function raises one
+PermissionError. Exercise: run it on your own card if your driver lets you
+lock clocks. -->
 
 ```{.python .input #energy-cost-clock-sweep-def}
 %%tab pytorch
 def hw_clock_sweep(clocks, workloads, device=0):  #@save
     """Board power, clocks and work rate of each named workload with the SM
-    clock locked at each of clocks (MHz) on visible GPU `device` (0: the
-    card the power trace reads); needs root, restores the default clocks."""
-    smi = d2l.hw_smi_card(device)  # nvidia-smi on that card (by UUID)
+    clock locked at each of clocks (MHz) on visible GPU `device`; needs
+    permission to lock clocks (sudo -n inside the regeneration)."""
+    smi = d2l.hw_smi_card(device)  # nvidia-smi on that card, guarded
     if smi('-lgc', f'{clocks[0]},{clocks[0]}').refused:
-        raise PermissionError('locking the SM clock needs root')
+        raise PermissionError('the driver refused to lock the SM clock')
     rows = []
     try:
         for f in clocks:
             smi('-lgc', f'{f},{f}')  # minimum = maximum: the clock is pinned
-            rows += d2l._sweep_rows('clock', f, workloads)
+            rows += d2l._sweep_rows('clock', f, workloads, smi)
     finally:
         smi.restore('-rgc')  # back to the default clocks, or say it failed
     return pd.DataFrame(rows)
 ```
 
-<!-- Placeholder (prose): what a cap does: a cap lowers the clock only when
-the load would pass it, so a compute-bound training step slows and a
-batch-1 decode step does not while the cap stays above decode's own draw
-(claim E5, only for caps above that draw: a cap below it slows decode too;
-pending until the root sweep exists: the cell prints one line now; then a
-4-row table of cap W, training and decode step times, their ratios to the
-uncapped limit and the decode noise, 3 median absolute deviations of its
-step times as a ratio, and a line with decode's uncapped power and the
-log's source). Zeus measures the same energy-time trade-off per job. -->
-<!-- campaign: lm-hw-buildbox-clocksweep-v1 -->
+<!-- Placeholder (prose): what a lower clock costs (claim E5, restated on
+clocks by the coordinator until the author rules; a power cap pulls the
+same lever on a compute-bound kernel, and the -pl arm is off: ruling H1
+covers clocks only). The table: each lock from the top down, the training
+step's clock as run, its power and step time, the batch-1 decode step time,
+each as a ratio x to the default-clock run with its noise (3 x the larger
+median absolute deviation). The training step slows about in proportion to
+the clock; batch-1 decode, bound by memory and per-kernel fixed costs,
+stays within its noise down to the clock the last line names (quote it and
+the training step's ratio there from the output; if decode slows at every
+lowered clock, the line says so and the text states it as measured). One
+setting for both workloads is the usual error. Zeus measures the same
+energy-time trade-off per job. -->
 
 ```{.python .input #energy-cost-cap-effect}
 %%tab pytorch
-caps = d2l.cap_effect(d2l.hw_clock_sweep_log())  # empty until measured
-above = caps[caps['cap W'] > 1.1 * caps.attrs['decode_w']]  # above its draw
-assert (above['decode ratio'] - 1 < above['noise']).all()  # E5
+effect = d2l.clock_effect(sweep)  # step times against the default clocks
+floor = effect.attrs['decode_floor']  # lowest lock: decode within noise
+row = effect.set_index('clock MHz').loc[floor]
+assert row['train x'] - 1 > row['train 3MAD']  # E5: training pays there
 ```
 
 ## Energy per Token

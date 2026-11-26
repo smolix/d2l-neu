@@ -30,6 +30,9 @@ fits and displays; the driver `regen_storage`. Blocks are tagged
 d2l.DATA_HUB['lm-hw-tiers-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-tiers-v1.csv',
     '039aaa0d909e4d22fe1a6be28dd7cb00f2b2f050')
+d2l.DATA_HUB['lm-hw-buildbox-storage-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-storage-v1.tar',
+    '9b17b56e6491970add49b436659a297f39b12e56')
 ```
 
 ```{.python .input #memory-tiers-lib-entries}

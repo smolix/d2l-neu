@@ -1679,7 +1679,7 @@ Does adding a projection step after every gradient update slow down convergence?
 - **Step 2: Strip away $\Pi_C$ via nonexpansiveness:**
   $$\|\mathbf{x}_{k+1} - \mathbf{x}^\star\| = \big\|\Pi_C(\mathbf{x}_k - \eta\nabla f(\mathbf{x}_k)) - \Pi_C(\mathbf{x}^\star - \eta\nabla f(\mathbf{x}^\star))\big\| \le \big\|(\mathbf{x}_k - \mathbf{x}^\star) - \eta\big(\nabla f(\mathbf{x}_k) - \nabla f(\mathbf{x}^\star)\big)\big\|$$
 - **Step 3: Apply the fundamental theorem of calculus:** With $\bar{\mathbf{H}} = \int_0^1 \nabla^2 f(\mathbf{x}^\star + t(\mathbf{x}_k - \mathbf{x}^\star))\,dt$ ($\mu\mathbf{I} \preceq \bar{\mathbf{H}} \preceq L\mathbf{I}$),
-  $$\|\mathbf{x}_{k+1} - \mathbf{x}^\star\| = \big\|(\mathbf{I} - \eta\bar{\mathbf{H}})(\mathbf{x}_k - \mathbf{x}^\star)\big\| \le \max\big(|1 - \eta\mu|,\, |1 - \eta L|\big)\,\|\mathbf{x}_k - \mathbf{x}^\star\|$$
+  $$\|\mathbf{x}_{k+1} - \mathbf{x}^\star\| \le \big\|(\mathbf{I} - \eta\bar{\mathbf{H}})(\mathbf{x}_k - \mathbf{x}^\star)\big\| \le \max\big(|1 - \eta\mu|,\, |1 - \eta L|\big)\,\|\mathbf{x}_k - \mathbf{x}^\star\|$$
 :::
 
 ::: {.slide title="Two-Phase PGD Dynamics on the κ = 1000 Valley"}
@@ -1689,7 +1689,7 @@ Minimize $f(\mathbf{x}) = \tfrac12(x_1^2 + 1000\,x_2^2)$ over the half-space $x_
 
 @!mdl-constrained-optimization-duality-projected-gradient-descent
 
-- **Why $738$ steps instead of $10{,}200$?** For the first $732$ steps, the iterate drifts through the interior at the slow rate $1 - \eta = 0.9985$. Once it hits the boundary line $x_1 + x_2 = 1$ at step $733$, the restricted quadratic along the line has curvature $500.5$, contracting at $1 - 500.5\eta = 0.249$ per step.
+- **Why $738$ steps instead of $10{,}200$?** After a projected first step, the iterate drifts through the interior until step $732$ at the slow rate $1 - \eta = 0.9985$. Once it hits the boundary line $x_1 + x_2 = 1$ at step $733$, the restricted quadratic along the line has curvature $500.5$, contracting at $1 - 500.5\eta = 0.249$ per step.
 :::
 
 ::: {.slide title="Projecting onto the Probability Simplex (Sparsemax)"}
@@ -1771,7 +1771,7 @@ Because $\|\mathbf{w}\|_1 = \sum_{j=1}^d |w_j|$ separates across coordinates, mi
 
 $$w_j \leftarrow \frac{\mathrm{sign}(c_j)\,\max(|c_j| - \lambda,\, 0)}{\|\mathbf{a}_j\|_2^2}$$
 
-- **Why coordinate sweeps beat ISTA:** Each coordinate step uses its own single-column curvature $L_j = \|\mathbf{a}_j\|_2^2 \approx 100$ rather than the global eigenvalue ceiling $L = \lambda_{\max}(\mathbf{A}^\top\mathbf{A}) \approx 160$, reaching $10^{-8}$ in $4$–$6$ passes vs. $\sim 20$ for ISTA.
+- **Why coordinate sweeps beat ISTA:** Each coordinate step uses its own single-column curvature $L_j = \|\mathbf{a}_j\|_2^2 \approx 100$ rather than the global eigenvalue ceiling $L = \lambda_{\max}(\mathbf{A}^\top\mathbf{A}) \approx 160$, reaching $10^{-8}$ in $4$–$6$ passes vs. $12$–$25$ for ISTA.
 :::
 
 ::: {.col .fig}

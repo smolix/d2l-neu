@@ -2040,7 +2040,7 @@ On a 300-point cloud rotated by $36^\circ$ with population standard deviations $
 - **Parallel Rank-$k$ Bypass:** LoRA freezes a pretrained weight $\mathbf{W} \in \mathbb{R}^{m \times n}$ and learns a rank-$k$ update $\Delta\mathbf{W} = \mathbf{B}\mathbf{A}$ ($\mathbf{B} \in \mathbb{R}^{m \times k}$, $\mathbf{A} \in \mathbb{R}^{k \times n}$):
   $$\mathbf{h} = \mathbf{W}\mathbf{x} + \mathbf{B}\mathbf{A}\mathbf{x}$$
 - **$256\times$ Parameter Compression:** For a $4096 \times 4096$ Transformer layer ($16.8\text{M}$ weights), rank $k = 8$ trains only $k(m+n) = 65{,}536$ parameters ($0.39\%$) and merges into $\mathbf{W}$ with zero inference overhead.
-- **What Eckart–Young Says:** Any full update $\Delta\mathbf{W}_{\text{full}}$ can be matched within $\sigma_{k+1}(\Delta\mathbf{W}_{\text{full}})$, and LoRA succeeds because task updates have fast-decaying spectra.
+- **What Eckart–Young Says:** Any full update $\Delta\mathbf{W}_{\text{full}}$ can be matched within $\sigma_{k+1}(\Delta\mathbf{W}_{\text{full}})$ by a rank-$k$ adapter; LoRA works when *some* low-rank update reaches low loss, an empirical finding rather than a consequence of Eckart–Young.
 :::
 
 ::: {.col .fig}

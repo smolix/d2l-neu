@@ -1825,7 +1825,7 @@ $$\sqrt{n}\bigl(\hat{\boldsymbol{\theta}} - \boldsymbol{\theta}^\star\bigr) \app
 ::: {.col}
 - **Why plain Newton fails on Cauchy:** Away from the minimum, the observed Cauchy second derivative $\frac{2(1-u^2)}{(1+u^2)^2}$ turns negative for $\lvert u\rvert > 1$, sending Newton steps uphill.
 - **Fisher scoring:** Replacing observed curvature with expected curvature $nI = n/2 > 0$ gives the stable update $\theta \leftarrow \theta + \frac{2}{n}S_n(\theta)$.
-- **Exact match at $n = 100$:** Across $4{,}000$ datasets, the histogram of $\sqrt{n}(\hat{\theta} - \theta^\star)$ tracks $\mathcal{N}(0, 1/I) = \mathcal{N}(0, 2)$ ($\mathrm{sd} \approx \sqrt{2} \approx 1.41$).
+- **Close match at $n = 100$:** Across $4{,}000$ datasets, the histogram of $\sqrt{n}(\hat{\theta} - \theta^\star)$ tracks $\mathcal{N}(0, 1/I) = \mathcal{N}(0, 2)$ ($\mathrm{sd} \approx 1.40$–$1.47$ across runs vs. the limit $\sqrt{2} \approx 1.41$).
 :::
 
 ::: {.col .fig}
@@ -1913,7 +1913,7 @@ $$\hat{\theta}_{\mathrm{MAP}} = \frac{n_H + a - 1}{n + a + b - 2} \qquad \text{v
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
-1. Setting $1.96\sqrt{0.69(0.31)/n} = 0.05$ gives $n = \frac{1.96^2 \cdot 0.2139}{0.05^2} \approx 329$ flips—roughly $25\times$ more data to shrink the error bar by $2.5\times$.
+1. Setting $1.96\sqrt{0.69(0.31)/n} = 0.05$ gives $n = \frac{1.96^2 \cdot 0.2139}{0.05^2} \approx 329$ flips—roughly $25\times$ more data to shrink the error bar by $5\times$.
 2. $\hat{\theta}_{\mathrm{MLE}} = 1$; $\hat{\theta}_{\mathrm{MAP}} = \frac{3+2-1}{3+2+2-2} = \frac{4}{5}$; and $\mathbb{E}[\theta \mid X] = \frac{3+1}{3+1+1} = \frac{4}{5}$ (Laplace's rule of succession).
 3. The Poisson MLE is $\bar{X}$, with true variance $12/n$, whereas Poisson Fisher information $I = 1/\lambda$ predicts $4/n$—underestimating the true variance by a factor of $1 + m/\alpha = 3$ (corrected by the sandwich variance $B/A^2$).
 :::

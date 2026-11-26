@@ -1089,7 +1089,7 @@ what changes when gradients are noisy
 
 1. **Steepest descent in other norms.** ● Problem
    :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`b measures length
-   by a norm $\|\cdot\|_{\mathbf{A}}$ induced by an inner product. Norms that
+   by a norm $\|\cdot\|_{\mathbf{P}}$ induced by an inner product. Norms that
    do not come from an inner product produce steepest directions of a very
    different form.
     1. Find the minimizers of $\nabla f(\mathbf{x})^\top \mathbf{d}$ over

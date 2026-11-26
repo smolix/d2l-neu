@@ -1736,7 +1736,7 @@ Point Estimation, Hypothesis Testing, Confidence Intervals, and the Bootstrap<br
 ::: {.cols .vc}
 ::: {.col}
 - **The 1,000-question test set:** Classifier A scores $912/1000$ ($91.2\%$) and Classifier B scores $921/1000$ ($92.1\%$), with single-model standard error $\mathrm{se} \approx 0.90\%$.
-- **Unpaired vs. paired comparison:** Treated as two independent test sets, the $+0.9\%$ gap is buried inside $\mathrm{se} = 1.24\%$; pairing on the *same* $1{,}000$ questions cancels shared item difficulty and cuts required labels $9\times$.
+- **Unpaired vs. paired comparison:** Treated as two independent test sets, the $+0.9\%$ gap is buried inside $\mathrm{se} = 1.24\%$; pairing on the *same* questions cancels shared item difficulty, and for a $90\%$ vs. $91\%$ pair that disagrees on $4\%$ of questions it cuts required labels about $9\times$.
 :::
 
 ::: {.col .fig .big}
@@ -2030,7 +2030,7 @@ Evaluating Classifier A ($912/1000$) and Classifier B ($921/1000$) on the *same*
   $$P_\theta(C_n \ni \theta) \ge 1 - \alpha \quad \text{for every } \theta$$
 - **Where the randomness lives:** $\theta$ is fixed; the interval $C_n$ shifts from sample to sample. Out of $100$ independent experiments, $\sim 95$ intervals cover $\theta$ and $\sim 5$ miss.
 - **Confidence vs. Credible ($9/13$ coin):**
-  - *Frequentist $95\%$ Wald CI $(0.44, 0.94)$:* Procedure covers true fixed $\theta$ in $\approx 95\%$ of repeated experiments.
+  - *Frequentist $95\%$ Wald CI $(0.44, 0.94)$:* The procedure targets $95\%$ coverage of the fixed $\theta$ over repeated experiments, but only asymptotically: with $13$ flips it covers about $91\%$ of the time at $\theta = 1/2$.
   - *Bayesian $95\%$ credible interval $(0.42, 0.87)$:* Under $\mathrm{Beta}(1,1)$ prior, $P(\theta \in (0.42, 0.87) \mid x=9) = 0.95$.
 :::
 

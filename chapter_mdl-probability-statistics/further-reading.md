@@ -43,10 +43,11 @@ and the sums and integrals of our chapter appear simply as two special cases.
 
 ### Heavy Tails and Stable Laws
 
-As exercise :exref:`ex_mdl-random-variables-heavy-tail-averages` shows, the
-average of independent Cauchy draws has the exact same Cauchy distribution,
-and averages of variables with power-law tails settle down far more slowly
-than the familiar $1/\sqrt{n}$ rate. If they do not approach a Gaussian, what
+As :numref:`sec_mdl-random_variables` notes, the average of independent
+Cauchy draws has the exact same Cauchy distribution, and exercise
+:exref:`ex_mdl-random-variables-heavy-tail-averages` shows that averages of
+variables with power-law tails settle down far more slowly than the familiar
+$1/\sqrt{n}$ rate. If they do not approach a Gaussian, what
 do they converge to? When the tail $P(|X| > x)$ decays like $x^{-\alpha}$ with
 $0 < \alpha < 2$, the variance is infinite, and properly centered sums scaled
 by $n^{1/\alpha}$ rather than $\sqrt{n}$ converge to an *$\alpha$-stable* law.

@@ -1378,7 +1378,7 @@ Using the affine form $s_y(\mathbf{x}) = \mathbf{w}_y^\top \mathbf{x} + b_y$, a 
 
 @!mdl-naive-bayes-calibration-1
 
-- **High bias, near-zero overfitting gap:** Training accuracy ($71.6\%$) sits only $1.0$ percentage point above test accuracy ($70.6\% \pm 0.9\%$). Collecting more training data cannot fix the remaining $29\%$ error—the bottleneck is the **bias** of the independence assumption.
+- **High bias, near-zero overfitting gap:** Training accuracy ($71.7\%$) sits only about $1$ percentage point above test accuracy ($70.6\% \pm 0.9\%$). Collecting more training data cannot fix the remaining $29\%$ error—the bottleneck is the **bias** of the independence assumption.
 :::
 
 ::: {.slide title="Head-to-Head: Naive Bayes vs. Softmax Regression"}

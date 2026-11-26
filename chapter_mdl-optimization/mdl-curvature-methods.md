@@ -634,9 +634,9 @@ print(f'final x = ({x[0]:.4f}, {x[1]:.4f}),  f = {f_s(x):.4f}')
 
 The first row matches our hand calculation. The radius doubles from $0.5$ to
 $1$ and then to $2$, while the third step (with ratio $0.41$) is accepted
-without changing the radius. By the fourth iterate, $(0.04, 3.75)$, the
+without changing the radius. By the third iterate, $(0.18, 1.75)$, the
 algorithm has entered the basin where the Hessian is positive definite. From
-that point on, the unconstrained Newton step fits inside the trust-region
+the next iterate on, the unconstrained Newton step fits inside the trust-region
 ball with $\tau = 0$, so the method seamlessly turns into Newton's method and
 converges quadratically to the minimum $(0, \pi)$ with $f = -1$. Six
 iterations are enough; :numref:`fig_mdl-opt-trust-region-saddle` contrasts
@@ -885,7 +885,7 @@ We test Newton's method on the $\kappa = 1000$ quadratic $\mathrm{diag}(1, 1000)
 @!gradient-based-optimization-newton
 
 - On the $\kappa = 1000$ valley, $1$ Newton step replaces $6{,}908$ gradient descent steps.
-- On the non-quadratic logistic loss, $\|\nabla f\|$ squares at each step ($10^{-1}$ $\to$ $10^{-3}$ $\to$ $10^{-6}$ $\to$ $10^{-11}$ $\to$ $10^{-16}$), matching $4{,}000$ gradient descent steps in $6$ linear solves.
+- On the non-quadratic logistic loss, $\|\nabla f\|$ squares at each step ($10^{-1}$ $\to$ $10^{-2}$ $\to$ $10^{-3}$ $\to$ $10^{-6}$ $\to$ $10^{-11}$ $\to$ $10^{-17}$), matching $4{,}000$ gradient descent steps in $6$ linear solves.
 :::
 
 ::: {.slide title="Why Exact Newton Fails at Deep Learning Scale"}
@@ -1045,7 +1045,7 @@ $$r_k = \frac{f(\mathbf{x}_k) - f(\mathbf{x}_k + \mathbf{p}_k)}{m_k(\mathbf{0}) 
 
 @!mdl-gradient-based-optimization-the-trust-region-step-at-a-saddle-2
 
-- When $r_k > 0.75$ on the boundary, $\Delta_k$ doubles ($0.5 \to 1 \to 2$); once inside the convex basin ($k \ge 3$), $\tau = 0$ and the method becomes pure Newton, reaching $(0, \pi)$ in $6$ steps.
+- When $r_k > 0.75$ on the boundary, $\Delta_k$ doubles ($0.5 \to 1 \to 2$); once the Newton step fits inside the ball ($k \ge 3$), $\tau = 0$ and the method becomes pure Newton, reaching $(0, \pi)$ in $6$ steps.
 :::
 
 ::: {.slide title="Comparing Trajectories: Newton vs. Trust Region"}
@@ -1054,7 +1054,7 @@ $$r_k = \frac{f(\mathbf{x}_k) - f(\mathbf{x}_k + \mathbf{p}_k)}{m_k(\mathbf{0}) 
 ::: {.cols .vc}
 ::: {.col}
 - **Panel (a): Local saddle surface:** At $(0.5, 0.3)$, the quadratic model $m_0(\mathbf{p})$ is a hyperbolic saddle. Pure Newton jumps to its stationary point at the origin, while minimizing $m_0$ inside the ball $\|\mathbf{p}\| \le 0.5$ follows the downward-curving $y$-axis.
-- **Panel (b): Global trajectory:** Trust region escapes the indefinite region in three steps, expands $\Delta$, and enjoys quadratic convergence to the global minimum $(0, \pi)$.
+- **Panel (b): Global trajectory:** Trust region escapes the indefinite region in two steps, expands $\Delta$, takes pure Newton steps ($\tau = 0$) from the fourth step on, and converges quadratically to the global minimum $(0, \pi)$.
 :::
 
 ::: {.col .fig}

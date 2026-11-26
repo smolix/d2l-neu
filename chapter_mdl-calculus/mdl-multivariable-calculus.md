@@ -1301,7 +1301,7 @@ At $\|\boldsymbol{\epsilon}\| = 3.2 \times 10^{-2}$, the linear model misses by 
 ::: {.slide title="Predicting the Linear Model Gap with the Hessian"}
 [Second-Order Accuracy]{.kicker}
 
-For log-sum-exp at $(0, \log 2)$ with step $\boldsymbol{\epsilon} = (0.01, -0.03)$, the quadratic term $\tfrac{1}{2}\boldsymbol{\epsilon}^\top \mathbf{H}_f \boldsymbol{\epsilon} = \tfrac{1}{9}(\epsilon_1 - \epsilon_2)^2$ $= \tfrac{1}{9}(0.04)^2$ $\approx 1.7778 \times 10^{-4}$ predicts the measured gap $1.786 \times 10^{-4}$ to three digits:
+For log-sum-exp at $(0, \log 2)$ with step $\boldsymbol{\epsilon} = (0.01, -0.03)$, the quadratic term $\tfrac{1}{2}\boldsymbol{\epsilon}^\top \mathbf{H}_f \boldsymbol{\epsilon} = \tfrac{1}{9}(\epsilon_1 - \epsilon_2)^2$ $= \tfrac{1}{9}(0.04)^2$ $\approx 1.7778 \times 10^{-4}$ predicts the measured gap $1.786 \times 10^{-4}$ to two digits (within 0.5%):
 
 @!mdl-multivariable-calculus-the-second-order-taylor-approximation-1
 

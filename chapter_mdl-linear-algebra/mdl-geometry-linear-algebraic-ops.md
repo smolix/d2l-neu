@@ -1677,7 +1677,7 @@ Normalizing standard Gaussian vectors confirms the $1/\sqrt{784} \approx 0.036$ 
 ::: {.cols .vc}
 ::: {.col}
 - **1D Projection Along $\mathbf{w}$:** Projecting all $2{,}000$ test images onto the normal $\mathbf{w} = \bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0$ compresses each $784$-pixel image to its signed distance $(\mathbf{w}\cdot\mathbf{x} + b)/\|\mathbf{w}\|$ from the boundary.
-- **Two Modes at $\mp\|\mathbf{w}\|/2 \approx \mp 3.2$:** T-shirts form a broad hump ($\sigma \approx 2.4$) on the negative side and trousers form a sharper peak ($\sigma \approx 1.7$) on the positive side.
+- **Class Means at $\mp\|\mathbf{w}\|/2 \approx \mp 3.2$ (Peaks Near $\mp 4$):** T-shirts form a broad hump ($\sigma \approx 2.4$) on the negative side and trousers form a sharper peak ($\sigma \approx 1.7$) on the positive side.
 - **Tail Overlap ($169$ Errors):** Because the boundary sits $1.4\sigma$ to $1.9\sigma$ from each class center, the tails cross zero ($101$ t-shirts and $68$ trousers misclassified).
 :::
 

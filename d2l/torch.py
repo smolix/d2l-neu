@@ -24398,6 +24398,66 @@ d2l.DATA_HUB['lm-r2-spike-v1'] = (
 d2l.DATA_HUB['lm-r2-inst-t1-v1'] = (
     d2l.LM_DATA_URL + 'lm-r2-inst-t1-v1.json.gz',
     '7095f284a524f7a21512483cfe5ecc7093762638')
+d2l.DATA_HUB['lm-r2-train-log-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-train-log-v1.jsonl.gz',
+    '8c955acf12a939307fed602bd22fa6ce769c5ed3')
+d2l.DATA_HUB['lm-r2-config-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-config-v1.json',
+    '4eb73e0e30ca4aaeb6005ff62693f1ca7554a44f')
+d2l.DATA_HUB['lm-r2-probe-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-probe-v1.json.gz',
+    'f4dd9bc981c7984d120a896c10ae8370ce6b8ec2')
+d2l.DATA_HUB['lm-r2-s500-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s500-v1.safetensors',
+    'fc7ea408faea5c936763b42f96ee5547bc9f62d3')
+d2l.DATA_HUB['lm-r2-s1000-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s1000-v1.safetensors',
+    '9fc7ef006390315141af3c16aaf313d420ade8d7')
+d2l.DATA_HUB['lm-r2-s2000-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s2000-v1.safetensors',
+    'f2befa5e2554b6be91766a772396ee10ed1cb2c5')
+d2l.DATA_HUB['lm-r2-s3000-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s3000-v1.safetensors',
+    'a665e2983d26dffb546c92b46c79ee041fb0c7b9')
+d2l.DATA_HUB['lm-r2-s4000-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s4000-v1.safetensors',
+    'f1623a5452ffc204e3803903f458f542bb04ab8e')
+d2l.DATA_HUB['lm-r2-s4500-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s4500-v1.safetensors',
+    '4d6d5ddfe8ea57a67ac953b6f9321b038f681845')
+d2l.DATA_HUB['lm-r2-s4800-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s4800-v1.safetensors',
+    '401899e18609a7d6911e53c6afdfd4a35d92a77d')
+d2l.DATA_HUB['lm-r2-s5100-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s5100-v1.safetensors',
+    '8d48b8fd79c5b69f68cc2fd51eb87128cf8fae89')
+d2l.DATA_HUB['lm-r2-s5400-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s5400-v1.safetensors',
+    '9f6bc7b3822086e5014e1d5d592e78ab37c80f41')
+d2l.DATA_HUB['lm-r2-s5700-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s5700-v1.safetensors',
+    '7511a32055eb951e5852a9df6e8b864b18710b23')
+d2l.DATA_HUB['lm-r2-s6000-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s6000-v1.safetensors',
+    '869d5f6637f455108557ee25a02c6a1678dba888')
+d2l.DATA_HUB['lm-r2-s5100-state-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-s5100-state-v1.pt',
+    'ffb9e95f1b0867206c5dd33db60d80a77e259f99')
+d2l.DATA_HUB['lm-r2-evals-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-evals-v1.json.gz',
+    '78ae3caa3a7573df21fceafdd84d2045cf2a57ea')
+d2l.DATA_HUB['lm-ladder-logs-v1'] = (
+    d2l.LM_DATA_URL + 'lm-ladder-logs-v1.jsonl.gz',
+    '4a64125165abd77b05dcd0e2c5e53b485547ec67')
+d2l.DATA_HUB['lm-ladder-config-v1'] = (
+    d2l.LM_DATA_URL + 'lm-ladder-config-v1.json',
+    '28ba56be7ef0e427ae982096fdac0fff1aa3b38d')
+d2l.DATA_HUB['lm-r2-inst-t2-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-inst-t2-v1.json.gz',
+    '3296eb030f2cd5c5d3d725293d7b0839f61c100c')
+d2l.DATA_HUB['lm-ladder-evals-v1'] = (
+    d2l.LM_DATA_URL + 'lm-ladder-evals-v1.json.gz',
+    'ef5eafbad161f4d0926a9178e7285bda1563294d')
 
 d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')

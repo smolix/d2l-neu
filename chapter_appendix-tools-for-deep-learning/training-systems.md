@@ -596,7 +596,7 @@ Even leaving out the $28\text{ GB}$ master-weight copy ($84\text{ GiB}$ state $+
 
 ::: {.cols .vc}
 ::: {.col}
-- **Sharding & Checkpointing:** FSDP2/ZeRO divides $16N$ state by $W$ ($\sim 1.5\times$ comm), while activation checkpointing trades $+25\text{--}33\%$ FLOPs to shrink saved activations from $O(L) \to O(1)$.
+- **Sharding & Checkpointing:** FSDP2/ZeRO divides $16N$ state by $W$ ($\sim 1.5\times$ comm), while activation checkpointing trades $+25\text{--}33\%$ FLOPs to keep only each block's input (still $O(L)$, but only $d$ values per token per block).
 - **Accumulation, Offload & Adapters:** Gradient accumulation shrinks microbatch $B_{\text{device}}$, CPU offload moves master weights/Adam across PCIe, and LoRA/QLoRA freezes base weights to drop $>98\%$ of gradient/optimizer state.
 :::
 

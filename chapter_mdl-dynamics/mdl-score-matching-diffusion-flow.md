@@ -1141,7 +1141,8 @@ by the factor above.
 
 The corollary gives the factor of one stride. Over a sampling run the
 factors multiply, and we compute the product for 10, 50 and 1,000 equally
-spaced strides of the DDPM schedule. How much of this error survives on data
+spaced strides of the DDPM schedule (at 1,000, one stride per level, since
+rounding leaves one of them empty). How much of this error survives on data
 that are not Gaussian? To see, DDIM runs on the standardized mixture with
 its exact noise prediction
 $\hat{\epsilon} = -\sqrt{1 - \bar\alpha_t}\, \nabla \log p_t$, where the
@@ -1911,7 +1912,7 @@ Comparing 10, 50, and 1,000 equally spaced DDIM strides with the exact noise pre
 
 @!mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed
 
-- **First-Order Euler Convergence:** Increasing from $10$ to $50$ strides ($5\times$ finer step) cuts the Gaussian shrinkage error by $4.7\times$ ($1 - 0.832 = 0.168 \to 1 - 0.964 = 0.036$) and cuts the mixture endpoint gap from $0.080$ to $0.017$.
+- **First-Order Euler Convergence:** Increasing from $10$ to $50$ strides ($5\times$ finer step) cuts the Gaussian shrinkage error by $4.7\times$ ($1 - 0.832 = 0.168 \to 1 - 0.964 = 0.036$) and cuts the mixture endpoint gap from about $0.08$ to about $0.015$.
 :::
 
 ::: {.slide title="DDIM on Least-Squares Scores Recovers Mode Weights"}

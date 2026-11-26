@@ -1192,8 +1192,8 @@ print(f'mean distance from the chord: original {chord_gap(euler_path(net, z_eval
 
 The original trajectories wander about a quarter of a unit from their
 chords. They set out toward the mean, where a single Euler step left them,
-and turn out to the moons only later. The reflowed ones stay about a
-hundredth of theirs, which is why one step suffices. Reflow straightens a
+and turn out to the moons only later. The reflowed ones stay within half a
+hundredth of theirs, about fifty times closer, which is why one step suffices. Reflow straightens a
 flow, but it does not make it optimal. In more than one dimension a flow can
 be straight and crossing-free and still move mass farther than it must.
 
@@ -2072,7 +2072,7 @@ When sampling from a curved probability-flow ODE on a tight budget of $10$ to $8
 ::: {.col}
 @!score-matching-diffusion-flow-euler-vs-heun[out=1]
 
-- **Grid Sensitivity:** On a **uniform grid**, Euler beats Heun at 10 and 20 NFE. On a **squared grid** $t_k = (1 - k/K)^2$ crowded near the data end $t = 0$, Heun wins at every budget and cuts the 10-NFE error to $0.030$.
+- **Grid Sensitivity:** On a **uniform grid**, Euler beats Heun at 10 and 20 NFE. On a **squared grid** $t_k = (1 - k/K)^2$ crowded near the data end $t = 0$, Heun wins at every budget and cuts the 10-NFE error to about $0.034$.
 :::
 
 ::: {.col .fig}
@@ -2093,7 +2093,7 @@ Decomposing terminal error into signed step contributions $c_k$ carried to $t = 
 
 ::: {.col}
 - **Most motion comes late:** Paths cover $>90\%$ of their length below $t = 0.5$; near $t = 1$ the law is almost $\mathcal{N}(0, 1)$, so uniform steps spend half the NFE budget above $t = 0.5$ on $<10\%$ of the travel.
-- **Accidental sign cancellation:** Euler's absolute step errors $\sum_k |c_k|$ are $>2\times$ Heun's on both grids, yet opposite signs cancel $88\%$ on the uniform grid (surviving share $0.12$). Crowding steps near $t = 0$ lets Heun's $O(h^2)$ accuracy dominate.
+- **Accidental sign cancellation:** Euler's absolute step errors $\sum_k |c_k|$ are about $2\times$ Heun's or more on both grids, yet opposite signs cancel $88\%$ on the uniform grid (surviving share $0.12$). Crowding steps near $t = 0$ lets Heun's $O(h^2)$ accuracy dominate.
 :::
 :::
 :::

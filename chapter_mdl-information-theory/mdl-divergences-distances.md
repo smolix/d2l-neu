@@ -1487,7 +1487,7 @@ $$\textrm{TV}(P, Q) \le \sqrt{\tfrac12 D_{\textrm{KL}}(P \| Q)}$$
 ::: {.slide title="Sharpness and Limits of Pinsker's Inequality"}
 [Monte Carlo Verification]{.kicker}
 
-Across $10{,}000$ random 5-outcome pairs, $\textrm{TV}/\sqrt{\textrm{KL}/2}$ has median $0.81$ and never exceeds $1$, while nearly fair coins ($\delta \to 0$) prove that the constant $\tfrac12$ cannot be improved:
+Across $10{,}000$ random 5-outcome pairs, $\textrm{TV}/\sqrt{\textrm{KL}/2}$ has median about $0.78$ and never exceeds $1$, while nearly fair coins ($\delta \to 0$) prove that the constant $\tfrac12$ cannot be improved:
 
 @!divergences-distances-pinsker
 :::

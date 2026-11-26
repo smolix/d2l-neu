@@ -609,7 +609,7 @@ Test your grasp of the D2L build system on these three questions:
 ::: {.d2l-note}
 **Answers:**
 
-1. **Both the PyTorch and JAX notebooks.** Because cell (3) is untagged, it belongs to every framework generated from the file (`pytorch` and `jax`), and editing it invalidates the prefix fingerprint of cells (3), (4), and (5) in both frameworks.
+1. **Both the PyTorch and JAX notebooks.** Because cell (3) is untagged, it belongs to every framework generated from the file (`pytorch` and `jax`), and editing it invalidates the prefix fingerprint of cells (3), (4), and (5) in the PyTorch notebook and of cells (3) and (5) in the JAX notebook.
 2. Switching `2.11.0+cu124` $\to$ `2.11.0` CPU **does not mark outputs stale** because the fingerprint strips local build tags (`+cu124`) so CPU laptops can build the site without false alarms. Upgrading to **`2.12.0` marks all PyTorch outputs stale**.
 3. `d2l/torch.py` contains the **§{sec_use_gpu} GPU-aware definition** (last definition in book order wins). When §{sec_oo-design} starts, `d2l.Trainer.prepare_batch` holds the §{sec_use_gpu} version until §{sec_oo-design}'s own `@d2l.add_to_class` cell executes and overwrites it in memory with the CPU version for the remainder of §{sec_oo-design}.
 :::

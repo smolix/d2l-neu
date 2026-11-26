@@ -1521,7 +1521,7 @@ $$p_{X,Y} = \begin{pmatrix} 0.45 & 0.05 \\ 0.05 & 0.45 \end{pmatrix}, \qquad H(X
 ::: {.slide title="Mutual Information: KL Divergence from Independence"}
 [Core Definition]{.kicker}
 
-If $X$ and $Y$ were independent, their joint distribution would be the product of their marginals $P_X \otimes P_Y$. **Mutual information** is the KL divergence from independence to the true joint distribution:
+If $X$ and $Y$ were independent, their joint distribution would be the product of their marginals $P_X \otimes P_Y$. **Mutual information** is the KL divergence from the true joint distribution to the independent product:
 
 $$I(X; Y) = D_{\textrm{KL}}\big(P_{X,Y} \,\|\, P_X \otimes P_Y\big) = \mathbb{E}_{(x, y) \sim P_{X,Y}}\!\left[\log\frac{p_{X,Y}(x, y)}{p_X(x)\,p_Y(y)}\right]$$
 

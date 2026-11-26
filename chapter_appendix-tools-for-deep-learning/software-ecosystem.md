@@ -589,14 +589,14 @@ Test your supply-chain and evaluation judgment on these three questions:
 
 1. Two models sit $15$ Elo points apart on the Arena leaderboard after $v = 400$ head-to-head votes. Is this difference statistically significant?
 2. Every repository in your pipeline is pinned to a 40-character commit SHA and loads `model.safetensors`. Name three factors *outside* the Hub repositories that can still change the model's outputs across machines.
-3. You inspect the `safetensors` header of `openai-community/gpt2` (GPT-2 small, $124\text{M}$ parameters) and sum the tensor shapes in the file, getting $\sim 163\text{M}$ values. Why does the file header sum exceed $124\text{M}$?
+3. You inspect the `safetensors` header of `openai-community/gpt2` (GPT-2 small, $124\text{M}$ parameters) and sum the tensor shapes in the file, getting $\sim 137\text{M}$ values. Why does the file header sum exceed $124\text{M}$?
 
 ::: {.d2l-note .fragment .fade-up}
 **Answers:**
 
 1. **No.** With $v = 400$ votes, the standard error is $\text{SE} \approx 347 / \sqrt{400} = 17.35$ Elo points. A $15$-point gap is less than $1\,\text{SE}$ from zero (well within sampling noise).
 2. (i) **Inference engine / kernel versions & hardware float associativity** (CUDA/cuBLAS/vLLM version, GPU architecture, batch size changing reduction order); (ii) **system prompt / chat-template wrapper or runtime clock/tool outputs**; (iii) **unseeded or hardware-dependent PRNG sampling** (`temperature > 0`).
-3. Legacy checkpoints of GPT-2 store non-parameter buffers (such as causal attention bias masks `attn.bias` of shape $1 \times 1 \times 1024 \times 1024$ across layers) or duplicated tied embedding weights inside the tensor file.
+3. The file also stores non-parameter buffers: the causal attention masks `attn.bias` of shape $1 \times 1 \times 1024 \times 1024$ in each of the 12 layers ($12 \times 1024^2 \approx 12.6\text{M}$ values). Adding them to the 124.4M parameters gives exactly the header sum.
 :::
 :::
 

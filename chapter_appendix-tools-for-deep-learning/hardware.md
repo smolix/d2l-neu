@@ -532,13 +532,13 @@ $$B_{\text{kv}}(n) = 2 \cdot L \cdot H_{\text{kv}} \cdot d_h \cdot 2\text{ B} \c
 ::: {.slide title="Two Families of Local Hardware"}
 [The Hardware Landscape]{.kicker}
 
-Plotting machines on **memory capacity** (vertical) versus **memory bandwidth** (horizontal) reveals a sharp architectural split:
+Plotting machines on **memory capacity** (horizontal) versus **memory bandwidth** (vertical) reveals a sharp architectural split:
 
 ::: {.cols .vc}
 ::: {.col}
-- **Discrete consumer GPUs (bottom right):** Pair ultra-fast GDDR6X/GDDR7 ($896\text{--}1792\text{ GB/s}$) with modest capacity ($16\text{--}32\text{ GB}$). Fast for training and small/medium models.
-- **Unified-memory systems (top left):** Pair massive LPDDR5X capacity ($64\text{--}512\text{ GB}$) with lower bandwidth ($256\text{--}1200\text{ GB/s}$). Run huge models locally at lower token rates.
-- **Workstation & datacenter cards (upper right):** RTX PRO 6000 ($96\text{ GB}$, $1.79\text{ TB/s}$) and H100 ($80\text{ GB}$, $3.35\text{ TB/s}$) deliver both at five-figure prices.
+- **Discrete consumer GPUs (upper left):** Pair ultra-fast GDDR6X/GDDR7 ($896\text{--}1792\text{ GB/s}$) with modest capacity ($16\text{--}32\text{ GB}$). Fast for training and small/medium models.
+- **Unified-memory systems (lower right):** Pair massive LPDDR5X capacity ($64\text{--}512\text{ GB}$) with lower bandwidth ($256\text{--}1200\text{ GB/s}$). Run huge models locally at lower token rates.
+- **Workstation & datacenter cards (top of the bandwidth axis):** RTX PRO 6000 ($96\text{ GB}$, $1.79\text{ TB/s}$) and a rented H100 ($80\text{ GB}$, $3.35\text{ TB/s}$) are the fastest at moderate capacity, at five-figure prices; nothing reaches the upper right.
 :::
 
 ::: {.col .fig}
@@ -653,7 +653,7 @@ The **RTX PRO 6000 Blackwell** packs **96 GB GDDR7 at $1.79\text{ TB/s}$** ($\$1
 - **Simple break-even:** Dividing a $\$10{,}500$ RTX 5090 workstation by a $\$2.00/\text{hr}$ marketplace H100 rate gives **$5{,}250$ productive hours** ($\approx 1.8\text{ years}$ at $8\text{ hr/day}$, every day).
 - **Full TCO break-even with power, resale, and relative speed $s$:**
   $$H = \frac{C_{\text{buy}} - R_{\text{resale}}}{s \cdot r_{\text{cloud}} - p_{\text{kW}} \cdot e_{\text{kWh}}}$$
-  Accounting for the H100's $\sim 2\times\text{--}3\times$ higher throughput $s$ and $0.9\text{ kW} \times \$0.20/\text{kWh}$ electricity pushes break-even to **3–5+ years** of heavy utilization. Buy for privacy, instant access, and hardware tinkering; rent for bursty scale.
+  Counting that an H100 does about $1.9\times$ (bandwidth-bound decode) to $4.7\times$ (compute-bound training) the work per hour, and $0.9\text{ kW} \times \$0.20/\text{kWh}$ electricity, pushes break-even to **about 4 years** (decode) or **about 15 years** (training) at $8\text{ hr/day}$. Buy for privacy, instant access, and hardware tinkering; rent for bursty scale.
 :::
 
 ::: {.col .fig}

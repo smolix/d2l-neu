@@ -653,7 +653,7 @@ Work through these three diagnostic questions:
 **Answers:**
 
 1. Gaps (`3, 8, 9`) show cells were re-run or deleted, which *warns* of possible hidden state but doesn't prove outputs are wrong; conversely, `1, 2, 3` **still does not guarantee reproducibility** if a cell was edited *after* it ran. Only a fresh **Restart and Run All** verifies agreement.
-2. An $8192^3$ matmul requires $2 \times 8192^3 \approx 1.1 \times 10^{12}\text{ FLOPs}$. At $25\,\mu\text{s}$, that would imply $44{,}000\text{ TFLOP/s}$ ($\sim 130\times$ the 4090's datasheet peak)—you measured **host-side CUDA kernel launch overhead**, not GPU execution.
+2. An $8192^3$ matmul requires $2 \times 8192^3 \approx 1.1 \times 10^{12}\text{ FLOPs}$. At $25\,\mu\text{s}$, that would imply $44{,}000\text{ TFLOP/s}$ ($\sim 270\times$ the 4090's bf16 peak of $165\text{ TFLOP/s}$)—you measured **host-side CUDA kernel launch overhead**, not GPU execution.
 3. (i) Restart & run all; (ii) no personal paths/unrecorded downloads; (iii) scrub secrets/tokens from outputs; (iv) trim noisy progress logs; (v) record environment and hardware specs.
 :::
 :::

@@ -1438,7 +1438,7 @@ On the 10-symbol message `aaaaaaaaba` ($4.69$ bits surprisal under $q(\texttt{a}
 
 Because arithmetic coding requires only next-symbol probabilities $q(\cdot \mid x_{<i})$, *any* causal predictor (from an n-gram table to a Transformer LLM) becomes a lossless compressor:
 
-- **Adaptive order-$m$ counting model:** Predicts character $x_i$ from the preceding $m$-character context $s = x_{i-m:i}$ using Laplace-smoothed running counts ($k = 27$):
+- **Adaptive order-$m$ counting model:** Predicts character $x_i$ from the preceding $m$-character context $s = x_{i-m:i}$ using add-$\tfrac12$ (Krichevsky–Trofimov) smoothed running counts ($k = 27$):
   $$q(x \mid s) = \frac{c(s, x) + 1/2}{c(s) + k/2}$$
 - **Zero parameter transmission overhead:** Counts are updated *after* coding each character, so the decoder updates identical counts in lockstep without receiving a header table.
 :::

@@ -583,7 +583,7 @@ Static batching locks $b$ requests together until the longest generation finishe
 - **Iteration-level scheduling (Continuous Batching):**
   - At the end of *every single decode step*, the engine checks for sequences that emitted `<eos>` or hit `max_tokens`.
   - Finished sequences exit immediately, freeing their KV-cache blocks, and waiting requests from the queue enter the batch on the very next step.
-- **Result on requests of `[5, 2, 7, 3]` output tokens across 2 slots:** Continuous batching finishes all four requests in **9 decode steps instead of 12** ($25\%$ higher utilization).
+- **Result on requests of `[5, 2, 7, 3]` output tokens across 2 slots:** Continuous batching finishes all four requests in **9 decode steps instead of 12** ($25\%$ fewer steps; slot utilization rises from $71\%$ to $94\%$).
 :::
 
 ::: {.col .fig}
@@ -601,7 +601,7 @@ Ten lines of Python capture the core state machine of an iteration-level continu
 ::: {.col}
 - **Step-by-step slot refill:**
   - Step 1 starts `(5, 2)`. After 2 steps, the 2-token request finishes (`(3,)` remaining) and the 7-token request immediately takes slot 2 (`(3, 7)`).
-  - When the first request finishes at step 5, the final 3-token request enters slot 1 (`(3, 4)`), leaving only 1 single-occupancy tail step at the very end.
+  - When the first request finishes at step 5, the final 3-token request joins the 7-token one, which has 4 tokens left (`(4, 3)`), leaving only 1 single-occupancy tail step at the very end.
 :::
 
 ::: {.col .fig}

@@ -1608,7 +1608,7 @@ What happens if we evaluate the trained vector fields at finer step counts ($N =
 @!mdl-neural-odes-training-through-the-solver-1
 
 - **Euler Trained a 10-Step Program:** Refining the step size makes the Euler-trained network *worse* (error jumps from $9 \times 10^{-4}$ to $2 \times 10^{-2}$), because its weights compensated for coarse $h = 0.1$ truncation error.
-- **RK4 Trained a True Flow:** Because 10 RK4 steps were already exact to working precision, its endpoint error stays at $1.2 \times 10^{-3}$ across all step counts $N \in \{10, 100, 1000\}$.
+- **RK4 Trained a True Flow:** Because 10 RK4 steps were already exact to working precision, its endpoint error stays at the same value (about $10^{-3}$) across all step counts $N \in \{10, 100, 1000\}$.
 - **Discrete Round-Trip Error:** Running $N$ forward Euler steps followed by $N$ backward Euler steps misses $\mathbf{x}_0$ by $O(h) = O(1/N)$ ($5.5 \times 10^{-2} \to 5.5 \times 10^{-4}$).
 :::
 
@@ -1694,7 +1694,7 @@ Why does the minus sign and transposed Jacobian $-(\frac{\partial\mathbf{f}}{\pa
 
 ::: {.cols .vc}
 ::: {.col}
-- **Discretize-then-optimize (Backprop):** Differentiates the $N$-step Euler program exactly via $\mathbf{a}_n = (\mathbf{I} + h\mathbf{J}(\mathbf{x}_n))^\top\mathbf{a}_{n+1}$ (stored with $2\sqrt{N}$ activation checkpoints).
+- **Discretize-then-optimize (Backprop):** Differentiates the $N$-step Euler program exactly via $\mathbf{a}_n = (\mathbf{I} + h\mathbf{J}(\mathbf{x}_n))^\top\mathbf{a}_{n+1}$ (with a checkpoint every $\sqrt{N}$ steps, holding about $2\sqrt{N}$ states).
 - **Optimize-then-discretize (Continuous adjoint):** Integrates $\dot{\mathbf{a}} = -\mathbf{J}^\top\mathbf{a}$ backward; if $\mathbf{x}(t)$ is re-integrated backward without checkpoints, a contracting mode $\lambda = 50$ amplifies `fp64` rounding by $e^{50T} \approx 5 \times 10^{21}$.
 :::
 

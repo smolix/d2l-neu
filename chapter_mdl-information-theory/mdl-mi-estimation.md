@@ -1731,7 +1731,7 @@ Instead of averaging an unnormalized exponential $e^{T(x, y)}$, **InfoNCE** (van
   $$\mathcal{L}_{\textrm{NCE}} = -\mathbb{E}\!\left[\log\frac{e^{T(x, y^+)}}{e^{T(x, y^+)} + \sum_{j=2}^N e^{T(x, y_j)}}\right]$$
 - **Mutual information lower bound:**
   $$\hat{I}_{\textrm{NCE}} = \log N - \mathcal{L}_{\textrm{NCE}} \le I(X; Y)$$
-- Self-normalized softmax keeps every batch term bounded in $(0, \log N]$.
+- Self-normalized softmax keeps every batch term at most $\log N$ (the ratio $\gamma$ lies in $(0, N]$).
 :::
 
 ::: {.col .fig}
@@ -1844,7 +1844,7 @@ How should you choose and interpret a mutual information estimator in research a
 
 - **Low dimension ($d \le 2$) and moderate dependence ($I \lesssim 4\text{ nats}$):** Use **KSG nearest neighbors** (or rank histograms in 1D) for direct, tuning-free nonparametric measurement within $\sim 0.1\text{ nat}$.
 - **High-dimensional representations ($d \gg 2$):** Direct estimation is impossible due to the $\mathcal{O}(\log n)$ McAllester–Stratos barrier and exponential box growth. Use **InfoNCE** with large negative pools $N$ and interpret $\log N - \mathcal{L}_{\textrm{NCE}}$ strictly as a certified lower bound.
-- **Avoid unnormalized exponential critics (DV / NWJ) when $I \gtrsim \log N - 2$:** Their apparent ability to report values above $\log N$ on minibatches is an artifact of starved-batch upward bias and $\mathcal{O}(e^I/\sqrt{N})$ variance.
+- **Avoid unnormalized exponential critics (DV / NWJ) when $I \gtrsim \log N - 2$:** Their apparent ability to report values above $\log N$ on minibatches is an artifact of starved-batch upward bias and $\mathcal{O}(e^I/\sqrt{N})$ standard deviation.
 - **More MI is not always a better representation (Tschannen et al., 2020):** Downstream linear-probe accuracy depends heavily on encoder inductive biases and critic temperature $\tau$, often peaking under looser MI bounds.
 :::
 

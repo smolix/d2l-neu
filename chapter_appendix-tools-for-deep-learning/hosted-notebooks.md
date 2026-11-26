@@ -569,7 +569,7 @@ Because a notebook menu shows the accelerator you *requested* rather than what t
 $$C \approx 6 N D \approx 2.8 \times 10^{19}\text{ FLOPs (BERT-base)}$$
 
 - **Why full pretraining outgrows free tiers:** At $30\%$ of a T4's $65\text{ TFLOP/s}$ peak ($19.5\text{ TFLOP/s}$), BERT-base takes $\sim 400\text{ T4 hours}$—over **33 twelve-hour sessions** or 13+ weeks of Kaggle's 30 h/week quota.
-- **What fits in one 12-hour T4 session ($8.4 \times 10^{17}\text{ FLOPs}$):** All D2L chapter notebooks, 7B–8B LoRA fine-tuning, or training an $\sim 85\text{M}$ model.
+- **What fits in one 12-hour T4 session ($8.4 \times 10^{17}\text{ FLOPs}$):** All D2L chapter notebooks, 7B–8B QLoRA fine-tuning, or training an $\sim 85\text{M}$ model.
 :::
 
 ::: {.col .fig}

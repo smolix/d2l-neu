@@ -298,7 +298,7 @@ export const diagrams = {
     ]},
     { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: `§§${num('sec_cloud_instances')}–${num('sec_hardware_buyers')}: Cloud & Hardware Sizing`, lines: [
       '4090 / A100 / H100 completed-result cost',
-      '7B full (86 GiB) vs QLoRA (4 GiB) & decode',
+      '7B state: full (78 GiB) vs QLoRA (~4 GiB) & decode',
     ]},
     { fill: D.purple.tint, st: C.purple, dk: D.purple.dark, title: `§§${num('sec_software_ecosystem')}–${num('sec_training_systems')}: Arena Elo & 8-GPU FSDP`, lines: [
       'Arena SE ≈ 347/√v & frozen Artifact SHA',
@@ -1505,7 +1505,7 @@ export const diagrams = {
       'Cost: ~1.5× collective comm over NVLink/IB',
     ]},
     { fill: C.lgreen, st: C.green, dk: D.green.dark, title: '2. Activation Checkpointing + Accumulation', lines: [
-      'Checkpointing: acts O(L) → O(1), +33% FLOPs',
+      'Checkpointing: keep block inputs only, +33% FLOPs',
       'Accumulation: shrinks microbatch B_device',
     ]},
     { fill: C.lamber, st: C.amber, dk: D.orange.dark, title: '3. CPU / NVMe Offload (ZeRO-Offload)', lines: [

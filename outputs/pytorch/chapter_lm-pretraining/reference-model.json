@@ -1,0 +1,472 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretraining/reference-model.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:301b07236b0e63aaa1ad6ce195473075e451af1fbb930b5edd291bc3127ad260",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "reference-model-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-the-reference-pretraining-run-1": {
+      "code_fingerprint": "sha256:d492dacd1c61ec92f92177ed287a14700bb1f4f89794fe6625acad27a40f8b32",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-opening": {
+      "code_fingerprint": "sha256:4c1e8d3dab00df073baf1ecfc4f3a70ea4fb374d4b88f6000d04f69e38487d5b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest gradient event: step 223 (hour 0.1), norm 2.9× its running median (mild)\nunclipped arm at lr 0.006, step 111: largest attention logit 131 (layer 13)\nunclipped arm at lr 0.006: loss change over the next 200 steps: -1.796\n"
+        }
+      ]
+    },
+    "reference-model-config": {
+      "code_fingerprint": "sha256:79046cca2c256662daad5e535cea3359cf5b2ecf25cd15cee364992fb131b65b",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-preset-tables": {
+      "code_fingerprint": "sha256:fefc16665bd4c7e5c39427a0f0d78c8b0f248fd68fed75e4a6efddd3835acf29",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-presets": {
+      "code_fingerprint": "sha256:65714b53414c988abadcb3248e9af7853b41b7fc3ab89daad692b629e50ea815",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    preset   L    d heads     f     T batch tokens steps        tokens\n        r2  18  768  12/4  2048  4096      524,288  6000 3,145,728,000\n  r2_short  18  768  12/4  2048  4096      524,288  2000 1,048,576,000\n        t1   8  384   6/2  1024  1024       65,536  1526   100,007,936\n       fp8   8  768  12/4  2048  1024       16,384  1221    20,004,864\nladder-25m   8  384   6/2  1024  4096      262,144  1920   503,316,480\nladder-54m  10  576   9/3  1536  4096      262,144  4141 1,085,538,304\nladder-88m  10  768  12/4  2048  4096      262,144  6721 1,761,869,824\n"
+        }
+      ]
+    },
+    "reference-model-param-count": {
+      "code_fingerprint": "sha256:9b63515700ab7f66003480eccbdece9c9ea91fff76620f67d095efc27cf26a7d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "parameters: 138,440,448 (formula) = 138,440,448 (counted)\nembedding share: 18.2%\ntokens per parameter: 22.7\n"
+        }
+      ]
+    },
+    "reference-model-flops": {
+      "code_fingerprint": "sha256:2b06e519b5bed5d6937427ad6a03edf0271be2f383f553571878ee1b909e0915",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-flops-check": {
+      "code_fingerprint": "sha256:fda7b4bf0b6942ea211a9693a4fd63818ccebae20c46866967dd80046503b568",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "formula: 1,509,949,440 FLOPs per token\ncounted: 1,509,949,440\nratio: 1.000\n"
+        }
+      ]
+    },
+    "reference-model-init-loss": {
+      "code_fingerprint": "sha256:8942aba3e6e4b896f6f9c41a93f45f9a9f85bb872fbb6e1c369fc824ad643cdc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "predicted: 10.55\nmeasured: 10.53\n"
+        }
+      ]
+    },
+    "reference-model-wsd": {
+      "code_fingerprint": "sha256:bb62aac3bf1e935ec2dfabd10a1b73d64aac9ab86d31f0516201cfbe51a8170e",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-groups-check": {
+      "code_fingerprint": "sha256:88b7b1d1dde561b4e8b33e2ef20a30f5d7f66524ae5a9b12ed3b081947ff5103",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "decayed tensors: 126 (113,246,208 parameters); not decayed: 38 (25,194,240)\nlr at steps 0, 299, 5100, 5550, 5999: 2.00e-06, 6.00e-04, 6.00e-04, 3.00e-04, 6.67e-07\n"
+        }
+      ]
+    },
+    "reference-model-step": {
+      "code_fingerprint": "sha256:c1318bd633321504f7de907c7a7fd66eac324de16c44bb94ac8b280d15ee9f20",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-pretrain": {
+      "code_fingerprint": "sha256:eb296666cf94d6145802e3ffa93e64e2dd530f5db9e53a2d03dc2d945df3c3f4",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-loop-checks": {
+      "code_fingerprint": "sha256:18855f6502496032878bff9f2a2927aae204a908fb7bc46f6336bc5ac76fcfd1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "accumulation 1 vs 4: max |Δ loss| = 1.9e-06\n"
+        }
+      ]
+    },
+    "reference-model-loop-resume": {
+      "code_fingerprint": "sha256:5a657ec43a949d4672f3680006ccca05390d266d7e8152813190bf17663cc532",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "resume at step 20: batches identical, max |Δ loss| = 0.0e+00\n"
+        }
+      ]
+    },
+    "reference-model-t1-runs": {
+      "code_fingerprint": "sha256:1125cdc555fbef21d31ea6fe3a108ce363aac3d35cde6266b5e819ea16cf3342",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed val loss val bits per byte tokens/s   MFU\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   0    4.079             1.303     168k  0.19\n   1    4.068             1.299     168k  0.19\n   2    4.079             1.303     169k  0.19\nspread (max − min): 0.012\n"
+        }
+      ]
+    },
+    "reference-model-reference-run": {
+      "code_fingerprint": "sha256:8d6a4d940be85ddd58af3e6ef12238a12608d1ddf5ccfde8417544f63dfd9e20",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tokens: 3,145,728,000 in 6,000 steps\nwall clock: 3.8 h on 4 × RTX 4090 (restarts: 0)\nMFU (stable phase, median [IQR]): 0.55 [0.54, 0.55]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final val loss: 3.03 (bits per byte: 0.967)\nlargest attention logit at the end: 28 (layer 17)\nsteps clipped: 2%\n"
+        }
+      ]
+    },
+    "reference-model-dashboard": {
+      "code_fingerprint": "sha256:3daac9d1cba724ed2c4f08a0da08a6e7a8d1060615567936b2f5a678265ffcbd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "reference-model/reference-model-dashboard-1.svg",
+          "bytes": 400305,
+          "sha256": "sha256:7ea74b49de56103f8818626424f22e1433d3fe86fa516238ce2a1b74afcd0895"
+        }
+      ]
+    },
+    "reference-model-update-rms": {
+      "code_fingerprint": "sha256:adb34612aad34c0541001d195bdd5be114de6e024ddd66c52c4e1ea6af690a40",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "update RMS in units of the learning rate (r2 run)\n   module  stable   decay  ratio to 0.229\n      W_q   0.211   0.220            0.92\n      W_k   0.196   0.214            0.85\n      W_v   0.168   0.201            0.73\n      W_o   0.192   0.210            0.84\n      W_g   0.209   0.220            0.91\n      W_1   0.204   0.218            0.89\n      W_2   0.206   0.217            0.90\ntoken_emb   0.216   0.219            0.94\n     norm   0.190   0.210            0.83\n"
+        }
+      ]
+    },
+    "reference-model-lead-lag": {
+      "code_fingerprint": "sha256:1e2f0fb1f1e7dbf0669beba8471725302de8ceceb7bf861d1190c07cf8740143",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-lead-lag-table": {
+      "code_fingerprint": "sha256:572d99118add62135db939d1371e229f9fa9d89378151a05137ce86219a1084b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "steps until each series moves (r2 run)\n                  event     grad norm          loss largest logit\n          end of warmup             —           +22           +60\n         start of decay             —             —           +60\n  gradient event (mild)             —           +19          +127\n 20 random steps (null)          0/20     3/20, +48    11/20, +58\n"
+        }
+      ]
+    },
+    "reference-model-checkpoint-evals": {
+      "code_fingerprint": "sha256:9c581dbea13ddbaf3412f7bdabf01270a8e01ef4541ec4b5defa92446a8b4c75",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  step val loss    BPB  hellaswag   arc_easy       piqa       sciq winogrande\n   500    4.175  1.333      0.259      0.341      0.546      0.402      0.513\n  1000    3.630  1.159      0.269      0.383      0.567      0.582      0.517\n  2000    3.364  1.075      0.282      0.416      0.591      0.606      0.530\n  3000    3.253  1.039      0.289      0.430      0.591      0.630      0.519\n  4000    3.185  1.017      0.296      0.434      0.594      0.639      0.536\n  4500    3.160  1.009      0.302      0.455      0.591      0.680      0.521\n  4800    3.148  1.006      0.301      0.457      0.602      0.660      0.526\n  5100    3.137  1.002      0.303      0.453      0.608      0.663      0.537\n  5400    3.097  0.989      0.307      0.455      0.600      0.659      0.513\n  5700    3.056  0.976      0.308      0.462      0.615      0.688      0.522\n  6000    3.026  0.967      0.311      0.463      0.609      0.687      0.537\nchance                      0.250      0.250      0.500      0.250      0.500\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "reference-model/reference-model-checkpoint-evals-1.svg",
+          "bytes": 26773,
+          "sha256": "sha256:6647036732229ec4972137728aa6dfff106017c0d3008e804dc81022a42b0d1c"
+        }
+      ]
+    },
+    "reference-model-adjacent": {
+      "code_fingerprint": "sha256:8a1423cee72bc7b4169d55eb6c266a4802b755e3ca1342f503de6af2f644ec33",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        pair Δ accuracy           95% CI     resolved?\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 5100 → 6000      +0.9p    +0.2 to +1.6           yes\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 5700 → 6000      +0.2p    -0.3 to +0.7  not resolved\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 4000 → 5100      +1.3p    +0.5 to +2.1           yes\n"
+        }
+      ]
+    },
+    "reference-model-domains": {
+      "code_fingerprint": "sha256:f710c5d869fbeb1a4167f502923a22582f3c96abc36b65854000148bf1bdedf7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "reference-model/reference-model-domains-1.svg",
+          "bytes": 29367,
+          "sha256": "sha256:b80d0c3f2b8ab6a07a907bd9bee4f935276a04aeb81e0f08f19eb32253f4b2c2"
+        }
+      ]
+    },
+    "reference-model-averaging": {
+      "code_fingerprint": "sha256:d2e3bab9cc6802857decf2392ac4abe0b871e31c8a3ce3f2b5995984cb31dfc6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "average of four stable checkpoints: 3.084 (s5100: 3.142; s6000 after decay: 3.031)\n"
+        }
+      ]
+    },
+    "reference-model-selection-bias": {
+      "code_fingerprint": "sha256:367c077158044d193491f1bcf2df81bcc57e5c8c5a7f0003263f5dd20005d918",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "best-of-11 on half the items: +0.0 points; on the other half: -0.1 (bias 0.1 ± 0.3 points)\n"
+        }
+      ]
+    },
+    "reference-model-ladder": {
+      "code_fingerprint": "sha256:194219815b92f2f4cda82f045f166ce8bc712ad07d0dd822ddbb6e2c4f95c6a6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "reference-model/reference-model-ladder-1.svg",
+          "bytes": 31854,
+          "sha256": "sha256:b50c9b6687aba8fc473cd506dd48459230af14e7ab0fe7dfd80195d054f61c15"
+        }
+      ]
+    },
+    "reference-model-ladder-table": {
+      "code_fingerprint": "sha256:20508297bfc3f3a35b08272c9bcd90b5eb4a0757ba3ce1e123a38dde9ebf8a88",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       size           P   val loss (tokens per parameter)\n ladder-25m  25,172,352  4.595 ( 5.0)  3.967 (10.0)  3.681 (20.0)\n ladder-54m  54,275,904  3.761 ( 5.0)  3.502 (10.0)  3.328 (20.0)\n ladder-88m  88,096,512  3.513 ( 5.0)  3.310 (10.0)  3.163 (20.0)\n         r2 138,440,448  3.378 ( 5.7)  3.165 (11.4)  3.015 (22.7)\n"
+        }
+      ]
+    },
+    "reference-model-logit-bound": {
+      "code_fingerprint": "sha256:8b0e6cc227c4dc57b0d61ad3476d5bb2fd0a74af041c0e0120a2383122db2a91",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest |s| over 1e5 samples: 41.9 (bound 640)\nwith QK-norm, inputs scaled by 1e3: largest |s| 9.7 (bound √d_h‖g_q‖∞‖g_k‖∞ = 31.6)\n"
+        }
+      ]
+    },
+    "reference-model-conservation": {
+      "code_fingerprint": "sha256:1f561151576d99ec0f0da404a910983aaf5e87e596d80001f7518526189755dc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "relative drift of W_Qᵀ W_Q − W_Kᵀ W_K: 1.4e-03 (W_Qᵀ W_Q itself moved 68%)\n"
+        }
+      ]
+    },
+    "reference-model-instability": {
+      "code_fingerprint": "sha256:ff027a3ed98cdaa9f896f5ab28c93ecafb8349fb8623f279a9bd35e56f42d3af",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-softcap-check": {
+      "code_fingerprint": "sha256:0e09aeb2a2fdfda191636f70a483950a6e49eeac8be4e63907724b02f8d2d168",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "softcap(s, 50): max |s| = 49.97 over s ∈ [−200, 200]; gradient at s = 200: 1.3e-03\n"
+        }
+      ]
+    },
+    "reference-model-qk-clip": {
+      "code_fingerprint": "sha256:0c8950e5320393051aed43c3f97bab7544662b295768242fbc89b5c80eb124b6",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-qk-clip-check": {
+      "code_fingerprint": "sha256:f6fba0fdefe665dad47b6b9cce53719216a9eb112ff635b7f8443328a3206eae",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "after clip: max logit = τ to 2.6e-07 relative\nheads below τ: bit-identical\n"
+        }
+      ]
+    },
+    "reference-model-qk-clip-again": {
+      "code_fingerprint": "sha256:8f3831dac5cb83a7adecc89390d39b7b3077e8efeee975891a8ff3bca0ae18af",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "second clip: weights move by at most 2e-07 (rounding)\nunder QK-norm: no layer clipped, 1 warning\n"
+        }
+      ]
+    },
+    "reference-model-stable-lr": {
+      "code_fingerprint": "sha256:fef142ed0a439c59ef89a131544bcf4aca5ea41ab94ac8ad0d61de83c3743490",
+      "kind": "text",
+      "outputs": []
+    },
+    "reference-model-stable-lr-arms": {
+      "code_fingerprint": "sha256:9126ed8ef5d0ea65c5fa5c6fab02de9e97ff87b1495102256b35a54973913e94",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "τ (t1) = 30\nδ = 0.3 above 3 × two-seed difference at lr 0.001 (0.177): yes\n"
+        }
+      ]
+    },
+    "reference-model-stable-lr-edge": {
+      "code_fingerprint": "sha256:fb0934359d03f3a0efe8e6e5a0a05bb4347e287972ee7f853e224e19b6052983",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " variant  best lr stable up to              slower lr sensitivity\n    none    0.002        0.002                   —           0.72\n qk_clip    0.001        0.001                   —           0.41\n qk_norm    0.002        0.002                   —           0.28\n softcap    0.002        0.002                   —           0.37\n"
+        }
+      ]
+    },
+    "reference-model-stable-lr-plot": {
+      "code_fingerprint": "sha256:9f07bc8be8e829b69af171007abddd3f94b1bc4326f242112138b285397e6c59",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "reference-model/reference-model-stable-lr-plot-1.svg",
+          "bytes": 32043,
+          "sha256": "sha256:841f24f69723b21c83917f9f83bded4baf48207c228fcc8f859cc7e831d920a8"
+        }
+      ]
+    },
+    "reference-model-ten-x": {
+      "code_fingerprint": "sha256:3a5881eb97419b90bb8eb62497fdefbe9db1f8303ea06d74d56e1d77bbaab182",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "reference-model/reference-model-ten-x-1.svg",
+          "bytes": 67857,
+          "sha256": "sha256:ad7d7ac2fb4989f8823ba62d0841e8a2ee1d5861f36553f0821e8bb89c07f6e7"
+        }
+      ]
+    },
+    "reference-model-ten-x-table": {
+      "code_fingerprint": "sha256:e2cadb55d7753904557adf5a807257e892544dbcbf757aa7f5a9cdb0f25c8946",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "τ = 50\n               arm final loss largest logit first non-finite step\n   0.0006 baseline      4.179            43                     —\n     0.006 no cure      3.969           412                     —\n   0.006 + QK-clip      3.953            67                     —\n"
+        }
+      ]
+    },
+    "reference-model-spike": {
+      "code_fingerprint": "sha256:f25cec89e9be4168745dcedbb3b9dc3fd5d5793f4917225631c26ca3a88c0fd6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "reference-model/reference-model-spike-1.svg",
+          "bytes": 75759,
+          "sha256": "sha256:3c3b65a39f6f9523fc246393436d96ad6b457f3449f91db47ae50f2bb2afc457"
+        }
+      ]
+    },
+    "reference-model-spike-table": {
+      "code_fingerprint": "sha256:17c3bbdeccc33b557c9a707b8ee16ac695206bc93189b1690ad1fcec0155220a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                   run loss at 300 peak norm, 295-305 max |Δ loss|, 301-400\n            spiked run      12.577              12.90                     —\nfrom 250, same batches      12.570              12.79               1.2e-02\n    from 250, skip 300       5.350               0.64               3.5e-01\n from 50, same batches      12.623              12.30               1.0e-01\n              clip 1.0      12.718              10.90               2.9e-01\nreplay floor (same state, same batches, no bad batch): 3.2e-03\n"
+        }
+      ]
+    }
+  }
+}

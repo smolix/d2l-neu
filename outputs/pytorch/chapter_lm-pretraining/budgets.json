@@ -1,0 +1,236 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretraining/budgets.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:f9bee74e35f973ca62ce9c5812a06a9ac9aa630421dc7df1661ebefd370a888e",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "budgets-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "budgets-imports-extra": {
+      "code_fingerprint": "sha256:803049e214112792fcb576871c184b92d3fe7e61cbfbfcd5b34ce391b99f7c32",
+      "kind": "text",
+      "outputs": []
+    },
+    "budgets-opening": {
+      "code_fingerprint": "sha256:c12c773cf3aa19d744ec13aff5570ecabc06758e296131dd90557ce4a83fd427",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reference model: 138M parameters, 3.15B tokens, 22.7 tokens per parameter\ntraining-optimal at its compute: N* = 124M (Hoffmann), 132M (Besiroglu); D*/N* = 28, 25\nLlama 3 8B: ≈ 15T tokens / 8.0B ≈ 1,875 per parameter\n"
+        }
+      ]
+    },
+    "budgets-solve-optimum": {
+      "code_fingerprint": "sha256:ea1b5e210480201116ba903aa68ed01b99ffa848b13adb76beebcc0c534c1ab4",
+      "kind": "text",
+      "outputs": []
+    },
+    "budgets-optimum-checks": {
+      "code_fingerprint": "sha256:6f773dcf0b6cb4991084302e71ee30f57a15771988fddee69135ba2b636ffaa0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      fit  D_inf      N*      D*  D*/N*  lifetime FLOPs\n Hoffmann      0   15.3B   1.21T     79        1.11e+23\n Hoffmann  1e+12   11.5B   1.65T    143        1.37e+23\n Hoffmann  1e+13    6.5B   3.89T    600        2.81e+23\nBesiroglu      0   48.3B   0.90T     19        2.62e+23\nBesiroglu  1e+12   35.6B   1.28T     36        3.43e+23\nBesiroglu  1e+13   20.8B   3.05T    147        7.95e+23\nclosed form at D_inf = 0: relative error 1.1e-15; N* decreasing in demand: True\n"
+        }
+      ]
+    },
+    "budgets-lifetime-cost": {
+      "code_fingerprint": "sha256:b137c6be9ad927eccd705ff62d8bab8033a748f4d0cc846f5fe9a3bad7cffaeb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "budgets/budgets-lifetime-cost-1.svg",
+          "bytes": 41308,
+          "sha256": "sha256:09f78cb9edb7d39b04fedea41aa7be5dd781d2139b55e1a69a92c2e26bc26d1b"
+        }
+      ]
+    },
+    "budgets-ratio-band": {
+      "code_fingerprint": "sha256:b462ff1c64c64ad9262be40ea5cd88863b3ce95064f7173873be814c38e34d75",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "the fits differ by more than a 10× change in demand moves them: every D_inf up to 7×10^11\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "budgets/budgets-ratio-band-1.svg",
+          "bytes": 44498,
+          "sha256": "sha256:08d44e2f1fe512aa55c0371b76e58d6bc03b0246377e4745c66a657c441a7bc1"
+        }
+      ]
+    },
+    "budgets-decode-roofline": {
+      "code_fingerprint": "sha256:a640c188f51928c13a17a166a851c618ad03d31bbb1bbaa73236212844eb4462",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KV cache per token: 18,432 bytes (reference model)\nroofline at batch 1, context 1,024 (tok/s): r2 3,408, Qwen3-0.6B 770, Qwen3-1.7B 283, Qwen3-4B 123\n"
+        }
+      ]
+    },
+    "budgets-decode-rates": {
+      "code_fingerprint": "sha256:7312d25bded1802b6c1f49ccdcbb556137def11413febd1aae7ebe4493bc9373",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      model   batch 1   batch 8  batch 32 batch 128   batch 1 ÷ roofline\n         r2       742     4,289    13,449    23,323   0.22\n Qwen3-0.6B       309     1,685     3,745     5,330   0.41\n Qwen3-1.7B       176     1,066     2,918     4,675   0.63\n   Qwen3-4B        89       580     1,684         —   0.73\ntokens per second; decode stack: eager + CUDA graph\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "budgets/budgets-decode-rates-1.svg",
+          "bytes": 36906,
+          "sha256": "sha256:2d957ca79bf7f4f1dbd421f62fc2164e9abd7cd909169756172f990a755057c9"
+        }
+      ]
+    },
+    "budgets-measured-optimum": {
+      "code_fingerprint": "sha256:f62ddd96b88b1b8f5845f00e34c5db8b96aa6d36ad4482f30a0981875fab9dc8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " D_inf  N* (FLOPs)  N* (GPU-s)  ratio\n 10^11       14.7B       14.0B   0.96\n 10^12       11.5B        9.7B   0.84\n 10^13        6.5B        5.3B   0.81\ntraining at MFU 0.55; decode at batch 32: roofline × 0.70 (Qwen3-4B measured)\n"
+        }
+      ]
+    },
+    "budgets-repeated-data": {
+      "code_fingerprint": "sha256:6ccde80deb18e0aafa0c7fceefa21c50c75d0a42436389f13b16953928e3f56f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "effective tokens at one epoch equal U: True\nderivative vs finite differences: 7.0e-11\nmarginal value dD'/dE at epoch 4 / 16 / 40: 0.82 / 0.38 / 0.08 of a fresh epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "budgets/budgets-repeated-data-1.svg",
+          "bytes": 34479,
+          "sha256": "sha256:80e233c59d94789a1edeb48d9a785667583909f289f6e619c879010247f6d00c"
+        }
+      ]
+    },
+    "budgets-ladder-points": {
+      "code_fingerprint": "sha256:d087625b6b04ae5ac98cdf977826e7b71e98c3b6dafde9e01cbb101dc5c98e20",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       size      N  tokens   D/N val loss\n ladder-25m    25M   0.13B   5.0    4.595\n ladder-25m    25M   0.25B  10.0    3.967\n ladder-25m    25M   0.50B  20.0    3.681\n ladder-54m    54M   0.27B   5.0    3.761\n ladder-54m    54M   0.54B  10.0    3.502\n ladder-54m    54M   1.09B  20.0    3.328\n ladder-88m    88M   0.44B   5.0    3.513\n ladder-88m    88M   0.88B  10.0    3.310\n ladder-88m    88M   1.76B  20.0    3.163\n         r2   138M   0.79B   5.7    3.378\n         r2   138M   1.57B  11.4    3.165\n         r2   138M   3.15B  22.7    3.015\n"
+        }
+      ]
+    },
+    "budgets-fitting-the-chinchilla-form-1": {
+      "code_fingerprint": "sha256:7841b75254b9bca129957e8e4187629648b7a31fe3f56b1328010eb95844d873",
+      "kind": "text",
+      "outputs": []
+    },
+    "budgets-fit-law": {
+      "code_fingerprint": "sha256:8c96e395459b8e3566f33b5c57a0f986099eccc600cceb6891d006d8c5d924b5",
+      "kind": "text",
+      "outputs": []
+    },
+    "budgets-fitting-the-chinchilla-form-2": {
+      "code_fingerprint": "sha256:cbee8220514a20a5b4a0ab4847dfd3d0619fd5b979e90a71bd195984c8793d5c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "E = 2.89, A = 1.01e+05, B = 5.78e+06, α = 0.74, β = 0.82\nresidual RMS: 0.0505 nats (7 degrees of freedom)\n"
+        }
+      ]
+    },
+    "budgets-recovery": {
+      "code_fingerprint": "sha256:cbaa74782c706255cfbc9ec427964d07bdc0fda2ce8d0251855f1ec6a96ecbf7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "recovered α: median 0.74 (true 0.74), 90% range [0.04, 2.44]; the ladder cannot pin this exponent\nrecovered β: median 0.84 (true 0.82), 90% range [0.63, 1.04]; the ladder cannot pin this exponent\n"
+        }
+      ]
+    },
+    "budgets-intervals": {
+      "code_fingerprint": "sha256:ba347ef5e151a03b1ae70e83a38f4f25b9a1105f520890038a759469f02595b0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "95% intervals from 1,000 resamples\nα: 0.74 [0.05, 2.45]; Hoffmann 0.34, Besiroglu 0.348\nβ: 0.82 [0.18, 0.99]; Hoffmann 0.28, Besiroglu 0.366\npublished value inside the 95% interval: α both fits; β both fits\n"
+        }
+      ]
+    },
+    "budgets-withheld": {
+      "code_fingerprint": "sha256:3537fac05d1866a9d165d098d21d36bfc580e20ffa97f608446368b0ff72bf4a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "predicted 3.096 [2.963, 3.245], measured 3.015 (286 resamples without it)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "budgets/budgets-withheld-1.svg",
+          "bytes": 48053,
+          "sha256": "sha256:2fe7ac4cb6dc9ce3cbabb9e66d164e5c65a0b1c34d746f1425fd9d0000e80a13"
+        }
+      ]
+    },
+    "budgets-plateau": {
+      "code_fingerprint": "sha256:011dfeedd0566f66f7001e0e2d49b0342b2cc2a1056e844f6590211d52409751",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "with 8 plateau points: α = 2.45, β = 0.63\nshift vs the finished-point fit: Δα = +1.71 (+2.1 bootstrap SDs), Δβ = -0.19 (-0.9 SDs)\n"
+        }
+      ]
+    },
+    "budgets-ladder-optimum": {
+      "code_fingerprint": "sha256:71f9234b3c1f0f5276cce2008a59ca350033310ed4edf9cbec10e7cd675cc30e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " D_inf    N*    95% range  D*/N*    95% range\n     0  258M   [22, 412]M     23   [4.5, 393]\n 10^11  151M   [11, 212]M    100  [51, 2,345]\n 10^12  123M    [8, 176]M    348 [177, 10,742]\n(946 of 1000 resamples reach the target loss)\n"
+        }
+      ]
+    }
+  }
+}

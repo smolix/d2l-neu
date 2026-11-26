@@ -1,0 +1,282 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretraining/continued-pretraining.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:53882bf062f402a9030e3622a85542b452295c8fb7322506e22728e24a6e3574",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "continued-pretraining-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "continued-pretraining-imports-extra": {
+      "code_fingerprint": "sha256:e14870bcf7afc0317dc8c1d8599d4ba94fe71152dadebae34a17279bbfc91811",
+      "kind": "text",
+      "outputs": []
+    },
+    "continued-pretraining-opening": {
+      "code_fingerprint": "sha256:9f73c555bdb9636c7605aa7934314a738ceeda7df250482523a01d78dd5bd682",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "after 3.9M tokens (arm A): held-out book loss 2.05 → 1.87 nats/token\ngeneral web text: 2.65 → 2.75\nsuite (6 tasks, mean accuracy): 61.6% → 60.8%\n"
+        }
+      ]
+    },
+    "continued-pretraining-quadratic": {
+      "code_fingerprint": "sha256:cd3b3831999443fe8c10462f9306920c775c798622a07cc05e32faea087e2449",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1-D frontier identity: max error 1.7e-16\nforgetting  replay gain  early-stopping gain\n      0.05        0.540                0.189\n       0.1        0.598                0.262\n       0.2        0.659                0.358\n       0.4        0.730                0.484\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "continued-pretraining/continued-pretraining-quadratic-1.svg",
+          "bytes": 26206,
+          "sha256": "sha256:33c3445600807101752a2dec0e5a5b84fd49124ae9d8264a4b5dc16cc13493e2"
+        }
+      ]
+    },
+    "continued-pretraining-mixstream": {
+      "code_fingerprint": "sha256:119f744bb68cffb8ddef65e4e5d0ba4de315b68b5f9cd821b15a6fd6c5aa241c",
+      "kind": "text",
+      "outputs": []
+    },
+    "continued-pretraining-mix-streams": {
+      "code_fingerprint": "sha256:de6628c11792e1e26725d73630bba777fceae47bc34860ce0b50c99519cda7c1",
+      "kind": "text",
+      "outputs": []
+    },
+    "continued-pretraining-mix-check": {
+      "code_fingerprint": "sha256:c9d37762a48576cd4357f0cebe3889e4bc3c6f7cf1294d1df22defc780a1c2cb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "replay share over 10,000 steps: 0.24990 (target 0.25, 3 SE = 0.0011)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "resumed at step 4,321: next 100 batches identical\n"
+        }
+      ]
+    },
+    "continued-pretraining-forgetting-gain": {
+      "code_fingerprint": "sha256:95426d82169e8f684b92e7ec372f2ea5be89fb4d1220860bc88198c7d39a80df",
+      "kind": "text",
+      "outputs": []
+    },
+    "continued-pretraining-estimator-check": {
+      "code_fingerprint": "sha256:0e60c33c23c4982b6a3adef94ac7332356253fd4a99b341d460412cb609db28e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "planted 0.050: estimated 0.047 [0.042, 0.053]\n"
+        }
+      ]
+    },
+    "continued-pretraining-adopt": {
+      "code_fingerprint": "sha256:a68be609a2f0ad9efc0830275a81189ae0f97a719aca89391c289b6b5c0e444e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "adopt, no context: identical logits\nadopt, one-document mask vs causal: loss 2.4141 vs 2.4146 nats/token (bf16)\n"
+        }
+      ]
+    },
+    "continued-pretraining-data": {
+      "code_fingerprint": "sha256:0458851f9d914f35a8541290081922e118a95fdfd8e152c521f98f162c2dd6a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "              stream documents tokens (Qwen)                 source      licence\n       domain: peS2o   289,635    80,000,148         peS2o v2 train       ODC-By\ndomain: book (train)       186     1,420,123          book sections CC BY-SA 4.0\n replay: FineWeb-Edu    23,247    24,000,050   FineWeb-Edu file 005       ODC-By\n          val: peS2o     7,076     2,200,131    peS2o v2 validation       ODC-By\n    val: FineWeb-Edu     8,341     8,218,474 FineWeb-Edu validation       ODC-By\n       held-out book        46       386,078    every fifth section CC BY-SA 4.0\n"
+        }
+      ]
+    },
+    "continued-pretraining-arms": {
+      "code_fingerprint": "sha256:dfea872a861cdb474d7ddf662f46d85ef3015e4b63e6b75d36a36636640f0903",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " arm  domain loss  general loss  held-out book loss suite mean\nbase        2.453         2.650               2.052      61.6%\n   A        2.407         2.750               2.388      61.0%\n   B        2.413         2.684               2.055      61.6%\n   C        2.415         2.677               1.793      60.7%\n  A′        2.407         2.749               2.355      61.0%\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "continued-pretraining/continued-pretraining-arms-1.svg",
+          "bytes": 53078,
+          "sha256": "sha256:ca4eaec244ca40182de629dd188de80d2876adcb14f603f71ec0b7cc53aec234"
+        }
+      ]
+    },
+    "continued-pretraining-rewarm-bump": {
+      "code_fingerprint": "sha256:da17744a7a25ce18591ae46ef96fac533152b815ef6fbe5d03bba21f5c6f47ad",
+      "kind": "text",
+      "outputs": []
+    },
+    "continued-pretraining-bump-table": {
+      "code_fingerprint": "sha256:164d2746729359a2c698046cf920f4dd4e787d41ef25ebdc04a595bcd764df0d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "arm peak lr  bump (nats)  step of the peak healed by the end\n  A   1e-04        0.106                24             0.008\n  B   1e-04 no transient                30                 –\n  C   1e-05        0.024                18            -0.002\n A′   1e-04        0.102                21             0.004\n"
+        }
+      ]
+    },
+    "continued-pretraining-frontier": {
+      "code_fingerprint": "sha256:d0de45bc61c564c368c8fa184a26139cf522ca8efe4ae319587af1e0abc57bb2",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "arm  gain [95% CI]           forgetting [95% CI]\nA    0.047 [0.046, 0.048]    0.099 [0.097, 0.102]\nB    0.040 [0.039, 0.041]    0.033 [0.032, 0.035]\nC    0.038 [0.037, 0.039]    0.026 [0.025, 0.027]\nA′   0.046 [0.045, 0.047]    0.099 [0.096, 0.102]\nseed spread (A vs A′): gain 0.001, forgetting 0.000\nB: 85% [85%, 86%] of A's gain, 34% [32%, 35%] of A's forgetting\nB above the line from the base through C: -0.008 [-0.011, -0.005]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "continued-pretraining/continued-pretraining-frontier-1.svg",
+          "bytes": 41991,
+          "sha256": "sha256:0b15f20b2b8a20f799ccfad69538fa415ad41af69a2e029f8ac8b51c6501dad2"
+        }
+      ]
+    },
+    "continued-pretraining-equal-tokens": {
+      "code_fingerprint": "sha256:fdef6abb6d33eafe1a17efee62120dea5937f0485a4fb46d8b5a832d63418308",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "domain loss at 60M domain tokens: A 2.416 (A′ 2.416), B 2.413\ngeneral loss at the same point: A 2.754 (A′ 2.753), B 2.684\nlearning rate there, share of the peak: A 24%, B 10%\n"
+        }
+      ]
+    },
+    "continued-pretraining-suite-deltas": {
+      "code_fingerprint": "sha256:8fa89a106aaab07649ea7ff1727a1c5445423b38002ed60d0d9b35bd7f614316",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "arm   Δ suite mean (points)  95% CI\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "A                      -0.6  [-1.3, +0.0]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "B                      -0.0  [-0.6, +0.6]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "C                      -0.9  [-1.4, -0.4]\n"
+        }
+      ]
+    },
+    "continued-pretraining-t1-arms": {
+      "code_fingerprint": "sha256:fcc3399f2bf172698572c9d010a32ac21879921f30e07e0fb75b7663c8c7c54d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "losses and bump in nats per token (–: no transient bump)\n   arm  bump  domain  general  book\n  base     –   3.167    3.087 3.713\n     A     –   2.987    3.236 2.398\n    A′     –   2.988    3.237 2.403\n    A″ 0.164   2.988    3.237 2.397\n     B     –   3.004    3.159 2.459\n  cold 0.587   3.008    3.352 2.354\nbranch 0.195   3.026    3.353 2.372\n"
+        }
+      ]
+    },
+    "continued-pretraining-smollm3": {
+      "code_fingerprint": "sha256:a8624a330e8af0be15c653a59bf9cc140bfece92dfdcd34048f4a5ed89299c43",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  checkpoint tokens ctx  hswag  arc-e  arc-c  piqa  wino  mmlu\n stage 1 end   8.1T  4K   72.3   73.5   46.0  79.1  67.5  53.2\n stage 2 end   9.9T  4K   71.9   75.5   49.1  78.4  68.7  55.6\n stage 3 end  11.1T  4K   75.4   77.7   52.9  78.8  69.7  60.1\n      LC 32K  11.2T 32K   75.2   77.6   52.6  78.9  69.4  59.9\n      LC 64K  11.2T 64K   75.2   76.9   52.6  78.5  67.9  61.8\nmid-training  11.4T 64K   68.2   69.1   48.0  72.2  57.7  55.5\n  checkpoint   web  science  book\n stage 1 end 0.699    0.686 0.768\n stage 2 end 0.703    0.687 0.747\n stage 3 end 0.671    0.672 0.691\n      LC 32K 0.672    0.667 0.691\n      LC 64K 0.672    0.665 0.692\nmid-training 0.909    0.871 1.198\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "continued-pretraining/continued-pretraining-smollm3-1.svg",
+          "bytes": 59650,
+          "sha256": "sha256:b32b15e337f231794388babed6e643d193a8ce52ef57d3ee7f75597b8dea2e38"
+        }
+      ]
+    },
+    "continued-pretraining-stage-deltas": {
+      "code_fingerprint": "sha256:882e1e9dbffe12ec5ee3efebcda3d7b1397ee4dfd87fccfc5388392435ec3857",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "transition    Δ suite mean, points [95% CI]\nS1 → S2       +1.3 [+0.6, +2.0]\nS2 → S3       +2.5 [+1.8, +3.3]\nS3 → LC32K    -0.1 [-0.6, +0.2]\nLC32K → LC64K -0.1 [-0.6, +0.3]\nLC64K → mid   -7.0 [-7.9, -6.1]\ntransition    Δ BPB web, %          Δ BPB science, %      Δ BPB book, %\nS1 → S2       +0.5 [+0.3, +0.8]     +0.2 [+0.0, +0.3]     -2.8 [-3.3, -2.3]\nS2 → S3       -4.5 [-4.9, -4.2]     -2.1 [-2.3, -2.0]     -7.4 [-7.7, -7.1]\nS3 → LC32K    +0.1 [-0.0, +0.2]     -0.8 [-0.9, -0.7]     -0.1 [-0.1, -0.0]\nLC32K → LC64K -0.0 [-0.1, +0.1]     -0.4 [-0.4, -0.3]     +0.2 [+0.2, +0.3]\nLC64K → mid   +35.3 [+32.8, +37.7]  +31.1 [+30.1, +32.2]  +73.1 [+70.4, +75.6]\n"
+        }
+      ]
+    },
+    "continued-pretraining-smollm3-live": {
+      "code_fingerprint": "sha256:355dee58e96f68f275033ae0c82344224710d92331490ffe23f87d4d605de8ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "checkpoint    live suite mean (n = 500) [95% CI]    committed\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stage 3 end   68.8 [67.2, 70.5]                     69.1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mid-training  61.8 [60.1, 63.6]                     61.8\n"
+        }
+      ]
+    },
+    "continued-pretraining-capability-bpb": {
+      "code_fingerprint": "sha256:ab4d667f65bcec33dae50f912afdd450044e86ae1947636854677da63fec9a28",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "continued-pretraining/continued-pretraining-capability-bpb-1.svg",
+          "bytes": 41292,
+          "sha256": "sha256:6d3673e618c365c530a56f3ca9aa98e1f004a7946974b4783bc12ad097d865fe"
+        }
+      ]
+    }
+  }
+}

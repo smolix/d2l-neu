@@ -34485,6 +34485,9 @@ def regen_storage(config='box'):
 d2l.DATA_HUB['lm-hw-links-v2'] = (
     d2l.LM_DATA_URL + 'lm-hw-links-v2.csv',
     '25dd72b975f488deb4cbd54c7607d75d6135fd91')
+d2l.DATA_HUB['lm-hw-buildbox-p2p-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-p2p-v1.tar',
+    '13c738ab7da15972f3c38badbe0393f6d63b204f')
 
 d2l.HW_STATIC['links'] = ('lm-hw-links-v2', 'csv')
 d2l.HW_ARTIFACTS['box-p2p'] = ('lm-hw-buildbox-p2p-v1', 'tar')
@@ -35839,6 +35842,9 @@ def regen_p2p_finish(folder):
 d2l.DATA_HUB['lm-hw-systems-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-systems-v1.json',
     '4ef586baa5a2e50dd5dc2d063f5b5a62b84270f5')
+d2l.DATA_HUB['lm-hw-buildbox-net-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-net-v1.tar',
+    '95533e1cbaaf28e4eef31f00d41d508f4b3699db')
 
 d2l.HW_STATIC['systems'] = ('lm-hw-systems-v1', 'json')
 d2l.HW_ARTIFACTS['box-net'] = ('lm-hw-buildbox-net-v1', 'tar')
@@ -36517,6 +36523,10 @@ def regen_net_finish(folder):
         d2l._hw_write(path, table, meta)
 
 d2l.HW_ARTIFACTS['box-coll'] = ('lm-hw-buildbox-coll-v1', 'tar')
+
+d2l.DATA_HUB['lm-hw-buildbox-coll-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-coll-v1.tar',
+    '2d0e6e2ec405653039d1e00c942b4f014b8e7c98')
 
 d2l.HW_JOBS['box-coll'] = (
     'regen_coll', lambda: dict(config='box'))

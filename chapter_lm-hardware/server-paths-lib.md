@@ -34,6 +34,9 @@ the box's alpha-beta reader; the driver `regen_p2p`. Blocks are tagged
 d2l.DATA_HUB['lm-hw-links-v2'] = (
     d2l.LM_DATA_URL + 'lm-hw-links-v2.csv',
     '25dd72b975f488deb4cbd54c7607d75d6135fd91')
+d2l.DATA_HUB['lm-hw-buildbox-p2p-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-p2p-v1.tar',
+    '13c738ab7da15972f3c38badbe0393f6d63b204f')
 ```
 
 ```{.python .input #server-paths-lib-entries}

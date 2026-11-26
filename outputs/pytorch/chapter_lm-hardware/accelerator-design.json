@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:acf02aaecaa56efd1ed39f416de84c1a7245ac141f985678c9491c9692f2cdeb",
+    "d2l_lib_fingerprint": "sha256:00c0dfbea58d5dfa096f7c796c1f778e44ea165292ea23ad03835ec08800db13",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -134,7 +134,7 @@
           "mime": "image/svg+xml",
           "asset": "accelerator-design/accelerator-design-ladder-1.svg",
           "bytes": 38354,
-          "sha256": "sha256:ab101fd32a4fbb0547ab85090f07fb730f0cbd84d79ca5365ec8f2bdc59ddb59"
+          "sha256": "sha256:f3aa8903ffe39ae059ccb2ad1eef5724576897c137487dc6082e95960e7ef97c"
         }
       ]
     },
@@ -160,7 +160,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (matmul) on RTX 4090: 2 points, largest difference 4%\n"
+          "text": "live check (matmul) on RTX 4090: 2 points, largest difference 7%\n"
         }
       ]
     },
@@ -176,19 +176,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (L1) on RTX 4090: 1 point, largest difference 2%\nlatency per dependent load: L1 17 ns, L2 98 ns, DRAM 220 ns\n"
+          "text": "live check (L1) on RTX 4090: 1 point, largest difference 1%\nlatency per dependent load: L1 17 ns, L2 98 ns, DRAM 220 ns\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (latency) on RTX 4090: 3 points, largest difference 11%; differs: 2 MiB 110 vs 98 ns\n"
+          "text": "live check (latency) on RTX 4090: 3 points, largest difference 10%; differs: 2\n  MiB 110 vs 98 ns\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "accelerator-design/accelerator-design-smem-latency-1.svg",
           "bytes": 32505,
-          "sha256": "sha256:cb73c5e280c7524a564466014d5b5ab7932e05cfaac9baeb66077338af89e92c"
+          "sha256": "sha256:dab1525926b5b9a8d3dec5036452ccf9508c5afc77d621417cd2126247c1197a"
         }
       ]
     },

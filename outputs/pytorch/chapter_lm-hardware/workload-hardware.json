@@ -1,0 +1,278 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-hardware/workload-hardware.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:92cb3c2b688bec130d88fdf966af92cfeae4bf1c8feb9e1e1227babc8eb3e463",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "workload-hardware-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-extras": {
+      "code_fingerprint": "sha256:e14870bcf7afc0317dc8c1d8599d4ba94fe71152dadebae34a17279bbfc91811",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-opening": {
+      "code_fingerprint": "sha256:7a3b600cd8eb570571f29501b622be010fbce76fa1788de25d8ef4ab670387cb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-8B weights in bf16: 16.4 GB\ndecode at b = 1, L = 2,048, datasheet bound: 15.3 ms per token (65 tokens/s)\nmatrix units busy for 0.6% of that step\nlargest batch at L = 8,192 in 90% of 24 GB: b_max = 4\n"
+        }
+      ]
+    },
+    "workload-hardware-serving-model": {
+      "code_fingerprint": "sha256:01f01fd2371f0e2069ce5bbfde95676092e4a9063a64f3223c24a46c7d275b96",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-n-params": {
+      "code_fingerprint": "sha256:7f7e1cabbd0a685460c323d4a3a986296d7d52b88f761797e2f31294e1fb66af",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-bytes": {
+      "code_fingerprint": "sha256:b857a05a721a8cfc212f8a6025eeacbe1002d7c7d683af9b18349c7c3e308ab1",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-three-workloads-three-requirement-cards-1": {
+      "code_fingerprint": "sha256:e27206c8e65496b4bb9eb8f64134a3f8b5dca806ca3b8e86f83024ed302f89e9",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-prefill": {
+      "code_fingerprint": "sha256:0192e4c1b741ac19457b28235381d38a15ecf44ae477bfef404a1fa5692daffc",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-train-model": {
+      "code_fingerprint": "sha256:712f025800eedaa7e438dbc7d1058bae58b09762665a39f5eb10d0e199dcff42",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-train-step": {
+      "code_fingerprint": "sha256:c487cdf971f88c7ac33e67ebc2b9abc6e30b06283dac0563873ddb6889f8e896",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-cards": {
+      "code_fingerprint": "sha256:68ddf7986c8f695c19ba4eccc743a51806e23112458aa879104d61af407425fe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                              RTX 4090, datasheet A100 PCIe, datasheet\ntrain: GFLOP per token                       50.3                 50.3\ntrain: state, pure bf16 (GB)                 65.5                 65.5\ntrain: state, mixed (GB)                      131                  131\nmemory of the chip (GB)                      24.0                 40.0\nprefill: crossover n                       47,100               47,100\nprefill: 2,048 tokens (ms)                    180                 95.2\ndecode: k_KV (KiB per token)                  144                  144\ndecode: b = 1, L = 2,048 (ms)                15.3                 9.93\n"
+        }
+      ]
+    },
+    "workload-hardware-decode-step": {
+      "code_fingerprint": "sha256:4dc4e0d6f8c3d146c06d30d8bb9ff9e2ea2db9a382d1dad52861ca0842f8a789",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-b-star": {
+      "code_fingerprint": "sha256:1ca65d135c9bad0224b3465fb2d5d62fd76a3b0235071f6b11554b29b1414d8f",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-decode-limits": {
+      "code_fingerprint": "sha256:b5079dbb7416941540f1fe8a48eba7a396fedad19e1cbd0164b0fcd53c147189",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "from the datasheets (b* infinite: none)\n                          8B, RTX 4090 8B, A100 PCIe 0.6B, RTX 4090\nridge R (FLOP/byte)                164           201            164\nL_crit (tokens)                    626           512             63\nL_crit, embedding counted          678           554             63\nb* at L = 0                        164           201            164\nb* at L = 512                      898          none           none\nb_max at L = 512                    69           259            347\nb_max at L = 2,048                  17            64             86\nb_max at L = 8,192                   4            16             21\n"
+        }
+      ]
+    },
+    "workload-hardware-moe-coverage": {
+      "code_fingerprint": "sha256:e96b1ff61e5289fd08ef64043915ce10a765f628a726ee80e86b19681bb95338",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-moe": {
+      "code_fingerprint": "sha256:0952ee485f94bb536b63c8d0b96e7700404d1d09f47041dfc11ab9891850ff8f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "measured / uniform at b = 8: prose 0.80, code 0.65\nmeasured / uniform at b = 64: prose 0.69, code 0.60\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "workload-hardware/workload-hardware-moe-1.svg",
+          "bytes": 38927,
+          "sha256": "sha256:435ee4e8325fffde4493aa25425ba348472a5f17130e5c2aa739ff9e5d349af5"
+        }
+      ]
+    },
+    "workload-hardware-moe-bytes": {
+      "code_fingerprint": "sha256:af7a4014ca570ba9cbb520be35a8c2a9604987467aaf4e83729f4295d832ce75",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   GB, uniform GB, measured ms, uniform ms, measured\n1         6.08         6.08        6.24         6.24\n8         25.8         21.2        27.2         22.6\n64        59.5         42.0        71.8         54.5\n"
+        }
+      ]
+    },
+    "workload-hardware-hw-calibrate": {
+      "code_fingerprint": "sha256:84b0116cecbd6cf9f6291f6a3d88db8298f373eaf2f6f9d2d6b14f1dc5987e33",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-calibrate": {
+      "code_fingerprint": "sha256:db7db92b3ed66ab5b52e6d3b49030b78f9a2d490908dba795ed075e59e3f2e24",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P_eff, the best bf16 product: 172 TFLOP/s (104% of the datasheet's 165)\nbeta_eff, a DRAM-sized copy: 921 GB/s (91% of the datasheet's 1,008)\nalpha_k, one kernel in a CUDA graph: 0.8 us\nall-reduce: alpha 33 us, beta 2.4 GB/s\nlive check on RTX 4090 (calibration): 3 points, largest difference 1%\n"
+        }
+      ]
+    },
+    "workload-hardware-decode-bench": {
+      "code_fingerprint": "sha256:3f5bc73539089c37040da7cb6e8d8520f583c024eaf12954a7650230be66c1d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-prefill-bench": {
+      "code_fingerprint": "sha256:04bbb1959f416da8125a950636d99f4112ffe682f3a9af6b5f03e0213d73fe06",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-train-bench": {
+      "code_fingerprint": "sha256:5f57210c04db84dc2634355b966cb403695c43d59bf52437bc69d0a1bdc1c257",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-grid": {
+      "code_fingerprint": "sha256:883b2e2c9cabb0a50c041b8d990d2f605a05f4a6a68dd9cccc3d1a3bd38f6a90",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "points measured: Qwen3-8B 15 decode, 7 prefill, 6 training; Qwen3-0.6B 13\n  decode, 7 prefill, 3 training\ncut by capacity, (b, L): Qwen3-8B (32, 2,048) (64, 2,048) (8, 8,192) (16,\n  8,192) (32, 8,192) (64, 8,192); Qwen3-0.6B (128, 2,048)\neager decode at b = 1, L = 2,048 (no CUDA graph): Qwen3-8B 2x, Qwen3-0.6B 7x\n  the graph step\nlaunch floor of the eager steps (narrow twin): Qwen3-8B prefill 34-38 ms,\n  Qwen3-8B train 11-32 ms, Qwen3-0.6B prefill 27-28 ms, Qwen3-0.6B train 99-109\n  ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (workloads) on RTX 4090: 4 points, largest difference 2%\n"
+        }
+      ]
+    },
+    "workload-hardware-real-weights": {
+      "code_fingerprint": "sha256:480967418b933a13365773aa0851ff55fe24e73e633d67fc7f84a514278beade",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-8B, b = 1, L = 2,048: random 19.28 ms, real 19.29, random again 19.28\nreal minus random +0.004 ms (+0.0%), noise 0.012 ms, the same kernels (2,189)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (weights) on RTX 4090: Qwen3-8B 3 points, largest difference 1%\n"
+        }
+      ]
+    },
+    "workload-hardware-launch": {
+      "code_fingerprint": "sha256:7ba4b8a942e187c7946316ea7b88181050e868598516f3f941d72bc22007d864",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-ladder": {
+      "code_fingerprint": "sha256:c7c8253a171c729d51c19b17b85510d0fc3436dbdfc1e1b9f7d16923d18053c5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      train  prefill   decode\nM0  25 / 64  35 / 95  27 / 67\nM1  26 / 63  38 / 95  20 / 64\nM2  24 / 30  23 / 40  12 / 32\nM3   3 / 30   9 / 16   3 / 12\n(median / max relative error in %, held-out points)\nM3 fitted on 17 of 51 points: eta_compute 0.72, eta_kv 0.95, kappa 1.90\nheld-out points within 15%, M0 / M3: Qwen3-8B 0 / 18 of 18, Qwen3-0.6B 0 / 10\n  of 11 (and 5 set by the launch floor, 4 within)\nQwen3-8B training, 1-3 layers, a straight line to within 0.4 ms:\n  1 x 2,048 tokens: 22.9 ms per layer + 118 ms; 36 layers 0.94 s (M3 0.95 s)\n  2 x 2,048 tokens: 43.6 ms per layer + 221 ms; 36 layers 1.79 s (M3 1.77 s)\n"
+        }
+      ]
+    },
+    "workload-hardware-frontier-def": {
+      "code_fingerprint": "sha256:a1c90be40b591f5d6fced55ec74611829f7b0da2452a2a0cad6a96a42bd38543",
+      "kind": "text",
+      "outputs": []
+    },
+    "workload-hardware-frontier": {
+      "code_fingerprint": "sha256:7d56f0dd2798f79415ed31b626b244d75f87fbfbc7cddbed5b63da0432646f5c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "compute roof P / (2 N_act): 8,200 tokens/s per GPU"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n10 held-out of 15 measured decode points: step time -7% to +4% off the line\nL = 512: b = 1 to 2 adds 1.05 ms; then each sequence 0.122 ms (model: 0.087)\nL = 2,048: b = 1 to 2 adds 1.37 ms; then each sequence 0.389 ms (model: 0.346)\nL = 8,192: b = 1 to 2 adds 2.28 ms; then each sequence 1.489 ms (model: 1.386)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "workload-hardware/workload-hardware-frontier-1.svg",
+          "bytes": 36771,
+          "sha256": "sha256:5dc2de7e99be48af049909f543d758e315f238974ec1b7f907b4ae58948d2a77"
+        }
+      ]
+    },
+    "workload-hardware-gpu-seconds": {
+      "code_fingerprint": "sha256:83e28a8b1fe72f349bf0f8ce64312f0fdcaa1781ff84e2815906ce826d8d48a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "interactive, b = 1, L = 2,048: 20,100 GPU-seconds per million tokens\ncapacity limit, b = 17, L = 2,048: 1,500 GPU-seconds per million tokens\nshort context, b = 64, L = 512: 400 GPU-seconds per million tokens\n"
+        }
+      ]
+    },
+    "workload-hardware-other-chips": {
+      "code_fingerprint": "sha256:8aa03da3b65d97e720a1b518b3d2f4b1f48e79dd57cceddd1eca349633d97b4a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         chips predicted tok/s/GPU rank\nH100 SXM     8               8,689    4\nH200 SXM     8              13,010    3\nB200         8              22,547    2\nMI355X       8              22,547    2\nRTX 4090     8               1,708     \nGroq LPU   384              26,589     \nInferenceX snapshot not committed yet: predictions only\n(dense 70B, FP8, 50 tokens/s per user, context 2,048)\nGroq LPU: bandwidth bound only, from the SRAM bandwidth of 384 chips; its\ncompute (no FLOP/s figure in the table) and the hops between chips are not\nmodeled\n"
+        }
+      ]
+    },
+    "workload-hardware-a100-twin": {
+      "code_fingerprint": "sha256:8c6826bd47c8f109aeffbc5f97fab2664be2f80edbcdfac332040f29a3cbe7d6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "A100 PCIe 40 GB: campaign C-T2 not run yet\n"
+        }
+      ]
+    }
+  }
+}

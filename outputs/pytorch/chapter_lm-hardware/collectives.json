@@ -1,0 +1,173 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-hardware/collectives.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:c3b16b2780d56a6fbf9ae97d9c66f271b7a8d5d65cb0cef61838c9c29158078f",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "collectives-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "collectives-extras": {
+      "code_fingerprint": "sha256:991c633ca5323ca4c040357d7a54fba289d0d8fa33751430d469aa2765074e34",
+      "kind": "text",
+      "outputs": []
+    },
+    "collectives-opening": {
+      "code_fingerprint": "sha256:978a13791a67ceb38f9ae26db1f862bc7e552942d03fded3a20cc718968b7e9c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "128 KiB on 4 GPUs: NCCL's choice Ring/LL 99 us, forced Ring/Simple 82 us\nNCCL's model of Ring/Simple: 24 GB/s busbw; the measured line: 2.4 GB/s\n"
+        }
+      ]
+    },
+    "collectives-closed-forms-def": {
+      "code_fingerprint": "sha256:85c384f075501baae3a76e94b47bfa7e3184baa034a89df661be04a6f87eb8cb",
+      "kind": "text",
+      "outputs": []
+    },
+    "collectives-closed-forms": {
+      "code_fingerprint": "sha256:1e679c710bce2eb13328348f14922c8f2e21ac54cfc90c0907f94eaf0e1f91a9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "16 x 1: d = 4, S* = 44 MB (ring = tree = 3.60 ms there)\n2 x 8: d = 8, S* = 28 MB (ring = tree = 2.40 ms there)\n"
+        }
+      ]
+    },
+    "collectives-hier-forms-def": {
+      "code_fingerprint": "sha256:986a81a2d3c8caf89801ae5c82140abd8ce9c884ad57fe635ce3db2442393dce",
+      "kind": "text",
+      "outputs": []
+    },
+    "collectives-hier-forms": {
+      "code_fingerprint": "sha256:f729ace31e3f45da30457bdef42b5898305390118b9d288ffe6562d231a0ff24",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1 GB on 2 x 8: flat ring through one NIC per node 75 ms\nhierarchical: 11 ms on 8 NICs per node (6.8x), 46 ms on one (1.6x)\nalpha = 0, b_in = inf, on 2, 8, 64 nodes: 15.0x, 9.0x, 8.1x (g = 8)\nin-network: 40 ms (flat ring 75 ms), busbw 47 GB/s on 25 GB/s links\n"
+        }
+      ]
+    },
+    "collectives-trees-def": {
+      "code_fingerprint": "sha256:b51620be9e224615f1cf1629dd08e7e9af337e86a3b4a01dc88f82e5b5ba9d21",
+      "kind": "text",
+      "outputs": []
+    },
+    "collectives-simulator-def": {
+      "code_fingerprint": "sha256:71f05379e5cae52d3ff36197e50b335e7c24434f0c62e7394d352e5543f96b13",
+      "kind": "text",
+      "outputs": []
+    },
+    "collectives-simulator": {
+      "code_fingerprint": "sha256:9f9d31eda4afe0c538cafd35a4fc53a0f933d5efcc2968a62ce0be90e62d6ec4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " G algo 0.01 S_b (%) 1 S_b (%) 100 S_b (%)\n 4 ring          0.0       0.0         0.0\n 4 tree         -0.5     -24.9         0.0\n 8 ring          0.0       0.0         0.0\n 8 tree         -0.5      -8.2         0.0\n16 ring          0.0       0.0         0.0\n16 tree         -0.5     -12.3         0.3\n32 ring          0.0       0.0         0.0\n32 tree         -0.5      -4.7         0.3\n"
+        }
+      ]
+    },
+    "collectives-debug-header": {
+      "code_fingerprint": "sha256:8beccabb52d1f37f38763a66eb6ef5b84ac621ca0a7e64e4c38bd03bc6d98d6a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "NCCL 2.28.9: 4 ranks on 1 node; transport between ranks: SHM/direct/direct\n4 channels; ring order 0 1 2 3\ntree of channel 0: 3 -> 2 -> 1 -> 0 (a chain to the root)\ntuner model of an all-reduce (latency, busbw as nccl-tests reports it): Ring/LL\n  13 us, 12.0 GB/s, Ring/Simple 43 us, 24.0 GB/s, Tree/LL 13 us, 4.3 GB/s,\n  Tree/Simple 32 us, 16.5 GB/s; disabled: Ring/LL128, Tree/LL128\ntuner's choice: Ring/LL up to 128 KiB, Ring/Simple from 512 KiB\n"
+        }
+      ]
+    },
+    "collectives-forced-pairs": {
+      "code_fingerprint": "sha256:e7ec52c1c715b70a3fd7e7c7f23f172d5f57be5d9520b9598661250fda58b23b",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (three pairs) on RTX 4090: 9 points, largest difference 7%\n8 B: Ring/LL 35 us, Ring/Simple 37 us: within noise (+2.5 noise units)\n256 MiB: Ring/Simple 169 ms, Ring/LL 179 ms: within noise (+2.8 noise units)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "collectives/collectives-forced-pairs-1.svg",
+          "bytes": 59390,
+          "sha256": "sha256:83b20a1af7c5038dfb4d76f29b0f5ff1bd0865bb8d433db092e8f0599f03130e"
+        }
+      ]
+    },
+    "collectives-fit-pairs": {
+      "code_fingerprint": "sha256:7928f002a807402e3417ef013ecb57c3c37b52fd4071d04ae9aee5d9f594a25e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   algo       proto alpha (us) beta (GB/s)  beta 95%\ndefault     default         32        2.35 2.35-2.36\n   Ring          LL         30        2.25 2.25-2.26\n   Ring LL128 (off)         33        2.34 2.32-2.35\n   Ring      Simple         38        2.35 2.34-2.36\n   Tree          LL         31        2.12 2.10-2.14\n   Tree LL128 (off)         32        2.46 2.46-2.46\n   Tree      Simple         39        2.14 2.12-2.16\nRing/Simple overtakes Ring/LL at 83 KiB measured, 280 KiB predicted by the fits\n"
+        }
+      ]
+    },
+    "collectives-tuner-verdict": {
+      "code_fingerprint": "sha256:f27da31d68dfb32e01b0b7e56daac240c8ed4cbe254eba54f08f82ec4367a8ba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cost of forcing NCCL's own choice: median 1%, up to 29% at 2 KiB\nlargest gain over NCCL's choice, both forced: Ring/Simple 16% faster than\n  Ring/LL at 128 KiB (9.6 noise units)\nwithin 3 noise units at 24 of 26 sizes (unit: the largest of the MAD of 3 runs,\n  the cost of forcing and 2%); Ring/LL128, Tree/LL128 left out: off in NCCL's\n  tuner\nNCCL's table switches Ring/LL -> Ring/Simple at 470 KiB; forced, they cross at\n  83 KiB\n"
+        }
+      ]
+    },
+    "collectives-hier-code": {
+      "code_fingerprint": "sha256:14fbd94d4bfc6c006f053e1fb061cd08e572d23c40d2ac28a256e44e8fe4ca2a",
+      "kind": "text",
+      "outputs": []
+    },
+    "collectives-hier-run": {
+      "code_fingerprint": "sha256:052b85e2dd122f1c01b901a6d80c6abdd2df154503f985f1fc0eb0c9548687ea",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "             16 MiB       256 MiB       \n                 ms model      ms  model\nflat gloo      28.3  23.1   394.6  336.2\nflat NCCL      11.4  10.7   185.1  170.7\nhierarchical   16.5  14.1   254.5  214.7\nintra stage     6.3   7.0   119.8  111.0\ninter stage     8.9   7.1   137.0  103.7\nat 256 MiB: hierarchical 1.6x faster than flat gloo (1.6x by the model)\n2-rank stages: intra/inter bandwidth 2.3x measured, 1.9x from the fits\nC4 gate: NCCL's shared memory 2.36 GB/s busbw, gloo on 4 ranks 1.21 (95%\n  1.18-1.23): 2.0x the bandwidth, 1/67 the latency; gloo's interval is not\n  below half, so C4 takes its fallback (gloo is slower by latency only)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (64 MiB) on RTX 4090: 3 points, largest difference 14%\nlive, 4 GPUs: hier_allreduce = CPU sum (rtol 1e-5, max error 1e-07)\n"
+        }
+      ]
+    },
+    "collectives-cluster-twin": {
+      "code_fingerprint": "sha256:e3d0675ee871ec63789d21adfd1fe73f8a5adbd0a7a24a00e6d384e3c8bea9d0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "two 8 x A100 nodes with RDMA: campaign C-T4 not run yet\n"
+        }
+      ]
+    }
+  }
+}

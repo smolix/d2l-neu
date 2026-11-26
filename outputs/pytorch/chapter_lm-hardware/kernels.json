@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9347d1fc3b308ac09297d9da702a30e96eaf70667e3739e8a4f03b457652794c",
+    "d2l_lib_fingerprint": "sha256:6e49bbe6a80938776904675f7ce85497c13bf8c710457560453b3591a33e7b8d",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (attention) on RTX 4090: 2 points, largest difference 3%\n"
+          "text": "live check (attention) on RTX 4090: 2 points, largest difference 0%\n"
         }
       ]
     },
@@ -93,14 +93,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (matmul shapes) on RTX 4090: 4 points, largest difference 5%\nslowest point: head at M = 4,096, 109 TFLOP/s (median of the sweep 166)\ncuBLAS kernels of the head product on this GPU:\n  M = 4,096: ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_tn\n  M = 2,048: ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_32x1_tn\ndatasheet line: 2.52 GHz boost clock; SM clock in the sweep 2.49-2.79 GHz\nA100 PCIe 40 GB: campaign C-T2 not run yet\n"
+          "text": "live check (matmul shapes) on RTX 4090: 4 points, largest difference 7%\nslowest point: head at M = 4,096, 109 TFLOP/s (median of the sweep 166)\ncuBLAS kernels of the head product on this GPU:\n  M = 4,096: ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_tn\n  M = 2,048: ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_32x1_tn\ndatasheet line: 2.52 GHz boost clock; SM clock in the sweep 2.49-2.79 GHz\nA100 PCIe 40 GB: campaign C-T2 not run yet\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kernels/kernels-shape-sweep-1.svg",
           "bytes": 41665,
-          "sha256": "sha256:97ea65f27617747ce05126a952fc1ed1f698017d8f6fc2e560b036253a89f214"
+          "sha256": "sha256:c3b28f1efe15e0896a60e7218d529f3e25ab284892148036f48343de7c08cc10"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "kernels/kernels-sawtooth-1.svg",
           "bytes": 34721,
-          "sha256": "sha256:bf014c2802fc20f597d841e0fe37b7df4dd36b9aca8250968aae67935cfd4a23"
+          "sha256": "sha256:06e6a39846d0bece2ecb3b928bf4bf8d623ab8f39a153c03fb80c961391f2016"
         }
       ]
     },
@@ -160,7 +160,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "reference: max |error| / max |output| = 2.1e-03 (band 0.02)\nQwen3-8B: max |error| / max |output| = 2.3e-03 (band 0.02)\n"
+          "text": "reference: max |error| / max |output| = 2.1e-03 (band 0.02)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-8B: max |error| / max |output| = 2.3e-03 (band 0.02)\n"
         }
       ]
     },
@@ -176,7 +181,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (attention kernels) on RTX 4090: 4 points, largest difference 4%\n"
+          "text": "live check (attention kernels) on RTX 4090: 4 points, largest difference 0%\n"
         }
       ]
     },

@@ -1,0 +1,242 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-hardware/memory-tiers.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:81c4f2f7e23bb12d7e3dab6e45b5399669908ad88f8dfa0ccaa2f9f764331bfe",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "memory-tiers-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-tiers-extras": {
+      "code_fingerprint": "sha256:e14870bcf7afc0317dc8c1d8599d4ba94fe71152dadebae34a17279bbfc91811",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-tiers-opening": {
+      "code_fingerprint": "sha256:d410813a9342f3fdccf80f66634e3adc87d34012939f016c7d4fe0eeb3857883",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3-8B training state, mixed precision: 131 GB\nGPU memory: 24 GB per card, 96 GB on this machine's 4 cards\nhost memory: 252 GiB, 2.1 times the state\n"
+        }
+      ]
+    },
+    "memory-tiers-tier-table": {
+      "code_fingerprint": "sha256:3727d24875ee7b860f9bd4c5df34cee27690d961111f9c91a0b64989b8ab38b0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                              GB/s latency per node cost\nregisters and shared memory      -  1.0 ns   170 MB    9\nGPU L2 cache                     -   75 ns   320 MB    9\nHBM                          1,560  300 ns   320 GB    8\nGDDR                         1,010       -  96.0 GB    7\nLPDDR5X (coherent)           1,000       -        -    6\nhost DRAM                      205   90 ns   256 GB    5\nCXL-attached memory           63.0       -        -    5\nhost link (PCIe)              31.5       -        -    5\nlocal NVMe                    4.12   50 us  2.00 TB    4\nparallel file system          14.5       -  44.0 PB    3\nobject store                     -   60 ms        -    2\nhard disk                    0.285  4.2 ms  24.0 TB    1\n"
+        }
+      ]
+    },
+    "memory-tiers-h2d-bench": {
+      "code_fingerprint": "sha256:2661e2ebaa713010048c292bc8604d498c876e8520867d0b47a5832ab3d3c574",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-tiers-fit-alpha-beta": {
+      "code_fingerprint": "sha256:ab6bbba901952fb220ca52530745b8288b5ac9320225d71d218108e9e4de972b",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-tiers-host-link": {
+      "code_fingerprint": "sha256:ad0c7b0a8d6183d34b18ebff42665870bd4de7522fb2a1cce0b1f4dc15a0a140",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (host link) on RTX 4090: 2 points, largest difference 11%\npinned h2d: alpha 5 us, beta 23 GB/s (21-24 from 256 MiB), 72% of 31.5\npinned d2h: alpha 5 us, beta 20 GB/s (20-21 from 256 MiB), 65% of 31.5\npinned, 2 MiB pages: h2d 25 GB/s (79%), d2h 26 GB/s (84%)\npageable h2d: alpha 9 us, beta 15 GB/s (15-15 from 256 MiB), 48% of 31.5\nlink: Gen 4 x16 during the sweep, Gen 1 x16 at rest\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "memory-tiers/memory-tiers-host-link-1.svg",
+          "bytes": 46081,
+          "sha256": "sha256:87b0908aad32c57acaefa53f730bf241f0835165f17d001f14fe0ec1b9ac2b0f"
+        }
+      ]
+    },
+    "memory-tiers-four-cards": {
+      "code_fingerprint": "sha256:e67159c897916fc0c0669c49c30fcb750ea0e9b9dfe25d6cf6512377d416a060",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "one card: h2d 23, d2h 20 GB/s\ntwo cards, one host bridge: h2d 36, d2h 29 GB/s (77% of 2 x one card)\ntwo cards, two host bridges: h2d 47, d2h 42 GB/s (100% of 2 x one card)\nall 4 cards: h2d 71, d2h 54 GB/s (76% of 4 x one card)\nnvbandwidth, each card alone (copy engines, 512 MiB): h2d 25, d2h 20 GB/s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (one card) on RTX 4090: 1 point, largest difference 3%\nhost DRAM, STREAM counting: read 111, copy 74, triad 89 GB/s (16 threads)\ndatasheet peak 204.8 GB/s (8 channels x 25.6): the triad reaches 43%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (host DRAM) on RTX 4090: 1 point, largest difference 11%; differs:\n  triad 78 vs 89 GB/s\n"
+        }
+      ]
+    },
+    "memory-tiers-nvme": {
+      "code_fingerprint": "sha256:fc06620a14cc318c82b00d3c9bc6a99213fc4f6242d66047fad6c0a0b2e4dc6c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sequential read, 1 MiB at QD 64 x 4: 7.3 GB/s, 89% of 2 x 4.12 (RAID 1)\nRAID 1: the less busy drive read 49% of the bytes\nknee: beta / IOPS = 7.3 GB/s / 331K reads/s = 22 KB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (fio) on RTX 4090: 2 points, largest difference 13%\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "memory-tiers/memory-tiers-nvme-1.svg",
+          "bytes": 60030,
+          "sha256": "sha256:ff0e376330d63557677b8d7f97720ce4fca55a3f45b72aba658ae3442131fb88"
+        }
+      ]
+    },
+    "memory-tiers-object-store": {
+      "code_fingerprint": "sha256:d81e243c6712c281c638f9d5d43c8548fc98d466cb958d9b290ba774ed7c410c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first byte: 75 ms measured, alpha 100 ms fitted\nbandwidth: 89 MB/s one stream, 91 MB/s over 8 streams\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (object store) on RTX 4090: 2 points, largest difference 16%\n"
+        }
+      ]
+    },
+    "memory-tiers-tiers-measured": {
+      "code_fingerprint": "sha256:8dc09ce330207d27078ad2d3f65d0873445c7102cb0f75feae5a338253f6ae2c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                        datasheet measured fraction\nhost link (PCIe)             31.5     22.8     0.72\nGDDR                      1,008.0    952.4     0.94\nlocal NVMe, 2 in RAID 1       8.2      7.3     0.89\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "memory-tiers/memory-tiers-tiers-measured-1.svg",
+          "bytes": 60312,
+          "sha256": "sha256:86c76cef713fd4b6c74a14c1096aa303dedb41023bf03e7d2e776ab54f04d7e3"
+        }
+      ]
+    },
+    "memory-tiers-shard-rule": {
+      "code_fingerprint": "sha256:405881b1f948a51411c3e523c8f6aaa4926937e1b6615df94f714ad10637e5f3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                           alpha beta (GB/s)    s_90\nhost link, pinned         5.3 us          23  1.1 MB\nNVMe, one reader           43 us         2.6  990 KB\nobject store, one stream  100 ms       0.089   80 MB\n"
+        }
+      ]
+    },
+    "memory-tiers-offload-breakeven": {
+      "code_fingerprint": "sha256:e003525c0be01fcab9d04e306f7ede4a31d6fd6b82918208ed5b7d7937378319",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-tiers-offload-threshold": {
+      "code_fingerprint": "sha256:9c0520cf079f30b4f5881df21a6922cc38dd4c9ece28050f3629b9f7d2aedaf9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (CPU AdamW) on RTX 4090: 1 point, largest difference 34%; differs:\n  AdamW 0.45 vs 0.34 ns per parameter\nCPU update: 0.34 ns per parameter; q / B_triad = 40 B / 89 GB/s = 0.45 ns\nat P_eff = 172 TFLOP/s: T_link = P_eff / (3 beta_l) = 2,500 tokens per GPU\nT_cpu = P_eff s_adam / 6 = 9,700 tokens per GPU: the CPU binds\n"
+        }
+      ]
+    },
+    "memory-tiers-offload-run": {
+      "code_fingerprint": "sha256:5a6acab9b80f4ac9556e3d976963cbb150a9a3a721caccd8b4214eda98815889",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (offloaded run) on RTX 4090: 2 points, largest difference 22%;\n  differs: 1,024 tokens 450 vs 370 ms per step\nthe run trains at 88 TFLOP/s; the link alone takes 0.09 s per step\nCPU update: 0.33 s alone, 0.42 s during the offloaded steps\ncrossover: predicted 7,400, measured 6,200 tokens (0.8x)\nabove 2x the crossover the offloaded step exceeds compute only by 0.02 s\nGPU busy at 8,192 tokens: 0.45 s alone, 0.46 s (8 CPU threads), 0.50 s (32)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "memory-tiers/memory-tiers-offload-run-1.svg",
+          "bytes": 47089,
+          "sha256": "sha256:b51be3f70ce7b5981dee00e5d564ed90d934c373d0b3c662cfbe8f2eac77fa78"
+        }
+      ]
+    },
+    "memory-tiers-kv-def": {
+      "code_fingerprint": "sha256:b9c87944c14ad24e0eb5af02622459566cb007ee93229ccc4e9409cb18b5bba8",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-tiers-kv-recompute": {
+      "code_fingerprint": "sha256:8f1c4e1630438eba3915a34558daf8960c2d321e5830234236f236ca05d4b840",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                         load 8K (ms) recompute 8K (ms)       load wins from\nhost link, pinned                52.9               775                  any\nNVMe, one reader                  467               775                  any\nobject store, one stream       13,700               775  never within 40,960\n"
+        }
+      ]
+    },
+    "memory-tiers-data-rate": {
+      "code_fingerprint": "sha256:7b79c1ef8c7b6f261463584fa6e1b056b7e05dcc89872c8131ad80569cf807c9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "O_DIRECT read of the shard (134 MB, 8 MiB requests): 2.4 GB/s\nPackedStream on one core: 52M tokens/s (windows of 2,048 tokens, 2 bytes each)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "live check (shards) on RTX 4090: 2 points, largest difference 19%\nneeded at 1M tokens/s: 2 MB/s, 1,200x below the drive\n"
+        }
+      ]
+    },
+    "memory-tiers-node-twin": {
+      "code_fingerprint": "sha256:8bb2137cc5e5518f040205391889a2a403f41b62ea7ea671fc724e22c8f7f472",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "one 8 x A100 40 GB node: campaign C-T3 not run yet\n"
+        }
+      ]
+    }
+  }
+}

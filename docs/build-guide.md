@@ -605,7 +605,7 @@ Buckets: `staging-d2l` serves d2l.smola.org and is the default; `d2l-en`
 serves d2l.ai and en.d2l.ai. The previous edition stays in `d2l-en-v2` at
 en-v2.d2l.ai, linked as "English (old)" at the bottom of the navbar's
 language menu (`_quarto.yml`); other languages' old editions go under the
-same divider when their new sites launch. The language buckets (`d2l-zh`,
+same divider when their new sites launch. The language buckets (`d2l-<code>`: `d2l-zh`, `d2l-ru`,
 `d2l-ja`, ...) share the `d2l-buckets.env` keys.
 
 Rules: the `notebooks` branch is an orphan serving branch; never open a PR

@@ -200,7 +200,7 @@ def gemm_shapes(cfg, tokens):  #@save
     decoder (an Arch or a Transformers config): per product, the shape
     M x N x K of one layer's matmul and the GFLOP over all layers (the head
     once). The attention scores are not weight products."""
-    L, d, H, H_kv, d_h, f, V, _ = d2l._arch_fields(cfg)  # _: tied or not
+    L, d, H, H_kv, d_h, f, V, _ = d2l.arch_dims(cfg)  # _: tied or not
     products = [('QKV', (H + 2 * H_kv) * d_h, d, L), ('out', d, H * d_h, L),
                 ('gate-up', 2 * f, d, L), ('down', d, f, L), ('head', V, d, 1)]
     return pd.DataFrame([

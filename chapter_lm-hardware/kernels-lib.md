@@ -14,16 +14,18 @@ kernels are defined, and launching one raises
 section's measurements are entries of 22.1's `box-microbench` result.
 
 It also holds what :numref:`sec_lm_kernels` explains in a sentence but does
-not show (docs/code-guide.md 7.1): the SDPA flash wrapper (`sdpa_causal`),
-the attention inputs, shapes and FP32 reference (`attention_inputs`,
-`attention_shapes`, `attention_error`, `check_close`), the timed sweeps whose
-committed result the page reads (`time_attention`, `time_fns`,
-`hw_shape_sweep`, `hw_wave_sweep`, `flash_sweep`; each one `_hw_result` call
-with entry `three-ways`, `rmsnorm`, `shape-sweep`, `wave` or `flash-sweep`),
-the compiled-kernel readers (`triton_spills`, `inductor_kernels`), the
-displays and live checks, and `_regen_kernels`, the section's part of the
-`box-microbench` regeneration. Blocks are tagged `%%tab pytorch`; they run
-only when called, so they may use names defined later in `d2l.torch`.
+not show (docs/code-guide.md 7.1): the SDPA flash wrapper (`sdpa_causal`), the
+configuration reader the page calls (`arch_dims`, chapter 21's `_arch_fields`
+under a public name), the attention inputs, shapes and FP32 reference
+(`attention_inputs`, `attention_shapes`, `attention_error`, `check_close`),
+the timed sweeps whose committed result the page reads (`time_attention`,
+`time_fns`, `hw_shape_sweep`, `hw_wave_sweep`, `flash_sweep`; each one
+`_hw_result` call with entry `three-ways`, `rmsnorm`, `shape-sweep`, `wave` or
+`flash-sweep`), the compiled-kernel readers (`triton_spills`,
+`inductor_kernels`), the displays and live checks, and `_regen_kernels`, the
+section's part of the `box-microbench` regeneration. Blocks are tagged
+`%%tab pytorch`; they run only when called, so they may use names defined
+later in `d2l.torch`.
 -->
 
 <!-- Not rendered; it sets the "Defined in" suffix of the docstrings. -->
@@ -88,9 +90,18 @@ flash kernel.
 ```{.python .input #kernels-lib-inputs}
 %%tab pytorch
 #@save
+def arch_dims(cfg):
+    """(L, d, H, H_kv, d_h, f, V, tied) of a decoder: layers, width,
+    query and key-value heads, head width, MLP width, vocabulary and
+    whether the head shares the embedding. `cfg` is a Transformers config
+    (object or dict) or chapter 21's Arch; the public name of chapter 21's
+    reader, which the pages call."""
+    return d2l._arch_fields(cfg)
+
+#@save
 def _attn_dims(cfg):
     """(H, H_kv, d_h) of an Arch or a Transformers config."""
-    L, d, H, H_kv, d_h, f, V, tie = d2l._arch_fields(cfg)
+    L, d, H, H_kv, d_h, f, V, tie = arch_dims(cfg)
     return H, H_kv, d_h
 
 #@save

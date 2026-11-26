@@ -61,7 +61,7 @@ def chip_specs():  #@save
     (GB, TB/s), on-chip SRAM (MB), dense peaks (TFLOP/s) in 16, 8 and 4
     bits, power (W), scale-up and scale-out bandwidth (GB/s), each row with
     its source and retrieval date. NaN where the vendor states nothing."""
-    df = d2l._hw_static('chip-specs').set_index('chip')
+    df = d2l._hw_static('hw-chip-specs').set_index('chip')
     d2l._check_specs(df)  # sources, dates, and the book's four rows
     return df
 ```

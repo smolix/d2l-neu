@@ -355,8 +355,8 @@ T_cpu = P_eff * s_adam / 6
 print(f'CPU update: {s_adam * 1e9:.2f} ns per parameter; q / B_triad = '
       f'{q} B / {B_triad:.0f} GB/s = {q / B_triad:.2f} ns')
 print(f'at P_eff = {P_eff / 1e12:.0f} TFLOP/s: T_link = P_eff / (3 beta_l) '
-      f'= {d2l._hw_sig(T_link)} tokens per GPU')
-print(f'T_cpu = P_eff s_adam / 6 = {d2l._hw_sig(T_cpu)} tokens per GPU: '
+      f'= {round(T_link, -2):,.0f} tokens per GPU')
+print(f'T_cpu = P_eff s_adam / 6 = {round(T_cpu, -2):,.0f} tokens per GPU: '
       f'the {"CPU" if T_cpu > T_link else "link"} binds')
 ```
 
@@ -471,7 +471,7 @@ read = d2l.hw_shard_read(shards, tokens=2**26)
 tokens_per_s = 1e6  # a node training at a million tokens per second
 need = tokens_per_s * shards.dtype.itemsize  # bytes/s of text
 print(f'needed at 1M tokens/s: {need / 1e6:.0f} MB/s, '
-      f'{d2l._hw_sig(read["drive_bps"] / need)}x below the drive')
+      f'{round(read["drive_bps"] / need, -2):,.0f}x below the drive')
 assert read['drive_bps'] > 1000 * need  # three orders of magnitude
 ```
 

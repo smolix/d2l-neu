@@ -1638,7 +1638,9 @@ never regenerates through a notebook. Its committed box measurements have
 short names in `d2l.HW_ARTIFACTS` (`box-microbench`, `box-workloads`,
 `box-moe`, `box-storage`, `box-p2p`, `box-net`, `box-coll`, `box-power`;
 keyed registries, like `HW_CAMPAIGNS` and `HW_STATIC`, so a page literal
-reaches one entry and its `DATA_HUB` key). `python tools/hw_regen.py <name>`
+reaches one entry and its `DATA_HUB` key; the static tables are named
+`hw-chip-specs`, `hw-prices`, ..., so a bare word such as `'prices'` on
+another chapter's page matches no shard). `python tools/hw_regen.py <name>`
 sets `D2L_RERUN=<name>`, runs the driver of `d2l.HW_JOBS[<name>]` in three
 processes one after the other, combines them (median of the per-process
 medians), refuses to pack if a foreign process was on a measured card, and

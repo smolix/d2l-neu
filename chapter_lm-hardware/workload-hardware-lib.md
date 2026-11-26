@@ -34,7 +34,7 @@ recorded router choices.
 #@save
 d2l.HW_ARTIFACTS['box-workloads'] = ('lm-hw-buildbox-workloads-v1', 'tar')
 d2l.HW_ARTIFACTS['box-moe'] = ('lm-hw-buildbox-moe-v1', 'tar')
-d2l.HW_STATIC['inferencex-snapshot'] = ('lm-hw-inferencex-snapshot-v1', 'tar')
+d2l.HW_STATIC['hw-inferencex-snapshot'] = ('lm-hw-inferencex-snapshot-v1', 'tar')
 d2l.HW_CAMPAIGNS['a100-workloads'] = (
     'lm-hw-a100-workloads-v1', 'tar', 'C-T2', 'A100 PCIe 40 GB')
 d2l.HW_CAMPAIGNS['t2pair-moe'] = (
@@ -1217,7 +1217,7 @@ def plot_coverage(cov, formula):
 
 ## Other Chips and the InferenceX Snapshot
 
-The snapshot (static table `inferencex-snapshot`) is a tar of `snapshot.csv`
+The snapshot (static table `hw-inferencex-snapshot`) is a tar of `snapshot.csv`
 (columns `model, hw, framework, precision, isl, osl, conc, tp, tps_per_gpu,
 tps_per_user, commit, retrieved`), the upstream `LICENSE` and `NOTICE.md`.
 Its rows are one dense 70B-class model (`HW_SHAPES['dense-70b']`) at one
@@ -1265,10 +1265,10 @@ def inferencex_snapshot():
     (dense 70B shape, FP8 weights and KV, 50 tokens/s per user, 2,048-token
     context) while it is not committed."""
     shape = d2l.HW_SHAPES['dense-70b']
-    if not hw_registered('inferencex-snapshot'):
+    if not hw_registered('hw-inferencex-snapshot'):
         return Snapshot(pd.DataFrame(columns=['chip', 'tp', 'tps_per_gpu']),
                         shape, 1, 1, 50.0, 2048, True)
-    return _read_snapshot(os.path.join(_hw_static('inferencex-snapshot'),
+    return _read_snapshot(os.path.join(_hw_static('hw-inferencex-snapshot'),
                                        'snapshot.csv'), shape)
 
 #@save

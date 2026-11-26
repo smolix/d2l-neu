@@ -43,7 +43,7 @@ d2l.DATA_HUB['lm-hw-buildbox-net-v1'] = (
 ```{.python .input #networks-lib-entries}
 %%tab pytorch
 #@save
-d2l.HW_STATIC['systems'] = ('lm-hw-systems-v1', 'json')
+d2l.HW_STATIC['hw-systems'] = ('lm-hw-systems-v1', 'json')
 d2l.HW_ARTIFACTS['box-net'] = ('lm-hw-buildbox-net-v1', 'tar')
 d2l.HW_CAMPAIGNS['cluster-nccl'] = (
     'lm-hw-cluster-nccl-v1', 'tar', 'C-T4',
@@ -85,7 +85,7 @@ def systems_table():
     and per domain, scale-out GB/s per chip and direction, dense bf16
     TFLOP/s, power, kind (quoted, measured, spec), source and date;
     has_scaleout is False only for the measured box (one machine)."""
-    df = pd.DataFrame(d2l._hw_static('systems')['rows']).set_index('system')
+    df = pd.DataFrame(d2l._hw_static('hw-systems')['rows']).set_index('system')
     assert df.source_url.notna().all() and df.retrieved.notna().all()
     for name in df.index[df.measured.notna()]:
         df.loc[name, 'scaleup_gbs_per_chip'] = (

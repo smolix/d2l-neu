@@ -62,6 +62,7 @@ import json
 import math
 import os
 import re
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -329,8 +330,8 @@ class TestRegistries(unittest.TestCase):
             self.assertRegex(key, r'^lm-[a-z0-9-]+-v\d+$')
             self.assertRegex(campaign, r'^(C-|chapter )')
         self.assertEqual(set(d2l.HW_STATIC), {
-            'chip-specs', 'links', 'tiers', 'systems', 'prices',
-            'inferencex-snapshot'})
+            'hw-chip-specs', 'hw-links', 'hw-tiers', 'hw-systems',
+            'hw-prices', 'hw-inferencex-snapshot'})
         self.assertEqual(d2l.HW_PENDING, frozenset())
         for (name, config), log in d2l.HW_CONFIG_LOGS.items():
             self.assertIn(name, d2l.HW_JOBS)
@@ -372,6 +373,60 @@ class TestRegistries(unittest.TestCase):
                                                      'hw_registered')):
                                 self.assertNotIn(c.value, names,
                                                  f'{path}: {node.name}')
+
+    def test_static_names(self):
+        """Every static table is named hw-...; the DATA_HUB keys are
+        unchanged by the rename (fix pass F1, library-review nit 5)."""
+        self.assertEqual({n: k for n, (k, _) in d2l.HW_STATIC.items()}, {
+            'hw-chip-specs': 'lm-hw-chip-specs-v1',
+            'hw-links': 'lm-hw-links-v2', 'hw-tiers': 'lm-hw-tiers-v1',
+            'hw-systems': 'lm-hw-systems-v1',
+            'hw-prices': 'lm-hw-prices-v1',
+            'hw-inferencex-snapshot': 'lm-hw-inferencex-snapshot-v1'})
+        for name in d2l.HW_STATIC:
+            self.assertTrue(name.startswith('hw-'), name)
+
+    def test_freshness_scan(self):
+        """The freshness scan (make audit-outputs) attributes a call of
+        d2l.hw_prices to the price table's key and a bare page literal
+        'prices', which another chapter may use, to no shard at all."""
+        shards = os.path.join(REPO, 'd2l', '_blocks', 'pytorch')
+        if not os.path.isfile(os.path.join(shards, 'hw_prices.py')):
+            self.skipTest('no library shards (run make lib)')
+        sys.path.insert(0, os.path.join(REPO, 'tools'))
+        import scan_d2l_usage as scan
+        graph = scan.shard_graph(shards)
+
+        def deps(code):
+            with tempfile.TemporaryDirectory() as tmp:
+                page = os.path.join(tmp, 'page.md')
+                with open(page, 'w', encoding='utf-8') as f:
+                    f.write('```{.python .input #p-1}\n%%tab pytorch\n'
+                            + code + '\n```\n')
+                refs = scan.d2l_refs_per_framework(scan.Path(page))
+            return scan.closure(refs['pytorch'], graph)
+        prices = deps('d2l.hw_prices()')
+        self.assertIn('HW_STATIC.hw-prices', prices)
+        self.assertIn('DATA_HUB.lm-hw-prices-v1', prices)
+        for word in ('prices', 'tiers', 'links', 'systems', 'chip-specs',
+                     'inferencex-snapshot'):
+            self.assertEqual(deps(f"x = {{'{word}': 1}}['{word}']"), set(),
+                             word)
+
+    def test_pages_call_no_private_helper(self):
+        """No cell of a chapter page outside a #@save definition calls a
+        private d2l._ helper (fix pass F1, library-review nit 6); the lib
+        files and #@save definitions may."""
+        for path in sorted(glob.glob(os.path.join(CHAPTER, '*.md'))):
+            if path.endswith('-lib.md'):
+                continue
+            text = open(path, encoding='utf-8').read()
+            for cid, code in re.findall(
+                    r'```\{\.python[^\n]*#([\w-]+)[^\n]*\n(.*?)```',
+                    text, re.S):
+                if '#@save' not in code:
+                    self.assertNotRegex(code, r'\bd2l\._',
+                                        f'{os.path.basename(path)}: {cid}')
 
 
 class TestStorage(unittest.TestCase):
@@ -556,7 +611,7 @@ class TestChipSpecs(unittest.TestCase):
 
     def test_registered_sha1(self):
         """The registered table is the committed CSV."""
-        key, kind = d2l.HW_STATIC['chip-specs']
+        key, kind = d2l.HW_STATIC['hw-chip-specs']
         self.assertEqual(kind, 'csv')
         self.assertIn(key, d2l.DATA_HUB)
         self.assertEqual(d2l.DATA_HUB[key][1], d2l.hashlib.sha1(
@@ -903,6 +958,16 @@ class TestTiles(unittest.TestCase):
 
 
 class TestGemmShapes(unittest.TestCase):
+    def test_arch_dims(self):
+        """The public reader equals chapter 21's _arch_fields for both
+        Transformers configurations and the reference Arch."""
+        arch = d2l.r2_config('r2').arch
+        self.assertEqual(d2l.arch_dims(arch), d2l._arch_fields(arch))
+        self.assertEqual(d2l.arch_dims(arch)[-1], arch.tie)
+        for model in ('Qwen/Qwen3-0.6B', 'Qwen/Qwen3-8B'):
+            cfg = cached_config(self, model)
+            self.assertEqual(d2l.arch_dims(cfg), d2l._arch_fields(cfg))
+
     def test_flop_counter(self):
         """Exact against FlopCounterMode's matmul FLOPs of a 2-layer Qwen3
         forward pass on the CPU (the attention scores counted apart)."""
@@ -1611,7 +1676,7 @@ class TestInferenceX(unittest.TestCase):
 
     def test_pending(self):
         snap = d2l.inferencex_snapshot()
-        if d2l.hw_registered('inferencex-snapshot'):
+        if d2l.hw_registered('hw-inferencex-snapshot'):
             self.skipTest('snapshot registered')
         self.assertFalse(snap)
         lines, t = lines_of(self, d2l.rank_against, snap, committed_specs())
@@ -3713,7 +3778,7 @@ class TestEnergyCost(unittest.TestCase):
         prices = self.prices.copy()
         prices.loc[0, 'age'] = 120
         static = d2l._hw_static
-        table = lambda n: (prices.drop(columns='age') if n == 'prices'
+        table = lambda n: (prices.drop(columns='age') if n == 'hw-prices'
                            else static(n))
         with mock.patch.object(d2l, '_hw_static', table), mock.patch.object(
                     d2l, '_price_age', lambda df: list(prices.age)):
@@ -3806,7 +3871,7 @@ class TestEnergyCost(unittest.TestCase):
 
     def test_registry(self):
         self.assertIn('box-power', d2l.HW_JOBS)
-        self.assertEqual(d2l.HW_STATIC['prices'][0], 'lm-hw-prices-v1')
+        self.assertEqual(d2l.HW_STATIC['hw-prices'][0], 'lm-hw-prices-v1')
         self.assertIn('lm-hw-prices-v1', d2l.DATA_HUB)
         for name in ('box-clocksweep', 'mfu-table', 'par-goodput'):
             self.assertIn(name, d2l.HW_CAMPAIGNS)

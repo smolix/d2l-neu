@@ -53,7 +53,7 @@ d2l.DATA_HUB['lm-hw-buildbox-power-v1'] = (
 ```{.python .input #energy-cost-lib-entries}
 %%tab pytorch
 #@save
-d2l.HW_STATIC['prices'] = ('lm-hw-prices-v1', 'csv')
+d2l.HW_STATIC['hw-prices'] = ('lm-hw-prices-v1', 'csv')
 d2l.HW_ARTIFACTS['box-power'] = ('lm-hw-buildbox-power-v1', 'tar')
 d2l.HW_CAMPAIGNS['box-clocksweep'] = (
     'lm-hw-buildbox-clocksweep-v1', 'tar', 'C-box-root',
@@ -854,7 +854,7 @@ def _price_rows(prices):
 def hw_prices():
     """The dated price table (one row per quote or assumption, with its age
     in days); prints the rows the cost calculators use."""
-    prices = _hw_static('prices')
+    prices = _hw_static('hw-prices')
     _check_prices(prices)
     prices['age'] = _price_age(prices)
     table = _price_rows(prices)

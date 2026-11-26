@@ -38,7 +38,7 @@ d2l.DATA_HUB['lm-hw-buildbox-storage-v1'] = (
 ```{.python .input #memory-tiers-lib-entries}
 %%tab pytorch
 #@save
-d2l.HW_STATIC['tiers'] = ('lm-hw-tiers-v1', 'csv')
+d2l.HW_STATIC['hw-tiers'] = ('lm-hw-tiers-v1', 'csv')
 d2l.HW_ARTIFACTS['box-storage'] = ('lm-hw-buildbox-storage-v1', 'tar')
 d2l.HW_CAMPAIGNS['node-storage'] = (
     'lm-hw-node-storage-v1', 'tar', 'C-T3', 'one 8 x A100 40 GB node')
@@ -273,7 +273,7 @@ def tier_table(log=None):
     cheapest per byte), example device, source and date. Given a campaign
     log, its measured columns are joined and shown too; while the log is
     pending, one status line."""
-    tiers = d2l._hw_static('tiers')
+    tiers = d2l._hw_static('hw-tiers')
     if isinstance(log, d2l.CampaignPending):
         print(d2l.hw_status_line(log))
         return tiers
@@ -702,7 +702,7 @@ def _stream_best(thread_counts, nbytes):
 #@save
 def _tier_spec(tier, column='bw_gbs'):
     """A column of the tier table's row (the registered table)."""
-    t = d2l._hw_static('tiers').set_index('tier')
+    t = d2l._hw_static('hw-tiers').set_index('tier')
     return float(t.loc[tier, column])
 
 #@save

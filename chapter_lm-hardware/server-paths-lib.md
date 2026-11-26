@@ -42,7 +42,7 @@ d2l.DATA_HUB['lm-hw-buildbox-p2p-v1'] = (
 ```{.python .input #server-paths-lib-entries}
 %%tab pytorch
 #@save
-d2l.HW_STATIC['links'] = ('lm-hw-links-v2', 'csv')
+d2l.HW_STATIC['hw-links'] = ('lm-hw-links-v2', 'csv')
 d2l.HW_ARTIFACTS['box-p2p'] = ('lm-hw-buildbox-p2p-v1', 'tar')
 d2l.HW_CAMPAIGNS['node-p2p'] = (
     'lm-hw-node-p2p-v1', 'tar', 'C-T3', 'one 8 x A100 40 GB node')
@@ -341,7 +341,7 @@ def links_table(show=True):
     direction and both directions together, the PCIe rows computed (lanes x
     GT/s x 128/130 / 8 for Gen 3 to 5, raw for Gen 6), indexed by name;
     printed (name and the two rates) when show."""
-    df = d2l._hw_static('links').copy()
+    df = d2l._hw_static('hw-links').copy()
     pcie = df['link'] == 'PCIe'
     coded = np.where(df['encoding'] == '128b/130b', 128 / 130, 1.0)
     df.loc[pcie, 'gbs_per_dir'] = (df.lanes * df.rate_gts / 8 * coded)[pcie]
@@ -400,7 +400,7 @@ def topo_graph(topo, links, nvlink='NVLink 3 (A100 SXM)',
     """A networkx graph of the machine that `topo` (parse_topo_matrix of
     `nvidia-smi topo -m`) describes: device nodes (GPUs, NICs); PCIe
     switch, host bridge and CPU nodes inferred from the relation codes; an
-    NVSwitch node when every GPU pair is NVLinked (row nvlink of `links`),
+    NVSwitch node when every GPU pair is NVLinked (row nvlink of `hw-links`),
     else NVLink bridges between the pairs (row bridge). Edge attributes:
     link (the links_table row) and gbs (GB/s per direction, NaN where no
     datasheet gives one)."""

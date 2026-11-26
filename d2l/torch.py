@@ -97,11 +97,21 @@ def _triton_modules():
 triton = _triton_modules()[0]
 tl = _triton_modules()[1]
 
+def arch_dims(cfg):
+    """(L, d, H, H_kv, d_h, f, V, tied) of a decoder: layers, width,
+    query and key-value heads, head width, MLP width, vocabulary and
+    whether the head shares the embedding. `cfg` is a Transformers config
+    (object or dict) or chapter 21's Arch; the public name of chapter 21's
+    reader, which the pages call.
+
+    Defined in :numref:`sec_lm_kernels`"""
+    return d2l._arch_fields(cfg)
+
 def _attn_dims(cfg):
     """(H, H_kv, d_h) of an Arch or a Transformers config.
 
     Defined in :numref:`sec_lm_kernels`"""
-    L, d, H, H_kv, d_h, f, V, tie = d2l._arch_fields(cfg)
+    L, d, H, H_kv, d_h, f, V, tie = arch_dims(cfg)
     return H, H_kv, d_h
 
 def attention_inputs(cfg, batch, seq, dtype=torch.bfloat16, seed=0,
@@ -13162,7 +13172,7 @@ def chip_specs():
     its source and retrieval date. NaN where the vendor states nothing.
 
     Defined in :numref:`sec_lm_accelerator_design`"""
-    df = d2l._hw_static('chip-specs').set_index('chip')
+    df = d2l._hw_static('hw-chip-specs').set_index('chip')
     d2l._check_specs(df)  # sources, dates, and the book's four rows
     return df
 
@@ -13310,7 +13320,7 @@ def gemm_shapes(cfg, tokens):
     once). The attention scores are not weight products.
 
     Defined in :numref:`sec_lm_kernels`"""
-    L, d, H, H_kv, d_h, f, V, _ = d2l._arch_fields(cfg)  # _: tied or not
+    L, d, H, H_kv, d_h, f, V, _ = d2l.arch_dims(cfg)  # _: tied or not
     products = [('QKV', (H + 2 * H_kv) * d_h, d, L), ('out', d, H * d_h, L),
                 ('gate-up', 2 * f, d, L), ('down', d, f, L), ('head', V, d, 1)]
     return pd.DataFrame([
@@ -29897,7 +29907,7 @@ HW_ARTIFACTS = {}  # box regeneration name: (DATA_HUB key, kind)
 
 HW_CAMPAIGNS = {}  # log name: (DATA_HUB key, kind, campaign, hardware)
 
-HW_STATIC = {}  # static table name: (DATA_HUB key, kind)
+HW_STATIC = {}  # static table name (hw-...): (DATA_HUB key, kind)
 
 HW_JOBS = {}  # regeneration name: (driver name in d2l, zero-argument kwargs)
 
@@ -29939,7 +29949,7 @@ d2l.HW_SHAPES['dense-70b'] = d2l.HWShape(
     torch_dtype='bfloat16')
 
 d2l.HW_ARTIFACTS['box-microbench'] = ('lm-hw-buildbox-microbench-v1', 'tar')
-d2l.HW_STATIC['chip-specs'] = ('lm-hw-chip-specs-v1', 'csv')
+d2l.HW_STATIC['hw-chip-specs'] = ('lm-hw-chip-specs-v1', 'csv')
 d2l.HW_CAMPAIGNS['a100-microbench'] = (
     'lm-hw-a100-microbench-v1', 'tar', 'C-T2', 'A100 PCIe 40 GB')
 d2l.HW_CAMPAIGNS['a100-clocksweep'] = (
@@ -31653,7 +31663,7 @@ def regen_microbench(config='box'):
 
 d2l.HW_ARTIFACTS['box-workloads'] = ('lm-hw-buildbox-workloads-v1', 'tar')
 d2l.HW_ARTIFACTS['box-moe'] = ('lm-hw-buildbox-moe-v1', 'tar')
-d2l.HW_STATIC['inferencex-snapshot'] = ('lm-hw-inferencex-snapshot-v1', 'tar')
+d2l.HW_STATIC['hw-inferencex-snapshot'] = ('lm-hw-inferencex-snapshot-v1', 'tar')
 d2l.HW_CAMPAIGNS['a100-workloads'] = (
     'lm-hw-a100-workloads-v1', 'tar', 'C-T2', 'A100 PCIe 40 GB')
 d2l.HW_CAMPAIGNS['t2pair-moe'] = (
@@ -32782,10 +32792,10 @@ def inferencex_snapshot():
 
     Defined in :numref:`sec_lm_workload_hardware`"""
     shape = d2l.HW_SHAPES['dense-70b']
-    if not hw_registered('inferencex-snapshot'):
+    if not hw_registered('hw-inferencex-snapshot'):
         return Snapshot(pd.DataFrame(columns=['chip', 'tp', 'tps_per_gpu']),
                         shape, 1, 1, 50.0, 2048, True)
-    return _read_snapshot(os.path.join(_hw_static('inferencex-snapshot'),
+    return _read_snapshot(os.path.join(_hw_static('hw-inferencex-snapshot'),
                                        'snapshot.csv'), shape)
 
 def _tps_at(sm, u, L):
@@ -32921,7 +32931,7 @@ d2l.DATA_HUB['lm-hw-buildbox-storage-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-buildbox-storage-v1.tar',
     '9b17b56e6491970add49b436659a297f39b12e56')
 
-d2l.HW_STATIC['tiers'] = ('lm-hw-tiers-v1', 'csv')
+d2l.HW_STATIC['hw-tiers'] = ('lm-hw-tiers-v1', 'csv')
 d2l.HW_ARTIFACTS['box-storage'] = ('lm-hw-buildbox-storage-v1', 'tar')
 d2l.HW_CAMPAIGNS['node-storage'] = (
     'lm-hw-node-storage-v1', 'tar', 'C-T3', 'one 8 x A100 40 GB node')
@@ -33124,7 +33134,7 @@ def tier_table(log=None):
     pending, one status line.
 
     Defined in :numref:`sec_lm_memory_tiers`"""
-    tiers = d2l._hw_static('tiers')
+    tiers = d2l._hw_static('hw-tiers')
     if isinstance(log, d2l.CampaignPending):
         print(d2l.hw_status_line(log))
         return tiers
@@ -33536,7 +33546,7 @@ def _tier_spec(tier, column='bw_gbs'):
     """A column of the tier table's row (the registered table).
 
     Defined in :numref:`sec_lm_memory_tiers`"""
-    t = d2l._hw_static('tiers').set_index('tier')
+    t = d2l._hw_static('hw-tiers').set_index('tier')
     return float(t.loc[tier, column])
 
 def _show_dram(r):
@@ -34563,7 +34573,7 @@ d2l.DATA_HUB['lm-hw-buildbox-p2p-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-buildbox-p2p-v1.tar',
     '13c738ab7da15972f3c38badbe0393f6d63b204f')
 
-d2l.HW_STATIC['links'] = ('lm-hw-links-v2', 'csv')
+d2l.HW_STATIC['hw-links'] = ('lm-hw-links-v2', 'csv')
 d2l.HW_ARTIFACTS['box-p2p'] = ('lm-hw-buildbox-p2p-v1', 'tar')
 d2l.HW_CAMPAIGNS['node-p2p'] = (
     'lm-hw-node-p2p-v1', 'tar', 'C-T3', 'one 8 x A100 40 GB node')
@@ -34808,7 +34818,7 @@ def links_table(show=True):
     printed (name and the two rates) when show.
 
     Defined in :numref:`sec_lm_server_paths`"""
-    df = d2l._hw_static('links').copy()
+    df = d2l._hw_static('hw-links').copy()
     pcie = df['link'] == 'PCIe'
     coded = np.where(df['encoding'] == '128b/130b', 128 / 130, 1.0)
     df.loc[pcie, 'gbs_per_dir'] = (df.lanes * df.rate_gts / 8 * coded)[pcie]
@@ -34850,7 +34860,7 @@ def topo_graph(topo, links, nvlink='NVLink 3 (A100 SXM)',
     """A networkx graph of the machine that `topo` (parse_topo_matrix of
     `nvidia-smi topo -m`) describes: device nodes (GPUs, NICs); PCIe
     switch, host bridge and CPU nodes inferred from the relation codes; an
-    NVSwitch node when every GPU pair is NVLinked (row nvlink of `links`),
+    NVSwitch node when every GPU pair is NVLinked (row nvlink of `hw-links`),
     else NVLink bridges between the pairs (row bridge). Edge attributes:
     link (the links_table row) and gbs (GB/s per direction, NaN where no
     datasheet gives one).
@@ -35920,7 +35930,7 @@ d2l.DATA_HUB['lm-hw-buildbox-net-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-buildbox-net-v1.tar',
     '95533e1cbaaf28e4eef31f00d41d508f4b3699db')
 
-d2l.HW_STATIC['systems'] = ('lm-hw-systems-v1', 'json')
+d2l.HW_STATIC['hw-systems'] = ('lm-hw-systems-v1', 'json')
 d2l.HW_ARTIFACTS['box-net'] = ('lm-hw-buildbox-net-v1', 'tar')
 d2l.HW_CAMPAIGNS['cluster-nccl'] = (
     'lm-hw-cluster-nccl-v1', 'tar', 'C-T4',
@@ -35942,7 +35952,7 @@ def systems_table():
     has_scaleout is False only for the measured box (one machine).
 
     Defined in :numref:`sec_lm_networks`"""
-    df = pd.DataFrame(d2l._hw_static('systems')['rows']).set_index('system')
+    df = pd.DataFrame(d2l._hw_static('hw-systems')['rows']).set_index('system')
     assert df.source_url.notna().all() and df.retrieved.notna().all()
     for name in df.index[df.measured.notna()]:
         df.loc[name, 'scaleup_gbs_per_chip'] = (
@@ -37755,7 +37765,7 @@ d2l.DATA_HUB['lm-hw-buildbox-power-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-buildbox-power-v1.tar',
     'bb1534b3ab70a875afa35916b673df4a30df420b')
 
-d2l.HW_STATIC['prices'] = ('lm-hw-prices-v1', 'csv')
+d2l.HW_STATIC['hw-prices'] = ('lm-hw-prices-v1', 'csv')
 d2l.HW_ARTIFACTS['box-power'] = ('lm-hw-buildbox-power-v1', 'tar')
 d2l.HW_CAMPAIGNS['box-clocksweep'] = (
     'lm-hw-buildbox-clocksweep-v1', 'tar', 'C-box-root',
@@ -38503,7 +38513,7 @@ def hw_prices():
     in days); prints the rows the cost calculators use.
 
     Defined in :numref:`sec_lm_energy_cost`"""
-    prices = _hw_static('prices')
+    prices = _hw_static('hw-prices')
     _check_prices(prices)
     prices['age'] = _price_age(prices)
     table = _price_rows(prices)

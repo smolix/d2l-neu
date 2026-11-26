@@ -50,7 +50,7 @@ HW_ARTIFACTS = {}  # box regeneration name: (DATA_HUB key, kind)
 HW_CAMPAIGNS = {}  # log name: (DATA_HUB key, kind, campaign, hardware)
 
 #@save
-HW_STATIC = {}  # static table name: (DATA_HUB key, kind)
+HW_STATIC = {}  # static table name (hw-...): (DATA_HUB key, kind)
 
 #@save
 HW_JOBS = {}  # regeneration name: (driver name in d2l, zero-argument kwargs)
@@ -120,7 +120,7 @@ and the A100 campaign (C-T2) logs. The `DATA_HUB` entries follow the uploads.
 %%tab pytorch
 #@save
 d2l.HW_ARTIFACTS['box-microbench'] = ('lm-hw-buildbox-microbench-v1', 'tar')
-d2l.HW_STATIC['chip-specs'] = ('lm-hw-chip-specs-v1', 'csv')
+d2l.HW_STATIC['hw-chip-specs'] = ('lm-hw-chip-specs-v1', 'csv')
 d2l.HW_CAMPAIGNS['a100-microbench'] = (
     'lm-hw-a100-microbench-v1', 'tar', 'C-T2', 'A100 PCIe 40 GB')
 d2l.HW_CAMPAIGNS['a100-clocksweep'] = (

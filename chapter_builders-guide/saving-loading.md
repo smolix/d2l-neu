@@ -1332,7 +1332,7 @@ When adapting an ImageNet-pretrained ResNet-50 ($\sim 25\text{M}$ parameters, $1
 
 Work out these three checkpointing questions:
 
-1. An MLP ($20 \to 256 \to 10$, `float32`) is saved to `mlp.safetensors` with a JSON header of $n = 296$ bytes. What is the exact total file size in bytes?
+1. Suppose an MLP ($20 \to 256 \to 10$, `float32`) saved to `mlp.safetensors` has a JSON header of $n = 296$ bytes (the exact length depends on the tensor names the framework writes). What is the exact total file size in bytes?
 2. Our $20 \to 64 \to 1$ regressor has $20 \times 64 + 64 + 64 \times 1 + 1 = 1{,}409$ parameters. If we resume at $\eta = 0.05$ with a fresh Adam optimizer ($\mathbf{m}=\mathbf{v}=\mathbf{0}$) and every gradient entry is nonzero, what is the Euclidean norm $\|\Delta \mathbf{w}\|_2$ of the very first parameter update?
 3. You rename `self.fc` to `self.classifier` in ResNet-50 and load an original pretrained checkpoint with `strict=False`. What appears in `missing_keys` and `unexpected_keys`?
 

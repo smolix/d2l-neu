@@ -916,6 +916,9 @@ The section's static table (transcribed 2026-11-25; `tools/lm_data/hw/chip_specs
 d2l.DATA_HUB['lm-hw-chip-specs-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-chip-specs-v1.csv',
     '173e1685760ac66e99376ce195fe667f83a15dcb')
+d2l.DATA_HUB['lm-hw-buildbox-microbench-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-microbench-v1.tar',
+    '157bc43c133638fe94bc5aeadb1059206f8dd2bd')
 ```
 
 ## Timing on One GPU

@@ -42,6 +42,16 @@ d2l.HW_CAMPAIGNS['t2pair-moe'] = (
     'two A100 40 GB with an NVLink bridge')
 ```
 
+The box results, committed with the book (tools/hw_regen.py writes them).
+
+```{.python .input #workload-hardware-lib-data-hub}
+%%tab pytorch
+#@save
+d2l.DATA_HUB['lm-hw-buildbox-workloads-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-workloads-v1.tar',
+    '35446a34dab2afe999c020ae9318764c87a5a6e2')
+```
+
 ```{.python .input #workload-hardware-lib-jobs}
 %%tab pytorch
 #@save

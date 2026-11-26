@@ -45,6 +45,9 @@ the providers' pages, each row with its source and date).
 d2l.DATA_HUB['lm-hw-prices-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-prices-v1.csv',
     'f01fbc697cecf0b679800cf396ef67c5591f3e65')
+d2l.DATA_HUB['lm-hw-buildbox-power-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-power-v1.tar',
+    'bb1534b3ab70a875afa35916b673df4a30df420b')
 ```
 
 ```{.python .input #energy-cost-lib-entries}

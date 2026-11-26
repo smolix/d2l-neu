@@ -31593,6 +31593,10 @@ d2l.HW_CAMPAIGNS['t2pair-moe'] = (
     'lm-hw-t2pair-moe-v1', 'tar', 'C-T2pair',
     'two A100 40 GB with an NVLink bridge')
 
+d2l.DATA_HUB['lm-hw-buildbox-workloads-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-workloads-v1.tar',
+    '35446a34dab2afe999c020ae9318764c87a5a6e2')
+
 d2l.HW_JOBS['box-workloads'] = (
     'regen_workloads', lambda: dict(config='box'))
 d2l.HW_JOBS['box-moe'] = (
@@ -37663,6 +37667,9 @@ def regen_coll_finish(folder):
 d2l.DATA_HUB['lm-hw-prices-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-prices-v1.csv',
     'f01fbc697cecf0b679800cf396ef67c5591f3e65')
+d2l.DATA_HUB['lm-hw-buildbox-power-v1'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-power-v1.tar',
+    'bb1534b3ab70a875afa35916b673df4a30df420b')
 
 d2l.HW_STATIC['prices'] = ('lm-hw-prices-v1', 'csv')
 d2l.HW_ARTIFACTS['box-power'] = ('lm-hw-buildbox-power-v1', 'tar')

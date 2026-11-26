@@ -265,6 +265,16 @@ for C chunks per half) is negligible: with 10 chunks instead of 1,000 the
 simulator runs up to a third above it. Quote the largest deficit as
 printed. -->
 
+<!-- Placeholder (prose): fix pass F2 (C1, coordinator decision): the line
+under the table states C1 as measured: ring exact; the tree exceeds the
+closed form by at most 0.3% (at 100 S_b, G = 16 and 32), is within 0.5% of
+it far from S_b, and up to 24.9% below it at S_b (G = 4), not monotone in G
+(-24.9, -8.2, -12.3, -4.7%). Never "never above". Drop the cause sentence
+above ("while one tree's first chunks climb ..."): F2's single-tree check
+(one tree carrying all of S, same rules) sits near its own closed form at
+S_b only for G = 4 (+0.1%) and 7-12% above it for G = 8-32, so the overlap
+of the two trees is not shown to be the cause; state the pattern only. -->
+
 ```{.python .input #collectives-simulator-def}
 %%tab pytorch
 def sim_collective(topo, algo, S, chunks):  #@save
@@ -351,6 +361,7 @@ for G in (4, 8, 16, 32):
 err = pd.DataFrame(rows, columns=['G', 'algo'] + cols)
 err[cols] = err[cols].round(1) + 0.0  # + 0.0: no '-0.0' in the table
 d2l.show_table(err, digits=dict.fromkeys(cols, 1), width=79)
+d2l.sim_summary(err)  # claim C1, read from the table
 assert (err[err.algo == 'ring'][cols].abs() < 1e-6).all().all()  # exact
 assert (err[[cols[0], cols[-1]]].abs() < 1).all().all()  # C1: far from S_b
 assert (err[cols] < 1).all().all()  # the closed form is an upper bound
@@ -465,6 +476,13 @@ fewer channels for small messages, visible in the INFO choice lines). Say
 this plainly: the alpha-beta line of one pair is good, the difference of
 two nearly equal lines is not. The "(off)" rows are LL128, fitted but not
 a choice NCCL would make here. -->
+
+<!-- Placeholder (prose): fix pass F2 (C2): the last line under the table
+gives each fit against its measured times from 16 KiB to 1 MiB (Ring/LL +2%
+to +72%, Ring/Simple -1% to +48%) and the two fitted lines against each
+other (+19% at 16 KiB, -3% at 1 MiB): the fits miss by more than the lines
+differ, so they cannot place the crossover. C2 fails the 2x bar (83 KiB
+measured, 280 KiB predicted); say so, do not widen the bar. -->
 
 ```{.python .input #collectives-fit-pairs}
 %%tab pytorch

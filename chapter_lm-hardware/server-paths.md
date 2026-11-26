@@ -232,6 +232,10 @@ what the copy-engine cell below says about its cause. Claim S5: alpha is
 tens of microseconds on the shared-memory path. The fits are the box's
 alpha_beta.json, which 22.3, 22.6 and 22.7 read through box_alpha_beta. -->
 
+<!-- Placeholder (prose): fix pass F2 (S2): the sentence under the table
+compares the two-card all-reduce across the host bridges (NODE, 3.5 GB/s)
+and behind one bridge (PHB, 2.4 GB/s): 1.5x, 95% intervals disjoint. -->
+
 ```{.python .input #server-paths-fits}
 %%tab pytorch
 ab = d2l.fit_collectives(nccl, alpha_below=2**16, plateau_from=2**22)

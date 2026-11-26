@@ -52,6 +52,10 @@ every chip the calculators read), the chapter-21 MFU conversion, the box's
 Qwen3-8B depth extrapolation, the training-MFU and goodput fallbacks and
 their campaign paths, the frontier and prefill readers, and the widths of
 every display.
+Fix pass F2: the claim lines computed from the committed data: K3's spill
+summary (synthetic and committed), M1's plateau label and M2's per-bridge
+line, S1's staged-copy fraction, S2's NODE/PHB sentence, C1's simulator
+sentence (from the committed table), C2's fit residuals near the crossover.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -1125,6 +1129,22 @@ class TestKernelDisplays(unittest.TestCase):
         s = d2l._flash_summary(self.flash())
         self.assertEqual(len(s), 10)  # 3 best (one worst among them), 2 more
 
+    def test_spill_summary(self):
+        """K3's line: the fastest spill-free block_q 128 configuration by
+        throughput (not the largest tile), light and heavy spills as % of
+        the shape's best, 'none' where a shape has no such configuration."""
+        t = pd.DataFrame({
+            'TF/s ref': [100.0, 90.0, 99.4, 70.0, 80.0],
+            'spills ref': [0, 0, 0, 5, 150],
+            'TF/s 8B': [50.0, 60.0, 30.0, 45.0, 20.0],
+            'spills 8B': [0, 40, 12, 0, 0]},
+            index=['64x64 w4', '128x32 w4', '128x64 w8', '128x128 w8',
+                   '128x128 w4'])
+        line = d2l._spill_summary(t)
+        self.assertEqual(line, 'spill-free block_q 128: ref 128x64 w8 99%, '
+                         '8B 128x128 w8 75%; light 70%, none; heavy 80%, none')
+        self.assertLessEqual(len(line), 100)
+
     def test_campaign_status(self):
         pending = d2l.CampaignPending('a100-microbench', 'C-T2',
                                       'A100 PCIe 40 GB')
@@ -1801,6 +1821,114 @@ class TestCommittedClaims(unittest.TestCase):
         self.assertIsNotNone(period)
         self.assertLessEqual(abs(period - wave_cols), r.N.diff().iloc[1])
 
+    # The spill counts of the committed kernels-spill output (register
+    # metadata, deterministic for the pinned Triton; read on a GPU only).
+    SPILLS = {
+        'reference': (0, 0, 0, 0, 8, 0, 0, 0, 10, 0, 140, 8),
+        'Qwen3-8B': (0, 0, 0, 0, 4, 0, 44, 0, 108, 20, 248, 22)}
+
+    def test_k3_spill_summary(self):
+        """K3 on the committed flash sweep: the fastest spill-free block_q
+        128 configuration is 128 x 32 w4 at the reference shape (146 TF/s)
+        and 128 x 32 w8 for Qwen3-8B (129); heavy spills cost about 16%
+        (reference) and up to 43% (Qwen3-8B), from the unrounded medians."""
+        if not d2l.hw_registered('box-microbench'):
+            self.skipTest('box-microbench is not registered yet')
+        flash = d2l.hw_box_log('box-microbench', 'flash-sweep')
+        rows = {}
+        for shape, spills in self.SPILLS.items():
+            tri = flash[(flash['shape'] == shape) & (flash.block_q > 0)]
+            self.assertEqual(len(tri), len(spills))
+            tag = shape.split('-')[-1] if '-' in shape else shape[:3]
+            for (_, r), n in zip(tri.iterrows(), spills):
+                label = (f'{int(r.block_q)}x{int(r.block_k)} '
+                         f'w{int(r.num_warps)}')
+                rows.setdefault(label, {}).update(
+                    {f'TF/s {tag}': r.tflops, f'spills {tag}': n})
+        t = pd.DataFrame.from_dict(rows, orient='index')
+        self.assertAlmostEqual(t.loc['128x32 w4', 'TF/s ref'], 146, delta=0.5)
+        self.assertAlmostEqual(t.loc['128x32 w8', 'TF/s 8B'], 129, delta=0.5)
+        heavy = 1 - t.loc['128x128 w4', 'TF/s ref'] / t['TF/s ref'].max()
+        self.assertAlmostEqual(heavy, 0.16, delta=0.01)
+        heavy = 1 - t.loc['128x128 w4', 'TF/s 8B'] / t['TF/s 8B'].max()
+        self.assertAlmostEqual(heavy, 0.43, delta=0.01)
+        self.assertEqual(d2l._spill_summary(t), (
+            'spill-free block_q 128: ref 128x32 w4 98%, 8B 128x32 w8 97%; '
+            'light 98-100%, 76%; heavy 84%, 57-80%'))
+
+    def test_m1_m2_lines(self):
+        """M1's plateau label names a range over copies (not an interval):
+        pinned h2d 23 GB/s, range 21-24, 72% of 31.5; M2: about 36 GB/s per
+        host bridge, four cards 98% of 2 x 36."""
+        if not d2l.hw_registered('box-storage'):
+            self.skipTest('box-storage is not registered yet')
+        with quiet():
+            h2d = d2l.hw_box_log('box-storage', 'h2d')
+            agg = d2l.hw_box_log('box-storage', 'concurrent')
+        links = d2l.fit_h2d(h2d, alpha_below=2**20, plateau_from=2**28)
+        lines, _ = lines_of(self, d2l.plot_h2d, h2d, links)
+        d2l.plt.close('all')
+        self.assertIn('the median of the copies of 256 MiB and more, and '
+                      'their range', lines[0])
+        self.assertIn('beta 23 GB/s (range 21-24), 72% of 31.5', lines[1])
+        lines, _ = lines_of(self, d2l._show_concurrent, agg)
+        self.assertIn('per host bridge: about 36 GB/s h2d (two cards behind '
+                      'it); all 4: 98% of 2 x 36', lines)
+
+    def test_s1_fraction(self):
+        """S1: P2P refused, GPU-to-GPU copies staged through host memory at
+        0.85-0.96 of the pinned host link (PHB pairs to NODE pairs, against
+        the pinned h2d plateau; unrounded medians)."""
+        if not (d2l.hw_registered('box-p2p')
+                and d2l.hw_registered('box-storage')):
+            self.skipTest('box-p2p or box-storage is not registered yet')
+        with quiet():
+            mat = d2l.hw_box_log('box-p2p', 'gpu-matrix')
+            h2d = d2l.hw_box_log('box-storage', 'h2d')
+        self.assertFalse(np.asarray(mat['peer'])[
+            ~np.eye(len(mat['peer']), dtype=bool)].any())
+        link = d2l.fit_h2d(h2d, alpha_below=2**20, plateau_from=2**28)
+        pinned = link.loc[('pinned', 'h2d'), 'beta'] / 1e9
+        by = d2l._by_relation(mat)
+        frac = {c: by[c] / pinned for c in ('PHB', 'NODE')}
+        self.assertEqual((round(frac['PHB'], 2), round(frac['NODE'], 2)),
+                         (0.85, 0.96))
+
+    def test_s2_line(self):
+        """S2: NODE pair 3.52 GB/s, PHB pair 2.42, intervals disjoint."""
+        if not d2l.hw_registered('box-p2p'):
+            self.skipTest('box-p2p is not registered yet')
+        with quiet():
+            nccl = d2l.hw_box_log('box-p2p', 'nccl')
+        ab = d2l.fit_collectives(nccl, alpha_below=2**16, plateau_from=2**22)
+        for path, beta in (('NODE', 3.52), ('PHB', 2.42)):
+            self.assertAlmostEqual(ab.loc[('all_reduce', 2, path)].beta / 1e9,
+                                   beta, delta=0.005)
+        self.assertEqual(d2l._pair_paths_line(ab), (
+            'two-card all-reduce: across the host bridges (NODE) 3.5 GB/s, '
+            'behind one bridge (PHB) 2.4 GB/s (1.5x; intervals disjoint)'))
+        lines, _ = lines_of(self, d2l.show_fits, ab)
+        self.assertEqual(len(lines), 11)
+
+    def test_c2_residuals(self):
+        """C2: measured crossover 83 KiB, predicted 280 KiB; between 16 KiB
+        and 1 MiB the fits miss the measured times by far more than the two
+        fitted lines differ (Ring/LL +2% to +72%, Ring/Simple -1% to +48%;
+        the lines +19% to -3% apart)."""
+        if not d2l.hw_registered('box-coll'):
+            self.skipTest('box-coll is not registered yet')
+        with quiet():
+            pairs = d2l.nccl_algo_proto_sweeps('box')
+        x = d2l.fit_pairs(pairs).attrs['crossover']
+        self.assertEqual(d2l._approx_bytes(x['measured']), '83 KiB')
+        self.assertEqual(d2l._approx_bytes(x['predicted']), '280 KiB')
+        r = {n: tuple(round(100 * e) for e in v)
+             for n, v in x['resid'].items()}
+        self.assertEqual(r, {'Ring/LL': (2, 72), 'Ring/Simple': (-1, 48)})
+        self.assertEqual(tuple(round(100 * g) for g in x['gap']), (19, -3))
+        self.assertGreater(min(max(map(abs, v)) for v in x['resid'].values()),
+                           max(map(abs, x['gap'])))
+
     def test_w1_w4(self):
         """W1: for Qwen3-8B (the plan's question) M3 within 15% on every
         held-out point of each workload, M0 worse; W4: real weights within
@@ -2090,14 +2218,23 @@ class TestMemoryTiers(unittest.TestCase):
         h2d, agg, dram, fio, obj = synthetic_storage()
         links = d2l.fit_h2d(h2d)
         lines, _ = lines_of(self, d2l.plot_h2d, h2d, links)
-        self.assertEqual(len(lines), 5)
-        self.assertIn('pinned, 2 MiB pages: h2d 26 GB/s', lines[2])
+        self.assertEqual(len(lines), 6)
+        self.assertEqual(lines[0], 'plateau beta: the median of the copies '
+                         'of 256 MiB and more, and their range')
+        self.assertRegex(lines[1], r'^pinned h2d: alpha 10 us, beta 25 GB/s '
+                         r'\(range \d+-\d+\), \d+% of 31\.5$')
+        self.assertIn('pinned, 2 MiB pages: h2d 26 GB/s', lines[3])
         self.assertIn('Gen 4 x16 during the sweep, Gen 1 x16 at rest',
                       lines[-1])
         lines, _ = lines_of(self, d2l._show_concurrent, agg)
-        self.assertEqual(len(lines), 5)
+        self.assertEqual(len(lines), 6)
         self.assertIn('(90% of 4 x one card)', lines[3])
-        self.assertIn('h2d 26 GB/s', lines[4])
+        # M2: one bridge 2 x 24 x 0.95 = 45.6; four cards 86.4 = 95% of 2 x it
+        self.assertEqual(lines[4], 'per host bridge: about 46 GB/s h2d (two '
+                         'cards behind it); all 4: 95% of 2 x 46')
+        self.assertIn('h2d 26 GB/s', lines[5])
+        two = agg[agg.group.isin(['one card', 'two cards, two host bridges'])]
+        self.assertIsNone(d2l._per_bridge(two))  # no pair behind one bridge
         lines, _ = lines_of(self, d2l._show_dram, dram)
         self.assertEqual(len(lines), 2)
         self.assertIn('triad 90 GB/s (16 threads)', lines[0])
@@ -2474,9 +2611,15 @@ class TestServerPaths(unittest.TestCase):
         self.assertEqual(int(a.n_points), 26)
         self.assertTrue(d2l.fit_collectives(nccl, algo='Ring').empty)
         lines, _ = lines_of(self, d2l.show_fits, ab)
-        self.assertEqual(len(lines), 3)
+        self.assertEqual(len(lines), 3)  # no NODE pair: no S2 sentence
         self.assertIn('all-reduce', lines[1])
         self.assertIn(' - ', lines[1] + ' ')
+        both = pd.concat([nccl, synthetic_sweep(
+            'all_reduce', 2, 'NODE', 20e-6, 3e9, seed=3)], ignore_index=True)
+        text = d2l._pair_paths_line(d2l.fit_collectives(both))
+        self.assertEqual(text, 'two-card all-reduce: across the host bridges '
+                         '(NODE) 3.0 GB/s, behind one bridge (PHB) 2.0 GB/s '
+                         '(1.5x; no intervals (one process))')
         # three processes: intervals around the combined fit
         rng = np.random.default_rng(2)
         nccl.attrs['proc_us'] = [
@@ -3120,6 +3263,29 @@ class TestCollectives(unittest.TestCase):
         with self.assertRaises(ValueError):
             d2l.sim_topology(1, alpha, beta)
 
+    def test_sim_summary(self):
+        """C1's sentence from the committed simulator table (the cell's
+        output, deterministic): ring exact, the tree at most 0.3% above the
+        closed form, within 0.5% far from S_b, 24.9% below it at G = 4."""
+        cols = ['0.01 S_b (%)', '1 S_b (%)', '100 S_b (%)']
+        tree = {4: (-0.5, -24.9, 0.0), 8: (-0.5, -8.2, 0.0),
+                16: (-0.5, -12.3, 0.3), 32: (-0.5, -4.7, 0.3)}
+        err = pd.DataFrame(
+            [[G, a] + list(v if a == 'tree' else (0.0,) * 3)
+             for G, v in tree.items() for a in ('ring', 'tree')],
+            columns=['G', 'algo'] + cols)
+        lines, _ = lines_of(self, d2l.sim_summary, err)
+        self.assertEqual(' '.join(l.strip() for l in lines),
+                         'ring: exact; tree: exceeds the closed form by at '
+                         'most 0.3%, within 0.5% of it far from S_b, up to '
+                         '24.9% below it at S_b (G = 4)')
+        err.loc[err.algo == 'tree', cols[-1]] = -0.1
+        err.loc[err.algo == 'ring', cols[1]] = 0.2
+        lines, _ = lines_of(self, d2l.sim_summary, err)
+        text = ' '.join(l.strip() for l in lines)
+        self.assertIn('ring: within 0.2%', text)
+        self.assertIn('never above the closed form', text)
+
     def test_parse_info(self):
         d = d2l._parse_info(NCCL_INFO_SAMPLE)
         self.assertEqual((d['version'], d['n_ranks'], d['n_nodes']),
@@ -3190,9 +3356,18 @@ class TestCollectives(unittest.TestCase):
         self.assertAlmostEqual(x['predicted'] / exact, 1, delta=0.1)
         self.assertAlmostEqual(x['measured'] / exact, 1, delta=0.15)
         self.assertEqual(x['why'], '')
+        self.assertEqual(x['window'], (2**14, 2**20))
+        for lo, hi in x['resid'].values():  # 0.2% noise: the fits are exact
+            self.assertLess(max(abs(lo), abs(hi)), 0.02)
+        S = np.array([2**14, 2**20])  # the two exact lines against each other
+        exact_gap = (40e-6 + phi * S / 9e9) / (15e-6 + phi * S / 3e9) - 1
+        np.testing.assert_allclose(x['gap'], exact_gap, atol=0.03)
         lines, _ = lines_of(self, d2l.show_pair_fits, fits)
         self.assertLessEqual(len(lines), 10)
-        self.assertIn('Ring/Simple overtakes Ring/LL', '\n'.join(lines[-2:]))
+        text = ' '.join(l.strip() for l in lines[5:])
+        self.assertIn('Ring/Simple overtakes Ring/LL', text)
+        self.assertIn('fit against measured, 16 KiB to 1 MiB: Ring/LL', text)
+        self.assertIn("Ring/Simple's fit against Ring/LL's:", text)
         self.assertIn('beta 95%', lines[0])
         self.assertAlmostEqual(d2l.pair_time(pairs, 'Ring/LL', 8),
                                15e-6, delta=1e-6)
@@ -3218,7 +3393,9 @@ class TestCollectives(unittest.TestCase):
         self.assertIn('bandwidth is not below', x['why'])
         lines, _ = lines_of(self, d2l.show_pair_fits, fits)
         self.assertIn('no crossover predicted', '\n'.join(lines))
-        self.assertNotIn('-', ' '.join(lines[-2:]).split('predicted')[0][-8:])
+        text = ' '.join(l.strip() for l in lines)
+        self.assertNotIn('-', text.split('predicted')[0][-8:])
+        self.assertIn('fit against measured', text)  # residuals still shown
 
     def test_off_pairs(self):
         """A pair NCCL's tuner disables is marked in the fits and dashed in

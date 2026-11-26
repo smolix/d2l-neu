@@ -21,8 +21,8 @@ under a public name), the attention inputs, shapes and FP32 reference
 the timed sweeps whose committed result the page reads (`time_attention`,
 `time_fns`, `hw_shape_sweep`, `hw_wave_sweep`, `flash_sweep`; each one
 `_hw_result` call with entry `three-ways`, `rmsnorm`, `shape-sweep`, `wave` or
-`flash-sweep`), the compiled-kernel readers (`triton_spills`,
-`inductor_kernels`), the displays and live checks, and `_regen_kernels`, the
+`flash-sweep`), the compiled-kernel readers (`triton_spills` with
+its summary line `_spill_summary`, `inductor_kernels`), the displays and live checks, and `_regen_kernels`, the
 section's part of the `box-microbench` regeneration. Blocks are tagged
 `%%tab pytorch`; they run only when called, so they may use names defined
 later in `d2l.torch`.
@@ -870,10 +870,48 @@ def triton_spills(launcher, flash):
     if committed != here:  # never committed timings next to this GPU's
         t = t[[c for c in t.columns if not c.startswith('TF')]]
     show_table(t, digits={c: 0 for c in t.columns if not c.startswith('TF')})
-    print('regs: registers per thread; spills: 32-bit words per thread in '
-          'local memory')
     if committed != here:
+        print('regs: registers per thread; spills: 32-bit words per thread '
+              'in local memory')
         print(f'(TF/s omitted: the sweep ran on {committed}, not on {here})')
+        return
+    print('regs: registers, spills: spilled 32-bit words per thread (light '
+          f'<= {_SPILL_LIGHT}, heavy >= {_SPILL_HEAVY}); %: of best')
+    print(_spill_summary(t))
+
+#@save
+_SPILL_LIGHT, _SPILL_HEAVY = 10, 100  # spilled words: light up to, heavy from
+
+#@save
+def _spill_summary(t):
+    """One line from triton_spills' table (TF/s, spills per shape tag):
+    per shape the fastest spill-free configuration with block_q 128, and
+    the TF/s of the configurations with light and with heavy spills, each
+    as a percentage of the shape's best configuration (from the unrounded
+    medians; a range over the configurations, 'none' without one)."""
+    tags = [c[len('TF/s '):] for c in t.columns if c.startswith('TF/s ')]
+    block_q = np.array([int(label.split('x')[0]) for label in t.index])
+    free, light, heavy = [], [], []
+
+    def span(x):
+        if len(x) == 0:
+            return 'none'
+        lo, hi = (int(round(v)) for v in (np.min(x), np.max(x)))
+        return f'{lo}%' if lo == hi else f'{lo}-{hi}%'
+    for tag in tags:
+        tf = t[f'TF/s {tag}'].to_numpy(float)
+        sp = t[f'spills {tag}'].to_numpy(float)
+        rel = 100 * tf / np.nanmax(tf)
+        ok = (sp == 0) & (block_q == 128) & np.isfinite(tf)
+        if ok.any():
+            i = np.flatnonzero(ok)[np.argmax(tf[ok])]
+            free.append(f'{tag} {t.index[i]} {rel[i]:.0f}%')
+        else:
+            free.append(f'{tag} none')
+        light.append(span(rel[(sp > 0) & (sp <= _SPILL_LIGHT)]))
+        heavy.append(span(rel[sp >= _SPILL_HEAVY]))
+    return (f"spill-free block_q 128: {', '.join(free)}; "
+            f"light {', '.join(light)}; heavy {', '.join(heavy)}")
 
 #@save
 _SOFTMAX_OPS = ('masked_fill', 'amax', 'maximum', 'sub', 'exp', 'sum', 'div',

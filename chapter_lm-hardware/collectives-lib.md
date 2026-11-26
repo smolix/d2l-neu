@@ -11,7 +11,8 @@ explains in a sentence but does not show (docs/code-guide.md 7.1): the
 section's registry entries, one statement each (the box's forced algorithm
 and protocol sweeps; 22.7 also reads the C-T4 log registered by 22.6; the
 `DATA_HUB` entry follows the upload) and its regeneration job; the
-configurations; the simulator's topology; the all-to-all's closed form
+configurations; the simulator's topology and its claim line
+(`sim_summary`); the all-to-all's closed form
 (`a2a_inter_node_time`, for chapter 23); NCCL's own account of a run
 (`nccl_info`); the forced-pair sweeps with their drop reasons
 (`nccl_algo_proto_sweeps`), their plot and fits (`plot_algo_crossover`,
@@ -111,6 +112,30 @@ def sim_topology(G, alpha, beta):
     if G < 2 or alpha < 0 or beta <= 0:
         raise ValueError('need G >= 2, alpha >= 0 and beta > 0')
     return dict(G=int(G), alpha=float(alpha), beta=float(beta))
+
+#@save
+def sim_summary(err):
+    """Claim C1 in one sentence, read from the simulator's table (G,
+    algo, the signed error in % of the simulation against the closed form
+    at each 'f S_b (%)' column): the ring's largest error, the tree's
+    largest excess over the closed form, its largest error far from S_b
+    (the first and last columns) and its largest deficit at S_b, with the
+    G where it occurs."""
+    import textwrap
+    cols = [c for c in err.columns if str(c).endswith('S_b (%)')]
+    ring, tree = err[err.algo == 'ring'], err[err.algo == 'tree']
+    r = float(ring[cols].abs().max().max())
+    over = float(tree[cols].max().max())
+    far = float(tree[[cols[0], cols[-1]]].abs().max().max())
+    at = tree['1 S_b (%)']
+    i = at.idxmin()
+    text = (f"ring: {'exact' if r == 0 else f'within {r:.1f}%'}; tree: "
+            + (f'exceeds the closed form by at most {over:.1f}%'
+               if over > 0 else 'never above the closed form')
+            + f', within {far:.1f}% of it far from S_b, '
+            + (f'up to {-at[i]:.1f}% below it at S_b (G = {tree.G[i]})'
+               if at[i] < 0 else 'never below it at S_b'))
+    print(textwrap.fill(text, 79, subsequent_indent='  '))
 ```
 
 ## The All-to-All across Nodes
@@ -635,14 +660,17 @@ def plot_algo_crossover(pairs, small='Ring/LL', large='Ring/Simple'):
             ax.axvline(x, color='k', linestyle=':', linewidth=1)
 
 #@save
-def fit_pairs(pairs, small='Ring/LL', large='Ring/Simple'):
+def fit_pairs(pairs, small='Ring/LL', large='Ring/Simple',
+              window=(2**14, 2**20)):
     """alpha (s) and beta (bytes/s, bus bandwidth) per kept pair of a
     forced-pair table (fit_collectives' two regimes, 95% intervals over
     the regeneration's processes), indexed by (algo, proto); attrs
     'crossover': the measured and the predicted size at which large
     overtakes small (t = alpha + phi S / beta of each fit; NaN with the
-    reason in 'why' when the fits predict none), 'off': the pairs NCCL's
-    tuner disables. A campaign log gives its 'pairs' entry's fits, or
+    reason in 'why' when the fits predict none) and, for the sizes in
+    window, each fit against its measured times and the two fitted lines
+    against each other ('resid', 'gap'), 'off': the pairs NCCL's tuner
+    disables. A campaign log gives its 'pairs' entry's fits, or
     while it is pending an empty table whose attrs['status'] is its status
     line."""
     if isinstance(pairs, d2l.CampaignPending):
@@ -673,15 +701,39 @@ def fit_pairs(pairs, small='Ring/LL', large='Ring/Simple'):
         s, t1 = kept[small]
         out.attrs['crossover'] = dict(
             small=small, large=large, why=why,
-            measured=_crossing(s, t1, kept[large][1]), predicted=float(pred))
+            measured=_crossing(s, t1, kept[large][1]), predicted=float(pred),
+            **_pair_residuals(kept, a, b, small, large, phi, window))
     return out
+
+#@save
+def _pair_residuals(kept, a, b, small, large, phi, window):
+    """How well the two alpha-beta lines t = alpha + phi S / beta (fits a
+    of small, b of large) describe the sizes in window (lo, hi bytes):
+    each fit against its measured times (fit / measured - 1, smallest and
+    largest), and the large pair's fitted line against the small pair's
+    at both ends of the window; {} without sizes there."""
+    lo, hi = window
+    line = lambda r, x: r.alpha + phi * x / r.beta
+    resid = {}
+    for name, r in ((small, a), (large, b)):
+        x, t = kept[name]
+        m = (x >= lo) & (x <= hi)
+        if not m.any():
+            return {}
+        e = line(r, x[m]) / t[m] - 1
+        resid[name] = (float(e.min()), float(e.max()))
+    x = kept[small][0]
+    x = x[(x >= lo) & (x <= hi)][[0, -1]]
+    gap = line(b, x) / line(a, x) - 1
+    return dict(window=(int(x[0]), int(x[1])), resid=resid,
+                gap=(float(gap[0]), float(gap[1])))
 
 #@save
 def show_pair_fits(fits):
     """At most seven rows: algorithm, protocol ('(off)' when NCCL's tuner
     disables the pair), alpha (us), beta (GB/s) and beta's 95% interval;
-    one line with the measured and the predicted crossover. For a pending
-    log its status line."""
+    one line with the measured and the predicted crossover, and one with
+    the two fits' errors near it. For a pending log its status line."""
     if fits.empty:
         print(fits.attrs.get('status') or fits.attrs.get('label', 'no fits'))
         return
@@ -704,6 +756,14 @@ def show_pair_fits(fits):
              + (f"measured; no crossover predicted: {x['why']}" if x['why']
                 else f"measured, {size(x['predicted'])} predicted by the "
                 'fits'))
+        if x.get('resid'):
+            lo, hi = (d2l._hw_bytes(b) for b in x['window'])
+            pct = lambda e: f'{100 * e:+.0f}%'
+            fits_vs = ', '.join(f'{n} {pct(e0)} to {pct(e1)}'
+                                for n, (e0, e1) in x['resid'].items())
+            _say(f'fit against measured, {lo} to {hi}: {fits_vs}; '
+                 f"{x['large']}'s fit against {x['small']}'s: "
+                 f"{pct(x['gap'][0])} at {lo}, {pct(x['gap'][1])} at {hi}")
 
 #@save
 def _approx_bytes(b):

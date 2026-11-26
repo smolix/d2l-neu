@@ -893,10 +893,48 @@ def triton_spills(launcher, flash):
     if committed != here:  # never committed timings next to this GPU's
         t = t[[c for c in t.columns if not c.startswith('TF')]]
     show_table(t, digits={c: 0 for c in t.columns if not c.startswith('TF')})
-    print('regs: registers per thread; spills: 32-bit words per thread in '
-          'local memory')
     if committed != here:
+        print('regs: registers per thread; spills: 32-bit words per thread '
+              'in local memory')
         print(f'(TF/s omitted: the sweep ran on {committed}, not on {here})')
+        return
+    print('regs: registers, spills: spilled 32-bit words per thread (light '
+          f'<= {_SPILL_LIGHT}, heavy >= {_SPILL_HEAVY}); %: of best')
+    print(_spill_summary(t))
+
+_SPILL_LIGHT, _SPILL_HEAVY = 10, 100  # spilled words: light up to, heavy from
+
+def _spill_summary(t):
+    """One line from triton_spills' table (TF/s, spills per shape tag):
+    per shape the fastest spill-free configuration with block_q 128, and
+    the TF/s of the configurations with light and with heavy spills, each
+    as a percentage of the shape's best configuration (from the unrounded
+    medians; a range over the configurations, 'none' without one).
+
+    Defined in :numref:`sec_lm_kernels`"""
+    tags = [c[len('TF/s '):] for c in t.columns if c.startswith('TF/s ')]
+    block_q = np.array([int(label.split('x')[0]) for label in t.index])
+    free, light, heavy = [], [], []
+
+    def span(x):
+        if len(x) == 0:
+            return 'none'
+        lo, hi = (int(round(v)) for v in (np.min(x), np.max(x)))
+        return f'{lo}%' if lo == hi else f'{lo}-{hi}%'
+    for tag in tags:
+        tf = t[f'TF/s {tag}'].to_numpy(float)
+        sp = t[f'spills {tag}'].to_numpy(float)
+        rel = 100 * tf / np.nanmax(tf)
+        ok = (sp == 0) & (block_q == 128) & np.isfinite(tf)
+        if ok.any():
+            i = np.flatnonzero(ok)[np.argmax(tf[ok])]
+            free.append(f'{tag} {t.index[i]} {rel[i]:.0f}%')
+        else:
+            free.append(f'{tag} none')
+        light.append(span(rel[(sp > 0) & (sp <= _SPILL_LIGHT)]))
+        heavy.append(span(rel[sp >= _SPILL_HEAVY]))
+    return (f"spill-free block_q 128: {', '.join(free)}; "
+            f"light {', '.join(light)}; heavy {', '.join(heavy)}")
 
 _SOFTMAX_OPS = ('masked_fill', 'amax', 'maximum', 'sub', 'exp', 'sum', 'div',
                 'mul')  # the operations of the online softmax, in its order
@@ -33339,8 +33377,9 @@ def _h2d_label(mode, d):
 def plot_h2d(h2d, links, pcie_gen=4, lanes=16):
     """GB/s against bytes per copy for each mode and direction, with the
     PCIe per-direction ceiling dashed; prints alpha and the plateau beta of
-    pinned h2d and d2h, the 2 MiB-page plateaus, pageable h2d and the link
-    state at rest and during the sweep.
+    pinned h2d and d2h (the median, and the range over the plateau's
+    copies: not an interval), the 2 MiB-page plateaus, pageable h2d and the
+    link state at rest and during the sweep.
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     ceiling = pcie_ceiling(pcie_gen, lanes) / 1e9
@@ -33365,9 +33404,11 @@ def plot_h2d(h2d, links, pcie_gen=4, lanes=16):
     def line(mode, d):
         r = links.loc[(mode, d)]
         print(f'{mode} {d}: alpha {r.alpha * 1e6:.0f} us, beta '
-              f'{r.beta / 1e9:.0f} GB/s ({r.beta_lo / 1e9:.0f}-'
-              f'{r.beta_hi / 1e9:.0f} from {big}), '
-              f'{r.beta / 1e9 / ceiling:.0%} of {ceiling:.1f}')
+              f'{r.beta / 1e9:.0f} GB/s (range {r.beta_lo / 1e9:.0f}-'
+              f'{r.beta_hi / 1e9:.0f}), {r.beta / 1e9 / ceiling:.0%} of '
+              f'{ceiling:.1f}')
+    print(f'plateau beta: the median of the copies of {big} and more, and '
+          'their range')
     line('pinned', 'h2d')
     line('pinned', 'd2h')
     if ('pinned-2M', 'h2d') in links.index:
@@ -33455,12 +33496,30 @@ def _show_concurrent(agg):
         ratio = '' if k == 1 else (f' ({h.gbs / (k * one["h2d"]):.0%} of '
                                    f'{k} x one card)')
         print(f'{label}: h2d {h.gbs:.0f}, d2h {b.gbs:.0f} GB/s{ratio}')
+    bridge = _per_bridge(agg)
+    if bridge:
+        print(bridge)
     nvb = agg.attrs.get('nvbandwidth') or {}
     rates = [f'{d} {np.median(nvb[k]):.0f}' for d, k in (
         ('h2d', 'host_to_device'), ('d2h', 'device_to_host')) if nvb.get(k)]
     if rates:
         print(f"nvbandwidth, each card alone (copy engines, 512 MiB): "
               f"{', '.join(rates)} GB/s")
+
+def _per_bridge(agg):
+    """One line: the h2d rate of the pair behind one host bridge as the
+    bridge's rate, and every card at once against the bridges times that
+    rate (two cards per bridge, as on the box); None without both groups.
+
+    Defined in :numref:`sec_lm_memory_tiers`"""
+    h2d = agg[agg.direction == 'h2d'].set_index('group').gbs
+    all_n = agg[(agg.direction == 'h2d') & (agg.n_cards > 2)]
+    if 'two cards, one host bridge' not in h2d.index or all_n.empty:
+        return None
+    x, n = h2d['two cards, one host bridge'], int(all_n.n_cards.iloc[0])
+    total, bridges = float(all_n.gbs.iloc[0]), n // 2
+    return (f'per host bridge: about {x:.0f} GB/s h2d (two cards behind it); '
+            f'all {n}: {total / (bridges * x):.0%} of {bridges} x {x:.0f}')
 
 def _concurrent_live(r, same):
     """One card again, measured as the committed run measured it (eight
@@ -35693,7 +35752,8 @@ def fit_collectives(nccl, algo='default', env='', alpha_below=None,
 def show_fits(ab, max_rows=10):
     """The fits as the text reads them: op, g, path, alpha (us), beta
     (GB/s) with its 95% interval over the processes ('-' with one), n_1/2
-    (KiB); for a pending log its status line.
+    (KiB), and the NODE and PHB two-card all-reduce compared in one
+    sentence when both were fitted; for a pending log its status line.
 
     Defined in :numref:`sec_lm_server_paths`"""
     if ab.empty:
@@ -35713,6 +35773,31 @@ def show_fits(ab, max_rows=10):
     d2l.show_table(show, digits={'alpha (us)': 0, 'beta (GB/s)': 2,
                                  'n_1/2 (KiB)': 0}, max_rows=max_rows,
                    width=79)
+    pairs = _pair_paths_line(ab)
+    if pairs:
+        import textwrap
+        print(textwrap.fill(pairs, 79, subsequent_indent='  '))
+
+def _pair_paths_line(ab):
+    """The two-card all-reduce across the host bridges (NODE) and behind
+    one (PHB) in one sentence: both betas, their ratio, and whether their
+    95% intervals are disjoint; None unless the fits hold both pairs.
+
+    Defined in :numref:`sec_lm_server_paths`"""
+    keys = [('all_reduce', 2, path) for path in ('NODE', 'PHB')]
+    if not all(k in ab.index for k in keys):
+        return None
+    node, phb = (ab.loc[k] for k in keys)
+    if np.isnan([node.beta_lo, phb.beta_lo]).any():
+        apart = 'no intervals (one process)'
+    elif node.beta_lo > phb.beta_hi or phb.beta_lo > node.beta_hi:
+        apart = 'intervals disjoint'
+    else:
+        apart = 'intervals overlap'
+    return (f'two-card all-reduce: across the host bridges (NODE) '
+            f'{node.beta / 1e9:.1f} GB/s, behind one bridge (PHB) '
+            f'{phb.beta / 1e9:.1f} GB/s ({node.beta / phb.beta:.1f}x; '
+            f'{apart})')
 
 _A2A_OP = {'alltoall': 'all_to_all'}  # alpha_beta.json's operation names
 
@@ -36653,6 +36738,31 @@ def sim_topology(G, alpha, beta):
         raise ValueError('need G >= 2, alpha >= 0 and beta > 0')
     return dict(G=int(G), alpha=float(alpha), beta=float(beta))
 
+def sim_summary(err):
+    """Claim C1 in one sentence, read from the simulator's table (G,
+    algo, the signed error in % of the simulation against the closed form
+    at each 'f S_b (%)' column): the ring's largest error, the tree's
+    largest excess over the closed form, its largest error far from S_b
+    (the first and last columns) and its largest deficit at S_b, with the
+    G where it occurs.
+
+    Defined in :numref:`sec_lm_collectives`"""
+    import textwrap
+    cols = [c for c in err.columns if str(c).endswith('S_b (%)')]
+    ring, tree = err[err.algo == 'ring'], err[err.algo == 'tree']
+    r = float(ring[cols].abs().max().max())
+    over = float(tree[cols].max().max())
+    far = float(tree[[cols[0], cols[-1]]].abs().max().max())
+    at = tree['1 S_b (%)']
+    i = at.idxmin()
+    text = (f"ring: {'exact' if r == 0 else f'within {r:.1f}%'}; tree: "
+            + (f'exceeds the closed form by at most {over:.1f}%'
+               if over > 0 else 'never above the closed form')
+            + f', within {far:.1f}% of it far from S_b, '
+            + (f'up to {-at[i]:.1f}% below it at S_b (G = {tree.G[i]})'
+               if at[i] < 0 else 'never below it at S_b'))
+    print(textwrap.fill(text, 79, subsequent_indent='  '))
+
 def a2a_inter_node_time(S, n, g, a_out, b_out, a_in, b_in):
     """Seconds of an all-to-all of S bytes per GPU across n nodes of g
     GPUs, one NIC per GPU (PXN routes each byte to the GPU on its
@@ -37143,14 +37253,17 @@ def plot_algo_crossover(pairs, small='Ring/LL', large='Ring/Simple'):
         if np.isfinite(x):
             ax.axvline(x, color='k', linestyle=':', linewidth=1)
 
-def fit_pairs(pairs, small='Ring/LL', large='Ring/Simple'):
+def fit_pairs(pairs, small='Ring/LL', large='Ring/Simple',
+              window=(2**14, 2**20)):
     """alpha (s) and beta (bytes/s, bus bandwidth) per kept pair of a
     forced-pair table (fit_collectives' two regimes, 95% intervals over
     the regeneration's processes), indexed by (algo, proto); attrs
     'crossover': the measured and the predicted size at which large
     overtakes small (t = alpha + phi S / beta of each fit; NaN with the
-    reason in 'why' when the fits predict none), 'off': the pairs NCCL's
-    tuner disables. A campaign log gives its 'pairs' entry's fits, or
+    reason in 'why' when the fits predict none) and, for the sizes in
+    window, each fit against its measured times and the two fitted lines
+    against each other ('resid', 'gap'), 'off': the pairs NCCL's tuner
+    disables. A campaign log gives its 'pairs' entry's fits, or
     while it is pending an empty table whose attrs['status'] is its status
     line.
 
@@ -37183,14 +37296,39 @@ def fit_pairs(pairs, small='Ring/LL', large='Ring/Simple'):
         s, t1 = kept[small]
         out.attrs['crossover'] = dict(
             small=small, large=large, why=why,
-            measured=_crossing(s, t1, kept[large][1]), predicted=float(pred))
+            measured=_crossing(s, t1, kept[large][1]), predicted=float(pred),
+            **_pair_residuals(kept, a, b, small, large, phi, window))
     return out
+
+def _pair_residuals(kept, a, b, small, large, phi, window):
+    """How well the two alpha-beta lines t = alpha + phi S / beta (fits a
+    of small, b of large) describe the sizes in window (lo, hi bytes):
+    each fit against its measured times (fit / measured - 1, smallest and
+    largest), and the large pair's fitted line against the small pair's
+    at both ends of the window; {} without sizes there.
+
+    Defined in :numref:`sec_lm_collectives`"""
+    lo, hi = window
+    line = lambda r, x: r.alpha + phi * x / r.beta
+    resid = {}
+    for name, r in ((small, a), (large, b)):
+        x, t = kept[name]
+        m = (x >= lo) & (x <= hi)
+        if not m.any():
+            return {}
+        e = line(r, x[m]) / t[m] - 1
+        resid[name] = (float(e.min()), float(e.max()))
+    x = kept[small][0]
+    x = x[(x >= lo) & (x <= hi)][[0, -1]]
+    gap = line(b, x) / line(a, x) - 1
+    return dict(window=(int(x[0]), int(x[1])), resid=resid,
+                gap=(float(gap[0]), float(gap[1])))
 
 def show_pair_fits(fits):
     """At most seven rows: algorithm, protocol ('(off)' when NCCL's tuner
     disables the pair), alpha (us), beta (GB/s) and beta's 95% interval;
-    one line with the measured and the predicted crossover. For a pending
-    log its status line.
+    one line with the measured and the predicted crossover, and one with
+    the two fits' errors near it. For a pending log its status line.
 
     Defined in :numref:`sec_lm_collectives`"""
     if fits.empty:
@@ -37215,6 +37353,14 @@ def show_pair_fits(fits):
              + (f"measured; no crossover predicted: {x['why']}" if x['why']
                 else f"measured, {size(x['predicted'])} predicted by the "
                 'fits'))
+        if x.get('resid'):
+            lo, hi = (d2l._hw_bytes(b) for b in x['window'])
+            pct = lambda e: f'{100 * e:+.0f}%'
+            fits_vs = ', '.join(f'{n} {pct(e0)} to {pct(e1)}'
+                                for n, (e0, e1) in x['resid'].items())
+            _say(f'fit against measured, {lo} to {hi}: {fits_vs}; '
+                 f"{x['large']}'s fit against {x['small']}'s: "
+                 f"{pct(x['gap'][0])} at {lo}, {pct(x['gap'][1])} at {hi}")
 
 def _approx_bytes(b):
     """73159.2 -> '71 KiB': two significant digits.

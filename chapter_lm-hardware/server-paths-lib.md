@@ -1267,7 +1267,8 @@ def fit_collectives(nccl, algo='default', env='', alpha_below=None,
 def show_fits(ab, max_rows=10):
     """The fits as the text reads them: op, g, path, alpha (us), beta
     (GB/s) with its 95% interval over the processes ('-' with one), n_1/2
-    (KiB); for a pending log its status line."""
+    (KiB), and the NODE and PHB two-card all-reduce compared in one
+    sentence when both were fitted; for a pending log its status line."""
     if ab.empty:
         print(ab.attrs.get('status') or ab.attrs.get('label', 'no fits'))
         return
@@ -1285,6 +1286,30 @@ def show_fits(ab, max_rows=10):
     d2l.show_table(show, digits={'alpha (us)': 0, 'beta (GB/s)': 2,
                                  'n_1/2 (KiB)': 0}, max_rows=max_rows,
                    width=79)
+    pairs = _pair_paths_line(ab)
+    if pairs:
+        import textwrap
+        print(textwrap.fill(pairs, 79, subsequent_indent='  '))
+
+#@save
+def _pair_paths_line(ab):
+    """The two-card all-reduce across the host bridges (NODE) and behind
+    one (PHB) in one sentence: both betas, their ratio, and whether their
+    95% intervals are disjoint; None unless the fits hold both pairs."""
+    keys = [('all_reduce', 2, path) for path in ('NODE', 'PHB')]
+    if not all(k in ab.index for k in keys):
+        return None
+    node, phb = (ab.loc[k] for k in keys)
+    if np.isnan([node.beta_lo, phb.beta_lo]).any():
+        apart = 'no intervals (one process)'
+    elif node.beta_lo > phb.beta_hi or phb.beta_lo > node.beta_hi:
+        apart = 'intervals disjoint'
+    else:
+        apart = 'intervals overlap'
+    return (f'two-card all-reduce: across the host bridges (NODE) '
+            f'{node.beta / 1e9:.1f} GB/s, behind one bridge (PHB) '
+            f'{phb.beta / 1e9:.1f} GB/s ({node.beta / phb.beta:.1f}x; '
+            f'{apart})')
 
 #@save
 _A2A_OP = {'alltoall': 'all_to_all'}  # alpha_beta.json's operation names

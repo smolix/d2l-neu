@@ -476,6 +476,16 @@ claim K3, stated as measured (the fallback wording), not as predicted:
 Do not write "the largest spill-free block_q at 4 warps was 64": 128 x 32 at
 4 warps has no spills at the reference shape. -->
 
+<!-- Placeholder (prose): fix pass F2 (K3): the cell's last line now states
+the claim as measured, per shape: the fastest spill-free block_q 128
+configuration (by throughput) and the TF/s of light (<= 10 words) and heavy
+(>= 100 words) spill configurations as a percentage of the shape's best.
+The numbers in the comment above come from an earlier run; quote the
+committed table and its summary line (run of 2026-11-26: reference 128x32
+w4 at 98% of the best 128x64 w4, Qwen3-8B 128x32 w8 at 97%; light spills
+98-100% at the reference shape, 76% at Qwen3-8B, where the only light
+configuration has block_q 64; heavy 84%, and 57-80% at Qwen3-8B). -->
+
 ```{.python .input #kernels-spill}
 %%tab pytorch
 d2l.triton_spills(d2l.flash_attention_triton, flash)

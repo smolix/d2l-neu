@@ -487,8 +487,9 @@ def _h2d_label(mode, d):
 def plot_h2d(h2d, links, pcie_gen=4, lanes=16):
     """GB/s against bytes per copy for each mode and direction, with the
     PCIe per-direction ceiling dashed; prints alpha and the plateau beta of
-    pinned h2d and d2h, the 2 MiB-page plateaus, pageable h2d and the link
-    state at rest and during the sweep."""
+    pinned h2d and d2h (the median, and the range over the plateau's
+    copies: not an interval), the 2 MiB-page plateaus, pageable h2d and the
+    link state at rest and during the sweep."""
     ceiling = pcie_ceiling(pcie_gen, lanes) / 1e9
     colors = {'pinned': 'C0', 'pinned-2M': 'C2', 'pageable': 'C1'}
     X, Y, legend, fmts = [], [], [], []
@@ -511,9 +512,11 @@ def plot_h2d(h2d, links, pcie_gen=4, lanes=16):
     def line(mode, d):
         r = links.loc[(mode, d)]
         print(f'{mode} {d}: alpha {r.alpha * 1e6:.0f} us, beta '
-              f'{r.beta / 1e9:.0f} GB/s ({r.beta_lo / 1e9:.0f}-'
-              f'{r.beta_hi / 1e9:.0f} from {big}), '
-              f'{r.beta / 1e9 / ceiling:.0%} of {ceiling:.1f}')
+              f'{r.beta / 1e9:.0f} GB/s (range {r.beta_lo / 1e9:.0f}-'
+              f'{r.beta_hi / 1e9:.0f}), {r.beta / 1e9 / ceiling:.0%} of '
+              f'{ceiling:.1f}')
+    print(f'plateau beta: the median of the copies of {big} and more, and '
+          'their range')
     line('pinned', 'h2d')
     line('pinned', 'd2h')
     if ('pinned-2M', 'h2d') in links.index:
@@ -612,12 +615,29 @@ def _show_concurrent(agg):
         ratio = '' if k == 1 else (f' ({h.gbs / (k * one["h2d"]):.0%} of '
                                    f'{k} x one card)')
         print(f'{label}: h2d {h.gbs:.0f}, d2h {b.gbs:.0f} GB/s{ratio}')
+    bridge = _per_bridge(agg)
+    if bridge:
+        print(bridge)
     nvb = agg.attrs.get('nvbandwidth') or {}
     rates = [f'{d} {np.median(nvb[k]):.0f}' for d, k in (
         ('h2d', 'host_to_device'), ('d2h', 'device_to_host')) if nvb.get(k)]
     if rates:
         print(f"nvbandwidth, each card alone (copy engines, 512 MiB): "
               f"{', '.join(rates)} GB/s")
+
+#@save
+def _per_bridge(agg):
+    """One line: the h2d rate of the pair behind one host bridge as the
+    bridge's rate, and every card at once against the bridges times that
+    rate (two cards per bridge, as on the box); None without both groups."""
+    h2d = agg[agg.direction == 'h2d'].set_index('group').gbs
+    all_n = agg[(agg.direction == 'h2d') & (agg.n_cards > 2)]
+    if 'two cards, one host bridge' not in h2d.index or all_n.empty:
+        return None
+    x, n = h2d['two cards, one host bridge'], int(all_n.n_cards.iloc[0])
+    total, bridges = float(all_n.gbs.iloc[0]), n // 2
+    return (f'per host bridge: about {x:.0f} GB/s h2d (two cards behind it); '
+            f'all {n}: {total / (bridges * x):.0%} of {bridges} x {x:.0f}')
 
 #@save
 def _concurrent_live(r, same):

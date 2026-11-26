@@ -211,6 +211,13 @@ triad a = b + s c. The datasheet's 8 x 25.6 GB/s is a peak no kernel
 reaches; the triad is the achievable rate, and the CPU optimizer's bound
 below uses it. -->
 
+<!-- Placeholder (prose): fix pass F2: the host-link lines now label the
+plateau as "the median of the copies of 256 MiB and more, and their range"
+(M1: pinned h2d 23 GB/s, range 21-24, is not a confidence interval), and
+the four-card output gains a per-bridge line (M2: about 36 GB/s h2d per host
+bridge, two cards behind it; all four cards 98% of 2 x 36: the bridge
+binds, not DRAM). -->
+
 ```{.python .input #memory-tiers-four-cards}
 %%tab pytorch
 agg = d2l.hw_h2d_concurrent('box')

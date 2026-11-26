@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c3b16b2780d56a6fbf9ae97d9c66f271b7a8d5d65cb0cef61838c9c29158078f",
+    "d2l_lib_fingerprint": "sha256:66098fc241b126e7e3641d8bceac85f34bd9ffca14e5f0647191d8e03ef7c039",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -104,14 +104,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (three pairs) on RTX 4090: 9 points, largest difference 7%\n8 B: Ring/LL 35 us, Ring/Simple 37 us: within noise (+2.5 noise units)\n256 MiB: Ring/Simple 169 ms, Ring/LL 179 ms: within noise (+2.8 noise units)\n"
+          "text": "live check (three pairs) on RTX 4090: 9 points, largest difference 5%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "8 B: Ring/LL 35 us, Ring/Simple 37 us: within noise (+2.5 noise units)\n256 MiB: Ring/Simple 169 ms, Ring/LL 179 ms: within noise (+2.8 noise units)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "collectives/collectives-forced-pairs-1.svg",
           "bytes": 59390,
-          "sha256": "sha256:83b20a1af7c5038dfb4d76f29b0f5ff1bd0865bb8d433db092e8f0599f03130e"
+          "sha256": "sha256:339b1ab03846086755596ac1556a69831882a63bc66bda55ba40f195bcb77ada"
         }
       ]
     },
@@ -154,7 +159,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (64 MiB) on RTX 4090: 3 points, largest difference 14%\nlive, 4 GPUs: hier_allreduce = CPU sum (rtol 1e-5, max error 1e-07)\n"
+          "text": "live check (64 MiB) on RTX 4090: 3 points, largest difference 17%\nlive, 4 GPUs: hier_allreduce = CPU sum (rtol 1e-5, max error 1e-07)\n"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ff6d33eb080d0906b967f978a2ee3bb98cbde20354b47849dcf311195972053d",
+    "d2l_lib_fingerprint": "sha256:6a8829a1206aad2ad782f30130d88bcb118f6d8f0a26c9d322456c6b963cac61",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "server-paths/server-paths-gpu-matrix-1.svg",
           "bytes": 30775,
-          "sha256": "sha256:9abe82105c67b52ef8e28c42e19e0797a9d10ddf349ff71c5cce7d79de064c4d"
+          "sha256": "sha256:732bb7002e74642d754f00caa485703a460cdc234d34b9737c53bb1b7e9d7f58"
         }
       ]
     },
@@ -90,14 +90,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (all-reduce) on RTX 4090: 2 points, largest difference 0%\n"
+          "text": "live check (all-reduce) on RTX 4090: 2 points, largest difference 1%\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "server-paths/server-paths-nccl-sweeps-1.svg",
           "bytes": 67313,
-          "sha256": "sha256:1257d4500e7b3d1a2262aee016dd652acb189770240a97bd096b032f487cf807"
+          "sha256": "sha256:fd52c664109e3dc1f3b43cea70ab190208b4d9602315c522eaf69742cd665a1c"
         }
       ]
     },
@@ -124,7 +124,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (both arms) on RTX 4090: 2 points, largest difference 0%\n"
+          "text": "live check (both arms) on RTX 4090: 2 points, largest difference 2%\n"
         }
       ]
     },
@@ -151,7 +151,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (all-to-all) on RTX 4090: 1 point, largest difference 0%\nall-to-all: tree 10 ms, star 14 ms, measured 24 ms (33 GB/s in all)\n      ring: tree 18 ms, star 29 ms, measured 39 ms (42 GB/s in all)\nNCCL all-to-all / all-reduce busbw at 256 MiB: 0.94 (tree 0.96)\n"
+          "text": "live check (all-to-all) on RTX 4090: 1 point, largest difference 4%\nall-to-all: tree 10 ms, star 14 ms, measured 24 ms (33 GB/s in all)\n      ring: tree 18 ms, star 29 ms, measured 39 ms (42 GB/s in all)\nNCCL all-to-all / all-reduce busbw at 256 MiB: 0.94 (tree 0.96)\n"
         }
       ]
     },

@@ -1,0 +1,241 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretraining/low-precision.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:9688ef0467723ddc9aa442577b28db7fa681ed6fb86ac9faaf4e27de241ffead",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "low-precision-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "low-precision-opening": {
+      "code_fingerprint": "sha256:b50b9ed97c4c54081c72927cfc0838599692b512442d0c95a5217f0633e95c49",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "format           scale  zeroed    NMSE\n  E4M3  one per tensor    0.0%  0.0007\n  E4M3  per 1x128 tile    0.0%  0.0005\n  E2M1  one per tensor   56.6%  0.1430\n  E2M1  per 16 (NVFP4)    8.5%  0.0087\n"
+        }
+      ]
+    },
+    "low-precision-fp8-quant": {
+      "code_fingerprint": "sha256:56ee6091ae1773f74b50802ad2bb19a620aec841c1bac74bdcb2b52461fb49bd",
+      "kind": "text",
+      "outputs": []
+    },
+    "low-precision-block-error": {
+      "code_fingerprint": "sha256:232b1059716f919196c3839926141fa7079608b0a97d9f4fad4c8c13d274d0cf",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "block  measured   model  ratio\n    8    0.0070  0.0111   1.58\n   16    0.0089  0.0117   1.31\n   32    0.0102  0.0121   1.18\n   64    0.0112  0.0125   1.12\n  128    0.0119  0.0129   1.08\n  256    0.0124  0.0132   1.06\n  512    0.0128  0.0136   1.06\n 1024    0.0133  0.0139   1.05\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "low-precision/low-precision-block-error-1.svg",
+          "bytes": 33457,
+          "sha256": "sha256:d04afb1ae2b6b264e989ac836c2db1b8a63b37a68e72a30ce4258e873ffbb08d"
+        }
+      ]
+    },
+    "low-precision-outlier": {
+      "code_fingerprint": "sha256:3a5aa8c726a4db007678e87dcc789fd585bebb1ddabe871e6d6795d0c895f25c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  ρ   model  measured  zeroed\n  8  0.0370    0.0375     26%\n 16  0.1481    0.1480     49%\n 24  0.3333    0.3305     68%\n 32  0.5926    0.5466     82%\n"
+        }
+      ]
+    },
+    "low-precision-fake-quant": {
+      "code_fingerprint": "sha256:ca185332403d5391350c4e844e97acf78dd3fc83c3d08f0c631787a1ef36c0a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "low-precision-fp4-checks": {
+      "code_fingerprint": "sha256:6f46f2578db4587af0d07da48fd259cde51c5b00d5e5cc247f099b0a05143d62",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "on-grid: exact\nstochastic rounding bias: 0.2% (100,000 draws)\nround-to-nearest idempotent: True\nNMSE fp32 / E4M3 scale / power-of-two (block 16): 0.0089 / 0.0091 / 0.0139\npower-of-two vs E4M3: ×1.5\n"
+        }
+      ]
+    },
+    "low-precision-hadamard": {
+      "code_fingerprint": "sha256:934ef7fa7567b46ef526637d7a50a12ef5a440f2583018d32b641bcad5092940",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |H Hᵀ − I| = 0e+00\n       NMSE of   plain  rotated\n   the outlier  0.0000   0.0008\n  the other 15  0.1481   0.1865\n     the block  0.0082   0.0111\n"
+        }
+      ]
+    },
+    "low-precision-sr-sum": {
+      "code_fingerprint": "sha256:26075a83848ae5767419eae6e8be760b089048e2ef54c66e2f7eb510ec9baadf",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sum of 10,000 updates of 0.2 steps: RTN 0.0, SR 1994.0 (exact 2,000)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "low-precision/low-precision-sr-sum-1.svg",
+          "bytes": 52925,
+          "sha256": "sha256:1accca8abaaa87a735d9ca344a780c0500abf79a1542e61f95c927e6760b6e2a"
+        }
+      ]
+    },
+    "low-precision-fp8-linear": {
+      "code_fingerprint": "sha256:d2928e30379217afb626a1fb6934ea540c3cb91ddcfc3d80e84c7bc6f17d346b",
+      "kind": "text",
+      "outputs": []
+    },
+    "low-precision-fp8-checks": {
+      "code_fingerprint": "sha256:8ff2bb963e6cc33bce8503b1da3134e64d20c727bc231d33610b1802be6b0575",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "forward error: 3.7e-02 (analytic 3.6e-02)\ninput / weight grad error: 5.9e-02 / 5.9e-02\n"
+        }
+      ]
+    },
+    "low-precision-fp8-native": {
+      "code_fingerprint": "sha256:71e478a9a5b33e1d2e2934f0d4be8997762c6e2522cef56af9d558bde03b69ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "native vs simulated (RTX 4090): 7.2e-04\ndelayed scaling after a 6× jump: 83% saturated at 448\n"
+        }
+      ]
+    },
+    "low-precision-fp4-linear": {
+      "code_fingerprint": "sha256:0ec684b113ff9f4701451dff525e0b0f4d199461743c780dd6d07b179d9c3bcf",
+      "kind": "text",
+      "outputs": []
+    },
+    "low-precision-gemm-sweep": {
+      "code_fingerprint": "sha256:dc6aa87e94bc8508586265dc71a392df495505bea950baade58db59ff82a0251",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fp8 with casts beats bf16 from n = 3,072 on (n = 4,096: ×1.16)\nfp8 without casts / bf16 at n = 4,096: ×1.99 (datasheet ×2)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "low-precision/low-precision-gemm-sweep-1.svg",
+          "bytes": 40265,
+          "sha256": "sha256:0834a01cb9875d9335e123485789480c974cef494855fb8e5ac055a2d07abe57"
+        }
+      ]
+    },
+    "low-precision-preset": {
+      "code_fingerprint": "sha256:02eb87cbc61c195e4d7c0b867612e05be0368cbe78e8ec0c6970c44ace849de2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "75,511,552 parameters; QK-norm on; widths 768, 2048, 256, multiples of 16: True\n1,221 steps × 16 × 1,024 = 20,004,864 tokens\nWSD: warmup 60, decay from step 1,038 over 183; peak learning rate 0.001\n"
+        }
+      ]
+    },
+    "low-precision-arms": {
+      "code_fingerprint": "sha256:04965a29ac2e2aec6cf4da5b9808386c85427e115dca00aea53fd0d70019d222",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "       arm  n    native val loss   tok/s IQR ÷bf16  GiB\n      bf16  4         —    4.596 105,683 573  1.00 10.1\ntensorwise  2       yes    4.593  97,891 347  0.93  8.9\n   rowwise  1       yes    4.602  74,238 191  0.70  8.9\n   delayed  1     eager    4.591       —   —     — 10.3\n nvfp4-mlp  1 simulated    4.632       —   —     — 11.3\n"
+        }
+      ]
+    },
+    "low-precision-amdahl": {
+      "code_fingerprint": "sha256:a913c8e12243abb4d38112932377d4cef87c6dfa1b7c4dbf07ca7a644fd9ee9f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GEMM share of a bf16 step: 0.20; fp8 GEMM-only speedup: ×1.86\nend-to-end bound: ×1.10\nms per step         bf16  tensorwise\nblock GEMMs         31.3        17.2\nhead GEMMs          19.8        20.2\nfp8 copies           0.0        18.2\nother kernels       90.4        98.5\nhost and launches   15.4        17.4\nwhole step         156.9       171.4\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "low-precision/low-precision-amdahl-1.svg",
+          "bytes": 49817,
+          "sha256": "sha256:fd206a0c973afd4b5f3a7f5242b67cbc66f97fc398291b16943152c855bf7519"
+        }
+      ]
+    },
+    "low-precision-seed-noise": {
+      "code_fingerprint": "sha256:37e4a912cca64290d0fd2a78842f8f995ba1b3164d2bd2988a3712c129cc2cdf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bf16, 4 seeds: 4.596 (SD 0.008)\n95% interval for one more bf16 seed: [4.569, 4.624]\ntensorwise seeds 0, 1: 4.590 (inside), 4.596 (inside)\n"
+        }
+      ]
+    },
+    "low-precision-scaling-stats": {
+      "code_fingerprint": "sha256:1f904b4cd3783ecbaf455c9e9de8ac844045c8a46a68e27d562e988d9c796037",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     in ppm operand saturated underflow (current)  ratio\n warmup end       x     0.599       169       161   1.05\n warmup end       w      1.13      8.95      8.94   1.00\n warmup end      dy    0.0268      24.3        11   2.21\ndecay start       x    0.0101       462       409   1.13\ndecay start       w     0.972      11.8      11.7   1.00\ndecay start      dy   0.00942      27.6      17.3   1.59\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "low-precision/low-precision-scaling-stats-1.svg",
+          "bytes": 67522,
+          "sha256": "sha256:3017d1f8de7a32c6b00c1b7761abc8e27f1bde5bff9537317cae07ae783ab263"
+        }
+      ]
+    },
+    "low-precision-nvfp4-gap": {
+      "code_fingerprint": "sha256:ccc49772378d539b84cb7fb7048ea5837b68d0b348c4d98cac14deac25b01373",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "NVFP4 (simulated, MLP) − bf16 mean: +0.035 = 4.6 seed SDs, outside the 95% interval\n"
+        }
+      ]
+    }
+  }
+}

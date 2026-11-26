@@ -1,0 +1,284 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretraining/long-context.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:12655839e739514890c218cc6976890533dd8d4e6381d24b15f17e9dc9797272",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "long-context-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "long-context-imports-extra": {
+      "code_fingerprint": "sha256:e14870bcf7afc0317dc8c1d8599d4ba94fe71152dadebae34a17279bbfc91811",
+      "kind": "text",
+      "outputs": []
+    },
+    "long-context-opening": {
+      "code_fingerprint": "sha256:f1ce2f285e85df74d0e7d1c0e656bfd1472836781e7ad99db65fe6874434be62",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "control, trained window (4K, 2K back): 2 / 50\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss by position (nats): 0-4K 4.78, 4-8K 4.86, 8-12K 4.92, 12-16K 4.92\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "recall 12K back: 5 / 50 (chance 1/8)\nreading: loss flat beyond 4K, recall at chance\n"
+        }
+      ]
+    },
+    "long-context-rope-inv-freq": {
+      "code_fingerprint": "sha256:ebae67a5cc57c8e797b8fa09fe9e87cbf7c01083a6426e89094a766db84a5dde",
+      "kind": "text",
+      "outputs": []
+    },
+    "long-context-scheme-checks": {
+      "code_fingerprint": "sha256:8131e4d4ba2c3791463a0e10b1db2da6545740d97a7dbaabc7bf6f8e93407c93",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "s = 1: max |Δ| 3.7e-09\nPI equals θ/s: True\nYaRN pairs: 9 interpolated, 12 blended, 11 untouched\nyarn_mscale(4) = 1.1386\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "vs Transformers (truncate=False): 3.7e-09; truncate=True differs by 1.0e-03\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "long-context/long-context-scheme-checks-1.svg",
+          "bytes": 28245,
+          "sha256": "sha256:d7afe191edfef384f53c16683d551ef6b76be68d6fd8971a28473e39c6777163"
+        }
+      ]
+    },
+    "long-context-attention-share": {
+      "code_fingerprint": "sha256:ec9985444c844b62961def896bbdd05c46775159079e296324d5efc60925ba9d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "F, dense attention: 1.51 / 2.19 / 3.55 GFLOP per token at 4K / 8K / 16K\nattention share: 0.45 / 0.62 / 0.77 (causal half: 0.29 / 0.45 / 0.62)\n40M of 100M tokens at 8K: -15% of the arm's compute\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FlopCounterMode at 16K (dense scores as well): ratio 1.000\n16K windows, no document mask: ×2.35 the FLOPs of 4K windows\n"
+        }
+      ]
+    },
+    "long-context-recall-task": {
+      "code_fingerprint": "sha256:270ff42b6ab76ed0265a5d5733eaa8786a1e1922afeb46dc67da3d0b92e505f9",
+      "kind": "text",
+      "outputs": []
+    },
+    "long-context-task-checks": {
+      "code_fingerprint": "sha256:8f4ae170458ac5f9bdcd934f5412f6814eb091913c935caf69cff7cbbef08bdd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "item: 16,369 tokens, 1,246 pairs, query depth 0.50, 8 candidates\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "oracle copier: 100%, 100%, 100% at 4K, 8K, 16K\n"
+        }
+      ]
+    },
+    "long-context-measures": {
+      "code_fingerprint": "sha256:f16cbecaff1aec8d0738a54d3c377c04f319beb448e3ec70d5554d209deba861",
+      "kind": "text",
+      "outputs": []
+    },
+    "long-context-measure-checks": {
+      "code_fingerprint": "sha256:921a4667f30084ac89f67ee1420372c0ec681183946a498bcabdb4d7b9baae42",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bucket means average to the total: |Δ| 0.0e+00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "long-context gain: oracle +7.62 nats, unigram 0.000\n"
+        }
+      ]
+    },
+    "long-context-data": {
+      "code_fingerprint": "sha256:4f99a4c7d4e272e8c7de232eedb5d4cb98e50289f970c9943998764a464c9ccf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "             part documents      tokens median length               source\nPG-19 train books       456  50,280,429        80,603           PG-19 (PD)\nlong peS2o papers       858  10,008,565        10,590    peS2o v2 (ODC-By)\n     short replay    97,699 100,001,469           615 FineWeb-Edu (ODC-By)\n PG-19 test books        64   1,048,704        16,386           PG-19 (PD)\n"
+        }
+      ]
+    },
+    "long-context-zeroshot": {
+      "code_fingerprint": "sha256:83aec6c726840dd95e7f70813160e3653b6d85af6e3c3546386957411b0bd70f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        scheme NLL 0-4K NLL 4-8K NLL 8-12K NLL 12-16K   recall 4K   recall 8K  recall 16K\n          none     3.42     4.95      6.10       6.24 0.10 ± 0.03 0.10 ± 0.03 0.11 ± 0.03\n            PI     4.78     4.91      4.95       4.95 0.12 ± 0.03 0.13 ± 0.03 0.14 ± 0.03\n           NTK     3.52     3.56      3.59       4.00 0.11 ± 0.03 0.15 ± 0.03 0.13 ± 0.03\n          YaRN     3.48     3.53      3.57       3.58 0.16 ± 0.03 0.13 ± 0.03 0.11 ± 0.03\nYaRN, mscale 1     3.53     3.59      3.61       3.64 0.15 ± 0.03 0.13 ± 0.03 0.12 ± 0.03\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "long-context/long-context-zeroshot-1.svg",
+          "bytes": 40890,
+          "sha256": "sha256:3f42daf1086f5e7978dc0453f7495140b90b4b44e6d35fba69bb619d228ce5bf"
+        }
+      ]
+    },
+    "long-context-schedule": {
+      "code_fingerprint": "sha256:2d5f57755ebf7dd29fcbecdef604bc59cec894290ef9ac8ae2e0d421e3758d3e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "arm        stage 1              stage 2              tokens\nPI         16K × 100M, s = 4    -                    100M\nYaRN       16K × 100M, s = 4    -                    100M\nYaRN-prog  8K × 40M, s = 2      16K × 60M, s = 4     100M\n"
+        }
+      ]
+    },
+    "long-context-arms": {
+      "code_fingerprint": "sha256:9bb56b81cc652fe0220c98d63f39c9e8ea06e52d1a18e98ce017fa9206d79977",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      arm  seeds val loss Δ val NLL 12-16K recall 4K recall 16K       95% CI effective\n     base      1    3.026 0.000      6.236      0.10       0.11 [0.09, 0.14]  below 4K\n       PI      1    3.060 0.034      3.188      0.21       0.18 [0.15, 0.22]  below 4K\n     YaRN      1    3.040 0.014      3.168      0.22       0.14 [0.11, 0.17]  below 4K\nYaRN-prog      1    3.040 0.014      3.168      0.24       0.12 [0.09, 0.15]  below 4K\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "long-context/long-context-arms-1.svg",
+          "bytes": 53080,
+          "sha256": "sha256:bf1023e44082f3d5e13b50f6f90ef87e585d8f5bed7947a4a9bd4839d2bc23ff"
+        }
+      ]
+    },
+    "long-context-position": {
+      "code_fingerprint": "sha256:a757ec122bd09d1eb368f1e366802803e38fb3690ea9366e0705df60fb56761d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "long-context/long-context-position-1.svg",
+          "bytes": 47994,
+          "sha256": "sha256:07a21e80c32d876ff70b8c694b82e6ae5e28ce71cf508f50d762f8c67b0d329a"
+        }
+      ]
+    },
+    "long-context-recall-grid": {
+      "code_fingerprint": "sha256:a2567ec686ed5d8f3c573b134c3f5f8e9e16b4070a8525cee48f0fc16649d875",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    model effective worst depth at 16K\n     base  below 4K           0.7 (8%)\n       PI  below 4K           0.3 (5%)\n     YaRN  below 4K           0.3 (2%)\nYaRN-prog  below 4K           0.3 (2%)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "long-context/long-context-recall-grid-1.svg",
+          "bytes": 30940,
+          "sha256": "sha256:0f7c6368a006728b7e277c07367b0cffddc192a9087f192d1f80e5a4d7eb5979"
+        }
+      ]
+    },
+    "long-context-gain": {
+      "code_fingerprint": "sha256:721cc342db4c10d0d6e522b738c07836346ef9498947ee66e55dc8c3daab6567",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    model             gap 1-2K             gap 2-4K             gap 4-8K            gap 8-16K\n     base -1.93 [-2.04, -1.82] -2.25 [-2.36, -2.15] -2.58 [-2.67, -2.48] -2.85 [-2.96, -2.75]\n       PI    0.53 [0.46, 0.63]    0.28 [0.25, 0.32]    0.18 [0.15, 0.22]    0.07 [0.05, 0.09]\n     YaRN    0.52 [0.45, 0.62]    0.28 [0.24, 0.32]    0.17 [0.14, 0.21]    0.05 [0.03, 0.07]\nYaRN-prog    0.52 [0.45, 0.62]    0.28 [0.24, 0.32]    0.17 [0.14, 0.20]    0.04 [0.03, 0.06]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "long-context/long-context-gain-1.svg",
+          "bytes": 39292,
+          "sha256": "sha256:2ed82a2f2bbd7838120daa6f2bd8b2bc2bf789a28c99b5bed29a73a2b7554e96"
+        }
+      ]
+    },
+    "long-context-first-steps": {
+      "code_fingerprint": "sha256:102c486bc50254eb7bb0fa19e9ea801f1c5dbac2b89feae0fdf4b255a34223dc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      arm perplexity      recall gain\n       PI         64 not reached   64\n     YaRN         64 not reached   64\nYaRN-prog        192 not reached  192\n"
+        }
+      ]
+    },
+    "long-context-short-cost": {
+      "code_fingerprint": "sha256:8b944bc9c66e0b069d0fd823688696768280da096953a04c70b161663920ac02",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      arm       Δ val loss (nats)        Δ suite accuracy\n       PI +0.034 [+0.033, +0.035] -0.007 [-0.013, -0.001]\n     YaRN +0.014 [+0.013, +0.015] -0.006 [-0.011, +0.000]\nYaRN-prog +0.014 [+0.013, +0.015] -0.003 [-0.008, +0.002]\n"
+        }
+      ]
+    },
+    "long-context-t1": {
+      "code_fingerprint": "sha256:46ff5ce78db8e54c552c53b40b827f4dd2f049343b00d5eb96413c42621c7755",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      arm  seeds val loss Δ val NLL 3-4K recall 1K recall 4K   seed range effective\n     base      1    4.079 0.000    5.908      0.08      0.10 [0.10, 0.10]  below 1K\n       PI      3    4.121 0.042    4.075      0.09      0.10 [0.10, 0.11]  below 1K\n     YaRN      3    4.083 0.004    4.033      0.09      0.11 [0.09, 0.12]  below 1K\nYaRN-prog      1    4.083 0.004    4.032      0.07      0.12 [0.12, 0.12]  below 1K\n"
+        }
+      ]
+    },
+    "long-context-scheme-difference": {
+      "code_fingerprint": "sha256:196e9ec4eb8a1faadcda42f61daee8878b2d66c3f63c3ea504032442b9c15a85",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T1 (t interval, 3 seeds): YaRN - PI\n  recall at 4K: +0.00 [-0.04, +0.05]\n  NLL 3-4K (nats): -0.043 [-0.043, -0.042]\nT2 (single run, paired resampling): YaRN - PI\n  recall at 16K: -0.05 [-0.08, -0.01]\n  NLL 12-16K (nats): -0.020 [-0.022, -0.018]\n"
+        }
+      ]
+    }
+  }
+}

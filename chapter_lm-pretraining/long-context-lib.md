@@ -52,18 +52,23 @@ d2l.DATA_HUB['lm-pg19-test-v1'] = (
 d2l.DATA_HUB['lm-lc-t1-v1'] = (
     d2l.LM_DATA_URL + 'lm-lc-t1-v1.json.gz',
     '05a0b45828fbfe613d5b63e0eaa3e275b618f0c2')
+d2l.DATA_HUB['lm-lc-evals-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lc-evals-v1.json.gz',
+    '68aa67ec366d4b4618a79524d4909d1717ccb7f2')
+d2l.DATA_HUB['lm-r2-16k-pi-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-16k-pi-v1.safetensors',
+    '1cec7e5dcb3d7ff9f42d25835831eb556ac967c2')
+d2l.DATA_HUB['lm-r2-16k-yarn-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-16k-yarn-v1.safetensors',
+    'aa606cf42aca9bfea1169b40f99fa2148e0b9792')
 ```
 
-The section's results and inputs. Until a campaign's result is committed
-the page shows it as pending (the T2 cells with the T1 arms as their
-stand-in) instead of failing.
+The section's results and inputs. Every campaign is committed; a
+regeneration run shows a result it has not computed yet as pending (the
+T2 cells with the T1 arms as their stand-in) instead of failing.
 
 ```{.python .input #long-context-lib-artifacts}
 %%tab pytorch
-#@save
-_LC_PENDING = {'lc-zeroshot', 'lc-t2-evals'}
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _LC_PENDING
-
 #@save
 d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'] = (  # the zero-shot part
     'lm-lc-evals-v1', 'json-table')

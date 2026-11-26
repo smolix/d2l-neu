@@ -1,0 +1,236 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-pretraining/data-path.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:ce43b945b1d38ed68840cb7abe16b7e7310a517911a5453f298f6ebdb70844db",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "data-path-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-path-the-pretraining-data-path-1": {
+      "code_fingerprint": "sha256:fe89c61f5db7969a9173d1a51e9bd1482dfedc9e09d71d7ae838ffbc4f8718fc",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-path-opening-leak": {
+      "code_fingerprint": "sha256:596a33cdc87bc327d73904e664509981a5ab552c36005b627695c686b92e6511",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1...........\n11..........\n111.........\n1111........\n11111.......\n.....1......\n.....11.....\n.....111....\n.....1111...\n.........1..\n.........11.\n.........111\nmax |logit change| of doc 2, masked:   8.2e-08\nmax |logit change| of doc 2, unmasked: 3.3e-01\n"
+        }
+      ]
+    },
+    "data-path-opening-restart": {
+      "code_fingerprint": "sha256:d645949315fdf503928b833667da86a1dfcec5b290209a7d6176c7a412bed68e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "re-seeded restart: 0 of 10 later batches as planned, 177 of 640 windows repeated\nstateless cursor: 10 of 10 later batches as planned, 0 repeated\n"
+        }
+      ]
+    },
+    "data-path-shards": {
+      "code_fingerprint": "sha256:19f92492ad17ade22c856f632c4fce9ffe397e0dc61b9f843424e95b436c3b5b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train: 100,000,084 tokens in 95,793 documents (1 shard, uint16)\nval: 8,390,187 tokens in 8,341 documents (1 shard, uint16)\nmean document length: 1044 tokens (median 628)\n"
+        }
+      ]
+    },
+    "data-path-doc-ids": {
+      "code_fingerprint": "sha256:f723b67761716de40509a58d096cd2f0cd4117e3d643ac97e25a82627fa35bcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-path-doc-ids-fixture": {
+      "code_fingerprint": "sha256:c4e8006f20d3a9b0a7396e350fed49662d10e67627d9241ba1039b7b5843701d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "doc_ids: [0, 0, 0, 1, 1, 2, 3]\npos_ids: [0, 1, 2, 0, 1, 0, 0]\n"
+        }
+      ]
+    },
+    "data-path-packed-attention": {
+      "code_fingerprint": "sha256:21b3c534c6b13477596e8ebc26c6ec0c44ddb77048df019d1cdcbb7618fc2ae3",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-path-packed-gpt": {
+      "code_fingerprint": "sha256:15386b2fb4e170b20ae3317c437ab543eaf837c9244ed866aaa368daffe6d2a0",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-path-packed-equals-alone": {
+      "code_fingerprint": "sha256:323cd7b3db741f62efc0ba15a43f003dd3d093a53be7bfa83d7ce9f1d97892e1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "setting            max |Δ|\nRoPE, reset        1.2e-07\nRoPE, no reset     1.2e-07\nRoPE, unmasked     3.2e-01\nlearned, reset     1.2e-07\nlearned, no reset  5.4e-01\n"
+        }
+      ]
+    },
+    "data-path-window-cuts": {
+      "code_fingerprint": "sha256:8fd0537f639f9c5a77850b84fbe3f78f18bd81889042b040a760eaa62bca90a4",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    T  predicted  measured\n  256      0.994     0.994\n  512      0.962     0.962\n 1024      0.864     0.864\n 2048      0.690     0.689\n 4096      0.502     0.502\n 8192      0.340     0.340\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "data-path/data-path-window-cuts-1.svg",
+          "bytes": 29390,
+          "sha256": "sha256:f6fb599ad8dda41fb6af3cc139d261248817de37a75243254fe70ef83e45fbf2"
+        }
+      ]
+    },
+    "data-path-losses": {
+      "code_fingerprint": "sha256:1d9baaff8c1b05e8a7381961b4f05e707da8b607737652d44683ebc0862dc135",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-path-token-weighting": {
+      "code_fingerprint": "sha256:d46c5c240789e65c3d051efd41aec8462ef5e33af1c812b7242796db883a558b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "two batches: token-weighted 3.23, mean of means 3.50\neight batches: accumulated − single pass = -8.9e-16\nmean of means − single pass = 0.0060\npredicted −Cov(n/n̄, l̄) = 0.0060\n"
+        }
+      ]
+    },
+    "data-path-chunked-memory": {
+      "code_fingerprint": "sha256:92b3304904452680eb3284578acd5268e4df9bdbca01a2dfa481e7fa9f65ce6c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "full logits: 3.0 GiB peak\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunked (1,024 positions): 0.7 GiB peak\nmax |Δ| loss / grad: 9.5e-07 / 4.1e-09\n"
+        }
+      ]
+    },
+    "data-path-packed-stream": {
+      "code_fingerprint": "sha256:ba84ff7bcf7ab29f5a5c329cdad3482e4c3836271de37c49eb38f0f21f95eef6",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-path-resume": {
+      "code_fingerprint": "sha256:3c7c1f172d2d6e2c1329d576aadce5b97f21fb3a0b61040a7b06a10d8a0a1d23",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "resume at 37: 50 of 50 batches identical\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "world sizes 1, 2, 4: same 640 windows at 10 steps\nskip=(3,): logical step 3 = physical step 4\nlayout check: ValueError: seq_len 1024 != 2048\n"
+        }
+      ]
+    },
+    "data-path-ddp": {
+      "code_fingerprint": "sha256:9403a9aa434bea6ead4c23c5b635a025154c48f515509043cd38d71cbf06db8b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "global count: max |Δ grad| = 7.5e-09\nlocal count: max |Δ grad| = 0.0711\n"
+        }
+      ]
+    },
+    "data-path-throughput": {
+      "code_fingerprint": "sha256:97928de1b56ac2d94c74a6f5c0e3abc28065d8ea8c3acf991799e536c6ba48e1",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pipeline       T  useful tok/s        IQR  padding  peak GiB\npadded      1024          110k   105-116k      38%       7.3\npacked      1024          177k   177-177k       0%       7.3\nsdpa-mask   1024          134k   134-134k       0%      10.2\nflex-mask   1024          173k   173-173k       0%       7.3\npadded      4096           37k     30-41k      78%       7.3\npacked      4096          163k   163-163k       0%       7.3\nsdpa-mask   4096           75k     75-75k       0%      19.2\nflex-mask   4096          163k   162-165k       0%       7.3\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "data-path/data-path-throughput-1.svg",
+          "bytes": 31278,
+          "sha256": "sha256:abfc3ac9e0179d6a9948a337390a3105e2fcbb4e48e0072e6e10eacd32209e05"
+        }
+      ]
+    },
+    "data-path-data-wait": {
+      "code_fingerprint": "sha256:1d2e8fbe1459fa4e469c5008ae0abb5bd19acb8d512ece3ab51c71bd8d4327fc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stream: 1.2 ms per batch (64 × 1,024 tokens)\nt1 training step (NVIDIA GeForce RTX 4090): 379 ms; data wait 0.3% of a step\n"
+        }
+      ]
+    },
+    "data-path-mask-runs": {
+      "code_fingerprint": "sha256:672033316c8baa1014c8487522d2bdb2440e738809b1e55f8b471a7ed7dffa83",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed 0: masked 5.265, unmasked 5.248\nseed 1: masked 5.177, unmasked 5.240\nseed 2: masked 5.181, unmasked 5.185\npaired difference (unmasked − masked): 0.017 ± 0.104 (95% t, 2 dof)\nno conclusion\n"
+        }
+      ]
+    },
+    "data-path-leak": {
+      "code_fingerprint": "sha256:bd3968861ed7b723e4c6b264f41a54446662fc3632b40f47ed0e64808be82afe",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "uniform-attention share 0.67; leak below it in 7 of 8 blocks [2, 3, 4, 5, 6, 7, 8]\nleak / uniform share, block 1 to 8: 0.91 0.60 0.54 0.39 0.26 0.20 0.14 0.29\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "data-path/data-path-leak-1.svg",
+          "bytes": 25254,
+          "sha256": "sha256:9a9dfbdd720174d4a75ec54cda806d4dd1d7f98592a83ac713126eaebac772dd"
+        }
+      ]
+    }
+  }
+}

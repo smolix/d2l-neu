@@ -26795,9 +26795,9 @@ d2l.DATA_HUB['lm-smollm3-trajectory-v1'] = (
 d2l.DATA_HUB['lm-cpt-runs-v1'] = (
     d2l.LM_DATA_URL + 'lm-cpt-runs-v1.json.gz',
     '59dab5e3e95193643732a7d923f49a4efa1e6a58')
-
-_CPT_PENDING = {'cpt-t1'}
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _CPT_PENDING
+d2l.DATA_HUB['lm-cpt-t1-v1'] = (
+    d2l.LM_DATA_URL + 'lm-cpt-t1-v1.json.gz',
+    'ecc9890d0bac23b3548c8f2eaf5616f52b5d4e64')
 
 d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'] = (
     'lm-cpt-qwen-manifest-v1', 'json-table')
@@ -27941,9 +27941,15 @@ d2l.DATA_HUB['lm-pg19-test-v1'] = (
 d2l.DATA_HUB['lm-lc-t1-v1'] = (
     d2l.LM_DATA_URL + 'lm-lc-t1-v1.json.gz',
     '05a0b45828fbfe613d5b63e0eaa3e275b618f0c2')
-
-_LC_PENDING = {'lc-zeroshot', 'lc-t2-evals'}
-d2l.PRETRAIN_PENDING = d2l.PRETRAIN_PENDING | _LC_PENDING
+d2l.DATA_HUB['lm-lc-evals-v1'] = (
+    d2l.LM_DATA_URL + 'lm-lc-evals-v1.json.gz',
+    '68aa67ec366d4b4618a79524d4909d1717ccb7f2')
+d2l.DATA_HUB['lm-r2-16k-pi-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-16k-pi-v1.safetensors',
+    '1cec7e5dcb3d7ff9f42d25835831eb556ac967c2')
+d2l.DATA_HUB['lm-r2-16k-yarn-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-16k-yarn-v1.safetensors',
+    'aa606cf42aca9bfea1169b40f99fa2148e0b9792')
 
 d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'] = (  # the zero-shot part
     'lm-lc-evals-v1', 'json-table')

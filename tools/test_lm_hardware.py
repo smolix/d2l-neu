@@ -414,9 +414,13 @@ class TestRegistries(unittest.TestCase):
                              word)
 
     def test_pages_call_no_private_helper(self):
-        """No cell of a chapter page outside a #@save definition calls a
-        private d2l._ helper (fix pass F1, library-review nit 6); the lib
-        files and #@save definitions may."""
+        """No top-level statement of a chapter page outside a #@save block
+        calls a private d2l._ helper (fix pass F1, library-review nit 6);
+        the lib files and #@save blocks may. Saved blocks are found with
+        build_lib's own parser, so a statement placed after a #@save
+        definition in the same cell is still checked."""
+        sys.path.insert(0, os.path.join(REPO, 'tools'))
+        from build_lib import save_blocks
         for path in sorted(glob.glob(os.path.join(CHAPTER, '*.md'))):
             if path.endswith('-lib.md'):
                 continue
@@ -424,9 +428,22 @@ class TestRegistries(unittest.TestCase):
             for cid, code in re.findall(
                     r'```\{\.python[^\n]*#([\w-]+)[^\n]*\n(.*?)```',
                     text, re.S):
-                if '#@save' not in code:
-                    self.assertNotRegex(code, r'\bd2l\._',
-                                        f'{os.path.basename(path)}: {cid}')
+                # Cell magics and shell lines are not Python; blank them so
+                # line numbers still match.
+                lines = ['' if ln.lstrip().startswith(('%', '!')) else ln
+                         for ln in code.split('\n')]
+                saved = save_blocks('\n'.join(lines))
+                where = f'{os.path.basename(path)}: {cid}'
+                tree = ast.parse('\n'.join(lines), filename=where)
+                for node in tree.body:  # each top-level statement
+                    first = min([node.lineno] + [
+                        dec.lineno for dec in
+                        getattr(node, 'decorator_list', [])])
+                    seg = re.sub(r'[ \t]*#\s*@save', '', '\n'.join(
+                        lines[first - 1:node.end_lineno])).rstrip()
+                    if not any(seg in block for block in saved):
+                        self.assertNotRegex(seg, r'\bd2l\._',
+                                            f'{where}, line {first}')
 
 
 class TestStorage(unittest.TestCase):
@@ -967,6 +984,10 @@ class TestGemmShapes(unittest.TestCase):
         for model in ('Qwen/Qwen3-0.6B', 'Qwen/Qwen3-8B'):
             cfg = cached_config(self, model)
             self.assertEqual(d2l.arch_dims(cfg), d2l._arch_fields(cfg))
+        # Pinned values: a change in what chapter 21 reads fails here.
+        self.assertEqual(
+            d2l.arch_dims(cached_config(self, 'Qwen/Qwen3-0.6B')),
+            (28, 1024, 16, 8, 128, 3072, 151936, True))
 
     def test_flop_counter(self):
         """Exact against FlopCounterMode's matmul FLOPs of a 2-layer Qwen3

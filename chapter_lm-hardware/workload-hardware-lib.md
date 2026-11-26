@@ -87,7 +87,7 @@ def _hw_cfg(cfg):
     ServingModel and TrainStepModel read (dense, no MoE)."""
     if 'L' not in getattr(cfg, '_fields', ()):
         return cfg
-    L, d, H, H_kv, d_h, f, V, tie = d2l._arch_fields(cfg)
+    L, d, H, H_kv, d_h, f, V, tie = d2l.arch_dims(cfg)
     return d2l.HWShape(
         num_hidden_layers=L, hidden_size=d, num_attention_heads=H,
         num_key_value_heads=H_kv, head_dim=d_h, intermediate_size=f,

@@ -22454,6 +22454,9 @@ d2l.DATA_HUB['lm-ladder-config-v1'] = (
 d2l.DATA_HUB['lm-r2-inst-t2-v1'] = (
     d2l.LM_DATA_URL + 'lm-r2-inst-t2-v1.json.gz',
     '3296eb030f2cd5c5d3d725293d7b0839f61c100c')
+d2l.DATA_HUB['lm-ladder-evals-v1'] = (
+    d2l.LM_DATA_URL + 'lm-ladder-evals-v1.json.gz',
+    'ef5eafbad161f4d0926a9178e7285bda1563294d')
 
 d2l.PRETRAIN_ARTIFACTS['reference-run-log'] = (
     'lm-r2-train-log-v1', 'jsonl')

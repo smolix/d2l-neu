@@ -236,6 +236,8 @@ d2l.PRETRAIN_JOBS['inst-t1-warmup'] = (
     'instability_arms', lambda: d2l._inst_t1_job())
 d2l.PRETRAIN_JOBS['size-xfer-pilot'] = (
     'size_transfer', lambda: d2l._size_xfer_job())
+d2l.PRETRAIN_JOBS['size-xfer'] = (  # added after the pilot's go (F17)
+    'size_transfer', lambda: d2l._size_xfer_job())
 d2l.PRETRAIN_JOBS['spike-replay'] = (
     'spike_replay', lambda: d2l._spike_job())
 d2l.PRETRAIN_JOBS['eps-headroom'] = (
@@ -2522,9 +2524,9 @@ def _size_xfer_job():
     """The page's size-transfer call (cell 25c) for tools/lm_regen.py: the
     pilot (size-xfer-pilot) and, after its go, the full job (size-xfer)
     take the same arguments. The full job's name is conditional (spec
-    5.3): after a go, add 'size-xfer' to PRETRAIN_RERUN_NAMES and
-    _RERUN_ARTIFACT ('size-transfer', data-path-lib.md), its
-    PRETRAIN_JOBS entry (as size-xfer-pilot's) and the tests' list."""
+    5.3); the pilot's gate went 'go' on 2026-11-27, so 'size-xfer' is in
+    PRETRAIN_RERUN_NAMES, _RERUN_ARTIFACT, PRETRAIN_JOBS and the tests'
+    list."""
     return dict(shapes=('t1', 'ladder-54m', 'ladder-88m', 'r2'),
                 lrs=(2e-3, 4e-3, 8e-3, 1.6e-2), seeds=(0, 1), steps=300)
 

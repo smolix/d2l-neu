@@ -9,7 +9,7 @@ Qwen3-0.6B-Base config (6 N_mm = 3,575,906,304, F(T=2,048) =
 4,985,192,448), `causal_half`, `T=None`; `mfu` arithmetic; `r2_config`
 overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
 `_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
-chapter's 39 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
+chapter's 40 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
 vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
 (losses 1e-6) and a branch from a saved state; the stats-step columns
 `entropy_<l>` and `log_z` (finite; `log_z` the explicit mean logsumexp
@@ -121,7 +121,8 @@ torch.set_num_threads(min(8, torch.get_num_threads()))
 RERUN_NAMES = (
     'pdp-throughput', 'pdp-mask-runs', 't1-runs', 'inst-t1-none',
     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'inst-t1-clip',
-    'inst-t1-warmup', 'size-xfer-pilot', 'spike-replay', 'eps-headroom',
+    'inst-t1-warmup', 'size-xfer-pilot', 'size-xfer', 'spike-replay',
+    'eps-headroom',
     'reference-run', 'ladder', 'inst-t2', 'reference-evals', 't1-evals',
     'ladder-evals',
     'gemm-sweep', 'lowp-runs', 'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B',
@@ -1588,13 +1589,10 @@ class ResultTest(unittest.TestCase):
             self.assertTrue(res.label.endswith('pending'))
             self.assertIsNone(res.gate)
             self.assertEqual(list(res.fit.columns), d2l._XFER_TABLES['fit'])
-            # after a go: the full job's name is added (spec 5.3)
-            names = d2l.PRETRAIN_RERUN_NAMES + ('size-xfer',)
-            with mock.patch.object(d2l, 'PRETRAIN_RERUN_NAMES', names), \
-                    mock.patch.dict(d2l._RERUN_ARTIFACT,
-                                    {'size-xfer': 'size-transfer'}):
-                os.environ['D2L_RERUN'] = 'size-xfer'
-                call()
+            # after a go: the full job (its name was added after the
+            # pilot's go, spec 5.3)
+            os.environ['D2L_RERUN'] = 'size-xfer'
+            call()
             self.assertEqual(calls, [False, True])
         os.environ['D2L_RERUN'] = ''
         d2l.DATA_HUB['lm-r2-size-xfer-v1'] = ('url', 'sha1')

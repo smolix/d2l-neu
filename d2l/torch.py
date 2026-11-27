@@ -21438,8 +21438,8 @@ PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'pdp-throughput', 'pdp-mask-runs',
     't1-runs', 'inst-t1-none', 'inst-t1-qkclip', 'inst-t1-qknorm',
     'inst-t1-softcap', 'inst-t1-clip', 'inst-t1-warmup', 'size-xfer-pilot',
-    'spike-replay', 'eps-headroom', 'reference-run', 'ladder', 'inst-t2',
-    'reference-evals', 't1-evals', 'ladder-evals',
+    'size-xfer', 'spike-replay', 'eps-headroom', 'reference-run', 'ladder',
+    'inst-t2', 'reference-evals', 't1-evals', 'ladder-evals',
     'gemm-sweep', 'lowp-runs',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
     'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2', 'smollm3-3',
@@ -21455,6 +21455,7 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     'inst-t1-qkclip': 'instability-t1', 'inst-t1-qknorm': 'instability-t1',
     'inst-t1-softcap': 'instability-t1', 'inst-t1-clip': 'instability-t1',
     'inst-t1-warmup': 'instability-t1', 'size-xfer-pilot': 'size-transfer',
+    'size-xfer': 'size-transfer',
     'spike-replay': 'spike-replay', 'eps-headroom': 'eps-headroom',
     'reference-run': 'reference-run-log', 'ladder': 'ladder-logs',
     'inst-t2': 'instability-t2', 'reference-evals': 'reference-evals',
@@ -22657,6 +22658,8 @@ d2l.PRETRAIN_JOBS['inst-t1-clip'] = (
 d2l.PRETRAIN_JOBS['inst-t1-warmup'] = (
     'instability_arms', lambda: d2l._inst_t1_job())
 d2l.PRETRAIN_JOBS['size-xfer-pilot'] = (
+    'size_transfer', lambda: d2l._size_xfer_job())
+d2l.PRETRAIN_JOBS['size-xfer'] = (  # added after the pilot's go (F17)
     'size_transfer', lambda: d2l._size_xfer_job())
 d2l.PRETRAIN_JOBS['spike-replay'] = (
     'spike_replay', lambda: d2l._spike_job())
@@ -24924,9 +24927,9 @@ def _size_xfer_job():
     """The page's size-transfer call (cell 25c) for tools/lm_regen.py: the
     pilot (size-xfer-pilot) and, after its go, the full job (size-xfer)
     take the same arguments. The full job's name is conditional (spec
-    5.3): after a go, add 'size-xfer' to PRETRAIN_RERUN_NAMES and
-    _RERUN_ARTIFACT ('size-transfer', data-path-lib.md), its
-    PRETRAIN_JOBS entry (as size-xfer-pilot's) and the tests' list.
+    5.3); the pilot's gate went 'go' on 2026-11-27, so 'size-xfer' is in
+    PRETRAIN_RERUN_NAMES, _RERUN_ARTIFACT, PRETRAIN_JOBS and the tests'
+    list.
 
     Defined in :numref:`sec_lm_reference_model`"""
     return dict(shapes=('t1', 'ladder-54m', 'ladder-88m', 'r2'),

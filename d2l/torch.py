@@ -25217,7 +25217,7 @@ ZLOSS_STATS = 1  # version of the pilot's statistics
 _ZLOSS_TABLES = dict(  # the columns of a ZlossPilot's tables
     table=['z_loss', 'seed', 'log_z_end', 'val_loss', 'final_loss',
            'first_nonfinite', 'max_logit', 'source'],
-    traces=['step', 'loss', 'log_z', 'z_loss'])
+    traces=['step', 'loss', 'log_z', 'max_logit', 'z_loss'])
 
 def _zloss_end(trace, steps):
     """An arm's mean log Z at the end: the mean of log_z (the mean
@@ -25249,11 +25249,10 @@ def _zloss_pilot(lr, device=None):
     regeneration reads it), paired with the grid's qk_norm cell at lr,
     seed 0 (z-loss ZLOSS_BASE), whose configuration must differ from the
     new run's in z_loss only. Also the gate script's call: the job runs
-    before its regeneration name exists (spec 5.3).
+    before its regeneration name exists (spec 5.3). Only training needs a
+    GPU; reading the kept run does not.
 
     Defined in :numref:`sec_lm_reference_model`"""
-    if device is None and not torch.cuda.is_available():
-        raise RuntimeError('the z-loss run trains on a GPU')
     cell, rows, cell_traces = _grid_cell(
         d2l.load_artifact('instability-t1'), 'qk_norm', lr, (0,))
     c, extra = _inst_arm(d2l.r2_config('t1', clip=None), 'qk_norm', lr, 0)
@@ -25269,6 +25268,8 @@ def _zloss_pilot(lr, device=None):
                                 tau=None))
 
     def compute():
+        if device is None and not torch.cuda.is_available():
+            raise RuntimeError('the z-loss run trains on a GPU')
         shards = _train_shards(c)
         val = _val_fn(dataclasses.replace(c, val_tokens=INST_VAL_TOKENS))
         log = _inst_run(c, extra, 'qk_norm', None, shards, val,
@@ -25285,7 +25286,8 @@ def _zloss_pilot(lr, device=None):
                           val_loss=r['val_loss'], final_loss=r['final_loss'],
                           first_nonfinite=r['first_nonfinite'],
                           max_logit=r['max_logit'], source=source))
-        traces.append(tr[['step', 'loss', 'log_z']].assign(z_loss=z))
+        traces.append(tr[['step', 'loss', 'log_z', 'max_logit']].assign(
+            z_loss=z))
     table = pd.DataFrame(table)
     return ZlossPilot(table, pd.concat(traces, ignore_index=True),
                       _zloss_gate(table), '')
@@ -25305,7 +25307,9 @@ def zloss_pilot(lr):
     once without z-loss; the two configurations differ in z_loss only
     (checked). ZlossPilot(table, traces, gate, label): a row per arm with
     the mean log Z at the end (_zloss_end), the final losses, the largest
-    logit; traces of loss and log_z per step; gate = claim 26's rule
+    logit; traces per step of loss, log_z and the largest logit (the
+    last two at the statistics steps; equal early values show that the
+    pair started alike); gate = claim 26's rule
     (_zloss_gate). Regeneration: zloss-pilot (after inst-t1-qknorm), a
     conditional name (spec 5.3): the gate script runs _zloss_pilot first;
     after a go, add 'zloss-pilot' to PRETRAIN_RERUN_NAMES and

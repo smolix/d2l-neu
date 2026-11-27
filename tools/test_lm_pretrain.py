@@ -2706,6 +2706,7 @@ class ZlossPilotTest(unittest.TestCase):
     def trace(log_z, steps=1526, loss=4.0):
         t = EpsHeadroomTest.trace(0.2, steps=steps, loss=loss)
         t['log_z'] = np.where(t['step'] % 10 == 0, log_z, np.nan)
+        t['max_logit'] = t['max_logit_0']  # as _arm_trace keeps it
         return t
 
     def test_end_and_gate(self):
@@ -2784,8 +2785,13 @@ class ZlossPilotTest(unittest.TestCase):
             for p in patches:
                 p.start()
             try:
-                res = d2l._zloss_pilot(self.LR, device='cpu')
-                again = d2l._zloss_pilot(self.LR, device='cpu')
+                with mock.patch('torch.cuda.is_available', lambda: False):
+                    with self.assertRaisesRegex(RuntimeError, 'trains on '
+                                                'a GPU'):
+                        d2l._zloss_pilot(self.LR)  # nothing kept yet
+                    self.assertEqual(calls, [])
+                    res = d2l._zloss_pilot(self.LR, device='cpu')
+                    again = d2l._zloss_pilot(self.LR)  # no GPU to read it
                 self.assertEqual(len(calls), 1)  # the kept run is read
                 pd.testing.assert_frame_equal(res.table, again.table)
                 self.assertTrue(os.path.exists(os.path.join(
@@ -2831,6 +2837,8 @@ class ZlossPilotTest(unittest.TestCase):
                          d2l._ZLOSS_TABLES['traces'])
         self.assertEqual(len(res.traces), 2 * 1526)
         self.assertEqual(res.traces['log_z'].notna().sum(), 2 * 152)
+        self.assertEqual(res.traces.loc[res.traces['step'] == 10,
+                                        'max_logit'].tolist(), [20.0, 20.0])
 
     def fake_result(self, base=10.71, none=16.04):
         table = pd.DataFrame(dict(
@@ -2838,7 +2846,7 @@ class ZlossPilotTest(unittest.TestCase):
             val_loss=[3.9, 3.97], final_loss=4.0, first_nonfinite=None,
             max_logit=20.0, source=['instability-t1', 'zloss-pilot']))
         traces = pd.DataFrame(dict(step=[10, 20], loss=4.0, log_z=10.0,
-                                   z_loss=1e-4))
+                                   max_logit=6.5, z_loss=1e-4))
         return d2l.ZlossPilot(table, traces, d2l._zloss_gate(table), '')
 
     def page_cell(self):

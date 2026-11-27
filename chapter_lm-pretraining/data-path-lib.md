@@ -9,7 +9,8 @@ uses these symbols at import time). It holds the library code that
 :numref:`sec_lm_data_path` explains in a sentence each but does not show
 (docs/code-guide.md 7.1):
 
-- the chapter's registries: Hub pins (`PRETRAIN_SOURCES`), committed results
+- the chapter's registries: Hub pins (`PRETRAIN_SOURCES`, and the files a
+  builder reads of a pinned dataset, `PRETRAIN_SOURCE_FILES`), committed results
   (`PRETRAIN_ARTIFACTS`, one statement per name; a keyed registry, so a new
   or re-versioned artifact stales only the notebooks that read it), the
   long regeneration jobs (`PRETRAIN_JOBS`), the regeneration names
@@ -64,6 +65,9 @@ d2l.DATA_HUB['lm-pdp-mask-runs-v1'] = (
 %%tab pytorch
 #@save
 PRETRAIN_SOURCES = {}  # name: (kind, Hub repository, revision, licence)
+
+#@save
+PRETRAIN_SOURCE_FILES = {}  # name: the files a builder reads, in order
 ```
 
 ```{.python .input #data-path-lib-source-pins}
@@ -96,6 +100,18 @@ d2l.PRETRAIN_SOURCES['pes2o'] = (
 d2l.PRETRAIN_SOURCES['pg19'] = (
     'dataset', 'emozilla/pg19',
     'd2f3c93e25bc848bd62bec2aa27a6bec14f4faf4', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['openthoughts3'] = (
+    'dataset', 'open-thoughts/OpenThoughts3-1.2M',
+    '61bcf9d4eb38b30295efc2021227a63cc5bb34c8', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['math500'] = (  # the card states none; MATH and
+    'dataset', 'HuggingFaceH4/MATH-500',  # openai/prm800k are MIT
+    '6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be', 'mit')
+# 21.4's reasoning traces: every 10th of the 120 parquet files (2.85 GB,
+# 120,000 conversations: 80,000 math, 30,000 code, 10,000 science), so
+# the subset spans the dataset's domain order
+d2l.PRETRAIN_SOURCE_FILES['openthoughts3'] = tuple(
+    f'data/train-{k:05d}-of-00120.parquet' for k in range(0, 120, 10))
+d2l.PRETRAIN_SOURCE_FILES['math500'] = ('test.jsonl',)
 ```
 
 ```{.python .input #data-path-lib-registries}

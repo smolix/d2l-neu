@@ -21400,6 +21400,8 @@ d2l.DATA_HUB['lm-pdp-mask-runs-v1'] = (
 
 PRETRAIN_SOURCES = {}  # name: (kind, Hub repository, revision, licence)
 
+PRETRAIN_SOURCE_FILES = {}  # name: the files a builder reads, in order
+
 d2l.PRETRAIN_SOURCES['smollm3-stage1'] = (
     'model', 'HuggingFaceTB/SmolLM3-3B-checkpoints',
     'd07a5a83dd011f3f084e9d2f1b47f51e524ca8d4', 'apache-2.0')
@@ -21427,6 +21429,18 @@ d2l.PRETRAIN_SOURCES['pes2o'] = (
 d2l.PRETRAIN_SOURCES['pg19'] = (
     'dataset', 'emozilla/pg19',
     'd2f3c93e25bc848bd62bec2aa27a6bec14f4faf4', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['openthoughts3'] = (
+    'dataset', 'open-thoughts/OpenThoughts3-1.2M',
+    '61bcf9d4eb38b30295efc2021227a63cc5bb34c8', 'apache-2.0')
+d2l.PRETRAIN_SOURCES['math500'] = (  # the card states none; MATH and
+    'dataset', 'HuggingFaceH4/MATH-500',  # openai/prm800k are MIT
+    '6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be', 'mit')
+# 21.4's reasoning traces: every 10th of the 120 parquet files (2.85 GB,
+# 120,000 conversations: 80,000 math, 30,000 code, 10,000 science), so
+# the subset spans the dataset's domain order
+d2l.PRETRAIN_SOURCE_FILES['openthoughts3'] = tuple(
+    f'data/train-{k:05d}-of-00120.parquet' for k in range(0, 120, 10))
+d2l.PRETRAIN_SOURCE_FILES['math500'] = ('test.jsonl',)
 
 PRETRAIN_ARTIFACTS = {}  # load name: (DATA_HUB key, kind)
 
@@ -26038,11 +26052,20 @@ d2l.DATA_HUB['lm-cpt-runs-v1'] = (
 d2l.DATA_HUB['lm-cpt-t1-v1'] = (
     d2l.LM_DATA_URL + 'lm-cpt-t1-v1.json.gz',
     'ecc9890d0bac23b3548c8f2eaf5616f52b5d4e64')
+d2l.DATA_HUB['lm-cpt-qwen-manifest-v2'] = (
+    d2l.LM_DATA_URL + 'lm-cpt-qwen-manifest-v2.json.gz',
+    '46c77b3151b04b2bb0fb20c91e6c2a286757b4fa')
+d2l.DATA_HUB['lm-traces-12m-v1'] = (
+    d2l.LM_DATA_URL + 'lm-traces-12m-v1.tar',
+    '269d73e0166d62c5fcc428c0a1e080be4a87fcd9')
+d2l.DATA_HUB['lm-traces-val-v1'] = (
+    d2l.LM_DATA_URL + 'lm-traces-val-v1.tar',
+    'c14411336f10e91ca619ab71c37e5bb2d7d07540')
 
 d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'] = (
-    'lm-cpt-qwen-manifest-v1', 'json-table')
-d2l.PRETRAIN_ARTIFACTS['cpt-pes2o-12m'] = ('lm-pes2o-12m-v1', 'shards')
-d2l.PRETRAIN_ARTIFACTS['cpt-pes2o-val'] = ('lm-pes2o-val-v1', 'shards')
+    'lm-cpt-qwen-manifest-v2', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['cpt-traces-12m'] = ('lm-traces-12m-v1', 'shards')
+d2l.PRETRAIN_ARTIFACTS['cpt-traces-val'] = ('lm-traces-val-v1', 'shards')
 d2l.PRETRAIN_ARTIFACTS['cpt-fwedu-replay-12m'] = (
     'lm-fwedu-replay-12m-v1', 'shards')
 d2l.PRETRAIN_ARTIFACTS['cpt-t1'] = (
@@ -26148,18 +26171,19 @@ def _mix_tokens(mix, step, streams):
 CptData = collections.namedtuple('CptData', ['table', 'shards', 'label'])
 
 _CPT_STREAMS = (  # key, row label, source, licence
-    ('pes2o', 'domain: peS2o', 'peS2o v2 train', 'ODC-By'),
-    ('book', 'domain: book (train)', 'book sections', 'CC BY-SA 4.0'),
+    ('traces', 'domain: reasoning traces', 'OpenThoughts3-1.2M',
+     'Apache-2.0'),
     ('replay', 'replay: FineWeb-Edu', 'FineWeb-Edu file 005', 'ODC-By'),
-    ('val_domain', 'val: peS2o', 'peS2o v2 validation', 'ODC-By'),
+    ('val_domain', 'val: held-out traces', 'question-disjoint',
+     'Apache-2.0'),
     ('val_general', 'val: FineWeb-Edu', 'FineWeb-Edu validation',
      'ODC-By'),
-    ('val_book', 'held-out book', 'every fifth section', 'CC BY-SA 4.0'))
+    ('val_book', 'held-out book', 'never trained', 'CC BY-SA 4.0'))
 
-_CPT_DIRS = {'t1': os.path.join('..', 'data', 'lm', 'cpt-t1-v1'),
-             't2': os.path.join('..', 'data', 'lm', 'cpt-qwen-v1')}
+_CPT_DIRS = {'t1': os.path.join('..', 'data', 'lm', 'cpt-t1-traces-v1'),
+             't2': os.path.join('..', 'data', 'lm', 'cpt-qwen-traces-v1')}
 
-_CPT_T1_KEYS = {'pes2o': 'cpt-pes2o-12m', 'val_domain': 'cpt-pes2o-val',
+_CPT_T1_KEYS = {'traces': 'cpt-traces-12m', 'val_domain': 'cpt-traces-val',
                 'replay': 'cpt-fwedu-replay-12m'}
 
 def book_split(every=5):
@@ -26232,35 +26256,82 @@ def _cpt_t1_shards():
             out[key] = d2l.TokenShards(local, 'train')
         else:
             raise KeyError(f'{name} is not committed yet; build it with '
-                           'tools/build_pretraining_data.py --stage cpt-t1')
+                           'tools/build_pretraining_data.py --stage '
+                           'cpt-t1-traces')
     out['val_general'] = d2l.reference_shards('val')
     return dict(out, **_book_shards('t1'))
+
+def _run_builder(stage):
+    """Run tools/build_pretraining_data.py --stage stage (quietly)."""
+    import subprocess
+    import sys
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(d2l.__file__)))
+    subprocess.run([sys.executable, os.path.join(
+        repo, 'tools', 'build_pretraining_data.py'), '--stage', stage],
+        check=True, cwd=repo, stdout=subprocess.DEVNULL)
+
+def _cpt_manifest_committed():
+    return d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'][0] in d2l.DATA_HUB
 
 def _cpt_qwen_shards():
     """The T2 shards (Qwen tokens, local), built through the builder when
     missing; checked against the committed manifest when there is one."""
-    import subprocess
-    import sys
-    keys = [k for k, *_ in _CPT_STREAMS if k not in ('book', 'val_book')]
+    keys = [k for k, *_ in _CPT_STREAMS if k != 'val_book']
     root = _CPT_DIRS['t2']
     have = lambda: all(os.path.exists(os.path.join(root, k,
                                                    'manifest.json'))
                        for k in keys)
     with _locked(root + '.lock'):
         if not have():
-            repo = os.path.dirname(os.path.dirname(os.path.abspath(
-                d2l.__file__)))
-            subprocess.run([sys.executable, os.path.join(
-                repo, 'tools', 'build_pretraining_data.py'), '--stage',
-                'cpt-qwen'], check=True, cwd=repo, stdout=subprocess.DEVNULL)
+            _run_builder('cpt-qwen-traces')
     out = {k: d2l.TokenShards(os.path.join(root, k), 'train') for k in keys}
-    if 'lm-cpt-qwen-manifest-v1' in d2l.DATA_HUB:
+    if _cpt_manifest_committed():
         layout = d2l.load_artifact('cpt-qwen-manifest').layout
         for k, s in out.items():
             if d2l._layout_hash(s) != layout[k]:
                 raise ValueError(f'{k}: the local shards differ from the '
                                  'committed manifest; rebuild them')
     return dict(out, **_book_shards('t2'))
+
+def chatml(messages):
+    """A conversation (dicts with role and content) as ChatML text, the
+    format of Qwen3's and SmolLM3's chat templates: per message
+    <|im_start|>role, a newline, the content, <|im_end|> and a newline."""
+    return ''.join(f'<|im_start|>{m["role"]}\n{m["content"]}<|im_end|>\n'
+                   for m in messages)
+
+def trace_conversations():
+    """The 500 held-out reasoning-trace conversations of the section's
+    corpus (OpenThoughts3-1.2M; no training document asks their
+    questions), in id order: a DataFrame with doc_id, question_id, domain,
+    source and messages (role, content). Local only, written by
+    tools/build_pretraining_data.py --stage cpt-qwen-traces, which runs the
+    first time they are needed."""
+    import gzip
+    root = _CPT_DIRS['t2']
+    path = os.path.join(root, 'heldout.jsonl.gz')
+    with _locked(root + '.lock'):
+        if not os.path.exists(path):
+            _run_builder('cpt-qwen-traces')
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        return pd.DataFrame([json.loads(line) for line in f])
+
+def trace_windows(tokenizer, T=2048, n=None, render=chatml):
+    """One window per held-out conversation (the first n; all 500 by
+    default): the first T token ids of render(messages) under tokenizer (a
+    Transformers tokenizer), as int64 arrays. With the default ChatML
+    rendering the chat markers must be the tokenizer's own special tokens,
+    so a window reads as the model's chat format does."""
+    conv = trace_conversations()
+    conv = conv if n is None else conv.iloc[:n]
+    if render is chatml:
+        marks = tokenizer.convert_tokens_to_ids(['<|im_start|>',
+                                                 '<|im_end|>'])
+        if None in marks or tokenizer.unk_token_id in marks:
+            raise ValueError('the tokenizer has no ChatML markers')
+    ids = tokenizer([render(m) for m in conv['messages']],
+                    add_special_tokens=False, verbose=False)['input_ids']
+    return [np.asarray(x[:T], dtype=np.int64) for x in ids]
 
 def qwen3_val_tokens(n=4, T=512):
     """n sequences of T Qwen3 tokens, each the start of one FineWeb-Edu
@@ -26277,9 +26348,13 @@ def qwen3_val_tokens(n=4, T=512):
                 break
     return torch.tensor(out)
 
-def _shard_table(shards):
-    """stream, documents, tokens, source, licence of each stream."""
-    rows = [(label, shards[k].n_docs, shards[k].n_tokens, src, lic)
+def _shard_table(shards, tier='t2'):
+    """stream, documents, tokens, source, licence of each stream (the
+    traces' source names their rendering: ChatML at T2, plain text at
+    T1)."""
+    form = {'t1': 'plain text', 't2': 'ChatML'}[tier]
+    rows = [(label, shards[k].n_docs, shards[k].n_tokens,
+             f'{src}, {form}' if k == 'traces' else src, lic)
             for k, label, src, lic in _CPT_STREAMS]
     return pd.DataFrame(rows, columns=['stream', 'documents', 'tokens',
                                        'source', 'licence'])
@@ -26290,20 +26365,22 @@ def _cpt_qwen_regenerating():
 
 def cpt_data(tier='t2'):
     """The arms' data: CptData(table, shards, label). table: per stream
-    (domain peS2o, book train sections, replay FineWeb-Edu, the three
-    evaluation sets) documents, tokens, source and licence. 't1': the
-    R2-tokenized shards. 't2': in a normal run the committed manifest's
-    table (no shard is opened, built or downloaded; shards is None); in a
-    regeneration of the Qwen arms the local Qwen-tokenized shards."""
+    (domain reasoning traces, replay FineWeb-Edu, the three evaluation
+    sets: held-out traces, FineWeb-Edu validation, held-out book)
+    documents, tokens, source and licence. 't1': the R2-tokenized shards.
+    't2': in a normal run the committed manifest's table (no shard is
+    opened, built or downloaded; shards is None); in a regeneration of the
+    Qwen arms the local Qwen-tokenized shards. shards also holds the book's
+    train sections ('book'), which no arm trains on."""
     if tier == 't1':
         shards = _cpt_t1_shards()
-        return CptData(_shard_table(shards), shards, '')
+        return CptData(_shard_table(shards, 't1'), shards, '')
     if tier != 't2':
         raise ValueError(f"tier is 't1' or 't2', not {tier!r}")
     if _cpt_qwen_regenerating():
         shards = _cpt_qwen_shards()
         return CptData(_shard_table(shards), shards, '')
-    if 'lm-cpt-qwen-manifest-v1' in d2l.DATA_HUB:
+    if _cpt_manifest_committed():
         return CptData(d2l.load_artifact('cpt-qwen-manifest').table, None,
                        '')
     if d2l._regenerating():

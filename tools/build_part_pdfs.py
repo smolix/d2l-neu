@@ -216,10 +216,12 @@ def part_preamble(preamble, title):
 
     Page and type come from gen_pdf.py (PDF_GEOMETRY, PDF_FONTSIZE), which
     sets them for the full books; a part inherits them. Refuse a full-book
-    .tex built with another geometry (a stale _pdf/<fw>/ tree)."""
+    .tex built with another geometry (a stale _pdf/<fw>/ tree). The font size
+    may follow other class options (a translated book lists its babel language,
+    e.g. `ngerman`, first)."""
     geometry = ','.join(PDF_GEOMETRY)
     if f'\\usepackage[{geometry}]{{geometry}}' not in preamble or \
-            not re.search(r'\\documentclass\[\s*' + PDF_FONTSIZE + ',', preamble):
+            not re.search(r'\\documentclass\[[^\]]*\b' + PDF_FONTSIZE + ',', preamble):
         sys.exit('ERROR: the full-book .tex was not built with gen_pdf.py\'s '
                  f'{PDF_FONTSIZE} / {geometry} page; rebuild it (make pdf-<fw>)')
     book = i18n.t('book.title')

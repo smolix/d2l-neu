@@ -2,38 +2,80 @@
 """Build the token shards of sec_lm_continued_pretraining (21.4) and
 sec_lm_long_context (21.5).
 
-Sources (pinned; peS2o and FineWeb-Edu are ODC-By, attribution in every
-manifest):
-  * domain: peS2o v2 (allenai/peS2o @636a503e), train file 00000 of 20, read
-    in file order. The whole file is s2ag/train (titles and abstracts;
-    3,058,025 records, counted 2026-11-25): "scientific prose".
-  * domain validation: peS2o v2 validation file 00000 of 2 (s2ag/valid, the
-    same kind of text, a different split).
+21.4's sources (pinned; attribution in every manifest):
+  * domain: reasoning traces, OpenThoughts3-1.2M
+    (open-thoughts/OpenThoughts3-1.2M @61bcf9d4, Apache-2.0; the licence is
+    re-read from the card at build and the build stops if it changed). The
+    pinned subset is every 10th of its 120 parquet files
+    (d2l.PRETRAIN_SOURCE_FILES['openthoughts3']: 12 files, 2.85 GB, 120,000
+    conversations, the dataset's domain order spanned). One document = one
+    conversation (one user turn, one assistant turn that opens a <think>
+    block). Most assistant turns stop at the annotator's generation cap
+    (about 16K tokens): about two thirds of the selected documents never
+    close the <think> block, and some that close it are cut in the answer.
+    Every document gets an ending, recorded per split: 'open' (no
+    </think>), 'capped' (closed, but the assistant turn holds at least
+    TRACES['near_cap'] tokens, where answers start being cut) or
+    'complete'; TRACES['endings'] names the endings the training and
+    held-out selections keep (all three: the dataset as published). Its id is the sha1 of its
+    ChatML text (d2l.chatml); its
+    question id the sha1 of the user turn after NFKC, lower case and one
+    space per whitespace run. Exact duplicates keep one copy.
+    Decontamination first: a document whose user turn shares a word
+    13-gram (NFKC, lower case, \\w+ words) with a GSM8K test question or a
+    MATH-500 problem (HuggingFaceH4/MATH-500 @6e4ed1a2) is dropped, as is
+    one whose text holds one of Qwen3's special-token strings. Then, in id
+    order: the training selection takes documents until it holds
+    TRACES['train'] Qwen tokens (EOS included); the held-out set takes the
+    next documents whose question the selection does not ask, one per
+    question, dropping (and recording) those whose 50-token-gram overlap
+    with the selection exceeds 20%, until it holds 500 conversations;
+    val_domain is its first 2.2M tokens of whole conversations.
   * replay: FineWeb-Edu sample/10BT/005_00000.parquet (@87f09149), a file
-    the reference model's shards never read (d2l._FWEDU_FILES).
+    the reference model's shards never read (d2l._FWEDU_FILES), without
+    texts of the general validation set.
   * general validation: the reference model's FineWeb-Edu validation texts
     (data/lm/fwedu-r2-v1/val/val.jsonl.gz, i.e. d2l.reference_shards('val')).
-  * the book's train and held-out sections are built by the library
-    (d2l._book_shards) on first use; this script builds them too so that the
-    T2 manifest can list them.
+  * the book's held-out sections are built by the library (d2l._book_shards)
+    on first use; this script builds them too so that the T2 manifest can
+    list them. No arm trains on the book.
 
 Stages:
-  --stage cpt-t1   the R2-tokenized (uint16) T1 slices, hosted:
-                   data/lm/cpt-t1-v1/{pes2o,val_domain,replay}/ and the
-                   upload tars data/lm/rerun/lm-pes2o-12m-v1.tar,
-                   lm-pes2o-val-v1.tar, lm-fwedu-replay-12m-v1.tar (each a
-                   shard set with its manifest.json at the root; sha1 and
-                   size printed for DATA_HUB).
-  --stage cpt-qwen the Qwen3-tokenized (uint32) T2 shards, local only:
-                   data/lm/cpt-qwen-v1/{pes2o,replay,val_domain,val_general}/
-                   (about 0.5 GB) and the committed summary
-                   data/lm/rerun/lm-cpt-qwen-manifest-v1.json.gz (json-table:
-                   the stream table, each stream's layout hash, the sources
-                   and the attribution).
+  --stage cpt-qwen-traces  the Qwen3-tokenized (uint32) T2 shards, local only
+                   (about 0.5 GB): data/lm/cpt-qwen-traces-v1/{traces,
+                   val_domain,replay,val_general}/ (traces in ChatML, EOS
+                   151,643 after each document), heldout.jsonl.gz (the 500
+                   held-out conversations, the SmolLM3 cell's "traces
+                   (seen)" windows), split.json (the selection: ids, file
+                   and row of every training and held-out document, the
+                   counts) and the committed summary
+                   data/lm/rerun/<PRETRAIN_ARTIFACTS['cpt-qwen-manifest']>
+                   .json.gz (json-table: the stream table, each stream's
+                   layout hash, sources and file list, licence, attribution,
+                   decontamination, overlap, per-domain and per-ending
+                   counts, the sha1 of the training and held-out id lists).
+                   The licence is re-read from the card on every build,
+                   also when split.json is reused. Replay and general validation
+                   are rebuilt byte-equal to cpt-qwen-v1's (layout hashes
+                   checked against lm-cpt-qwen-manifest-v1).
+  --stage cpt-t1-traces  the R2-tokenized (uint16) T1 slices, hosted: the
+                   same selection as plain text ("User: ...\\nAssistant:
+                   ..."), training documents in id order to 12M tokens and
+                   held-out ones to 2.2M, plus the unchanged replay slice:
+                   data/lm/cpt-t1-traces-v1/{traces,val_domain,replay}/ and
+                   the upload tars data/lm/rerun/lm-traces-12m-v1.tar and
+                   lm-traces-val-v1.tar (sha1 and size printed for
+                   DATA_HUB); the replay tar must equal the hosted
+                   lm-fwedu-replay-12m-v1. Reads split.json (computes it
+                   when missing).
   --check          verify every shard set of the stage (SHA-256 and EOS
-                   invariants), the token targets, and the disjointness of
-                   train and evaluation documents (peS2o ids; FineWeb-Edu
-                   text hashes against the general validation texts).
+                   invariants), the token targets (the arms' windows within
+                   one epoch: T2 305 x 128 x 2,048, T1 183 x 64 x 1,024),
+                   the file list against the pin, the endings recounted,
+                   ids and question ids recomputed from the parquet, the
+                   tokens re-encoded, training and held-out questions and
+                   texts disjoint, decontamination, the held-out overlap
+                   target (under 2% of held-out 50-grams, none over 20%).
 
   --stage lc-long  21.5's long half (R2-tokenized, uint16, hosted): PG-19
                    train books (emozilla/pg19 @d2f3c93e, the parquet
@@ -63,37 +105,52 @@ Stages:
                    general validation texts, every host in its domain.
 
 Deterministic: the same inputs give the same bytes (no timestamps, files read
-in order, one shard per stream). Run from the repository root:
+in order, one shard per stream), except the gzip header of the json-table
+manifest, which d2l._write_result writes with the file's time and temporary
+name (its content is the same). Run from the repository root:
 
     HF_HOME=/home/smola/.cache/hf-lm .venv-lm/bin/python \\
-        tools/build_pretraining_data.py --stage cpt-t1 [--check]
+        tools/build_pretraining_data.py --stage cpt-qwen-traces [--check]
 
-Expected time: cpt-t1 about 2 minutes, cpt-qwen about 8 minutes (CPU,
-tokenization of about 110M tokens), lc-long about 5 minutes, pg19-test
-under a minute; a few GB of RAM.
+Expected time (measured 2026-11-27 on 6 workers): cpt-qwen-traces about
+4 minutes including its --check, after the 2.8 GB download;
+cpt-t1-traces under a minute; lc-long about 5 minutes, pg19-test under a
+minute; up to 10 GB of RAM.
 """
 import argparse
 import gzip
 import hashlib
 import json
 import os
+import re
 import sys
 import tarfile
+import unicodedata
+
+import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHAPTER = os.path.join(ROOT, 'chapter_lm-pretraining')
-PES2O_TRAIN = 'data/v2/train-00000-of-00020.json.gz'
-PES2O_VAL = 'data/v2/validation-00000-of-00002.json.gz'
 FWEDU_REPLAY = 'sample/10BT/005_00000.parquet'
 
-# stage: {stream: (token target, None = all)}
-TARGETS = {
-    'cpt-t1': {'pes2o': 12_000_000, 'val_domain': 2_200_000,
-               'replay': 12_000_000},
-    'cpt-qwen': {'pes2o': 80_000_000, 'replay': 24_000_000,
-                 'val_domain': 2_200_000, 'val_general': None}}
-UPLOADS = {'pes2o': 'lm-pes2o-12m-v1', 'val_domain': 'lm-pes2o-val-v1',
-           'replay': 'lm-fwedu-replay-12m-v1'}
+TRACES = dict(  # 21.4's reasoning-trace corpus (tokens include each EOS)
+    train=84_000_000,  # Qwen tokens of the training selection
+    seq_len=2048, steps=305, batch=128,  # the arms: 305 x 128 windows
+    heldout=500,  # held-out conversations, one per question
+    near_cap=15_500,  # assistant tokens from which closed answers get cut
+    endings=('complete', 'capped', 'open'),  # the endings selected (a
+    # complete-only selection reads ids up to 3d0c...: prefetch '5')
+    val=2_200_000,  # val_domain: whole held-out conversations, id order
+    gram=50, max_overlap=0.20, overlap_target=0.02,  # held-out vs train
+    contam=13,  # word n-grams shared with GSM8K test or MATH-500
+    t1_train=12_000_000, t1_val=2_200_000,  # R2 tokens (T1)
+    t1_seq_len=1024, t1_steps=183, t1_batch=64,  # the T1 arms' windows
+    replay_t1=12_000_000, replay_t2=24_000_000,
+    prefetch='2',  # texts kept by the scan for ids below this (1/8)
+    workers=6)
+TRACE_UPLOADS = {'traces': 'lm-traces-12m-v1',
+                 'val_domain': 'lm-traces-val-v1'}
+REPLAY_T1 = 'lm-fwedu-replay-12m-v1'  # hosted; rebuilt byte-equal
 LC = {  # 21.5: the long half's two parts, their token targets, the windows
     'pg19': 50_000_000, 'pes2o': 10_000_000, 'min_paper': 8_192,
     'shard': 8_000_000, 'test_books': 64, 'test_tokens': 16_385}
@@ -104,11 +161,15 @@ LC_ATTRIBUTION = (
     '(allenai/peS2o, ODC-By 1.0; full-text papers derived from S2ORC, Allen '
     'Institute for AI). Token shards derived for Dive into Deep Learning, '
     'section "Long-Context Training".')
-ATTRIBUTION = (
-    'peS2o (allenai/peS2o, ODC-By 1.0; derived from S2ORC/S2AG, Allen '
-    'Institute for AI) and FineWeb-Edu (HuggingFaceFW/fineweb-edu, ODC-By '
-    '1.0; Hugging Face). Token shards derived for Dive into Deep Learning, '
-    'section "Continued Pretraining and Mid-Training".')
+FWEDU_ATTRIBUTION = (
+    'FineWeb-Edu (HuggingFaceFW/fineweb-edu, ODC-By 1.0; Hugging Face). '
+    'Token shards derived for Dive into Deep Learning, section "Continued '
+    'Pretraining and Mid-Training".')
+TRACES_ATTRIBUTION = (
+    'OpenThoughts3-1.2M (open-thoughts/OpenThoughts3-1.2M, Apache-2.0; '
+    'OpenThoughts team, Guha et al. 2025), a pinned subset of its files. '
+    'Token shards derived for Dive into Deep Learning, section "Continued '
+    'Pretraining and Mid-Training".')
 
 
 def d2l_module():
@@ -159,35 +220,26 @@ def val_general_docs(d2l):
             yield str(d.get('doc_id', d.get('id', f'val:{k}'))), d['text']
 
 
-def sources(d2l, stage):
-    out = {'pes2o': lambda: pes2o_docs(d2l, PES2O_TRAIN),
-           'val_domain': lambda: pes2o_docs(d2l, PES2O_VAL),
-           'replay': lambda: fwedu_docs(d2l, general_hashes(d2l))}
-    if stage == 'cpt-qwen':
-        out['val_general'] = lambda: val_general_docs(d2l)
-    return out
-
-
-def tokenizer(d2l, stage):
+def tokenizer(d2l, tier):
     os.chdir(CHAPTER)  # the library's relative data paths
-    return d2l._cpt_tokenizer('t1' if stage == 'cpt-t1' else 't2')
+    return d2l._cpt_tokenizer(tier)
 
 
-def stage_dir(d2l, stage):
-    return os.path.abspath(d2l._CPT_DIRS['t1' if stage == 'cpt-t1' else 't2'])
-
-
-def build_stream(d2l, tok, docs, target, out):
-    """One shard: documents in order until the shard holds target tokens."""
+def build_stream(d2l, tok, docs, target, out, attribution=FWEDU_ATTRIBUTION,
+                 eos_id=None, meta_fn=None):
+    """One shard: documents in order until the shard holds target tokens
+    (None: all of them)."""
     import shutil
     tmp = out + '.tmp'
     shutil.rmtree(tmp, ignore_errors=True)
     kw = (dict(shard_tokens=target, max_shards=1) if target else
           dict(shard_tokens=10 ** 12))
-    d2l.write_shards(docs, tok, tmp, 'train', **kw)
+    d2l.write_shards(docs, tok, tmp, 'train', eos_id=eos_id,
+                     meta_fn=meta_fn, **kw)
     with open(os.path.join(tmp, 'manifest.json')) as f:
         m = json.load(f)
-    m['attribution'] = ATTRIBUTION
+    m['name'] = os.path.basename(out)  # not the temporary folder's name
+    m['attribution'] = attribution
     with open(os.path.join(tmp, 'manifest.json'), 'w') as f:
         json.dump(m, f, indent=1, sort_keys=True)
     shutil.rmtree(out, ignore_errors=True)
@@ -252,14 +304,15 @@ def lc_long_docs(d2l, tok):
 
 class PreTokenized:
     """A tiktoken-like encoding whose 'texts' are keys of precomputed ids
-    (write_shards then stores exactly those ids)."""
+    (write_shards then stores exactly those ids); eos is its only special
+    token."""
     special_tokens_set = {'<|endoftext|>'}
 
-    def __init__(self, ids, n_vocab):
-        self.ids, self.n_vocab = ids, n_vocab
+    def __init__(self, ids, n_vocab, eos=0):
+        self.ids, self.n_vocab, self.eos = ids, n_vocab, eos
 
     def encode_single_token(self, s):
-        return 0
+        return self.eos
 
     def encode_ordinary(self, key):
         return self.ids[key]
@@ -384,7 +437,7 @@ def build_domains():
     import pyarrow.parquet as pq
     from huggingface_hub import hf_hub_download
     d2l = d2l_module()
-    tok = tokenizer(d2l, 'cpt-t1')  # the reference tokenizer; chdir
+    tok = tokenizer(d2l, 't1')  # the reference tokenizer; chdir
     _, repo, rev, _ = d2l.LM_DATA_SOURCES['fineweb-edu']
     local = hf_hub_download(repo, FWEDU_DOMAINS, repo_type='dataset',
                             revision=rev)
@@ -436,7 +489,7 @@ def build_domains():
 
 def check_domains():
     d2l = d2l_module()
-    tok = tokenizer(d2l, 'cpt-t1')
+    tok = tokenizer(d2l, 't1')
     with gzip.open(domains_path(d2l), 'rt', encoding='utf-8') as f:
         rows = [json.loads(line) for line in f]
     general = general_hashes(d2l)
@@ -457,91 +510,675 @@ def check_domains():
     return ok
 
 
-def build(stage):
+# ---------------------------------------------------------------------------
+# 21.4's reasoning traces (OpenThoughts3-1.2M)
+
+def trace_words(text):
+    """Lower-case NFKC word tokens (the decontamination's unit)."""
+    return re.findall(r'\w+', unicodedata.normalize('NFKC', text).lower())
+
+
+def word_ngrams(text, n):
+    w = trace_words(text)
+    return {' '.join(w[i:i + n]) for i in range(len(w) - n + 1)}
+
+
+def question_id(user):
+    """sha1 of a user turn after NFKC, lower case and one space per
+    whitespace run: every annotation of a question shares it."""
+    norm = ' '.join(unicodedata.normalize('NFKC', user).lower().split())
+    return hashlib.sha1(norm.encode()).hexdigest()
+
+
+def trace_messages(conv):
+    """OpenThoughts3's turns ({from: human|gpt, value}) as role/content."""
+    roles = {'human': 'user', 'gpt': 'assistant'}
+    return [dict(role=roles[m['from']], content=m['value']) for m in conv]
+
+
+def trace_plain(messages):
+    """The T1 rendering for the reference tokenizer (no chat tokens)."""
+    names = {'user': 'User', 'assistant': 'Assistant'}
+    return '\n'.join(f'{names[m["role"]]}: {m["content"]}' for m in messages)
+
+
+def trace_record(d2l, messages, grams, n, specials):
+    """A conversation's record: doc_id (sha1 of its ChatML text),
+    question_id, the benchmarks whose word n-grams its user turn shares
+    (contam), whether a message holds a special-token string, and the
+    messages."""
+    user = '\n'.join(m['content'] for m in messages if m['role'] == 'user')
+    g = word_ngrams(user, n)
+    return dict(
+        doc_id=hashlib.sha1(d2l.chatml(messages).encode()).hexdigest(),
+        question_id=question_id(user),
+        contam=sorted(name for name, bench in grams.items() if g & bench),
+        special=any(s in m['content'] for m in messages for s in specials),
+        messages=messages)
+
+
+ENDINGS = ('complete', 'capped', 'open')
+
+
+def trace_ending(record, n_assistant, near_cap):
+    """'open' when the assistant turn never closes its <think> block (the
+    generation stopped inside it), 'capped' when it closes it but holds at
+    least near_cap tokens (n_assistant; the answer may be cut at the same
+    cap), else 'complete'."""
+    reply = ''.join(m['content'] for m in record['messages']
+                    if m['role'] == 'assistant')
+    if '</think>' not in reply:
+        return 'open'
+    return 'capped' if n_assistant >= near_cap else 'complete'
+
+
+def assistant_tokens(im_start):
+    """ids -> the number of tokens after the last <|im_start|> (id
+    im_start): the assistant turn with its role line and end marker."""
+    def count(ids):
+        at = np.flatnonzero(np.asarray(ids) == im_start)
+        return len(ids) - int(at[-1]) - 1 if len(at) else len(ids)
+    return count
+
+
+def endings_count(pairs, ending):
+    """{ending: dict(documents, tokens)} of (record, ids) pairs (one EOS per
+    document counted); ending(record, ids) -> one of ENDINGS."""
+    out = {e: dict(documents=0, tokens=0) for e in ENDINGS}
+    for rec, ids in pairs:
+        c = out[ending(rec, ids)]
+        c['documents'] += 1
+        c['tokens'] += len(ids) + 1
+    return out
+
+
+def scan_traces_file(job):
+    """The records of one parquet file in row order, with file (its index
+    in the pin), row, domain, source and difficulty; messages are kept only
+    for ids below prefix (the start of the id order, all a selection
+    reads)."""
+    import pyarrow.parquet as pq
+    k, path, grams, n, specials, prefix = job
     d2l = d2l_module()
-    tok = tokenizer(d2l, stage)
-    root = stage_dir(d2l, stage)
+    out = []
+    pf = pq.ParquetFile(path)
+    for g in range(pf.num_row_groups):
+        for d in pf.read_row_group(g).to_pylist():
+            r = trace_record(d2l, trace_messages(d['conversations']), grams,
+                             n, specials)
+            r.update(file=k, row=len(out), domain=d['domain'],
+                     source=d['source'], difficulty=d['difficulty'])
+            if r['doc_id'] >= prefix:
+                r['messages'] = None
+            out.append(r)
+    return out
+
+
+def dedupe_sort(records):
+    """Records sorted by doc_id, one per id (an exact duplicate keeps the
+    copy first in (domain, source, difficulty) order, so the result does
+    not depend on the order of the files), and the number dropped."""
+    key = lambda r: (r['doc_id'], r['domain'], r['source'], r['difficulty'],
+                     r['file'], r['row'])
+    out = []
+    for r in sorted(records, key=key):
+        if not out or out[-1]['doc_id'] != r['doc_id']:
+            out.append(r)
+    return out, len(records) - len(out)
+
+
+def ngram_hashes(d2l, ids, n):
+    return d2l._rolling_ngram_hashes(ids, n)[0]
+
+
+def select_traces(d2l, docs, token_ids, train_tokens, n_heldout, gram,
+                  max_overlap, batch=256, keep=None):
+    """The training selection and the held-out set from records sorted by
+    doc_id. Usable records (no benchmark n-gram, no special-token string)
+    are tokenized in id order, in batches, by token_ids(records) -> id
+    arrays; with keep(record, ids) given, only those it accepts are used
+    (both selections). Training takes them until it holds train_tokens tokens (one EOS
+    per document counted). Held-out takes the following ones whose question
+    training does not ask, one try per question, and drops (records) a
+    document more than max_overlap of whose gram-token windows occur in
+    the training documents. Returns dict(train, heldout: lists of (record,
+    ids); overlap: (hits, windows) per held-out document; dropped ids)."""
+    usable = [r for r in docs if not r['contam'] and not r['special']]
+
+    def stream():
+        for i in range(0, len(usable), batch):
+            part = usable[i:i + batch]
+            if any(r['messages'] is None for r in part):
+                raise RuntimeError('the scan kept too few texts; raise '
+                                   "TRACES['prefetch']")
+            for rec, ids in zip(part, token_ids(part)):
+                if keep is None or keep(rec, ids):
+                    yield rec, ids
+
+    it, train, n = stream(), [], 0
+    for rec, ids in it:
+        train.append((rec, ids))
+        n += len(ids) + 1
+        if n >= train_tokens:
+            break
+    else:
+        raise RuntimeError(f'only {n:,} tokens for a {train_tokens:,} target')
+    known = np.unique(np.concatenate(
+        [ngram_hashes(d2l, ids, gram) for _, ids in train]))
+    asked = {r['question_id'] for r, _ in train}
+    heldout, overlap, dropped = [], [], []
+    for rec, ids in it:
+        if rec['question_id'] in asked:
+            continue
+        asked.add(rec['question_id'])
+        h = ngram_hashes(d2l, ids, gram)
+        pos = np.minimum(np.searchsorted(known, h), len(known) - 1)
+        hits = int((known[pos] == h).sum()) if len(known) else 0
+        if hits > max_overlap * len(h):
+            dropped.append(rec['doc_id'])
+            continue
+        heldout.append((rec, ids))
+        overlap.append((hits, len(h)))
+        if len(heldout) == n_heldout:
+            break
+    else:
+        raise RuntimeError(f'only {len(heldout)} held-out conversations')
+    return dict(train=train, heldout=heldout, overlap=overlap,
+                dropped=dropped)
+
+
+def prefix_docs(pairs, tokens):
+    """The shortest prefix of (record, ids) pairs holding at least tokens
+    tokens (one EOS per document counted)."""
+    n = 0
+    for k, (_, ids) in enumerate(pairs):
+        n += len(ids) + 1
+        if n >= tokens:
+            return pairs[:k + 1]
+    raise RuntimeError(f'only {n:,} tokens for a {tokens:,} target')
+
+
+def count_by(records, field='domain'):
+    out = {}
+    for r in records:
+        out[r[field]] = out.get(r[field], 0) + 1
+    return dict(sorted(out.items()))
+
+
+def split_record(d2l, records, sel, duplicates, targets, ending):
+    """The selection as stored in split.json: the pin, the targets, the
+    entries [doc_id, question_id, domain, source, file, row] of training
+    and held-out documents (held-out ones with their overlap hits and
+    windows), the dropped ids and the counts (with each split's endings:
+    ending(record, ids) -> 'complete', 'capped' or 'open')."""
+    entry = lambda r: [r['doc_id'], r['question_id'], r['domain'],
+                       r['source'], r['file'], r['row']]
+    rtrain = [r for r, _ in sel['train']]
+    rheld = [r for r, _ in sel['heldout']]
+    hits = sum(h for h, _ in sel['overlap'])
+    windows = sum(w for _, w in sel['overlap'])
+    val = prefix_docs(sel['heldout'], targets['val'])
+    tokens = lambda pairs: sum(len(i) + 1 for _, i in pairs)
+    counts = dict(
+        rows=len(records) + duplicates, duplicates=duplicates,
+        documents=len(records),
+        questions=len({r['question_id'] for r in records}),
+        by_domain=count_by(records),
+        contaminated={b: sum(b in r['contam'] for r in records)
+                      for b in ('gsm8k', 'math500')},
+        special=sum(r['special'] for r in records),
+        train=dict(documents=len(rtrain), tokens=tokens(sel['train']),
+                   questions=len({r['question_id'] for r in rtrain}),
+                   by_domain=count_by(rtrain),
+                   endings=endings_count(sel['train'], ending)),
+        heldout=dict(documents=len(rheld), tokens=tokens(sel['heldout']),
+                     by_domain=count_by(rheld),
+                     endings=endings_count(sel['heldout'], ending),
+                     overlap=hits / max(windows, 1),
+                     max_overlap=max(h / max(w, 1)
+                                     for h, w in sel['overlap']),
+                     dropped=len(sel['dropped'])),
+        val_domain=dict(documents=len(val), tokens=tokens(val),
+                        by_domain=count_by([r for r, _ in val]),
+                        endings=endings_count(val, ending)))
+    return dict(files=list(d2l.PRETRAIN_SOURCE_FILES['openthoughts3']),
+                pin=list(d2l.PRETRAIN_SOURCES['openthoughts3'][1:3]),
+                targets=dict(targets),
+                train=[entry(r) for r in rtrain],
+                heldout=[entry(r) + list(o)
+                         for r, o in zip(rheld, sel['overlap'])],
+                dropped=sel['dropped'], counts=counts)
+
+
+def trace_licence(d2l):
+    """The licence read from the dataset card at the pin; exits if it is
+    not the pinned one (or the pin does not resolve to itself)."""
+    from huggingface_hub import HfApi
+    _, repo, rev, licence = d2l.PRETRAIN_SOURCES['openthoughts3']
+    info = HfApi().dataset_info(repo, revision=rev)
+    found = (info.card_data or {}).get('license')
+    if info.sha != rev or found != licence:
+        sys.exit(f'{repo}@{rev}: licence {found!r}, pinned {licence!r}: '
+                 'stop and ask before building')
+    return found
+
+
+def trace_paths(d2l):
+    """The pinned subset's local parquet paths (downloaded once) and the
+    licence re-read from the card (trace_licence)."""
+    from huggingface_hub import hf_hub_download
+    found = trace_licence(d2l)
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES['openthoughts3']
+    return [hf_hub_download(repo, f, repo_type='dataset', revision=rev)
+            for f in d2l.PRETRAIN_SOURCE_FILES['openthoughts3']], found
+
+
+def benchmark_grams(d2l, n):
+    """Word n-grams of the GSM8K test questions and MATH-500 problems."""
+    import pandas as pd
+    from huggingface_hub import hf_hub_download
+    gsm = pd.read_parquet(d2l.download_keyed('gsm8k-test'))
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES['math500']
+    path = hf_hub_download(repo, d2l.PRETRAIN_SOURCE_FILES['math500'][0],
+                           repo_type='dataset', revision=rev)
+    with open(path, encoding='utf-8') as f:
+        math = [json.loads(line)['problem'] for line in f]
+    grams = lambda texts: set().union(*(word_ngrams(t, n) for t in texts))
+    return {'gsm8k': grams(gsm['question']), 'math500': grams(math)}
+
+
+def special_strings(tok):
+    """The special-token strings of a Transformers tokenizer."""
+    return sorted({t.content for t in tok.added_tokens_decoder.values()
+                   if t.special})
+
+
+def chatml_ids(d2l, tok):
+    """records -> their ChatML token ids (the chat markers become the
+    tokenizer's special tokens; the special-string filter keeps such
+    strings out of the contents)."""
+    def ids(records):
+        out = tok([d2l.chatml(r['messages']) for r in records],
+                  add_special_tokens=False, verbose=False)['input_ids']
+        return [np.asarray(x, dtype=np.int64) for x in out]
+    return ids
+
+
+def qwen_ending(tok, near_cap):
+    """ending(record, ids) for ChatML ids under a Qwen tokenizer."""
+    count = assistant_tokens(tok.convert_tokens_to_ids('<|im_start|>'))
+    return lambda rec, ids: trace_ending(rec, count(ids), near_cap)
+
+
+def traces_split(d2l, tok, root):
+    """(split, selection): split.json's content, read when root holds it,
+    else computed (scan, decontamination, selection) and written; the
+    selection's (record, ids) pairs when computed now, else None. Either
+    way the licence is re-read from the card first, and a split.json
+    written under another licence, near_cap or set of endings is
+    refused."""
+    path = os.path.join(root, 'split.json')
+    if os.path.exists(path):
+        licence = trace_licence(d2l)
+        with open(path) as f:
+            split = json.load(f)
+        got = {k: split['targets'].get(k) for k in ('near_cap', 'endings')}
+        want = dict(near_cap=TRACES['near_cap'],
+                    endings=list(TRACES['endings']))
+        if split.get('licence') != licence or got != want:
+            sys.exit(f'{path}: written for licence {split.get("licence")!r}'
+                     f' and {got}, now {licence!r} and {want}: remove it '
+                     'and rebuild')
+        return split, None
+    import multiprocessing
+    paths, licence = trace_paths(d2l)
+    grams = benchmark_grams(d2l, TRACES['contam'])
+    jobs = [(k, p, grams, TRACES['contam'], special_strings(tok),
+             TRACES['prefetch']) for k, p in enumerate(paths)]
+    with multiprocessing.get_context('fork').Pool(TRACES['workers']) as pool:
+        records = [r for part in pool.map(scan_traces_file, jobs)
+                   for r in part]
+    docs, duplicates = dedupe_sort(records)
+    ending = qwen_ending(tok, TRACES['near_cap'])
+    keep = lambda rec, ids: ending(rec, ids) in TRACES['endings']
+    sel = select_traces(d2l, docs, chatml_ids(d2l, tok), TRACES['train'],
+                        TRACES['heldout'], TRACES['gram'],
+                        TRACES['max_overlap'], keep=keep)
+    split = split_record(d2l, docs, sel, duplicates, TRACES, ending)
+    split.update(licence=licence, tokenizer=[
+        'Qwen/Qwen3-0.6B-Base', d2l.HF_REVISIONS['Qwen/Qwen3-0.6B-Base']])
     os.makedirs(root, exist_ok=True)
-    shards = {}
-    for key, make in sources(d2l, stage).items():
-        shards[key] = build_stream(d2l, tok, make(), TARGETS[stage][key],
-                                   os.path.join(root, key))
-        print(f'{key}: {shards[key].n_docs:,} documents, '
-              f'{shards[key].n_tokens:,} tokens')
+    with open(path + '.tmp', 'w') as f:
+        json.dump(split, f, indent=0)
+    os.replace(path + '.tmp', path)
+    return split, sel
+
+
+def fetch_messages(d2l, entries):
+    """doc_id -> messages for split entries, read from the pinned parquet
+    files by (file, row); each id is checked against its text."""
+    import pyarrow.parquet as pq
+    from huggingface_hub import hf_hub_download
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES['openthoughts3']
+    files = d2l.PRETRAIN_SOURCE_FILES['openthoughts3']
+    want = {}
+    for e in entries:
+        want.setdefault(e[4], []).append((e[5], e[0]))
+    out = {}
+    for k, rows in sorted(want.items()):
+        pf = pq.ParquetFile(hf_hub_download(repo, files[k],
+                                            repo_type='dataset',
+                                            revision=rev))
+        starts = np.cumsum([0] + [pf.metadata.row_group(g).num_rows
+                                  for g in range(pf.num_row_groups)])
+        for g in sorted({int(np.searchsorted(starts, r, 'right')) - 1
+                         for r, _ in rows}):
+            col = pf.read_row_group(g, columns=['conversations']).column(0)
+            for r, doc_id in rows:
+                if starts[g] <= r < starts[g + 1]:
+                    msgs = trace_messages(col[r - starts[g]].as_py())
+                    got = hashlib.sha1(d2l.chatml(msgs).encode()).hexdigest()
+                    if got != doc_id:
+                        raise ValueError(f'{files[k]} row {r}: id {got}, '
+                                         f'expected {doc_id}')
+                    out[doc_id] = msgs
+    return out
+
+
+def entry_records(entries, messages):
+    return [dict(doc_id=e[0], question_id=e[1], domain=e[2], source=e[3],
+                 messages=messages[e[0]]) for e in entries]
+
+
+def write_traces(d2l, pairs, out, n_vocab, eos):
+    """(record, ids) pairs as one shard set holding exactly those ids, EOS
+    after each document, meta question_id and domain."""
+    key = {r['doc_id']: ids for r, ids in pairs}
+    docs = [(r['doc_id'], r['doc_id'], dict(question_id=r['question_id'],
+                                            domain=r['domain']))
+            for r, _ in pairs]
+    return build_stream(d2l, PreTokenized(key, n_vocab, eos), docs, None,
+                        out, TRACES_ATTRIBUTION, eos_id=eos,
+                        meta_fn=lambda doc_id, text, meta: meta)
+
+
+def write_heldout(records, path):
+    """The held-out conversations as a deterministic jsonl.gz."""
+    with open(path + '.tmp', 'wb') as raw:
+        with gzip.GzipFile(filename='', mode='wb', fileobj=raw,
+                           mtime=0) as f:
+            for r in records:
+                row = {k: r[k] for k in ('doc_id', 'question_id', 'domain',
+                                         'source', 'messages')}
+                f.write((json.dumps(row, ensure_ascii=False) + '\n').encode())
+    os.replace(path + '.tmp', path)
+
+
+def read_heldout(path):
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        return [json.loads(line) for line in f]
+
+
+def build_traces_qwen():
+    """--stage cpt-qwen-traces (see the module docstring)."""
+    d2l = d2l_module()
+    tok = tokenizer(d2l, 't2')
+    root = os.path.abspath(d2l._CPT_DIRS['t2'])
+    split, sel = traces_split(d2l, tok, root)
+    if sel is None:  # split.json was there: re-read and re-encode
+        msgs = fetch_messages(d2l, split['train'] + split['heldout'])
+        sel = {}
+        for part in ('train', 'heldout'):
+            recs = entry_records(split[part], msgs)
+            sel[part] = list(zip(recs, chatml_ids(d2l, tok)(recs)))
+    eos = d2l._lm_boundary_id(tok)
+    shards = {
+        'traces': write_traces(d2l, sel['train'],
+                               os.path.join(root, 'traces'), len(tok), eos),
+        'val_domain': write_traces(
+            d2l, prefix_docs(sel['heldout'], TRACES['val']),
+            os.path.join(root, 'val_domain'), len(tok), eos),
+        'replay': build_stream(d2l, tok, fwedu_docs(d2l, general_hashes(d2l)),
+                               TRACES['replay_t2'],
+                               os.path.join(root, 'replay')),
+        'val_general': build_stream(d2l, tok, val_general_docs(d2l), None,
+                                    os.path.join(root, 'val_general'))}
+    write_heldout([r for r, _ in sel['heldout']],
+                  os.path.join(root, 'heldout.jsonl.gz'))
+    for key, s in shards.items():
+        print(f'{key}: {s.n_docs:,} documents, {s.n_tokens:,} tokens')
+    shards['val_book'] = d2l._book_shards('t2')['val_book']
+    table = d2l._shard_table(shards, 't2')
+    layout = {k: d2l._layout_hash(s) for k, s in shards.items()}
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES['openthoughts3']
+    name = 'Qwen/Qwen3-0.6B-Base'
+    ids_sha1 = lambda part: hashlib.sha1(' '.join(
+        e[0] for e in split[part]).encode()).hexdigest()
+    result = dict(
+        table=table, layout=layout,
+        sources=dict(
+            traces=[repo, rev] + split['files'],
+            replay=list(d2l.LM_DATA_SOURCES['fineweb-edu'][1:3]) +
+            [FWEDU_REPLAY],
+            gsm8k=d2l.DATA_HUB['gsm8k-test'][0],
+            math500=list(d2l.PRETRAIN_SOURCES['math500'][1:3]) +
+            list(d2l.PRETRAIN_SOURCE_FILES['math500'])),
+        licence=dict(traces=split['licence'], replay='odc-by',
+                     book='cc-by-sa-4.0'),
+        tokenizer=[name, d2l.HF_REVISIONS[name]],
+        attribution=TRACES_ATTRIBUTION + ' ' + FWEDU_ATTRIBUTION,
+        counts=split['counts'], targets=split['targets'],
+        ids_sha1=dict(train=ids_sha1('train'), heldout=ids_sha1('heldout')))
     rerun = os.path.abspath(d2l._rerun_dir())
     os.makedirs(rerun, exist_ok=True)
-    if stage == 'cpt-t1':
-        for key, name in UPLOADS.items():
-            sha1, size = deterministic_tar(os.path.join(root, key),
-                                           os.path.join(rerun, name + '.tar'))
-            print(f"DATA_HUB['{name}'] = ('{name}.tar', '{sha1}')  "
-                  f'# {size / 2**20:.1f} MB')
-        return
-    shards.update(d2l._book_shards('t2'))
-    table = d2l._shard_table(shards)
-    layout = {k: d2l._layout_hash(s) for k, s in shards.items()}
-    pins = {k: d2l.PRETRAIN_SOURCES['pes2o'][1:3] for k in ('pes2o',
-                                                             'val_domain')}
-    pins['replay'] = d2l.LM_DATA_SOURCES['fineweb-edu'][1:3] + (
-        FWEDU_REPLAY,)
-    name = 'Qwen/Qwen3-0.6B-Base'
-    result = dict(table=table, layout=layout, sources=pins,
-                  tokenizer=[name, d2l.HF_REVISIONS[name]],
-                  attribution=ATTRIBUTION)
-    path = os.path.join(rerun, 'lm-cpt-qwen-manifest-v1.json.gz')
+    key = d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'][0]
+    path = os.path.join(rerun, key + '.json.gz')
     d2l._write_result(path, 'json-table', result,
                       dict(config=None, label=''))
     with open(path, 'rb') as f:
-        print(f'wrote {path}, sha1 {hashlib.sha1(f.read()).hexdigest()}')
+        print(f"DATA_HUB['{key}'] = ('{key}.json.gz', "
+              f"'{hashlib.sha1(f.read()).hexdigest()}')  "
+              f'# {os.path.getsize(path) / 2**10:.1f} KB')
     print(table.to_string(index=False))
+    print(json.dumps(split['counts'], indent=1))
 
 
-def check(stage):
+def build_traces_t1():
+    """--stage cpt-t1-traces (see the module docstring)."""
     d2l = d2l_module()
-    os.chdir(CHAPTER)
-    root = stage_dir(d2l, stage)
-    ok = True
-    shards = {k: d2l.TokenShards(os.path.join(root, k), 'train')
-              for k in TARGETS[stage]}
+    qwen = tokenizer(d2l, 't2')
+    split, _ = traces_split(d2l, qwen, os.path.abspath(d2l._CPT_DIRS['t2']))
+    tok = tokenizer(d2l, 't1')
+    root = os.path.abspath(d2l._CPT_DIRS['t1'])
+    os.makedirs(root, exist_ok=True)
+    msgs = fetch_messages(d2l, split['train'] + split['heldout'])
+    docs = lambda part: ((e[0], trace_plain(msgs[e[0]]),
+                          dict(question_id=e[1], domain=e[2]))
+                         for e in split[part])
+    meta = lambda doc_id, text, m: m
+    shards = {
+        'traces': build_stream(d2l, tok, docs('train'), TRACES['t1_train'],
+                               os.path.join(root, 'traces'),
+                               TRACES_ATTRIBUTION, meta_fn=meta),
+        'val_domain': build_stream(d2l, tok, docs('heldout'),
+                                   TRACES['t1_val'],
+                                   os.path.join(root, 'val_domain'),
+                                   TRACES_ATTRIBUTION, meta_fn=meta),
+        'replay': build_stream(d2l, tok, fwedu_docs(d2l, general_hashes(d2l)),
+                               TRACES['replay_t1'],
+                               os.path.join(root, 'replay'))}
     for key, s in shards.items():
-        s.verify()
-        target = TARGETS[stage][key]
-        good = target is None or s.n_tokens >= target
-        ok &= good
-        print(f'{key}: verified, {s.n_tokens:,} tokens'
-              f'{"" if good else f" < target {target:,}"}')
+        print(f'{key}: {s.n_docs:,} documents, {s.n_tokens:,} tokens')
+    rerun = os.path.abspath(d2l._rerun_dir())
+    os.makedirs(rerun, exist_ok=True)
+    for key, name in TRACE_UPLOADS.items():
+        sha1, size = deterministic_tar(os.path.join(root, key),
+                                       os.path.join(rerun, name + '.tar'))
+        print(f"DATA_HUB['{name}'] = ('{name}.tar', '{sha1}')  "
+              f'# {size / 2**20:.1f} MB')
+
+
+def check_trace_shards(d2l, split, shards, targets, tier):
+    """The structural invariants of a trace stage's output: [(ok, line)].
+    split: split.json's content; shards: {'traces', 'val_domain'} (and the
+    rest) as TokenShards; targets: TRACES."""
     import pandas as pd
-    meta = lambda s: pd.concat([pd.read_parquet(os.path.join(
-        s.root, sh['file'] + '.meta.parquet')) for sh in s.shards])
-    train, val = set(meta(shards['pes2o'])['doc_id']), set(
-        meta(shards['val_domain'])['doc_id'])
-    print(f'peS2o train/validation documents shared: {len(train & val)}')
-    ok &= not train & val
-    general = general_hashes(d2l)
-    replay = set(meta(shards['replay'])['sha1'])  # recorded at build time
-    print(f'replay/general-validation texts shared: {len(replay & general)}')
-    ok &= not replay & general
+    out = [(split['files'] == list(d2l.PRETRAIN_SOURCE_FILES['openthoughts3'])
+            and split['pin'] == list(d2l.PRETRAIN_SOURCES['openthoughts3'][
+                1:3]), f'file list equals the pin ({len(split["files"])} '
+            'files)')]
+    for k, s in shards.items():
+        try:
+            s.verify()  # SHA-256 of every file, EOS and offsets
+            out.append((True, f'{k}: verified, {s.n_docs:,} documents, '
+                              f'{s.n_tokens:,} tokens'))
+        except (ValueError, AssertionError) as e:
+            out.append((False, f'{k}: {e}'))
+    got = {k: list(pd.concat([shards[k].meta(i) for i in range(
+        shards[k].n_shards)])['doc_id']) for k in ('traces', 'val_domain')}
+    train = [e[0] for e in split['train']]
+    held = [e[0] for e in split['heldout']]
+    held_q = {e[1] for e in split['heldout']}
+    out.append((got['traces'] == train[:len(got['traces'])],
+                'training documents: the selection, in id order'))
+    out.append((got['val_domain'] == held[:len(got['val_domain'])],
+                'val_domain: the first held-out conversations, id order'))
+    out.append((train == sorted(train) and held == sorted(held) and
+                (not train or not held or train[-1] < held[0]),
+                'ids increase; held-out ids follow the training ones'))
+    out.append((not {e[1] for e in split['train']} & held_q and
+                not set(train) & set(held),
+                'training and held-out questions and texts disjoint'))
+    out.append((len(held) == targets['heldout'] == len(held_q),
+                f'{len(held)} held-out conversations, one per question'))
+    counts = split['counts']
+    shown = []
+    for part in ('train', 'heldout', 'val_domain'):
+        e = counts[part]['endings']
+        shown.append(f'{part} ' + ' / '.join(
+            f'{e[k]["documents"]:,}' for k in ENDINGS))
+    out.append((all(counts[p]['endings'][k]['documents'] == 0
+                    for p in ('train', 'heldout', 'val_domain')
+                    for k in ENDINGS if k not in targets['endings']),
+                'endings complete / capped / open (selected: ' +
+                ', '.join(targets['endings']) + '): ' + '; '.join(shown)))
+    c = counts['heldout']
+    out.append((c['overlap'] < targets['overlap_target'] and
+                c['max_overlap'] <= targets['max_overlap'],
+                f'held-out {targets["gram"]}-gram overlap {c["overlap"]:.2%} '
+                f'(largest {c["max_overlap"]:.1%}; {c["dropped"]} dropped)'))
+    if tier == 't2':
+        T, B = targets['seq_len'], targets['batch']
+        steps = (shards['traces'].n_tokens - 1) // T // B
+        out.append((shards['traces'].n_tokens >= targets['train'] and
+                    steps >= targets['steps'],
+                    f'traces: {steps} steps of {B} x {T} per epoch '
+                    f'(the arms take {targets["steps"]}: no repeats)'))
+        out.append((shards['val_domain'].n_tokens >= targets['val'],
+                    f'val_domain: >= {targets["val"]:,} tokens'))
+    else:
+        T, B = targets['t1_seq_len'], targets['t1_batch']
+        steps = (shards['traces'].n_tokens - 1) // T // B
+        out.append((shards['traces'].n_tokens >= targets['t1_train'] and
+                    steps >= targets['t1_steps'],
+                    f'traces: {steps} steps of {B} x {T} per epoch '
+                    f'(the T1 arms take {targets["t1_steps"]}: no repeats)'))
+        out.append((shards['val_domain'].n_tokens >= targets['t1_val'],
+                    f'val_domain: >= {targets["t1_val"]:,} tokens'))
+    return out
+
+
+def check_traces(stage):
+    """--check of a trace stage: prints each invariant, returns ok."""
+    d2l = d2l_module()
+    qwen = tokenizer(d2l, 't2')
+    t2 = os.path.abspath(d2l._CPT_DIRS['t2'])
+    with open(os.path.join(t2, 'split.json')) as f:
+        split = json.load(f)
+    tier = 't1' if stage == 'cpt-t1-traces' else 't2'
+    root = os.path.abspath(d2l._CPT_DIRS[tier])
+    keys = ['traces', 'val_domain', 'replay'] + (
+        ['val_general'] if tier == 't2' else [])
+    shards = {k: d2l.TokenShards(os.path.join(root, k), 'train')
+              for k in keys}
+    lines = check_trace_shards(d2l, split, shards, TRACES, tier)
+    if tier == 't2':
+        held = read_heldout(os.path.join(t2, 'heldout.jsonl.gz'))
+        lines.append(([r['doc_id'] for r in held] == [
+            e[0] for e in split['heldout']] and all(
+            hashlib.sha1(d2l.chatml(r['messages']).encode()).hexdigest() ==
+            r['doc_id'] for r in held), 'heldout.jsonl.gz: the held-out '
+            'ids, each the sha1 of its ChatML text'))
+        msgs = fetch_messages(d2l, split['train'] + split['heldout'])
+        grams = benchmark_grams(d2l, TRACES['contam'])
+        specials = special_strings(qwen)
+        recs = [trace_record(d2l, m, grams, TRACES['contam'], specials)
+                for m in msgs.values()]
+        lines.append((not any(r['contam'] or r['special'] for r in recs),
+                      'no selected user turn shares a 13-gram with GSM8K '
+                      'test or MATH-500; no special-token strings'))
+        q = {e[0]: e[1] for e in split['train'] + split['heldout']}
+        lines.append((all(r['question_id'] == q[r['doc_id']] for r in recs),
+                      'question ids recomputed from the texts'))
+        enc, same, pairs = chatml_ids(d2l, qwen), True, {}
+        for k, part in (('traces', 'train'), ('val_domain', 'heldout')):
+            s, entries = shards[k], split[part]
+            pairs[part] = []
+            for i in range(0, len(entries), 256):
+                batch = entry_records(entries[i:i + 256], msgs)
+                for j, want in enumerate(enc(batch)):
+                    pairs[part].append((batch[j], want))
+                    if i + j < s.n_docs:
+                        same &= np.array_equal(s.doc(i + j)[:-1], want)
+            same &= s.n_docs <= len(entries)
+        lines.append((same, 'shard tokens equal the re-encoded ChatML'))
+        ending = qwen_ending(qwen, split['targets']['near_cap'])
+        n_val = shards['val_domain'].n_docs
+        got = {p: endings_count(x, ending) for p, x in (
+            ('train', pairs['train']), ('heldout', pairs['heldout']),
+            ('val_domain', pairs['heldout'][:n_val]))}
+        lines.append((all(got[p] == split['counts'][p]['endings']
+                          for p in got), 'endings recounted from the texts'))
+        if 'lm-cpt-qwen-manifest-v1' in d2l.DATA_HUB:
+            with d2l._quiet():
+                v1 = d2l._read_result(d2l.download_keyed(
+                    'lm-cpt-qwen-manifest-v1'), 'json-table')
+            for k in ('replay', 'val_general'):
+                lines.append((d2l._layout_hash(shards[k]) == v1.layout[k],
+                              f'{k}: bytes equal to cpt-qwen-v1'))
+    else:
+        with d2l._quiet():
+            hosted = d2l._layout_hash(d2l.load_artifact(
+                'cpt-fwedu-replay-12m'))
+        lines.append((d2l._layout_hash(shards['replay']) == hosted,
+                      f'replay: bytes equal to the hosted {REPLAY_T1}'))
+    for good, text in lines:
+        print(('ok    ' if good else 'FAIL  ') + text)
+    ok = all(good for good, _ in lines)
     print('check passed' if ok else 'CHECK FAILED')
     return ok
 
 
+STAGES = {  # stage: (build, check)
+    'cpt-qwen-traces': (build_traces_qwen, lambda: check_traces(
+        'cpt-qwen-traces')),
+    'cpt-t1-traces': (build_traces_t1, lambda: check_traces('cpt-t1-traces')),
+    'domains': (build_domains, check_domains),
+    'lc-long': (lambda: build_lc('lc-long'), lambda: check_lc('lc-long')),
+    'pg19-test': (lambda: build_lc('pg19-test'),
+                  lambda: check_lc('pg19-test'))}
+
+
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    p.add_argument('--stage', choices=sorted(TARGETS) + [
-        'domains', 'lc-long', 'pg19-test'], required=True)
+    p.add_argument('--stage', choices=sorted(STAGES), required=True)
     p.add_argument('--check', action='store_true',
                    help='verify the built shards (after building, or alone '
                         'with --check-only)')
     p.add_argument('--check-only', action='store_true')
     a = p.parse_args()
-    if a.stage == 'domains':
-        if not a.check_only:
-            build_domains()
-        if a.check or a.check_only:
-            sys.exit(0 if check_domains() else 1)
-        sys.exit(0)
-    lc = a.stage in ('lc-long', 'pg19-test')
+    build, check = STAGES[a.stage]
     if not a.check_only:
-        (build_lc if lc else build)(a.stage)
+        build()
     if a.check or a.check_only:
-        sys.exit(0 if (check_lc if lc else check)(a.stage) else 1)
+        sys.exit(0 if check() else 1)

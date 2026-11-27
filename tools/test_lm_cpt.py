@@ -21,7 +21,18 @@ another arm refused, and a resumed arm equal to an uninterrupted one; the
 page's T2 cells on a pending result and the fallback's own label kept; the
 SmolLM3 merge (token counts, byte-weighted bits per byte) and
 `stage_deltas` with the page's cell; the regeneration jobs against the
-page's literals.
+page's literals; the reasoning-trace corpus of
+tools/build_pretraining_data.py on a 30-document fixture (ids from the
+ChatML text, stable under the order of the files; decontamination and
+special strings; training selection in id order; held-out questions
+disjoint, one per question; the overlap rule; the check's invariants
+failing on a changed byte, file list or target; the T1 epoch line), the
+endings (open, capped, complete; counted per split; a selection keeping
+complete traces only), the licence re-read on both build paths (a changed
+licence stops the build), `chatml`, `trace_conversations` (refuses
+conversations the committed manifest does not list) and `trace_windows`
+(one window per conversation, shorter ones whole; on the 500 built
+held-out conversations when they are on disk).
 """
 import contextlib
 import io
@@ -29,7 +40,9 @@ import json
 import math
 import os
 import re
+import sys
 import tempfile
+import zlib
 import unittest
 from unittest import mock
 
@@ -41,6 +54,9 @@ import torch
 from torch.nn import functional as F
 
 from d2l import torch as d2l
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import build_pretraining_data as builder  # noqa: E402
 
 torch.set_num_threads(min(8, torch.get_num_threads()))
 
@@ -317,8 +333,8 @@ class DataTest(unittest.TestCase):
                 mock.patch.object(d2l, '_cpt_qwen_shards', boom), \
                 mock.patch.object(d2l, 'TokenShards', boom), \
                 mock.patch.object(d2l, 'download_keyed', boom), \
-                mock.patch.dict(d2l.DATA_HUB, {'lm-cpt-qwen-manifest-v1':
-                                               ('x', 'y')}), \
+                mock.patch.dict(d2l.DATA_HUB, {d2l.PRETRAIN_ARTIFACTS[
+                    'cpt-qwen-manifest'][0]: ('x', 'y')}), \
                 mock.patch.object(d2l, 'load_artifact',
                                   lambda name: manifest):
             data = d2l.cpt_data('t2')
@@ -326,8 +342,8 @@ class DataTest(unittest.TestCase):
         self.assertIs(data.table, table)
 
     def test_t2_pending_and_missing(self):
-        hub = {k: v for k, v in d2l.DATA_HUB.items()
-               if k != 'lm-cpt-qwen-manifest-v1'}
+        key = d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'][0]
+        hub = {k: v for k, v in d2l.DATA_HUB.items() if k != key}
         with mock.patch.dict(d2l.DATA_HUB, hub, clear=True):
             with mock.patch.dict(os.environ, {'D2L_RERUN': ''}):
                 with self.assertRaises(KeyError):
@@ -670,6 +686,326 @@ class JobsTest(unittest.TestCase):
         for k in range(6):
             self.assertEqual(d2l.PRETRAIN_JOBS[f'smollm3-{k}'][0],
                              'smollm3_trajectory')
+
+
+def conversation(question, answer, closed=True):
+    reply = f'<think> {answer} </think> done' if closed else \
+        f'<think> {answer}'
+    return [dict(role='user', content=question),
+            dict(role='assistant', content=reply)]
+
+
+def words_ending(near_cap):
+    """The fixture's ending(record, ids): the assistant turn's words."""
+    return lambda rec, ids: builder.trace_ending(
+        rec, len(rec['messages'][1]['content'].split()), near_cap)
+
+
+def words(rng, n):
+    return ' '.join(f'w{x}' for x in rng.integers(0, 10 ** 6, n))
+
+
+def word_ids(records):
+    """A stand-in tokenizer: one id per word of the ChatML text, never 0
+    (the fixture's EOS)."""
+    return [np.array([zlib.crc32(w.encode()) % 50_000 + 1 for w in
+                      d2l.chatml(r['messages']).split()], dtype=np.int64)
+            for r in records]
+
+
+class TracesCorpusTest(unittest.TestCase):
+    """The trace corpus on 30 conversations: 12 questions with one to
+    three annotations (24 conversations, padded to 29 with single ones),
+    one question with a GSM8K test 13-gram, one with a special-token
+    string, one exact duplicate, and one held-out candidate that copies a
+    training document's reasoning."""
+    GSM = ('a baker sells twelve loaves every morning and four more in the '
+           'evening how many loaves')
+
+    def fixture(self):
+        rng = np.random.default_rng(0)
+        convs, k = [], 0
+        for q in range(12):
+            question = words(rng, 30)
+            if q == 2:
+                question += ' ' + self.GSM
+            for a in range(1 + q % 3):
+                text = question + (' <|im_end|>' if q == 5 else '')
+                convs.append((q, conversation(
+                    text, words(rng, 60 + 20 * (q % 4 == 3)),
+                    closed=(q + a) % 3 != 1)))
+        while len(convs) < 29:
+            k += 1
+            convs.append((100 + k, conversation(words(rng, 30),
+                                                words(rng, 60),
+                                                closed=k % 2 == 0)))
+        convs.append(convs[0])  # an exact duplicate
+        grams = {'gsm8k': builder.word_ngrams(self.GSM, 13),
+                 'math500': set()}
+        records = []
+        for i, (q, msgs) in enumerate(convs):
+            r = builder.trace_record(d2l, msgs, grams, 13, ['<|im_end|>'])
+            r.update(file=i % 3, row=i, domain='math' if q % 2 else 'code',
+                     source='s', difficulty=1, q=q)
+            records.append(r)
+        return records
+
+    def select(self, docs, **kw):
+        args = dict(train_tokens=600, n_heldout=4, gram=8, max_overlap=0.2,
+                    batch=5)
+        args.update(kw)
+        return builder.select_traces(d2l, docs, word_ids, **args)
+
+    def test_ids_and_order(self):
+        records = self.fixture()
+        self.assertEqual(len(records), 30)
+        r = records[0]
+        self.assertEqual(r['doc_id'], __import__('hashlib').sha1(
+            d2l.chatml(r['messages']).encode()).hexdigest())
+        docs, dups = builder.dedupe_sort(records)
+        self.assertEqual((len(docs), dups), (29, 1))
+        shuffled = [dict(x, file=2 - x['file']) for x in reversed(records)]
+        again, _ = builder.dedupe_sort(shuffled)
+        self.assertEqual([d['doc_id'] for d in docs],
+                         [d['doc_id'] for d in again])
+        a, b = self.select(docs), self.select(again)
+        for part in ('train', 'heldout'):
+            self.assertEqual([x['doc_id'] for x, _ in a[part]],
+                             [x['doc_id'] for x, _ in b[part]])
+        self.assertEqual(builder.question_id('What  is\n2+2?'),
+                         builder.question_id('what is 2+2?'))
+
+    def test_split_rules(self):
+        docs, _ = builder.dedupe_sort(self.fixture())
+        flagged = {d['doc_id'] for d in docs if d['contam'] or d['special']}
+        self.assertEqual(sum(d['q'] == 2 for d in docs if d['contam']), 3)
+        self.assertEqual(sum(1 for d in docs if d['special']), 3)
+        sel = self.select(docs)
+        train = [r for r, _ in sel['train']]
+        held = [r for r, _ in sel['heldout']]
+        usable = [d for d in docs if d['doc_id'] not in flagged]
+        self.assertEqual([r['doc_id'] for r in train],
+                         [d['doc_id'] for d in usable[:len(train)]])
+        n = sum(len(i) + 1 for _, i in sel['train'])
+        self.assertGreaterEqual(n, 600)
+        self.assertLess(n - len(sel['train'][-1][1]) - 1, 600)
+        self.assertFalse({r['doc_id'] for r in train + held} & flagged)
+        self.assertFalse({r['question_id'] for r in train} &
+                         {r['question_id'] for r in held})
+        self.assertEqual(len({r['question_id'] for r in held}), 4)
+        self.assertTrue(all(h <= 0.2 * w for h, w in sel['overlap']))
+        val = builder.prefix_docs(sel['heldout'], 150)
+        self.assertGreaterEqual(sum(len(i) + 1 for _, i in val), 150)
+        self.assertLess(sum(len(i) + 1 for _, i in val[:-1]), 150)
+
+    def test_overlap_rule(self):
+        docs, _ = builder.dedupe_sort(self.fixture())
+        sel = self.select(docs)
+        first = sel['heldout'][0][0]
+        donor = sel['train'][0][0]
+        copy = dict(first, messages=[first['messages'][0],
+                                     donor['messages'][1]])
+        docs2 = [copy if d['doc_id'] == first['doc_id'] else d for d in docs]
+        sel2 = self.select(docs2)
+        self.assertEqual(sel2['dropped'], [first['doc_id']])
+        self.assertNotIn(first['question_id'],
+                         {r['question_id'] for r, _ in sel2['heldout']})
+        self.assertEqual(len(sel2['heldout']), 4)
+        with self.assertRaises(RuntimeError):
+            self.select(docs, n_heldout=40)
+
+    def test_check_invariants(self):
+        docs, dups = builder.dedupe_sort(self.fixture())
+        sel = self.select(docs)
+        targets = dict(builder.TRACES, train=600, heldout=4, val=150,
+                       seq_len=4, batch=2, steps=1, gram=8,
+                       overlap_target=0.5)
+        split = builder.split_record(d2l, docs, sel, dups, targets,
+                                     words_ending(70))
+        self.assertEqual(split['counts']['documents'], 29)
+        for part in ('train', 'heldout'):
+            e = split['counts'][part]['endings']
+            self.assertEqual(sum(v['documents'] for v in e.values()),
+                             split['counts'][part]['documents'])
+            self.assertEqual(sum(v['tokens'] for v in e.values()),
+                             split['counts'][part]['tokens'])
+        self.assertEqual(split['counts']['contaminated'],
+                         {'gsm8k': 3, 'math500': 0})
+        with tempfile.TemporaryDirectory() as root:
+            shards = {
+                'traces': builder.write_traces(
+                    d2l, sel['train'], os.path.join(root, 'traces'), 60_000,
+                    0),
+                'val_domain': builder.write_traces(
+                    d2l, builder.prefix_docs(sel['heldout'], 150),
+                    os.path.join(root, 'val_domain'), 60_000, 0)}
+            check = lambda sp=split, t=targets: [
+                text for good, text in builder.check_trace_shards(
+                    d2l, sp, shards, t, 't2') if not good]
+            self.assertEqual(check(), [])
+            s = shards['traces']
+            self.assertTrue(np.array_equal(s.doc(0)[:-1],
+                                           sel['train'][0][1]))
+            self.assertEqual(int(s.doc(0)[-1]), 0)
+            self.assertEqual(len(check(dict(split, files=split['files'][:-1]))),
+                             1)
+            self.assertEqual(len(check(t=dict(targets, heldout=5))), 1)
+            self.assertEqual(len(check(t=dict(targets, train=10 ** 6))), 1)
+            self.assertEqual(len(check(t=dict(targets,
+                                              endings=('complete',)))), 1)
+            t1 = dict(targets, t1_train=600, t1_val=150, t1_seq_len=4,
+                      t1_batch=2, t1_steps=1)
+            t1_check = lambda t: [text for good, text in
+                                  builder.check_trace_shards(
+                                      d2l, split, shards, t, 't1')
+                                  if not good]
+            self.assertEqual(t1_check(t1), [])
+            self.assertEqual(len(t1_check(dict(t1, t1_steps=10 ** 6))), 1)
+            path = os.path.join(root, 'traces',
+                                s.shards[0]['file'] + '.bin')
+            with open(path, 'r+b') as f:
+                f.seek(8)
+                b = f.read(1)
+                f.seek(8)
+                f.write(bytes([b[0] ^ 1]))
+            self.assertTrue(any('SHA-256' in t for t in check()))
+
+
+    def test_endings(self):
+        docs, _ = builder.dedupe_sort(self.fixture())
+        ending = words_ending(70)
+        kinds = {ending(d, None) for d in docs}
+        self.assertEqual(kinds, set(builder.ENDINGS))
+        sel = self.select(docs, train_tokens=300, n_heldout=2,
+                          keep=lambda r, i: ending(r, i) == 'complete')
+        kept = [r for r, _ in sel['train'] + sel['heldout']]
+        self.assertTrue(kept and all(ending(r, None) == 'complete'
+                                     for r in kept))
+        usable = [d for d in docs if not d['contam'] and not d['special']
+                  and ending(d, None) == 'complete']
+        self.assertEqual([r['doc_id'] for r, _ in sel['train']],
+                         [d['doc_id'] for d in usable[:len(sel['train'])]])
+        count = builder.assistant_tokens(7)
+        self.assertEqual(count(np.array([7, 1, 1, 7, 1, 1, 1])), 3)
+        self.assertEqual(count(np.array([1, 1])), 2)
+        rec = dict(messages=conversation('q', 'a'))
+        self.assertEqual(builder.trace_ending(rec, 10, 11), 'complete')
+        self.assertEqual(builder.trace_ending(rec, 11, 11), 'capped')
+        self.assertEqual(builder.trace_ending(
+            dict(messages=conversation('q', 'a', closed=False)), 1, 11),
+            'open')
+
+    def test_licence_reread(self):
+        _, repo, rev, licence = d2l.PRETRAIN_SOURCES['openthoughts3']
+        card = lambda lic, sha=rev: mock.patch(
+            'huggingface_hub.HfApi', lambda: mock.Mock(dataset_info=lambda
+                *a, **k: mock.Mock(sha=sha, card_data={'license': lic})))
+        with card(licence):
+            self.assertEqual(builder.trace_licence(d2l), licence)
+        for bad in (card('cc-by-nc-4.0'), card(licence, sha='0' * 40)):
+            with bad, self.assertRaises(SystemExit):
+                builder.trace_licence(d2l)
+        targets = dict(near_cap=builder.TRACES['near_cap'],
+                       endings=list(builder.TRACES['endings']))
+        with tempfile.TemporaryDirectory() as root:
+            def write(**kw):
+                with open(os.path.join(root, 'split.json'), 'w') as f:
+                    json.dump(dict(dict(licence=licence, targets=targets),
+                                   **kw), f)
+            write()
+            with card(licence):  # the re-read path also reads the card
+                split, sel = builder.traces_split(d2l, None, root)
+            self.assertIsNone(sel)
+            with card('cc-by-nc-4.0'), self.assertRaises(SystemExit):
+                builder.traces_split(d2l, None, root)
+            write(targets=dict(targets, endings=['complete']))
+            with card(licence), self.assertRaises(SystemExit):
+                builder.traces_split(d2l, None, root)
+
+
+class FakeTokenizer:
+    """ChatML markers as ids 1 and 2, every other character its code."""
+    unk_token_id = 0
+
+    def __init__(self, marks=True):
+        self.marks = marks
+
+    def convert_tokens_to_ids(self, toks):
+        return [1, 2] if self.marks else [0, 0]
+
+    def __call__(self, texts, add_special_tokens=False, verbose=False):
+        out = []
+        for t in texts:
+            ids = []
+            for part in re.split(r'(<\|im_start\|>|<\|im_end\|>)', t):
+                ids += ([1] if part == '<|im_start|>' else [2]
+                        if part == '<|im_end|>' else [ord(c) for c in part])
+            out.append(ids)
+        return dict(input_ids=out)
+
+
+class TraceWindowsTest(unittest.TestCase):
+    def test_chatml(self):
+        self.assertEqual(d2l.chatml(conversation('q?', 'a')),
+                         '<|im_start|>user\nq?<|im_end|>\n<|im_start|>'
+                         'assistant\n<think> a </think> done<|im_end|>\n')
+
+    def test_windows(self):
+        conv = pd.DataFrame(dict(doc_id=['a', 'b', 'c'], messages=[
+            conversation('x' * 50, 'y' * 3000), conversation('q', 'z'),
+            conversation('r' * 10, 's' * 100)]))
+        with mock.patch.object(d2l, 'trace_conversations', lambda: conv):
+            w = d2l.trace_windows(FakeTokenizer(), T=64)
+            short = len(FakeTokenizer()([d2l.chatml(conv['messages'][1])])[
+                'input_ids'][0])
+            self.assertEqual(len(d2l.trace_windows(FakeTokenizer())[1]),
+                             short)
+            self.assertEqual([len(x) for x in w], [64, 45, 64])
+            self.assertEqual(int(w[0][0]), 1)
+            self.assertEqual(len(d2l.trace_windows(FakeTokenizer(), n=2)), 2)
+            with self.assertRaises(ValueError):
+                d2l.trace_windows(FakeTokenizer(marks=False))
+        self.assertEqual(builder.TRACES['heldout'], 500)
+        import inspect
+        self.assertEqual(inspect.signature(d2l.trace_windows).parameters[
+            'T'].default, 2048)
+
+    def test_conversations_identity(self):
+        rows = [dict(doc_id=i, question_id=i, domain='math', source='s',
+                     messages=conversation('q', 'a')) for i in ('a', 'b')]
+        with tempfile.TemporaryDirectory() as root:
+            import gzip
+            with gzip.open(os.path.join(root, 'heldout.jsonl.gz'),
+                           'wt') as f:
+                f.writelines(json.dumps(r) + '\n' for r in rows)
+            ok = __import__('hashlib').sha1(b'a b').hexdigest()
+            man = lambda h: mock.patch.object(
+                d2l, 'load_artifact', lambda name: mock.Mock(
+                    ids_sha1=dict(heldout=h)))
+            with mock.patch.dict(d2l._CPT_DIRS, t2=root), mock.patch.object(
+                    d2l, '_cpt_manifest_committed', lambda: True):
+                with man(ok):
+                    self.assertEqual(list(d2l.trace_conversations()[
+                        'doc_id']), ['a', 'b'])
+                with man('0' * 40), self.assertRaises(ValueError):
+                    d2l.trace_conversations()
+
+    @unittest.skipUnless(os.path.exists(os.path.join(
+        ROOT, 'data', 'lm', 'cpt-qwen-traces-v1', 'heldout.jsonl.gz')),
+        'the trace corpus is not built here')
+    def test_built_heldout(self):
+        cwd = os.getcwd()
+        os.chdir(os.path.join(ROOT, 'chapter_lm-pretraining'))
+        try:
+            conv = d2l.trace_conversations()
+            self.assertEqual(len(conv), 500)
+            self.assertEqual(conv['question_id'].nunique(), 500)
+            self.assertEqual(list(conv['doc_id']), sorted(conv['doc_id']))
+            w = d2l.trace_windows(d2l._cpt_tokenizer('t2'), n=4)
+            self.assertEqual([len(x) for x in w], [2048] * 4)
+            self.assertTrue(all(int(x[0]) == 151644 for x in w))
+        finally:
+            os.chdir(cwd)
 
 
 if __name__ == '__main__':

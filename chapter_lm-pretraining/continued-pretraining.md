@@ -69,7 +69,7 @@ print(f'suite ({len(d2l.CPT_TASKS)} tasks, mean accuracy): '
       f'{100 * suite.iloc[0]:.1f}% → {100 * suite.iloc[1]:.1f}%')
 ```
 
-<!-- Placeholder (prose): read the three lines (quote them at the printed precision); the section's question and its plan: the schedule (re-warming), the data (replay as an exact mixture, the forgetting frontier), the four arms at T2 and the branch point at T1, then the stages of a released model (SmolLM3). Licence note for peS2o and FineWeb-Edu (ODC-By) and the book (CC BY-SA 4.0). -->
+<!-- Placeholder (prose): read the three lines (quote them at the printed precision); the section's question and its plan: the schedule (re-warming), the data (replay as an exact mixture, the forgetting frontier), the four arms at T2 and the branch point at T1, then the stages of a released model (SmolLM3). Licence note for OpenThoughts3-1.2M (Apache-2.0; attribution text in the manifest), FineWeb-Edu (ODC-By) and the book (CC BY-SA 4.0). -->
 
 ## Re-warming and the Cold Optimizer
 
@@ -257,7 +257,7 @@ del qwen, packed, ref, plain, masked
 d2l.lm_free()
 ```
 
-<!-- Placeholder (prose): the data. The domain stream is 90% scientific prose from peS2o v2 (S2ORC-derived; it has no field metadata, so "technical" means scientific prose) and 10% the book's train sections, with every fifth section held out; replay is FineWeb-Edu (a different file from the reference model's training shards and its validation set). Qwen3's 151,936-token vocabulary needs uint32 shards, which a script regenerates rather than the book hosting them; a normal run reads the committed summary below and opens no shard. The book's train sections are about 1.4M Qwen tokens (quote the printed count) and 10% of 80M is 8M, so an arm sees them between five and six times: report the held-out sections separately. The peS2o slice is the first train file, which holds titles and abstracts (s2ag) only; say so. -->
+<!-- Placeholder (prose): the data (ruling 2026-11-25 ~16:30: reasoning traces, which every reader can read). The domain stream is reasoning traces from OpenThoughts3-1.2M (Apache-2.0; licence and attribution in the manifest): a pinned subset, every 10th of its 120 files (120,000 conversations, the dataset's math/code/science mix), one document per conversation in ChatML markers with the content verbatim (the question, then the assistant's reply opening a <think> block; not Qwen3's full chat template), so the arms are a small causal twin of SmolLM3's reasoning stage. Most replies stop at the dataset's generation cap of about 16K tokens: about two thirds of the training documents (and of their tokens) never close the <think> block and end mid-sentence, and some that close it are cut in the answer (quote the per-ending counts from the manifest; the author's ruling on keeping them is pending, F20 review finding 1). Decontaminated against GSM8K test and MATH-500 (13-gram; quote the counts from the manifest). The held-out traces are 500 conversations whose questions no training document asks (question-disjoint, near-copies of training text replaced); their mix is math-heavier than training (about 75% math against 67%, since code questions carry many annotations and held-out skips questions that training asks; quote the manifest's counts); val is their first 2.2M tokens; the arms see about 84M trace tokens once each, no repetition. The book is no longer trained: only its held-out sections are evaluated (old-domain technical prose). Replay and the general validation set are FineWeb-Edu as before. Qwen3's vocabulary needs uint32 shards, which a script regenerates; a normal run reads the committed summary below and opens no shard. -->
 
 ```{.python .input #continued-pretraining-data}
 %%tab pytorch
@@ -398,7 +398,7 @@ for arm in [a for a in ('A', 'B', 'C') if a in wide]:
 
 ### The Branch Point at T1
 
-<!-- Placeholder (prose): the same machinery on the reference model (sec_lm_reference_model) at T1: 12M tokens per arm at T = 1,024 from the hosted R2-tokenized peS2o and FineWeb-Edu slices. Arm A under three data seeds (the spread that decides "not resolved"), B with 25% replay, the cold restart (the final checkpoint at the base run's own peak 6e-4, no warmup, fresh moments: the pitfall), and the branch from the plateau state at step 5,100 (lm-r2-s5100-state: weights and AdamW moments restored, the rate continuing at 6e-4 and decaying linearly to zero). This is also the configuration every claim of the T2 arms falls back to while they are pending. -->
+<!-- Placeholder (prose): the same machinery on the reference model (sec_lm_reference_model) at T1: 12M tokens per arm at T = 1,024 from the hosted R2-tokenized slices: the same reasoning traces as plain text (User: … Assistant: …, no chat tokens; same question split) and FineWeb-Edu. Arm A under three data seeds (the spread that decides "not resolved"), B with 25% replay, the cold restart (the final checkpoint at the base run's own peak 6e-4, no warmup, fresh moments: the pitfall), and the branch from the plateau state at step 5,100 (lm-r2-s5100-state: weights and AdamW moments restored, the rate continuing at 6e-4 and decaying linearly to zero). This is also the configuration every claim of the T2 arms falls back to while they are pending. -->
 
 ```{.python .input #continued-pretraining-t1-arms}
 %%tab pytorch

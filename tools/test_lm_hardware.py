@@ -3113,7 +3113,7 @@ class TestNetworks(unittest.TestCase):
         sentinel in a patched _gloo_env shows the value comes from it."""
         self.assertEqual(d2l._gloo_env(), dict(
             CUDA_VISIBLE_DEVICES='', GLOO_SOCKET_IFNAME='lo',
-            OMP_NUM_THREADS='4'))  # box-net v1 and box-coll v1 ran so
+            OMP_NUM_THREADS='4', D2L_GLOO_PIN='core'))  # v1 ran unpinned
         envs = []
         def fake_run(cmd, timeout_s, env=None, record=False):
             envs.append(dict(env))
@@ -3141,6 +3141,48 @@ class TestNetworks(unittest.TestCase):
         self.assertEqual(envs[4], dict(gloo, NCCL_DEBUG='WARN',
                                        CUDA_VISIBLE_DEVICES='u0,u1,u2,u3'))
         self.assertEqual(envs[5], {'CUDA_VISIBLE_DEVICES': 'u0,u1'})
+        with self.assertRaises(ValueError):  # env is NCCL's only
+            d2l.loopback_sweep(backend='gloo', env='NCCL_DEBUG=INFO')
+
+    def pin_affinity(self, cpus, rank, world, pin='core'):
+        """The CPUs a rank of _GLOO_PIN ends on, started with cpus."""
+        import subprocess
+        code = ('import os\nos.sched_setaffinity(0, %r)\n' % sorted(cpus)
+                + d2l._GLOO_PIN
+                + 'print(sorted(os.sched_getaffinity(0)))\n')
+        env = dict(os.environ, LOCAL_RANK=str(rank),
+                   LOCAL_WORLD_SIZE=str(world), D2L_GLOO_PIN=pin)
+        out = subprocess.run([sys.executable, '-c', code], env=env,
+                             capture_output=True, text=True, check=True)
+        return json.loads(out.stdout)
+
+    @unittest.skipUnless(hasattr(os, 'sched_setaffinity'), 'Linux only')
+    def test_gloo_pin(self):
+        """_GLOO_PIN puts each rank on a physical core of its own (both SMT
+        threads), the first allowed core left free; leaves the ranks alone
+        with fewer cores than ranks or without D2L_GLOO_PIN=core."""
+        allowed = sorted(os.sched_getaffinity(0))
+        def core(c):
+            with open(f'/sys/devices/system/cpu/cpu{c}/topology/'
+                      'thread_siblings_list') as f:
+                text = f.read().strip()
+            sib = set()
+            for part in text.split(','):
+                lo, _, hi = part.partition('-')
+                sib.update(range(int(lo), int(hi or lo) + 1))
+            return sorted(sib & set(allowed))
+        cores = []
+        for c in allowed:
+            if core(c) not in cores:
+                cores.append(core(c))
+        if len(cores) < 3:
+            self.skipTest('needs three physical cores')
+        got = [self.pin_affinity(allowed, r, 2) for r in range(2)]
+        self.assertEqual(got, cores[1:3])  # the first core is left free
+        self.assertEqual(self.pin_affinity(allowed, 0, 2, pin=''), allowed)
+        two = cores[0] + cores[1]  # exactly k cores: the r-th each
+        self.assertEqual(self.pin_affinity(two, 1, 2), cores[1])
+        self.assertEqual(self.pin_affinity(cores[0], 0, 2), cores[0])
 
     def test_loopback_displays(self):
         floor = self.loopback('gloo', (2, 4), 300e-6, 1.4e9)

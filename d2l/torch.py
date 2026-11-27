@@ -35497,7 +35497,8 @@ def _torchrun_sweep(op, k, sizes, iters, warmup, env, timeout_s,
     processes: d2l.torchrun's command line through hw_run, so that it has
     a timeout of its own; the workers' output goes to files (--redirects
     3), and a timeout kills them too. backend 'gloo' runs CPU ranks in
-    sec_lm_networks' _gloo_env, with env added on top.
+    sec_lm_networks' _gloo_env, with env added on top (_GLOO_PIN, first in
+    the script, pins those ranks).
 
     Defined in :numref:`sec_lm_server_paths`"""
     if backend == 'gloo':
@@ -35505,7 +35506,7 @@ def _torchrun_sweep(op, k, sizes, iters, warmup, env, timeout_s,
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, 'sweep.py')
         with open(path, 'w') as f:
-            f.write(_TORCH_SWEEP)
+            f.write(d2l._GLOO_PIN + _TORCH_SWEEP)
         launcher = os.path.join(os.path.dirname(sys.executable), 'torchrun')
         try:
             run = d2l.hw_run(
@@ -36246,11 +36247,46 @@ def _gloo_env():
     """The one environment of the chapter's gloo ranks (the loopback
     sweeps here, _torchrun_sweep's gloo path, sec_lm_collectives'
     _hier_run): CPU processes on the loopback interface, a few threads
-    each. A change here changes box-net and box-coll together.
+    each, each rank on a physical core of its own (D2L_GLOO_PIN, which
+    _GLOO_PIN reads in the rank). A change here changes box-net and
+    box-coll together.
 
     Defined in :numref:`sec_lm_networks`"""
     return dict(CUDA_VISIBLE_DEVICES='', GLOO_SOCKET_IFNAME='lo',
-                OMP_NUM_THREADS='4')
+                OMP_NUM_THREADS='4', D2L_GLOO_PIN='core')
+
+_GLOO_PIN = '''
+import os
+def _pin_rank():
+    # D2L_GLOO_PIN=core: rank r of k on the (r+1)-th physical core of the
+    # allowed CPUs (both SMT threads; the first core is left to the host),
+    # or on the r-th when there are only k; unpinned with fewer than k
+    # cores or without sched_setaffinity. Unpinned ranks wait on the
+    # scheduler: about half of gloo's alpha on the build box.
+    if os.environ.get('D2L_GLOO_PIN') != 'core' or \\
+            not hasattr(os, 'sched_setaffinity'):
+        return
+    allowed, cores = os.sched_getaffinity(0), []
+    for c in sorted(allowed):
+        try:
+            with open(f'/sys/devices/system/cpu/cpu{c}/topology/'
+                      'thread_siblings_list') as f:
+                text = f.read().strip()
+        except OSError:
+            text = str(c)
+        sib = set()
+        for part in text.split(','):
+            lo, _, hi = part.partition('-')
+            sib.update(range(int(lo), int(hi or lo) + 1))
+        core = sorted(sib & allowed)
+        if core and core not in cores:
+            cores.append(core)
+    k = int(os.environ['LOCAL_WORLD_SIZE'])
+    r = int(os.environ['LOCAL_RANK'])
+    if len(cores) >= k:
+        os.sched_setaffinity(0, cores[r + (len(cores) > k)])
+_pin_rank()
+'''
 
 def _gloo_sweep(k, sizes, iters, warmup, timeout_s=None):
     """(rows, HWRun) of the gloo all-reduce sweep in k CPU processes
@@ -36315,8 +36351,8 @@ def _loopback_compute(backend, ranks, env, min_bytes, max_bytes, iters,
     out = pd.concat(frames, ignore_index=True)
     out.attrs.update(tool=frames[0].attrs.get('tool'), backend=backend,
                      env=env, info=info, **_HW_NET_REGIMES)
-    if backend == 'gloo':
-        out.attrs['cpu'] = _cpu_model()
+    if backend == 'gloo':  # the CPU and the ranks' settings it ran with
+        out.attrs.update(cpu=_cpu_model(), gloo_env=_gloo_env())
     if info:
         out.attrs['nccl'] = next(iter(info.values()))['version']
     return out
@@ -36439,9 +36475,12 @@ def loopback_sweep(backend='gloo', ranks=(2, 4), env='', max_bytes=2**24):
     first cards; the collectives as the long sweep table of nccl_sweeps
     (path 'loopback'). Committed in box-net; a normal run prints the fits
     and re-times 2 ranks at three sizes (tcp and gloo on any host, nccl
-    with two GPUs).
+    with two GPUs). env is NCCL's only: tcp and gloo run in their fixed
+    settings (gloo in _gloo_env).
 
     Defined in :numref:`sec_lm_networks`"""
+    if env and backend != 'nccl':
+        raise ValueError(f'env applies to backend nccl only, not {backend}')
     spec = _HW_NET[backend]
     config = dict(backend=backend, ranks=list(ranks), env=env,
                   min_bytes=spec['min_bytes'], max_bytes=max_bytes,
@@ -37703,15 +37742,15 @@ def _hier_run(mode, sizes, iters, warmup, check, intra, inter, timeout_s,
               gpus=(0, 1, 2, 3)):
     """(timing rows, check record, HWRun) of _HIER_SCRIPT in four torchrun
     processes ('cuda': one GPU each; 'cpu': gloo on the CPU), in
-    sec_lm_networks' _gloo_env (its gloo groups), the cards made visible
-    in 'cuda' mode.
+    sec_lm_networks' _gloo_env (its gloo groups; _GLOO_PIN pins each
+    rank), the cards made visible in 'cuda' mode.
 
     Defined in :numref:`sec_lm_collectives`"""
     import inspect
     with tempfile.TemporaryDirectory() as tmp:
         path, fn = (os.path.join(tmp, f) for f in ('hier.py', 'fn.py'))
         with open(path, 'w') as f:
-            f.write(_HIER_SCRIPT)
+            f.write(d2l._GLOO_PIN + _HIER_SCRIPT)
         with open(fn, 'w') as f:
             f.write(inspect.getsource(d2l.hier_allreduce))
         env = dict(d2l._gloo_env(), NCCL_DEBUG='WARN')
@@ -37751,7 +37790,8 @@ def _hier_compute(config):
     rel = d2l._smi_relations()
     out.attrs.update(check=check, intra=spec['intra'], inter=spec['inter'],
                      intra_relation=rel(*spec['intra'][0][:2]),
-                     inter_relation=rel(*spec['inter'][0][:2]))
+                     inter_relation=rel(*spec['inter'][0][:2]),
+                     gloo_env=d2l._gloo_env())
     return out
 
 _HIER_ROWS = ('flat gloo', 'flat NCCL', 'hierarchical', 'intra stage',

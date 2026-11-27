@@ -212,7 +212,9 @@ tcp = d2l.loopback_sweep(backend='tcp', ranks=(2,), max_bytes=2**24)
 floor = d2l.loopback_sweep(backend='gloo', ranks=(2, 4), max_bytes=2**24)
 ```
 
-<!-- Placeholder (prose): fix pass F6 (N2 as measured, committed values kept): the gloo alpha is gloo's own per-message cost, not the sweep's settings: a gloo send/recv round trip takes 200-300 us against 41 us for the Python TCP round trip, and a 2-rank all-reduce is two such steps; OMP threads change nothing, pinning each rank to a core lowers it by at most 1.9x and only in some runs, the 4-rank alpha not at all. -->
+<!-- Placeholder (prose): fix pass F6 (N2, after review): about half of the unpinned gloo alpha on this box is where the operating system places the ranks, not gloo: with each rank on a physical core of its own (both SMT threads) the 2-rank alpha falls from about 690 to 340 us and the 4-rank one from about 2,200 to 1,200 us, and beta rises (2 ranks 1.3 to 2.0 GB/s, 4 ranks 1.2 to 1.4-1.6); OpenMP threads change nothing. The harness now pins every gloo rank (one line in the call's settings), so quote alpha and beta from the regenerated box-net v2, never from this comment. What stays after pinning (about 170 us per ring step at 2 ranks) is gloo's own per-message cost, still several times the 41 us TCP round trip. Pitfall for the reader: pinning a rank to a single logical CPU is far worse than not pinning (gloo's I/O thread then shares that CPU with the caller). The first placeholder's "hundreds of microseconds per ring step" becomes the v2 figure. -->
+
+<!-- Placeholder (prose): fix pass F6 (side finding, label only): the NCCL-socket beta is NCCL's default socket settings on loopback (no helper threads, one socket); setting NCCL_SOCKET_NTHREADS / NCCL_NSOCKS_PERTHREAD raises the 16 MiB rate about 1.9x. Label the sockets' beta in the transport ladder so; N2 is about alpha. -->
 
 ```{.python .input #networks-nccl-socket}
 %%tab pytorch

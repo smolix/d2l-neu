@@ -1027,13 +1027,13 @@ def _hier_run(mode, sizes, iters, warmup, check, intra, inter, timeout_s,
               gpus=(0, 1, 2, 3)):
     """(timing rows, check record, HWRun) of _HIER_SCRIPT in four torchrun
     processes ('cuda': one GPU each; 'cpu': gloo on the CPU), in
-    sec_lm_networks' _gloo_env (its gloo groups), the cards made visible
-    in 'cuda' mode."""
+    sec_lm_networks' _gloo_env (its gloo groups; _GLOO_PIN pins each
+    rank), the cards made visible in 'cuda' mode."""
     import inspect
     with tempfile.TemporaryDirectory() as tmp:
         path, fn = (os.path.join(tmp, f) for f in ('hier.py', 'fn.py'))
         with open(path, 'w') as f:
-            f.write(_HIER_SCRIPT)
+            f.write(d2l._GLOO_PIN + _HIER_SCRIPT)
         with open(fn, 'w') as f:
             f.write(inspect.getsource(d2l.hier_allreduce))
         env = dict(d2l._gloo_env(), NCCL_DEBUG='WARN')
@@ -1074,7 +1074,8 @@ def _hier_compute(config):
     rel = d2l._smi_relations()
     out.attrs.update(check=check, intra=spec['intra'], inter=spec['inter'],
                      intra_relation=rel(*spec['intra'][0][:2]),
-                     inter_relation=rel(*spec['inter'][0][:2]))
+                     inter_relation=rel(*spec['inter'][0][:2]),
+                     gloo_env=d2l._gloo_env())
     return out
 
 #@save

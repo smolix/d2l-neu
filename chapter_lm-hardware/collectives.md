@@ -578,6 +578,8 @@ if not np.isnan(predicted):  # NaN without the two earlier sections' fits
     assert abs(gain / predicted - 1) < 0.2  # C4: the closed form predicts it
 ```
 
+<!-- Placeholder (prose): fix pass F6: the gloo ranks are pinned to physical cores from box-net v2 and box-coll v2 on (sec_lm_networks), which raises gloo's beta and halves its alpha; C4's branch, the gain and the gate's bandwidth and latency ratios are quoted from the v2 pair only, and stated as properties of this box's gloo setup, not of gloo itself. -->
+
 <!-- Placeholder (prose): what the box cannot show. The ring/tree crossover
 of D1 needs a tree deeper than a chain (several nodes), the rail effect of
 D2 needs one NIC per GPU, and SHARP and NVLS need the switches. Campaign

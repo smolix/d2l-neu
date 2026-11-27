@@ -909,7 +909,10 @@ def _torchrun_sweep(op, k, sizes, iters, warmup, env, timeout_s,
     """(rows, HWRun) of the torch.distributed sweep in k torchrun
     processes: d2l.torchrun's command line through hw_run, so that it has
     a timeout of its own; the workers' output goes to files (--redirects
-    3), and a timeout kills them too."""
+    3), and a timeout kills them too. backend 'gloo' runs CPU ranks in
+    sec_lm_networks' _gloo_env, with env added on top."""
+    if backend == 'gloo':
+        env = dict(d2l._gloo_env(), **env)
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, 'sweep.py')
         with open(path, 'w') as f:

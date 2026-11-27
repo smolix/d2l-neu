@@ -35496,9 +35496,12 @@ def _torchrun_sweep(op, k, sizes, iters, warmup, env, timeout_s,
     """(rows, HWRun) of the torch.distributed sweep in k torchrun
     processes: d2l.torchrun's command line through hw_run, so that it has
     a timeout of its own; the workers' output goes to files (--redirects
-    3), and a timeout kills them too.
+    3), and a timeout kills them too. backend 'gloo' runs CPU ranks in
+    sec_lm_networks' _gloo_env, with env added on top.
 
     Defined in :numref:`sec_lm_server_paths`"""
+    if backend == 'gloo':
+        env = dict(d2l._gloo_env(), **env)
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, 'sweep.py')
         with open(path, 'w') as f:
@@ -36240,20 +36243,24 @@ def _fit_tcp(r):
                 beta_lo=b_lo, beta_hi=b_hi)
 
 def _gloo_env():
-    """CPU processes on the loopback interface, a few threads each.
+    """The one environment of the chapter's gloo ranks (the loopback
+    sweeps here, _torchrun_sweep's gloo path, sec_lm_collectives'
+    _hier_run): CPU processes on the loopback interface, a few threads
+    each. A change here changes box-net and box-coll together.
 
     Defined in :numref:`sec_lm_networks`"""
     return dict(CUDA_VISIBLE_DEVICES='', GLOO_SOCKET_IFNAME='lo',
                 OMP_NUM_THREADS='4')
 
 def _gloo_sweep(k, sizes, iters, warmup, timeout_s=None):
-    """(rows, HWRun) of the gloo all-reduce sweep in k CPU processes.
+    """(rows, HWRun) of the gloo all-reduce sweep in k CPU processes
+    (_torchrun_sweep adds _gloo_env).
 
     Defined in :numref:`sec_lm_networks`"""
     timeout_s = timeout_s or d2l._sweep_timeout(
         max(sizes), iters, warmup, min_rate=0.2e9)
-    return d2l._torchrun_sweep('all_reduce', k, sizes, iters, warmup,
-                               _gloo_env(), timeout_s, backend='gloo')
+    return d2l._torchrun_sweep('all_reduce', k, sizes, iters, warmup, {},
+                               timeout_s, backend='gloo')
 
 def _net_info(k, env):
     """NCCL's account of one small all-reduce on the first k cards with
@@ -37695,7 +37702,9 @@ dist.destroy_process_group()
 def _hier_run(mode, sizes, iters, warmup, check, intra, inter, timeout_s,
               gpus=(0, 1, 2, 3)):
     """(timing rows, check record, HWRun) of _HIER_SCRIPT in four torchrun
-    processes ('cuda': one GPU each; 'cpu': gloo on the CPU).
+    processes ('cuda': one GPU each; 'cpu': gloo on the CPU), in
+    sec_lm_networks' _gloo_env (its gloo groups), the cards made visible
+    in 'cuda' mode.
 
     Defined in :numref:`sec_lm_collectives`"""
     import inspect
@@ -37705,13 +37714,10 @@ def _hier_run(mode, sizes, iters, warmup, check, intra, inter, timeout_s,
             f.write(_HIER_SCRIPT)
         with open(fn, 'w') as f:
             f.write(inspect.getsource(d2l.hier_allreduce))
-        env = dict(GLOO_SOCKET_IFNAME='lo', OMP_NUM_THREADS='4',
-                   NCCL_DEBUG='WARN')
+        env = dict(d2l._gloo_env(), NCCL_DEBUG='WARN')
         if mode == 'cuda':
             env['CUDA_VISIBLE_DEVICES'] = ','.join(
                 d2l._hw_visible_uuids()[i] for i in gpus)
-        else:
-            env['CUDA_VISIBLE_DEVICES'] = ''
         launcher = os.path.join(os.path.dirname(sys.executable), 'torchrun')
         try:
             run = d2l.hw_run(

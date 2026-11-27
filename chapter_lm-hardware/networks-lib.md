@@ -232,17 +232,21 @@ def _fit_tcp(r):
 %%tab pytorch
 #@save
 def _gloo_env():
-    """CPU processes on the loopback interface, a few threads each."""
+    """The one environment of the chapter's gloo ranks (the loopback
+    sweeps here, _torchrun_sweep's gloo path, sec_lm_collectives'
+    _hier_run): CPU processes on the loopback interface, a few threads
+    each. A change here changes box-net and box-coll together."""
     return dict(CUDA_VISIBLE_DEVICES='', GLOO_SOCKET_IFNAME='lo',
                 OMP_NUM_THREADS='4')
 
 #@save
 def _gloo_sweep(k, sizes, iters, warmup, timeout_s=None):
-    """(rows, HWRun) of the gloo all-reduce sweep in k CPU processes."""
+    """(rows, HWRun) of the gloo all-reduce sweep in k CPU processes
+    (_torchrun_sweep adds _gloo_env)."""
     timeout_s = timeout_s or d2l._sweep_timeout(
         max(sizes), iters, warmup, min_rate=0.2e9)
-    return d2l._torchrun_sweep('all_reduce', k, sizes, iters, warmup,
-                               _gloo_env(), timeout_s, backend='gloo')
+    return d2l._torchrun_sweep('all_reduce', k, sizes, iters, warmup, {},
+                               timeout_s, backend='gloo')
 
 #@save
 def _net_info(k, env):

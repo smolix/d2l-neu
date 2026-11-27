@@ -3105,6 +3105,43 @@ class TestNetworks(unittest.TestCase):
                                      transports=['NET/Socket/0'])})
         return t
 
+    def test_gloo_env_single_source(self):
+        """_gloo_env is the one environment of every gloo run (F6): the
+        loopback sweep and _torchrun_sweep's gloo path pass it to hw_run
+        as is, _hier_run adds only NCCL_DEBUG (and the cards in 'cuda'
+        mode); NCCL's torch.distributed fallback does not get it. A
+        sentinel in a patched _gloo_env shows the value comes from it."""
+        self.assertEqual(d2l._gloo_env(), dict(
+            CUDA_VISIBLE_DEVICES='', GLOO_SOCKET_IFNAME='lo',
+            OMP_NUM_THREADS='4'))  # box-net v1 and box-coll v1 ran so
+        envs = []
+        def fake_run(cmd, timeout_s, env=None, record=False):
+            envs.append(dict(env))
+            return d2l.HWRun(list(cmd), 0, '', '', 0.0, None)
+        gloo = dict(d2l._gloo_env(), D2L_TEST_SENTINEL='1')
+        with mock.patch.object(d2l, 'hw_run', side_effect=fake_run), \
+                mock.patch.object(d2l, '_gloo_env', return_value=gloo), \
+                mock.patch.object(d2l, '_hw_visible_uuids',
+                                  return_value=['u0', 'u1', 'u2', 'u3']):
+            d2l._gloo_sweep(2, [8], 1, 0)
+            d2l._torchrun_sweep('all_reduce', 2, [8], 1, 0, {}, 5,
+                                backend='gloo')
+            d2l._torchrun_sweep('all_reduce', 2, [8], 1, 0,
+                                {'NCCL_DEBUG': 'INFO'}, 5, backend='gloo')
+            d2l._hier_run('cpu', [], 1, 0, 64, [[0, 1], [2, 3]],
+                          [[0, 2], [1, 3]], 5)
+            d2l._hier_run('cuda', [8], 1, 0, 64, [[0, 1], [2, 3]],
+                          [[0, 2], [1, 3]], 5)
+            d2l._torchrun_sweep('all_reduce', 2, [8], 1, 0,
+                                {'CUDA_VISIBLE_DEVICES': 'u0,u1'}, 5)
+        self.assertEqual(envs[0], gloo)
+        self.assertEqual(envs[1], gloo)
+        self.assertEqual(envs[2], dict(gloo, NCCL_DEBUG='INFO'))
+        self.assertEqual(envs[3], dict(gloo, NCCL_DEBUG='WARN'))
+        self.assertEqual(envs[4], dict(gloo, NCCL_DEBUG='WARN',
+                                       CUDA_VISIBLE_DEVICES='u0,u1,u2,u3'))
+        self.assertEqual(envs[5], {'CUDA_VISIBLE_DEVICES': 'u0,u1'})
+
     def test_loopback_displays(self):
         floor = self.loopback('gloo', (2, 4), 300e-6, 1.4e9)
         sock = self.loopback('nccl', (2,), 40e-6, 1.0e9)

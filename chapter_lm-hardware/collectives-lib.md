@@ -1026,7 +1026,9 @@ dist.destroy_process_group()
 def _hier_run(mode, sizes, iters, warmup, check, intra, inter, timeout_s,
               gpus=(0, 1, 2, 3)):
     """(timing rows, check record, HWRun) of _HIER_SCRIPT in four torchrun
-    processes ('cuda': one GPU each; 'cpu': gloo on the CPU)."""
+    processes ('cuda': one GPU each; 'cpu': gloo on the CPU), in
+    sec_lm_networks' _gloo_env (its gloo groups), the cards made visible
+    in 'cuda' mode."""
     import inspect
     with tempfile.TemporaryDirectory() as tmp:
         path, fn = (os.path.join(tmp, f) for f in ('hier.py', 'fn.py'))
@@ -1034,13 +1036,10 @@ def _hier_run(mode, sizes, iters, warmup, check, intra, inter, timeout_s,
             f.write(_HIER_SCRIPT)
         with open(fn, 'w') as f:
             f.write(inspect.getsource(d2l.hier_allreduce))
-        env = dict(GLOO_SOCKET_IFNAME='lo', OMP_NUM_THREADS='4',
-                   NCCL_DEBUG='WARN')
+        env = dict(d2l._gloo_env(), NCCL_DEBUG='WARN')
         if mode == 'cuda':
             env['CUDA_VISIBLE_DEVICES'] = ','.join(
                 d2l._hw_visible_uuids()[i] for i in gpus)
-        else:
-            env['CUDA_VISIBLE_DEVICES'] = ''
         launcher = os.path.join(os.path.dirname(sys.executable), 'torchrun')
         try:
             run = d2l.hw_run(

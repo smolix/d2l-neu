@@ -54,7 +54,8 @@ cap only as the lever that lowers the clock on a compute-bound kernel. The
 answer (E5 on the committed sweep) is that batch-1 decode slows about as
 much as the training step, so do not promise "free" energy savings for
 decode here. The plan's numbers (P_s = 80 W, k = 80 W/GHz^3, f* = 0.79 GHz)
-appear only as the worked example of D3, never as the box's result. -->
+appear only as the worked example of the spec's derivation D3
+(P = P_s + k f^3), never as the box's result. -->
 
 ```{.python .input #energy-cost-imports}
 %%tab pytorch

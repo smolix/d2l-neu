@@ -362,20 +362,22 @@ the kernel. -->
 
 <!-- Placeholder (prose): ruling D3 in one or two sentences (fix pass F9,
 F11): fp8 is native on Ada (the 330 TFLOP/s row above, about twice bf16) and
-on every newer GPU; NVFP4 and MXFP4 are simulated on this Ada card and run
-natively on Blackwell (sm_100, sm_103, sm_120, sm_121), both through chapter
-21's implementation (cite :numref:`sec_lm_low_precision`: its simulator and
-its native product with the capability check and probe GEMM); this section
-re-implements none of the packing or scales. The 4-bit cell
-(accelerator-design-fp4, d2l.hw_fp4_matmul) goes here once chapter 21's
-native FP4 product lands (its fix F40; held, not on the ch21 branch as of
-2026-11-27). On this box it prints two status lines and measures nothing
-(no FP4 tensor cores on sm_89; simulated here, timed natively on sm_100 /
-sm_120); on a Blackwell card it times the native product against the chip
-row's FP4 peak, a live rate never quoted in the text. Say that the native
-branch is written and unit-tested with the hardware detection mocked and
-cannot run here. The summary table gains an FP4 row only for chips with an
-FP4 datasheet figure (the 4090 has none). -->
+on every newer GPU; NVFP4 and MXFP4 are simulated on this Ada card through
+chapter 21 (cite :numref:`sec_lm_low_precision`) and native on Blackwell
+(the Blackwell capabilities chapter 21's check accepts; do not list
+architectures here); this section re-implements none of the packing or
+scales. CONDITIONAL: the 4-bit cell (accelerator-design-fp4,
+d2l.hw_fp4_matmul) and its tests are NOT written yet; they are held on
+chapter 21's native FP4 product (its fix F40; not on the ch21 branch as of
+2026-11-27). Only if cell accelerator-design-fp4 is on the page: on this box
+it prints two status lines and measures nothing (no FP4 tensor cores on
+sm_89); on a Blackwell card it times the native product against the chip
+row's FP4 peak, a live rate never quoted in the text; say that the native
+branch is unit-tested with the hardware detection mocked and cannot run
+here. If the cell is not on the page, say only that NVFP4/MXFP4 are
+simulated on Ada through chapter 21 and native on Blackwell, and describe
+no 4-bit cell, status line or test. The summary table gains an FP4 row only
+for chips with an FP4 datasheet figure (the 4090 has none). -->
 
 ### Shared Memory and Latency
 

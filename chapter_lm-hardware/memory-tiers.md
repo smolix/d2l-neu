@@ -199,9 +199,14 @@ the 31.5 GB/s per-direction line rate, not "within 20%"; in 2 MiB pages 25
 (79%); NVIDIA's nvbandwidth, copy engines alone, 25 (79%); d2h 20 (65%);
 pageable h2d 15 (48%), markedly slower. The link ran at Gen 4 x16 during
 the sweep, so it is not link training. The 2 MiB-page gain is the GPU's
-translation of 4 KiB host pages; PCIe packet overhead (TLP and DLLP
-headers, about 26-27 GB/s attainable, quoted) explains most of the rest;
-about 1-2 GB/s stays unattributed: say so. Quote fractions at 2 digits from
+translation of 4 KiB host pages; PCIe packet overhead explains most of
+the rest, as a short derivation labelled an estimate (no quoted source):
+each TLP carries about 24 B beyond its payload (12-16 B header, 2 B
+sequence number, 4 B LCRC, 4 B framing token), so 256 B payloads give at
+most 256/280 = 91% and 128 B payloads 84%, and ACK and flow-control DLLPs
+take a few percent more: about 26-28 GB/s attainable (the box's max payload
+size cannot be read without root, so state the payload as assumed). About
+1-3 GB/s stays unattributed: say so. Quote fractions at 2 digits from
 the printed lines. -->
 
 <!-- Placeholder (prose): the four cards at once, asked as a question with

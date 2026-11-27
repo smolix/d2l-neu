@@ -453,8 +453,11 @@ on the 4090 all twelve compile (num_stages 2), so no such line appears.
 Measured on the 4090 (committed run, fix pass F11): the best configuration
 runs at 102% of SDPA at the reference shape (128 x 64, 4 warps; the next two
 within 2%) and 92% at Qwen3-8B (128 x 128, 8 warps), so claim K1 holds; the
-64-row tiles at 8 warps run at about half speed at the reference shape
-(46-52% of the best) and at 48-74% at Qwen3-8B. -->
+64-row tiles at 8 warps run at 46-52% of SDPA at the reference shape
+(68-76 TF/s) and at 44-68% of SDPA at Qwen3-8B (64-98 TF/s). All
+percentages are of SDPA, as in the printed column; the table prints only
+the worst of these tiles (46%, 44%), the others are the spill table's TF/s
+divided by the shape's SDPA row. -->
 
 ```{.python .input #kernels-flash-sweep}
 %%tab pytorch
@@ -469,15 +472,18 @@ claim K3, stated as measured (the fallback wording), not as predicted:
 (numbers from the committed table, run of 2026-11-26; fix pass F11
 replaced an earlier run's figures)
 - d_h = 64 (reference): block_q 128 does not raise throughput; 64- and
-  128-row tiles at 4 warps are within 2% (144-148 TF/s), since K and V come
-  from L2 anyway. 128 x 32 at 4 warps is spill-free (254 registers) at 146.
+  128-row tiles at 4 warps are within 3% (144-148 TF/s), since K and V come
+  from L2 anyway, except the heavily spilling 128 x 128 at 4 warps (next
+  bullet but one). 128 x 32 at 4 warps is spill-free (254 registers) at 146.
 - d_h = 128 (Qwen3-8B): block_q 128 gains (64 x 32 -> 128 x 32 at 4 warps:
   116 -> 132 TF/s) even with 44 spilled words; the fastest spill-free
   block_q 128 tile is 128 x 32 at 8 warps (129).
 - Large spills cost: 128 x 128 at 4 warps spills 140 words (reference) and
   248 (Qwen3-8B) and runs at 125 and 75 TF/s.
 - The strongest effect is warps against tile height: 64-row tiles at 8
-  warps run at about half speed at both shapes (68-76 and 64-98 TF/s).
+  warps run at about half speed at the reference shape (68-76 TF/s, 46-52%
+  of SDPA) and at 44-68% of SDPA at Qwen3-8B (64-98 TF/s); there only the
+  64 x 32 tile halves (64 TF/s at 8 warps against 116 at 4).
 Do not write "the largest spill-free block_q at 4 warps was 64": 128 x 32 at
 4 warps has no spills at the reference shape. -->
 
@@ -486,8 +492,10 @@ the claim as measured, one per shape, all at block_q 128 (the spill-free
 reference's tile height, so the tile height does not mix into the spill
 cost): the fastest spill-free configuration (by throughput) and the TF/s of
 the configurations spilling 1-99 words and 100+ words as a percentage of the
-shape's best. The numbers in the comment above come from an earlier run;
-quote the committed table and its summary lines (run of 2026-11-26:
+shape's best. Quote the committed table and its summary lines (the
+comment above was refreshed to the committed run in fix pass F11; the
+summary lines appear only after F12's recapture, since the committed
+output predates F2's code) (run of 2026-11-26:
 reference 128x32 w4 at 98% of the best 128x64 w4, which spills 10 words;
 spilling 1-99 words 98-100%, 100+ words 84%; Qwen3-8B 128x32 w8 at 97%,
 1-99 words 99-100% (the best, 128x128 w8, spills 22 words), 100+ words

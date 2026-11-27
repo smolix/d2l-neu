@@ -159,10 +159,12 @@ assert np.nanmax(mat['gbs']) < host  # every copy crosses two host links
 <!-- Placeholder (prose): fix pass F11 (claim S1, as restated): peer access
 is refused, so every GPU-to-GPU copy is staged through host memory, at
 about the pinned host-link rate, not "a small fraction" of it: NODE pairs
-22 GB/s, PHB pairs 20, against pinned h2d 23 of sec_lm_memory_tiers, i.e.
-0.85-0.96 of the measured host link (the range from the unrounded medians;
-quote it from the printed line); a 4-byte copy takes 18-19 us on every
-pair. The assert compares with the 31.5 GB/s line rate; the text compares
+22 GB/s, PHB pairs 20, against pinned h2d 23 of sec_lm_memory_tiers. The
+fraction is not printed by any cell: it is the unrounded medians divided by
+memory-tiers' pinned h2d beta (22.8 GB/s), PHB 0.85 and NODE 0.96, computed
+and tested (TestCommittedClaims.test_s1_fraction); quote it as 0.85-0.96 or
+as "about the host-link rate", never by dividing the rounded printed values;
+a 4-byte copy takes 18-19 us on every pair. The assert compares with the 31.5 GB/s line rate; the text compares
 with the measured link. -->
 
 ### Collectives on the Box

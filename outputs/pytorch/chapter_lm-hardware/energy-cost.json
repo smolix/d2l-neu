@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c6873e1f117b7c08dd889cc1bbe096c4f5cfcbd7164ad31d0f06ed1385c2a7f4",
+    "d2l_lib_fingerprint": "sha256:42b09dfc135c94a70077caf299e65d82ed40300b54039759d0e9feeb68f47bf1",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -34,7 +34,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (matrix product, 3 s) on RTX 4090: 2 points, largest difference 3%\n"
+          "text": "live check (matrix product, 3 s) on RTX 4090: 2 points, largest difference 4%\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "energy-cost/energy-cost-dvfs-1.svg",
           "bytes": 52493,
-          "sha256": "sha256:fabdeba09afdb792e8c1074a0ef8091bad27dd855a42239f31055f623e083fc8"
+          "sha256": "sha256:4151f82d1efcae0b41f6ce4743ba2a5dae694c0bce6fa01206d6e902ee9d2cee"
         }
       ]
     },
@@ -94,14 +94,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (J/token at b = 1, 64) on RTX 4090: 2 points, largest difference 10%\nL = 512: knee at b = 20; d log(J/token) / d log b -0.84 below, -0.32 above\nL = 2,048: knee at b = 5; d log(J/token) / d log b -0.82 below, -0.22 above\n"
+          "text": "live check (J/token at b = 1, 64) on RTX 4090: 2 points, largest difference 9%\nL = 512: knee at b = 20; d log(J/token) / d log b -0.84 below, -0.32 above\nL = 2,048: knee at b = 5; d log(J/token) / d log b -0.82 below, -0.22 above\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "energy-cost/energy-cost-decode-energy-1.svg",
           "bytes": 42477,
-          "sha256": "sha256:e533990214fa060657dd789b9e165ca1ee5018b6a36eb7c6054687344da38f22"
+          "sha256": "sha256:954d1f53a9ded4a2f7d12165a397f47bf698672e2af177e78945d0562189239b"
         }
       ]
     },
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (training steps, 3 s) on RTX 4090: 2 points, largest difference 9%\n"
+          "text": "live check (training steps, 3 s) on RTX 4090: 2 points, largest difference 10%\n"
         }
       ]
     },
@@ -189,7 +189,7 @@
           "mime": "image/svg+xml",
           "asset": "energy-cost/energy-cost-owned-rented-1.svg",
           "bytes": 46460,
-          "sha256": "sha256:e6f333bd06722dcc9842f601c74e7f66bb98b7394fa391295374a5e5651f14ec"
+          "sha256": "sha256:e1e0f6bef39e90711bc1a1b55f16f0efeb36bca603e603eeae0636248a1fc395"
         }
       ]
     },

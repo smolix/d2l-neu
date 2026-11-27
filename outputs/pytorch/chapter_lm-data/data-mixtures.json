@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-temperature-1.svg",
           "bytes": 52783,
-          "sha256": "sha256:df0a67362009b27bc9156299f57340bfc403a6f696ed1a9196e052a1bb43c19a"
+          "sha256": "sha256:b882f30314b96ecc11c7a29209d91b937802c0741762d32a4451dc1af8460bbc"
         }
       ]
     },
@@ -183,7 +183,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-opening-plot-1.svg",
           "bytes": 32398,
-          "sha256": "sha256:ea40206152e0fc9c9320b542d66460a9dca1c1c1478ef2875c0af4c1609622e3"
+          "sha256": "sha256:abd7a3e5052a9dffbc0fde9737d87149be30219103417b7b07e1c489ca3164c0"
         }
       ]
     },
@@ -211,7 +211,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-regression-1.svg",
           "bytes": 73142,
-          "sha256": "sha256:958de303f7034b8ee3c16be26fd6c7e4dc5325fa1c7e119d0f3f8b44d0a73dc8"
+          "sha256": "sha256:6817006d8098ec397f279566a87938c5eef9bdc2925161641773db9d5da6dbe8"
         }
       ]
     },
@@ -272,7 +272,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-arms-1.svg",
           "bytes": 26334,
-          "sha256": "sha256:30b73dbbed7bb9c615896e35072d761c5c1509b72432e317316affc5aa5f8098"
+          "sha256": "sha256:3d078ebcc5e532e14ef864d4357bcac3c5a28fb440a12238159b1e400ceeee66"
         }
       ]
     },
@@ -290,12 +290,12 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-staged-1.svg",
           "bytes": 57875,
-          "sha256": "sha256:b2e6648f7138745ef1fa82a5789b038406b315f1de8c32504812385e945200e5"
+          "sha256": "sha256:00c621afde341d40becdca2443db633b448da23dea303f04ad4fa2a8157d3553"
         }
       ]
     },
     "data-mixtures-t2-package": {
-      "code_fingerprint": "sha256:acb5b24a6491261324ff57d50d6d5d401e02d35d7a63a183794c487fe5bf11e9",
+      "code_fingerprint": "sha256:69cf5537a87d0d2813091de62042bc136300335bf79fced9c7e257a2d8c80561",
       "kind": "text",
       "outputs": [
         {
@@ -306,7 +306,7 @@
       ]
     },
     "data-mixtures-t2-test": {
-      "code_fingerprint": "sha256:66de886fb5d232852abc610831471a5cdf8e6d4a98dcda028f1db57d50b958f5",
+      "code_fingerprint": "sha256:871fe6c5cc68f911fc3ede0beb013746781a526e3eafd6e8986f4a59d5de4678",
       "kind": "text",
       "outputs": [
         {

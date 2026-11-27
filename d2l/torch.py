@@ -25033,22 +25033,29 @@ def _eps_update_rms(trace, cfg):
     t = t.loc[cfg.warmup:cfg.steps - cfg.decay]
     return float(t.mean(axis=1).median()) if len(t) else math.nan
 
-def _eps_pair_check(cell, new):
-    """Refuse a pair (PretrainConfigs of the grid cell and the new run)
-    whose configurations differ in anything but eps, or not in eps.
+def _cfg_pair_check(cell, new, field):
+    """Refuse a pair (PretrainConfigs of a grid cell and a new run) whose
+    configurations differ in anything but field, or not in field.
 
     Defined in :numref:`sec_lm_reference_model`"""
     a, b = _cfg_json(cell), _cfg_json(new)
     diff = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
-    if diff != ['eps']:
-        raise ValueError('the eps pair must differ in eps only; it differs '
-                         f'in {diff or "nothing"}')
+    if diff != [field]:
+        raise ValueError(f'the {field} pair must differ in {field} only; it '
+                         f'differs in {diff or "nothing"}')
 
-def _eps_cell(grid, lr, seeds=(0, 1)):
-    """The T1 grid's 'clip' cell at lr: (its PretrainConfig at seed 0, its
-    table rows and traces at seeds), checked: the grid ran the full t1
-    schedule, the 'clip' variant, lr and the seeds, with this library's
-    recipe (INST_CLIP, the statistics).
+def _eps_pair_check(cell, new):
+    """Refuse an eps pair that differs in anything but eps.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    _cfg_pair_check(cell, new, 'eps')
+
+def _grid_cell(grid, variant, lr, seeds):
+    """The T1 grid's cell of variant at lr: (its PretrainConfig at the
+    first of seeds, its table rows and traces at seeds), checked: the grid
+    ran the full t1 schedule, variant, lr and the seeds, with this
+    library's recipe (INST_CLIP, the statistics). A pilot that pairs one
+    new run with the cell reads it here.
 
     Defined in :numref:`sec_lm_reference_model`"""
     stored = d2l._stored_config(grid)
@@ -25056,18 +25063,24 @@ def _eps_cell(grid, lr, seeds=(0, 1)):
     if d:
         raise ValueError(f'the T1 grid ran another recipe: recipe.{d[0]} '
                          f'{d[1]!r} != {d[2]!r}')
-    if (stored['steps'] is not None or 'clip' not in stored['variants']
+    if (stored['steps'] is not None or variant not in stored['variants']
             or lr not in stored['lrs']
             or not set(seeds) <= set(stored['seeds'])):
-        raise ValueError(f'the T1 grid has no full-schedule clip cell at lr '
-                         f'{lr:g}, seeds {list(seeds)}')
-    cell, _ = _inst_arm(_cfg_from_json(stored['cfg']), 'clip', lr, seeds[0])
+        raise ValueError(f'the T1 grid has no full-schedule {variant} cell '
+                         f'at lr {lr:g}, seeds {list(seeds)}')
+    cell, _ = _inst_arm(_cfg_from_json(stored['cfg']), variant, lr, seeds[0])
     t, tr = grid.table, grid.traces
-    rows = t[(t['variant'] == 'clip') & (t['lr'] == lr)
+    rows = t[(t['variant'] == variant) & (t['lr'] == lr)
              & t['seed'].isin(seeds)].sort_values('seed')
-    traces = tr[(tr['variant'] == 'clip') & (tr['lr'] == lr)
+    traces = tr[(tr['variant'] == variant) & (tr['lr'] == lr)
                 & tr['seed'].isin(seeds)]
     return cell, rows, traces
+
+def _eps_cell(grid, lr, seeds=(0, 1)):
+    """The T1 grid's 'clip' cell at lr (_grid_cell).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return _grid_cell(grid, 'clip', lr, seeds)
 
 def _eps_register(eps, readout, held):
     """Write the new eps (with the readout it came from and the UTC time)
@@ -25191,6 +25204,135 @@ def adam_eps_headroom(lr):
                                config)
     return d2l._show_label(_as_tuple(EpsHeadroom, res, _EPS_TABLES, dict(
         eps=math.nan, matrix_median=math.nan)))
+
+ZlossPilot = collections.namedtuple('ZlossPilot',
+                                    ['table', 'traces', 'gate', 'label'])
+
+ZLOSS_LR = 8e-3  # the pilot's rate: the T1 grid's qk_norm cell at it
+ZLOSS_BASE = 1e-4  # the presets' z-loss coefficient: the grid cell's
+ZLOSS_TAIL = 50  # "at the end": the statistics steps of the last 50 steps
+ZLOSS_GATE = 5.0  # claim 26's rule: |difference of mean log Z| > 5 nats
+ZLOSS_STATS = 1  # version of the pilot's statistics
+
+_ZLOSS_TABLES = dict(  # the columns of a ZlossPilot's tables
+    table=['z_loss', 'seed', 'log_z_end', 'val_loss', 'final_loss',
+           'first_nonfinite', 'max_logit', 'source'],
+    traces=['step', 'loss', 'log_z', 'z_loss'])
+
+def _zloss_end(trace, steps):
+    """An arm's mean log Z at the end: the mean of log_z (the mean
+    log-partition of the output softmax, logged at the statistics steps)
+    over the statistics steps after steps - ZLOSS_TAIL; NaN for an arm
+    with a non-finite loss (it stopped) or no such step.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if not np.isfinite(trace['loss'].to_numpy(float)).all():
+        return math.nan
+    z = trace.loc[trace['step'] > steps - ZLOSS_TAIL, 'log_z'].dropna()
+    return float(z.mean()) if len(z) else math.nan
+
+def _zloss_gate(table):
+    """Claim 26's rule on a pilot's table: 'go' if both arms ended finite
+    and their mean log Z at the end differs by more than ZLOSS_GATE nats,
+    else 'no-go'.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    end = table.set_index('z_loss')['log_z_end']
+    d = float(end[ZLOSS_BASE] - end[0.0])
+    go = math.isfinite(d) and math.fabs(d) > ZLOSS_GATE
+    return 'go' if go else 'no-go'
+
+def _zloss_pilot(lr, device=None):
+    """The job behind zloss_pilot (device: tests only): one t1 run of the
+    grid's qk_norm recipe at lr, seed 0, without z-loss (kept under
+    _job_root()/zloss-pilot/, so that a restarted job or the later
+    regeneration reads it), paired with the grid's qk_norm cell at lr,
+    seed 0 (z-loss ZLOSS_BASE), whose configuration must differ from the
+    new run's in z_loss only. Also the gate script's call: the job runs
+    before its regeneration name exists (spec 5.3).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if device is None and not torch.cuda.is_available():
+        raise RuntimeError('the z-loss run trains on a GPU')
+    cell, rows, cell_traces = _grid_cell(
+        d2l.load_artifact('instability-t1'), 'qk_norm', lr, (0,))
+    c, extra = _inst_arm(d2l.r2_config('t1', clip=None), 'qk_norm', lr, 0)
+    c = dataclasses.replace(c, z_loss=0.0)
+    _cfg_pair_check(cell, c, 'z_loss')
+    if cell.z_loss != ZLOSS_BASE:
+        raise ValueError(f'the grid cell ran z-loss {cell.z_loss:g}, not '
+                         f'{ZLOSS_BASE:g}')
+    held = os.path.join(_job_root(), 'zloss-pilot',
+                        f'qk_norm-{lr:g}-z0-s0.json.gz')
+    config = d2l._jsonable(dict(cfg=_cfg_json(c), variant='qk_norm',
+                                model=extra, recipe=_inst_recipe(),
+                                tau=None))
+
+    def compute():
+        shards = _train_shards(c)
+        val = _val_fn(dataclasses.replace(c, val_tokens=INST_VAL_TOKENS))
+        log = _inst_run(c, extra, 'qk_norm', None, shards, val,
+                        torch.device(device or 'cuda'))
+        return (_arm_summary(log, 'qk_norm', lr, 0,
+                             peak_end=c.steps - c.decay),
+                _arm_trace(log, 'qk_norm', lr, 0))
+    row, trace = _inst_kept(held, config, compute)
+    table, traces = [], []
+    for z, r, tr, source in ((ZLOSS_BASE, rows.iloc[0], cell_traces,
+                              'instability-t1'),
+                             (0.0, row, trace, 'zloss-pilot')):
+        table.append(dict(z_loss=z, seed=0, log_z_end=_zloss_end(tr, c.steps),
+                          val_loss=r['val_loss'], final_loss=r['final_loss'],
+                          first_nonfinite=r['first_nonfinite'],
+                          max_logit=r['max_logit'], source=source))
+        traces.append(tr[['step', 'loss', 'log_z']].assign(z_loss=z))
+    table = pd.DataFrame(table)
+    return ZlossPilot(table, pd.concat(traces, ignore_index=True),
+                      _zloss_gate(table), '')
+
+def _zloss_recipe():
+    """The library constants a stored z-loss pilot was computed with.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return dict(base=ZLOSS_BASE, tail=ZLOSS_TAIL, gate=ZLOSS_GATE,
+                inst=_inst_recipe(), stats=ZLOSS_STATS)
+
+def zloss_pilot(lr):
+    """Does the output softmax's log-partition drift without z-loss? Two
+    t1 runs with QK-norm at peak rate lr on the T1 grid's recipe (full
+    schedule, clipping off), seed 0: z-loss ZLOSS_BASE is the grid's
+    qk_norm cell (read from 'instability-t1', not re-run), the other trains
+    once without z-loss; the two configurations differ in z_loss only
+    (checked). ZlossPilot(table, traces, gate, label): a row per arm with
+    the mean log Z at the end (_zloss_end), the final losses, the largest
+    logit; traces of loss and log_z per step; gate = claim 26's rule
+    (_zloss_gate). Regeneration: zloss-pilot (after inst-t1-qknorm), a
+    conditional name (spec 5.3): the gate script runs _zloss_pilot first;
+    after a go, add 'zloss-pilot' to PRETRAIN_RERUN_NAMES and
+    _RERUN_ARTIFACT (load name 'zloss-pilot', data-path-lib.md),
+    PRETRAIN_ARTIFACTS['zloss-pilot'] = ('lm-r2-zloss-pilot-v1',
+    'json-table'), PRETRAIN_JOBS['zloss-pilot'] = ('zloss_pilot', lambda:
+    dict(lr=ZLOSS_LR)) and the tests' list, then run it (it reads the kept
+    run). Until then a normal run raises KeyError and a regeneration run
+    shows it pending.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    run, _ = _inst_arm(d2l.r2_config('t1', clip=None), 'qk_norm', lr, 0)
+    run = _cfg_json(run)
+    del run['z_loss']  # the arms' one difference
+    config = dict(lr=lr, run=run, recipe=_zloss_recipe(), cell=dict(
+        key=d2l.PRETRAIN_ARTIFACTS['instability-t1'][0], variant='qk_norm',
+        seed=0))
+    if 'zloss-pilot' in d2l.PRETRAIN_RERUN_NAMES:
+        res = d2l._pretrain_result('zloss-pilot', lambda: _zloss_pilot(lr),
+                                   config)
+    elif d2l._regenerating():
+        res = d2l._pending_result('zloss-pilot')
+    else:
+        raise KeyError('zloss-pilot is not committed yet (its gate has not '
+                       'passed)')
+    return d2l._show_label(_as_tuple(ZlossPilot, res, _ZLOSS_TABLES,
+                                     dict(gate=None)))
 
 d2l.DATA_HUB['lm-lowp-runs-v1'] = (
     d2l.LM_DATA_URL + 'lm-lowp-runs-v1.json.gz',

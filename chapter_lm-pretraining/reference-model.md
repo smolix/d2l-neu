@@ -1279,6 +1279,25 @@ if k:
           f'{r["repeats"]} times: {r["text"]}')
 ```
 
+### A z-Loss Pilot
+
+<!-- Placeholder (prose): conditional subsection (claim 26; it stays only if the pilot met its pre-registered rule, |difference of mean log Z at the end| > 5 nats; otherwise the gate step removes it, z-loss stays a one-sentence restatement of subsec_practice-nan with its citation, and a 10× longer t1 run at 8e-3 becomes an exercise). z-loss adds 1e-4 · (log Z)² per token and pulls the log-partition of the output softmax toward 0. The pilot: t1 with QK-norm at 8e-3 on the T1 grid's recipe (full schedule, clipping off), seed 0; the z-loss 1e-4 arm is the grid's QK-norm cell at that rate (the same run, not re-run), the other arm trains once without z-loss, and the two differ in z-loss only. "Mean log Z at the end" is the mean over the statistics steps of the last 50 steps of the mean log-partition over the step's targets; for scale, log V = ln 32,768 ≈ 10.4 is the value of a uniform softmax at zero logits. -->
+
+```{.python .input #reference-model-a-z-loss-pilot}
+%%tab pytorch
+Z_LR = 8e-3  # the T1 grid's QK-norm cell at this rate has z-loss 1e-4
+z = d2l.zloss_pilot(Z_LR)
+if len(z.table):
+    end = z.table.set_index('z_loss')['log_z_end']
+    assert abs(end[d2l.ZLOSS_BASE] - end[0.0]) > d2l.ZLOSS_GATE  # claim 26
+    sci = lambda x: f'{x:.0e}'.replace('e-0', 'e-')
+    print(f'mean log Z at the end (t1, QK-norm, lr {sci(Z_LR)}): z-loss '
+          f'{sci(d2l.ZLOSS_BASE)} {end[d2l.ZLOSS_BASE]:.1f}, '
+          f'none {end[0.0]:.1f}')
+```
+
+<!-- Placeholder (prose): claim 26 as measured: the two values and their difference (the cell asserts the rule, so the difference exceeds 5 nats); what a drifting log Z does to bf16 logits; a t1 pair of 1,526 steps is not a measurement at scale. -->
+
 ## Optimizers as a Stated Fact
 
 <!-- Placeholder (prose): no optimizer race here. Against a tuned AdamW, matrix optimizers (Muon, Soap, Kron) gain at most about 1.4x at small scale and about 1.1x at larger scale, and the gain shrinks with scale under standard weight decay (Fantastic Pretraining Optimizers I and II); the production Muon recipe (Muon is Scalable). The Muon variant of the t1 preset is an exercise. -->

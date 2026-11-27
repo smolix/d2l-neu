@@ -1197,6 +1197,14 @@ class MeasurementTest(unittest.TestCase):
         styles = [ln.get_linestyle() for ln in d2l.plt.gcf().axes[0].lines]
         self.assertEqual(styles, ['-', '--'])
         d2l.plt.close('all')
+        d2l.plot_traces(traces, ['max_logit', 'loss'], by='variant',
+                        refs={'loss': 0.1})  # a threshold on one panel
+        top, bottom = d2l.plt.gcf().axes
+        self.assertEqual(len(top.lines), 2)  # no line where no ref
+        ref = bottom.lines[-1]
+        self.assertEqual((list(ref.get_ydata()), ref.get_linestyle()),
+                         ([0.1, 0.1], ':'))
+        d2l.plt.close('all')
         arms = pd.DataFrame([dict(variant=v, lr=lr, seed=s, loss=3 + lr + s,
                                   max_logit=10 * lr)
                              for v in ('none', 'qk_norm')

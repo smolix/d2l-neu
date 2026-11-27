@@ -23521,12 +23521,13 @@ def plot_run_log(log, cols, marks=(), figsize=(6, 7)):
     fig.align_ylabels()
 
 def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4),
-                dashed=()):
+                dashed=(), refs=None):
     """Stacked panels of per-step traces against step, one line per group
     of the columns by (named by their values): cols as in plot_run_log
     ('loss', 'grad_norm', 'max_logit', 'min_entropy') or any column; logy:
     the columns on a log scale; steps: the (first, last) step shown;
-    dashed: the group names drawn dashed (a twin).
+    dashed: the group names drawn dashed (a twin); refs: {column: value}
+    drawn as a dotted black line (a threshold).
 
     Defined in :numref:`sec_lm_reference_model`"""
     d2l.use_svg_display()
@@ -23544,6 +23545,8 @@ def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4),
                     ls='--' if name in dashed else '-')
     for ax, col in zip(axes, cols):
         ax.set_ylabel(_PANEL_LABELS.get(col, col), fontsize=8)
+        if refs and col in refs:
+            ax.axhline(refs[col], color='k', ls=':', lw=0.8)
         if col in logy:
             ax.set_yscale('log')
             d2l.set_log_ticks(ax.yaxis)

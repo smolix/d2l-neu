@@ -952,7 +952,7 @@ for v in VARIANTS:
     alarm = (f'step {int(hit.min()):,} ({len(hit)} of {len(at_top)})'
              if len(hit) else '—')  # the earliest, and how many seeds
     print(f'{v:>8} {m.idxmin():7g} {lr_sensitivity(m, math.log(V)):11.2f} '
-          f'{m[top] - m.min():12.2f} {g["max_logit"].max():13.0f} '
+          f'{m[top] - m.min():12.2f} {g["max_logit"].max():13,.0f} '
           f'{alarm:>21}')
 print(f'zero-layer reference: {inst.zero_layer:.2f}')
 print(f'τ (t1) = {inst.tau}')
@@ -988,7 +988,7 @@ rates = [first_collapsed_rate(arms, v) for v in VARIANTS]
 print(f'{"first collapsed rate":>21}'
       + ''.join(f'{"—" if r is None else f"{r:g}":>9}' for r in rates))
 print(f'{"smallest entropy":>21}' + ''.join(
-    f'{arms.loc[arms["variant"] == v, "min_entropy"].min():9.2f}'
+    f'{arms.loc[arms["variant"] == v, "min_entropy"].min():9.3f}'
     for v in VARIANTS))
 ```
 
@@ -996,9 +996,12 @@ print(f'{"smallest entropy":>21}' + ''.join(
 
 ```{.python .input #reference-model-stable-lr-plot}
 %%tab pytorch
+end = t1_cfg.steps - t1_cfg.decay  # the last step at the peak rate
+end -= end % d2l.INST_STATS_EVERY  # its last statistics step
 d2l.plot_lr_grid(arms, {'loss': ('final val loss', inst.zero_layer),
                         'max_logit': ('largest logit', TAU_T1),
-                        'peak_entropy': ('smallest entropy (nats)', None)},
+                        'peak_entropy': (f'entropy at step {end:,} (nats)',
+                                         None)},
                  VARIANTS, logy=['max_logit'])
 ```
 
@@ -1012,21 +1015,40 @@ lr_c = first_collapsed_rate(arms, 'none', seed=0)
 if lr_c is None:  # pre-registered: the claim is dropped
     print('no baseline rate collapsed: every entropy stayed above 0.1 nats')
 else:
-    steps = d2l.collapse_crossings(inst, lr_c, t1_cfg.warmup, seed=0)
-    at = steps['loss 0.1 above QK-norm']
+    start = t1_cfg.warmup  # the grad-norm band: the 200 steps from here
+    steps = d2l.collapse_crossings(inst, lr_c, start, seed=0)
+    rule = 'loss 0.1 above QK-norm'
+    at = steps[rule]
     print(f'baseline at lr {lr_c:g} (first collapsed rate), seed 0')
     for name, s in steps.items():
         lead = ('' if s is None or at is None or s == at else
                 f', {abs(at - s)} steps {"before" if s < at else "after"} '
                 'the loss')
-        print(f'{name:>22}: ' + ('never' if s is None else f'step {s:,}')
+        never = (f'never (searched from step {start + 200})'
+                 if name == 'grad norm moves' else 'never')
+        print(f'{name:>22}: ' + (never if s is None else f'step {s:,}')
               + lead)
+    calm = arms[(arms['variant'] == 'none') & (arms['seed'] == 0)
+                & (arms['min_entropy'] >= 0.1)]  # the same rule, no collapse
+    null = [(lr, d2l.collapse_crossings(inst, lr, start)[rule])
+            for lr in sorted(calm['lr'])]
+    print(f'{"loss rule, no collapse":>22}: ' + ', '.join(
+        f'{"never" if s is None else f"step {s:,}"} at {lr:g}'
+        for lr, s in null))
     tr = inst.traces[(inst.traces['seed'] == 0) & (inst.traces['lr'] == lr_c)]
-    d2l.plot_traces(tr[tr['variant'].isin(['none', 'qk_norm'])],
-                    ['max_logit', 'min_entropy', 'grad_norm', 'loss'],
+    pair = tr[tr['variant'].isin(['none', 'qk_norm'])].copy()
+    loss = pair.pivot(index='step', columns='variant', values='loss')
+    gap = (loss['none'] - loss['qk_norm']).rolling(20).mean()  # the rule's
+    pair['loss − QK-norm'] = pair['step'].map(gap).where(
+        pair['variant'] == 'none')  # one line: the baseline's gap
+    d2l.plot_traces(pair, ['max_logit', 'min_entropy', 'grad_norm',
+                           'loss − QK-norm'],
                     by='variant', logy=['max_logit', 'grad_norm'],
-                    dashed=['qk_norm'], figsize=(5, 5))
+                    dashed=['qk_norm'], refs={'loss − QK-norm': 0.1},
+                    figsize=(5, 5))
 ```
+
+<!-- Placeholder (prose): claim 6b as measured (F11 review findings 1-3). The loss crossed first, but the printed control line shows the same loss rule firing at rates whose entropy never fell below 0.1 nats (QK-norm trains faster early at every rate from 2e-3 up), so the loss crossing does not warn of collapse; of the four monitors only the entropy and the logit are specific. The last panel is that rule's series, the 20-step mean of baseline − QK-norm with the 0.1 line. The grad norm cannot be read here: every collapsed cell departs before or inside the detector's reference window (steps 76-275), and the detector searches only from step 276. 4e-3 is a borderline first collapsed rate (seed 0 at 0.068, seed 1 at 0.1002); its paired gap is no larger than at the uncollapsed 2e-3, and 8e-3 is where the loss first fails clearly. -->
 
 ### Ten Times the Learning Rate
 

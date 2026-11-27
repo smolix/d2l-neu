@@ -426,7 +426,7 @@ def _write_quarto_yml(dst, framework, files):
                         ('Path=static/fonts/', 'Extension=.ttf',
                          'UprightFont=*-Regular', 'BoldFont=*-Bold',
                          'Scale=0.9')))
-    cjk = i18n.latex_cjk_preamble()
+    cjk = i18n.latex_locale_preamble()
     if cjk:
         (dst / 'static').mkdir(parents=True, exist_ok=True)
         (dst / 'static' / 'd2l-i18n-preamble.tex').write_text(

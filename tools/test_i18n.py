@@ -126,6 +126,26 @@ class PseudoLocale(unittest.TestCase):
                 self.assertIn('xeCJK', i18n.latex_cjk_preamble())
                 self.assertEqual(i18n.quarto_lang_yaml(), 'lang: "ja"\n')
 
+    def test_emphasis_setting(self):
+        with Env():
+            self.assertEqual(i18n.emphasis(), 'italic')
+            self.assertEqual(i18n.latex_locale_preamble(), '')
+            self.assertNotIn('font-weight: bold', i18n._head_extras())
+        with tempfile.TemporaryDirectory() as tmp:
+            bold = Path(tmp) / 'bold.yml'
+            bold.write_text(PSEUDO + 'fonts.emphasis: bold\n', encoding='utf-8')
+            with Env(D2L_LANG='xx', D2L_LOCALE_FILE=str(bold)):
+                self.assertIn('em { font-style: normal; font-weight: bold; }',
+                              i18n._head_extras())
+                pre = i18n.latex_locale_preamble()
+                self.assertIn('xeCJK', pre)
+                self.assertIn('\\renewcommand{\\emph}[1]{\\textbf{#1}}', pre)
+            bad = Path(tmp) / 'bad.yml'
+            bad.write_text(PSEUDO + 'fonts.emphasis: dots\n', encoding='utf-8')
+            with Env(D2L_LANG='xx', D2L_LOCALE_FILE=str(bad)):
+                with self.assertRaises(SystemExit):
+                    i18n.emphasis()
+
     def test_quarto_yml_round_trip(self):
         text = (REPO / '_quarto.yml').read_text(encoding='utf-8')
         with tempfile.TemporaryDirectory() as tmp:

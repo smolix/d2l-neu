@@ -363,8 +363,9 @@ def build_pdf(qmd: Path, pdf: Path, bundle: Path = None, keep: Path = None,
             f'\\def\\dtlfooter{{{footer}}}\n'
             f'\\def\\dtlcover{{{cover}}}\n'
             '\\input{d2l-beamer}\n\\InputIfFileExists{sizes}{}{}\n'
-            # xeCJK and its fonts for a CJK locale (none for English).
-            + i18n.latex_cjk_preamble())
+            # xeCJK, its fonts and the emphasis style of the locale
+            # (none for English).
+            + i18n.latex_locale_preamble())
         tex_name = f'{stem}.tex'
         r = subprocess.run(
             [str(QUARTO), 'pandoc', 'deck.md', '-f', 'markdown', '-t', 'beamer',

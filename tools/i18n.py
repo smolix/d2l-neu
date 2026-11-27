@@ -278,6 +278,8 @@ def _head_extras() -> str:
         css.append(f'body, .d2l-landing {{ font-family: {cat["fonts.html.sans"]}; }}')
     if cat['fonts.html.mono'] != base['fonts.html.mono']:
         css.append(f'code, pre, kbd, samp {{ font-family: {cat["fonts.html.mono"]}; }}')
+    if emphasis() == 'bold':
+        css.append('em { font-style: normal; font-weight: bold; }')
     if css:
         out.append('<style>\n' + '\n'.join(css) + '\n</style>')
     return ''.join(x + '\n' for x in out)
@@ -517,6 +519,29 @@ def quarto_lang_yaml(indent: str = '') -> str:
     if cat['dir'] != base['dir']:
         lines.append(f'{indent}dir: {json.dumps(cat["dir"])}')
     return ''.join(x + '\n' for x in lines)
+
+
+EMPHASIS = ('italic', 'bold')
+
+
+def emphasis() -> str:
+    """fonts.emphasis: how *…* is set (italic, or bold for scripts without
+    italics)."""
+    value = catalog().get('fonts.emphasis') or 'italic'
+    if value not in EMPHASIS:
+        raise SystemExit(f'i18n: fonts.emphasis must be one of {", ".join(EMPHASIS)}, '
+                         f'not {value!r}')
+    return value
+
+
+def latex_locale_preamble() -> str:
+    """LaTeX additions for the locale (PDFs and Beamer decks): xeCJK and its
+    fonts, and bold emphasis where fonts.emphasis says so; '' for English."""
+    out = latex_cjk_preamble()
+    if emphasis() == 'bold':
+        # pandoc writes *…* as \emph{…}; CJK fonts have no italic shape
+        out += '\\renewcommand{\\emph}[1]{\\textbf{#1}}\n'
+    return out
 
 
 def latex_cjk_preamble() -> str:

@@ -37,6 +37,9 @@ fonts.pdf.mono: Inconsolata
 fonts.pdf.cjk: null
 fonts.pdf.cjk_sans: null
 fonts.pdf.cjk_mono: null
+# How *…* (emphasis) is set in the HTML book, the PDFs and the Beamer decks:
+# italic, or bold for scripts whose fonts have no italic (Japanese).
+fonts.emphasis: italic
 # Pandoc/Quarto `lang` for the PDFs (babel hyphenation and LaTeX names).
 # null: not set. Set it only for languages whose babel module works with
 # XeLaTeX (de, fr, es, pt, ...).

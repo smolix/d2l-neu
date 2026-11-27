@@ -733,7 +733,9 @@ sources (navbar, the injected `_d2l-*.html` scripts, the slide index and
 deck chrome, PowerPoint and Beamer covers and footers, PDF front matter,
 notebook-zip README) and the settings: `lang` (BCP-47, given to Quarto so its
 own UI and search are localized), `dir` (`ltr`/`rtl`), `fonts.html.*` and
-`fonts.pdf.*` (a CJK font loads xeCJK), `pdf.lang`, `site.hosts`,
+`fonts.pdf.*` (a CJK font loads xeCJK; the build host needs TeX Live's xeCJK,
+Ubuntu `texlive-lang-cjk`), `fonts.emphasis` (`italic`, or `bold` for scripts
+without italics: `*…*` in HTML, PDFs and Beamer), `pdf.lang`, `site.hosts`,
 `forum.mode`, `forum.category`, and `quarto.<key>` overrides of Quarto's
 language strings. `make html` first runs `tools/i18n.py render`: it renders
 the `_d2l-*.html` templates (`{{t:key}}`, `{{tjs:key}}`) into `_i18n/`, the

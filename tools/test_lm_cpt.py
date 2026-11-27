@@ -11,17 +11,20 @@ quadratic cell (frontier identity and the 2-D points, run from the page);
 paired resamples), `frontier_excess` against the C -> A chord on a
 synthetic concave frontier (on the chord 0, under it negative, a replay
 arm forgetting less than C against the base -> C segment, one forgetting
-more than A no verdict; notes when an arm is missing or a span is not
-resolved from 0) and `replay_fractions`; an arm's two-stream mixture
+more than A, or one that does not forget, no verdict; notes when an arm
+is missing or a span is not resolved from 0) and `replay_fractions`; an arm's two-stream mixture
 (traces and replay in (1 - r, r), no book); the data in the job identity
 (T2 manifest layout, T1 tar sha1) and in a result's configuration;
 cold-plateau's fresh moments against the branch's restored ones; GSM8K in
 two formats (the ChatML prompt and its tokens, the answer after
-</think>, a cut or never-closed reply has none, chat markers in the
+</think> with a box preferred, a cut or never-closed reply has none, the
+forced-answer readout for exactly those replies, chat markers in the
 completion format, budgets and end tokens; the Transformers weight map
-inverted; the per-model cache of cpt-qwen-evals); the page's T2 cells on a
-synthetic result (shapes, widths); `rewarm_bump` (from each arm's own step 0, transient
-or not); `book_split`
+inverted; the per-model cache of cpt-qwen-evals, refused under another
+setting or batch size); the page's T2 cells on a synthetic result (shapes,
+widths); `rewarm_bump` (from each arm's own step 0, transient or not);
+`early_gaps` (paired gaps and the seed yardstick over steps 1-40);
+`book_split`
 (deterministic, disjoint, every fifth section held out); `cpt_data('t2')`
 in a normal run opens no shard; the arm schedule, configurations and
 evaluation grid; `_doc_nll` against a direct loss; a toy two-arm run of
@@ -297,7 +300,7 @@ class ForgettingGainTest(unittest.TestCase):
         self.assertEqual((ex.note, ex.ref), ('', 'C → A chord'))
         miss = d2l.frontier_excess(fg, 'B', chord=('C', 'Z'))
         self.assertTrue(math.isnan(miss.value))
-        self.assertEqual(miss.note, 'needs arm Z (T2 only)')
+        self.assertEqual(miss.note, 'needs arm Z: not in this result')
         kept, forgot = d2l.replay_fractions(fg, 'B', of='A')
         self.assertAlmostEqual(kept.value, 0.8, delta=0.06)
         self.assertAlmostEqual(forgot.value, 0.5, delta=0.15)
@@ -333,6 +336,12 @@ class ForgettingGainTest(unittest.TestCase):
         low = d2l.frontier_excess(self.frontier(0.02, 0.0049))
         self.assertEqual(low.ref, 'base → C segment')
         self.assertAlmostEqual(low.value, 0.02 - 0.03 * 0.49, places=9)
+        for f in (0.0, -0.004):  # B does not forget: no lower bound there
+            none = d2l.frontier_excess(self.frontier(0.01, f))
+            self.assertTrue(math.isnan(none.value))
+            self.assertEqual(none.note, 'B does not forget (outside the '
+                                        'measured no-replay range): no '
+                                        'verdict')
         far = d2l.frontier_excess(self.frontier(0.07, 0.06))
         self.assertTrue(math.isnan(far.value))
         self.assertEqual(far.note, "B's forgetting is outside the measured "
@@ -354,7 +363,7 @@ class ForgettingGainTest(unittest.TestCase):
         self.assertTrue(math.isnan(ex.value))
         self.assertIn('not resolved', ex.note)
         fg = arms(('C', 0.03, 0.002, 0.05, 1), ('A', 0.06, 0.04, 0.0, 2),
-                  ('B', 0.02, -0.01, 0.0, 3))
+                  ('B', 0.02, 0.001, 0.0, 3))  # forgets, less than C
         ex = d2l.frontier_excess(fg)
         self.assertIn("C's forgetting is not resolved", ex.note)
         fg = arms(('C', 0.03, 0.04, 0.0, 1), ('A', 0.06, 0.01, 0.0, 2),
@@ -393,6 +402,41 @@ class BumpTest(unittest.TestCase):
             page_ns(), runs=runs._replace(table=pd.DataFrame(dict(
                 arm=['A', 'C', 'branch'], peak_lr=[1e-4, 1e-5, 6e-4])))))
         self.assertIn('no transient', out.splitlines()[2])
+
+
+class EarlyGapsTest(unittest.TestCase):
+    def test_gaps(self):
+        """Largest a - b over steps 1-40 at shared evaluation steps (step 0
+        and later steps ignored); the seed yardstick is the largest
+        difference between any two seeds; defined when no arm has a
+        transient (all still rising); a missing arm drops its row."""
+        steps = [0, 3, 6, 40, 45]
+        curve = lambda *v: list(v)
+        L = {'A': curve(3.0, 3.10, 3.20, 3.30, 9.0),
+             'A′': curve(3.0, 3.12, 3.21, 3.31, 0.0),
+             'A″': curve(3.0, 3.09, 3.25, 3.30, 5.0),
+             'cold': curve(3.0, 3.30, 3.35, 3.40, 3.0),
+             'cold-plateau': curve(3.1, 3.30, 3.25, 3.40, 3.0),
+             'branch': curve(3.1, 3.12, 3.20, 3.35, 3.0)}
+        logs = pd.DataFrame([dict(arm=a, step=s, general_loss=v)
+                             for a, vs in L.items()
+                             for s, v in zip(steps, vs)])
+        runs = d2l.CptRuns(None, logs, None, None, None, None, None, '')
+        self.assertTrue(d2l.rewarm_bump(runs)['bump'].isna().all())
+        g = d2l.early_gaps(runs, [('cold-plateau', 'branch'), ('cold', 'A'),
+                                  ('cold', 'Z')], ['A', 'A′', 'A″'])
+        self.assertEqual(list(g['comparison']), [
+            'cold-plateau − branch', 'cold − A', "between A's seeds"])
+        self.assertEqual(list(g['step']), [3, 3, 6])
+        for got, want in zip(g['gap'], (0.18, 0.20, 0.05)):
+            self.assertAlmostEqual(got, want)
+        empty = d2l.early_gaps(runs._replace(logs=logs[logs['arm'] == 'A']),
+                               [('cold', 'A')], ['A', 'A′'])
+        self.assertEqual(len(empty), 0)
+        pending = runs._replace(logs=pd.DataFrame(
+            columns=d2l._CPT_COLUMNS['logs']))
+        self.assertEqual(len(d2l.early_gaps(pending, [('cold', 'A')],
+                                            ['A', 'A′'])), 0)
 
 
 class BookSplitTest(unittest.TestCase):
@@ -684,10 +728,12 @@ class PendingPageTest(unittest.TestCase):
                          'frontier-chord', 'equal-tokens', 'suite-deltas'):
                 out = run_cell(f'continued-pretraining-{cell}', ns)
                 if cell == 'gsm8k':
-                    self.assertEqual(out, '')
+                    self.assertEqual(out, 'GSM8K: scored for the Qwen arms '
+                                          'only\n')
                 if cell == 'frontier-chord':
                     self.assertEqual(out.splitlines()[0],
-                                     'needs arm A, B, C (T2 only)')
+                                     'needs arm A, B, C: not in this '
+                                     'result')
         self.assertIn('pending', ns['runs'].label)
 
     def test_fallback_label_kept(self):
@@ -823,6 +869,21 @@ class GSM8KTest(unittest.TestCase):
         self.assertEqual(ans('The answer is 18.', 'eos'), '18')  # no think
         self.assertEqual(ans('<think> 17 </think> 18', 'eos'), '18')
         self.assertIsNone(ans('<think> a </think> b <think> 18', 'eos'))
+        # a box wins over a later number; a box without a number does not
+        self.assertEqual(ans('<think> x </think> So $\\boxed{18}$ dollars, '
+                             'i.e. 3 bags.', 'eos'), '18')
+        self.assertEqual(ans('</think> \\boxed{1,800.00} in 2 days', 'eos'),
+                         '1800')
+        self.assertEqual(ans('</think> \\boxed{x} so 18', 'eos'), '18')
+
+    def test_force_prompt(self):
+        cue = 'The final answer is $\\boxed{'
+        self.assertEqual(d2l.gsm8k_force_prompt('P', '<think> 3 + 15'),
+                         'P<think> 3 + 15\n</think>\n\n' + cue)
+        self.assertEqual(d2l.gsm8k_force_prompt('P', 'Q: q Q: q'),
+                         'PQ: q Q: q\n\n' + cue)
+        self.assertEqual(d2l.gsm8k_force_prompt('P', '<think> a </think> b'),
+                         'P<think> a </think> b\n\n' + cue)
 
     def test_score(self):
         """score_gsm8k on canned replies: the scoring rules, the flags,
@@ -841,17 +902,28 @@ class GSM8KTest(unittest.TestCase):
                            Gen('The answer is 17.', 'stop'),
                            Gen('so 3', 'length', 256),
                            Gen('<think> The answer is 18.', 'stop')]}
+        replies['forced'] = [Gen('18', 'stop'), Gen('17', 'stop')]
         calls = []
 
         def generate(model, tok, prompts, max_new, **kw):
-            fmt = 'chat' if prompts[0].startswith('<|im_start|>') else \
-                'completion'
+            fmt = 'forced' if kw['stop'] == ['}'] else 'chat' if prompts[
+                0].startswith('<|im_start|>') else 'completion'
             calls.append((fmt, prompts, max_new, kw))
             return replies[fmt]
         with mock.patch.object(d2l, 'generate', generate):
             res = d2l.score_gsm8k(None, FakeChatTokenizer(), items)
         self.assertEqual(list(res.columns), d2l._CPT_COLUMNS['gsm8k'][1:])
-        comp, chat = calls
+        comp, chat, forced = calls
+        # forcing: only the cut reply (1) and the never-closed one (2)
+        self.assertEqual(forced[1], [d2l.gsm8k_force_prompt(
+            chat[1][i], replies['chat'][i].text) for i in (1, 2)])
+        self.assertEqual((forced[2], forced[3]['batch_size']), (32, 8))
+        with mock.patch.object(d2l, 'generate', generate):
+            calls.clear()
+            off = d2l.score_gsm8k(None, FakeChatTokenizer(), items,
+                                  formats=('chat',), force=0)
+        self.assertEqual([c[0] for c in calls], ['chat'])
+        self.assertEqual(list(off['forced']), list(off['score']))
         self.assertEqual((comp[0], comp[1][0], comp[2], comp[3]['stop'],
                           comp[3]['eos_token_ids']),
                          ('completion', 'P0', 256, ['Q:'], [151643]))
@@ -861,6 +933,9 @@ class GSM8KTest(unittest.TestCase):
                           [151643, 151645]))
         r = res.set_index(['format', 'item_id'])
         self.assertEqual(list(r.loc['chat', 'score']), [1, 0, 0, 1, 0])
+        self.assertEqual(list(r.loc['chat', 'forced']), [1, 1, 0, 1, 0])
+        self.assertEqual(list(r.loc['completion', 'forced']),
+                         list(r.loc['completion', 'score']))
         self.assertEqual(list(r.loc['chat', 'cut']),
                          [False, True, False, False, False])
         open_think = r.loc['chat', 'thinks'] & ~r.loc['chat', 'closed']
@@ -929,7 +1004,7 @@ class GSM8KTest(unittest.TestCase):
         def score(model, tok, items):
             log.append(('score', model['w']))
             return pd.DataFrame(dict(format=['chat'], item_id=['0'],
-                                     score=[1.0], cut=[False],
+                                     score=[1.0], forced=[1.0], cut=[False],
                                      thinks=[True], closed=[True],
                                      chat_tokens=[False], new_tokens=[9]))
 
@@ -960,6 +1035,10 @@ class GSM8KTest(unittest.TestCase):
             pd.testing.assert_frame_equal(again, res, check_dtype=False)
             with mock.patch.dict(d2l._CPT_GSM8K, n=100), \
                     self.assertRaisesRegex(ValueError, 'settings.n'):
+                d2l._cpt_gsm8k_all(cfgs)
+            # another batch size is another setting (not batch-invariant)
+            with mock.patch.dict(d2l._GSM8K_BATCH, chat=32), \
+                    self.assertRaisesRegex(ValueError, 'settings.batch'):
                 d2l._cpt_gsm8k_all(cfgs)
 
 
@@ -1034,7 +1113,8 @@ def synthetic_runs(n=120, seed=0):
                       for a, g, f, sd in spec])
     rng = np.random.default_rng(seed)
     rows = [dict(arm=m, format=fmt, item_id=str(i),
-                 score=float(rng.random() < p), cut=bool(rng.random() < 0.2),
+                 score=float(rng.random() < p), forced=float(
+                     rng.random() < p + 0.1), cut=bool(rng.random() < 0.2),
                  thinks=True, closed=bool(rng.random() < 0.6),
                  chat_tokens=bool(rng.random() < 0.05), new_tokens=100)
             for m, p in (('base', 0.4), ('A', 0.3), ('B', 0.35), ('C', 0.4),
@@ -1072,7 +1152,7 @@ class PageCellsTest(unittest.TestCase):
         self.assertEqual(out[1].split()[0], 'base')
         self.assertEqual(out[6], 'change against the base, points '
                                  '[95% CI, paired items]')
-        self.assertRegex(out[8], r'^A +[-+]\d+\.\d \[[-+]\d+\.\d, '
+        self.assertRegex(out[8], r'^ *A +[-+]\d+\.\d \[[-+]\d+\.\d, '
                                  r'[-+]\d+\.\d\] +[-+]')
 
     def test_frontier_cells(self):
@@ -1097,14 +1177,21 @@ class PageCellsTest(unittest.TestCase):
         logs = pd.DataFrame(dict(arm=np.repeat(arms[1:], 3),
                                  step=np.tile([0, 3, 40], 7),
                                  general_loss=np.tile([3.0, 3.2, 3.0], 7)))
+        logs.loc[(logs['arm'] == 'cold-plateau') & (logs['step'] == 3),
+                 'general_loss'] = 3.5
         runs = d2l.CptRuns(table, logs, None, None, None, None, None, '')
         with mock.patch.object(d2l, 'cpt_arms', lambda *a, **k: runs):
             out = run_cell('continued-pretraining-t1-arms',
                            page_ns()).splitlines()
-        self.assertEqual(len(out), 9)
+        self.assertEqual(len(out), 14)
         self.assertEqual(out[0].split(), ['arm', 'bump', 'trace', 'general',
                                           'book'])
         self.assertIn('cold-plateau', out[7])
+        self.assertEqual(out[9], 'largest general-loss gap over steps 1-40 '
+                                 '(nats/token)')
+        self.assertEqual([r.split()[-2:] for r in out[11:]],
+                         [['0.300', '3'], ['0.000', '3'], ['0.000', '3']])
+        self.assertLessEqual(max(map(len, out)), 80)
 
 
 class JobsTest(unittest.TestCase):

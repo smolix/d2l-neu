@@ -24,7 +24,8 @@ that the section explains in a sentence but does not show
   grid, the equal-domain-token evaluation, the merge of the arms with the
   base's numbers), the D2 probe and the arms' plots;
 - the frontier test behind the replay claim (`frontier_excess`: the
-  replay arm against the chord between two no-replay arms);
+  replay arm against the chord between two no-replay arms) and the
+  early general-loss gaps behind the cold-restart claims (`early_gaps`);
 - the SmolLM3 trajectory (`smollm3_trajectory`) and its plot.
 
 Every block is tagged `%%tab pytorch` and imports what it needs beyond the
@@ -688,28 +689,48 @@ of thought, 256 new tokens, cut at the next `Q:`), the format of a base
 model. The chat format is one ChatML user turn and the assistant's
 generation prompt, with no system turn and no prefilled `<think>`: the
 format of the reasoning traces the arms train on. A chat reply gets 4,096
-new tokens. Its answer is the number after its last `</think>` (the whole
+new tokens. Its answer is the content of the last `\boxed{}` after its
+last `</think>`, else the number `extract_answer` finds there (the whole
 reply when it opened no think block). A reply cut at the budget has no
 answer, and neither has a reply that opened a think block and ended it
-with `<|im_end|>` before closing it. Per item the table keeps the score,
-whether the reply was cut at the budget, whether it opened and closed a
-think block, whether a completion reply wrote a ChatML or think marker
-(the text before the first marker is scored, since the reply has ended
-there), and the number of new tokens.
+with `<|im_end|>` before closing it: that is the pre-registered score.
+A second readout forces an answer from those replies (budget forcing,
+Muennighoff et al. 2025, s1): the reply so far, a `</think>` if a think
+block is open, and the cue `The final answer is $\boxed{`, continued
+greedily for at most 32 tokens up to the closing brace. Replies that
+answered on their own keep their score; the forced score puts a number
+on every item at a cost of 32 tokens per cut reply, and the cut share
+stays its own column (F21 review finding 1: traces averaging 15K tokens
+teach thinking past 4,096, so the pre-registered score alone may measure
+thinking length, not skill). Per item the table keeps the score, the
+forced score, whether the reply was cut at the budget, whether it opened
+and closed a think block, whether a completion reply wrote a ChatML or
+think marker (the text before the first marker is scored, since the reply
+has ended there), and the number of new tokens.
 
 Generation runs on a Transformers Qwen3 model, which batches prompts of
 different lengths (left padding), with an arm's weights mapped back from
-the book's layout (`_qwen3_hf_state` inverts `map_qwen3_state_dict`). At
-24 chat replies per batch the key-value cache of 4,096 + 300 positions
-takes about 12 GB.
+the book's layout (`_qwen3_hf_state` inverts `map_qwen3_state_dict`).
+Qwen3-0.6B's key-value cache costs 28 layers x 8 heads x 128 x 2 x 2 B =
+112 KiB per position, about 11 GiB at 24 chat replies of 4,096 + 300
+positions; measured, batch 24 peaks at 13.1 GiB allocated, and batch 32
+runs out of a 24 GiB card (the growing cache fragments the allocator, and
+SDPA's grouped-query expansion copies each layer's keys and values; F21
+review smoke). The forced answers prefill 4,400-token prompts and run 8 at
+a time. Greedy decoding with left padding in bf16 is not batch-invariant,
+so the batch sizes are part of each cached file's settings.
 
 ```{.python .input #continued-pretraining-lib-gsm8k}
 %%tab pytorch
 #@save
-_CPT_GSM8K = dict(n=500, seed=0, budget=dict(completion=256, chat=4096))
+_CPT_GSM8K = dict(n=500, seed=0, budget=dict(completion=256, chat=4096),
+                  force=32)  # force: tokens after the forced-answer cue
 
 #@save
-_GSM8K_BATCH = dict(completion=32, chat=24)  # sequences per batch
+_GSM8K_BATCH = dict(completion=32, chat=24, force=8)  # per batch
+
+#@save
+_GSM8K_CUE = 'The final answer is $\\boxed{'  # budget forcing (s1)
 
 #@save
 _CHAT_MARKS = ('<|im_start|>', '<|im_end|>', '<think>', '</think>')
@@ -737,24 +758,40 @@ def _think_state(text):
 
 def gsm8k_chat_answer(text, finish_reason):
     """The answer of a chat reply, or None: a reply cut at the budget, or
-    one that opened a think block and never closed it, has none; else the
-    number d2l.extract_answer finds after the last </think> (in the whole
-    reply when it did not think)."""
+    one that opened a think block and never closed it, has none; else,
+    after the last </think> (in the whole reply when it did not think),
+    the number in the last \\boxed{} if one holds a number, otherwise the
+    number d2l.extract_answer finds there."""
     opened, closed = _think_state(text)
     if finish_reason == 'length' or (opened and not closed):
         return None
-    return d2l.extract_answer(text.split('</think>')[-1], 'gsm8k')
+    tail = text.split('</think>')[-1]
+    boxed = d2l.extract_answer(tail, 'boxed')
+    return (boxed and d2l.extract_answer(boxed, 'gsm8k')) or \
+        d2l.extract_answer(tail, 'gsm8k')
+
+def gsm8k_force_prompt(prompt, text):
+    """Budget forcing: the prompt, the reply so far, a closing </think>
+    if a think block is open, and the answer cue."""
+    opened, closed = _think_state(text)
+    close = '\n</think>' if opened and not closed else ''
+    return prompt + text + close + '\n\n' + _GSM8K_CUE
 
 def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
-                budget=None, batch_size=None, chat_prompt=None):
+                budget=None, batch_size=None, chat_prompt=None, force=None):
     """GSM8K replies of model (greedy) per item and format ('completion':
     the 8-shot prompt; 'chat': chat_prompt(question), by default
     gsm8k_chat_prompt): a DataFrame with format, item_id, score (exact
-    match), cut (stopped at the budget), thinks and closed (opened and
-    closed a think block), chat_tokens (wrote a ChatML or think marker)
-    and new_tokens. budget and batch_size are {format: n}."""
+    match), forced (the score with budget forcing: a chat reply without an
+    answer of its own is continued from gsm8k_force_prompt for at most
+    `force` tokens, default _CPT_GSM8K['force'], 0 = off; else the score),
+    cut (stopped at the budget), thinks and closed (opened and closed a
+    think block), chat_tokens (wrote a ChatML or think marker) and
+    new_tokens. budget is {format: n}, batch_size {format or 'force':
+    n}."""
     budget = {**_CPT_GSM8K['budget'], **(budget or {})}
     batch = {**_GSM8K_BATCH, **(batch_size or {})}
+    force = _CPT_GSM8K['force'] if force is None else force
     chat_prompt = chat_prompt or gsm8k_chat_prompt
     ids = {m: tokenizer.convert_tokens_to_ids(m) for m in
            ('<|endoftext|>', '<|im_end|>')}
@@ -771,19 +808,35 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
         gens = d2l.generate(model, tokenizer, prompts, budget[fmt],
                             eos_token_ids=eos, stop=stop,
                             batch_size=batch[fmt])
-        for it, g in zip(items, gens):
-            marks = [g.text.find(m) for m in _CHAT_MARKS if m in g.text]
-            if fmt == 'chat':
-                pred = gsm8k_chat_answer(g.text, g.finish_reason)
-            else:  # the reply has ended at its first chat marker
-                pred = d2l.extract_answer(g.text[:min(marks, default=None)],
-                                          'gsm8k')
+        if fmt == 'chat':
+            preds = [gsm8k_chat_answer(g.text, g.finish_reason)
+                     for g in gens]
+            todo = [i for i, g in enumerate(gens) if force and (
+                g.finish_reason == 'length'
+                or _think_state(g.text) == (True, False))]  # no answer
+            forced = list(preds)
+            if todo:  # up to the closing brace of the box
+                more = d2l.generate(
+                    model, tokenizer, [gsm8k_force_prompt(prompts[i],
+                                                          gens[i].text)
+                                       for i in todo], force,
+                    eos_token_ids=eos, stop=['}'], batch_size=batch['force'])
+                for i, m in zip(todo, more):
+                    forced[i] = d2l.extract_answer(m.text, 'gsm8k')
+        else:  # the reply has ended at its first chat marker
+            preds = [d2l.extract_answer(g.text[:min(
+                [g.text.find(m) for m in _CHAT_MARKS if m in g.text],
+                default=None)], 'gsm8k') for g in gens]
+            forced = preds
+        right = lambda p, it: float(p is not None and p == it['reference'])
+        for it, g, pred, fp in zip(items, gens, preds, forced):
             opened, closed = _think_state(g.text)
-            rows.append(dict(format=fmt, item_id=it['id'], score=float(
-                pred is not None and pred == it['reference']),
-                cut=g.finish_reason == 'length', thinks=opened,
-                closed=closed, chat_tokens=bool(marks),
-                new_tokens=len(g.token_ids)))
+            rows.append(dict(format=fmt, item_id=it['id'],
+                             score=right(pred, it), forced=right(fp, it),
+                             cut=g.finish_reason == 'length', thinks=opened,
+                             closed=closed, chat_tokens=any(
+                                 m in g.text for m in _CHAT_MARKS),
+                             new_tokens=len(g.token_ids)))
     return pd.DataFrame(rows, columns=[c for c in _CPT_COLUMNS['gsm8k']
                                        if c != 'arm'])
 
@@ -860,10 +913,13 @@ def _cpt_gsm8k_one(folder, ident, model_fn, items):
 
 def _cpt_gsm8k_all(cfgs):
     """GSM8K in both formats for the base and every arm's final weights
-    (T2), one Transformers model whose weights are swapped per arm."""
+    (T2), one Transformers model whose weights are swapped per arm; the
+    settings of every cached file include the batch sizes (batched greedy
+    decoding in bf16 is not batch-invariant)."""
     cfg0 = next(iter(cfgs.values()))
     items = gsm8k_items(_CPT_GSM8K['n'], _CPT_GSM8K['seed'])
-    settings, hf = d2l._jsonable(_CPT_GSM8K), {}
+    settings = d2l._jsonable(dict(_CPT_GSM8K, batch=_GSM8K_BATCH))
+    hf = {}
 
     def model(path=None):  # loaded once, on first need
         if not hf:
@@ -888,6 +944,44 @@ def _cpt_gsm8k_all(cfgs):
     hf.clear()
     d2l.lm_free()
     return pd.concat(out, ignore_index=True)[_CPT_COLUMNS['gsm8k']]
+
+def gsm8k_tables(gsm):
+    """The page's two GSM8K tables from runs.gsm8k, or None when it is
+    empty (the T1 stand-in): per model the 8-shot, chat and forced-answer
+    accuracies, the share of chat replies cut at the budget, the share
+    that never close </think>, and the share of 8-shot replies writing
+    chat markers; per arm the change against the base in points with the
+    95% interval of the paired item bootstrap."""
+    if not len(gsm):
+        return None
+    gsm = gsm.assign(open=gsm['thinks'] & ~gsm['closed'])
+    by = gsm.groupby(['arm', 'format'], sort=False)[[
+        'score', 'forced', 'cut', 'open', 'chat_tokens']].mean().unstack(
+        'format')
+    pct = lambda v, d=1: f'{100 * v:.{d}f}%'
+    rates = pd.DataFrame({
+        'model': by.index,
+        '8-shot': by['score', 'completion'].map(pct),
+        'chat': by['score', 'chat'].map(pct),
+        'forced': by['forced', 'chat'].map(pct),
+        'cut': by['cut', 'chat'].map(lambda v: pct(v, 0)),
+        'no </think>': by['open', 'chat'].map(lambda v: pct(v, 0)),
+        '8-shot chat tokens': by['chat_tokens', 'completion'].map(
+            lambda v: pct(v, 0))})
+    rows = []
+    for arm in [a for a in by.index if a != 'base']:
+        row = dict(arm=arm)
+        for name, fmt, key in (('8-shot', 'completion', 'score'),
+                               ('chat', 'chat', 'score'),
+                               ('forced', 'chat', 'forced')):
+            wide = gsm[gsm['format'] == fmt].pivot_table(
+                index='item_id', columns='arm', values=key)
+            r = d2l.paired_bootstrap(wide[arm], wide['base'])
+            row[name] = (f'{100 * r.mean:+.1f} [{100 * r.ci[0]:+.1f}, '
+                         f'{100 * r.ci[1]:+.1f}]')
+        rows.append(row)
+    return rates, pd.DataFrame(rows, columns=['arm', '8-shot', 'chat',
+                                              'forced'])
 ```
 
 ## The Arms
@@ -929,7 +1023,8 @@ CptRuns = collections.namedtuple(
 _CPT_COLUMNS = {
     'table': ['arm', 'peak_lr', 'replay', 'steps', 'domain_tokens',
               'domain_loss', 'general_loss', 'book_loss', 'suite',
-              'gsm8k_completion', 'gsm8k_chat', 'tok_s', 'gib'],
+              'gsm8k_completion', 'gsm8k_chat', 'gsm8k_forced', 'tok_s',
+              'gib'],
     'logs': ['arm', 'step', 'tokens', 'domain_tokens', 'lr', 'loss',
              'grad_norm', 'domain_loss', 'general_loss', 'book_loss'],
     'base_docs': ['set', 'doc_id', 'sum_nll', 'n_tokens'],
@@ -937,8 +1032,8 @@ _CPT_COLUMNS = {
     'equal': ['arm', 'step', 'domain_tokens', 'domain_loss',
               'general_loss', 'book_loss'],
     'items': ['arm', 'step', 'task', 'item_id', 'score'],
-    'gsm8k': ['arm', 'format', 'item_id', 'score', 'cut', 'thinks',
-              'closed', 'chat_tokens', 'new_tokens']}
+    'gsm8k': ['arm', 'format', 'item_id', 'score', 'forced', 'cut',
+              'thinks', 'closed', 'chat_tokens', 'new_tokens']}
 
 #@save
 _CPT_MICRO = {'t1': 16, 't2': 1}  # sequences per micro-batch (D2 probe:
@@ -1313,9 +1408,11 @@ def _cpt_merge(parts, cfgs):
     C = _CPT_COLUMNS
     gsm = (_cpt_gsm8k_all(cfgs) if tier == 't2'
            else pd.DataFrame(columns=C['gsm8k']))
-    for fmt in ('completion', 'chat'):
-        acc = gsm[gsm['format'] == fmt].groupby('arm')['score'].mean()
-        table[f'gsm8k_{fmt}'] = table['arm'].map(acc)
+    for col, fmt, key in (('gsm8k_completion', 'completion', 'score'),
+                          ('gsm8k_chat', 'chat', 'score'),
+                          ('gsm8k_forced', 'chat', 'forced')):
+        acc = gsm[gsm['format'] == fmt].groupby('arm')[key].mean()
+        table[col] = table['arm'].map(acc)
     return CptRuns(table.reindex(columns=C['table']),
                    pd.concat(logs, ignore_index=True).reindex(
                        columns=C['logs']),
@@ -1449,20 +1546,25 @@ def frontier_excess(fg, arm='B', chord=('C', 'A')):
     below low's forgetting so does the segment from the base to low: arm
     is measured against the chord, or against the segment if it forgets
     less than low (point estimates decide). Above high's forgetting
-    nothing measured bounds the frontier, and the note says there is no
-    verdict. A note also when an arm is missing, high does not forget more
+    nothing measured bounds the frontier, and at no forgetting (arm's
+    point estimate <= 0) the segment's extension bounds it from above, not
+    below: there the note says there is no verdict. A note also when an arm is missing, high does not forget more
     than low, or the reference's span of forgetting is not resolved from
     0 (its replicates would divide by about 0)."""
     low, high = chord
     draws = fg.attrs.get('draws', {})
     if not {arm, low, high} <= set(draws):
         missing = sorted({arm, low, high} - set(draws))
-        return _estimate(None, f'needs arm {", ".join(missing)} (T2 only)')
+        return _estimate(None, f'needs arm {", ".join(missing)}: not in '
+                         'this result')
     g, f = (lambda a: draws[a]['gain']), (lambda a: draws[a]['forget'])
     resolved = lambda x: np.percentile(x[:-1], 2.5) > 0
     if f(high)[-1] <= f(low)[-1]:
         return _estimate(None, f'{high} forgets no more than {low}: no '
                          'chord')
+    if f(arm)[-1] <= 0:  # the segment's extension bounds from above there
+        return _estimate(None, f'{arm} does not forget (outside the '
+                         'measured no-replay range): no verdict')
     if f(arm)[-1] > f(high)[-1]:
         return _estimate(None, f"{arm}'s forgetting is outside the measured "
                          f"no-replay range (above {high}'s): no verdict")
@@ -1516,6 +1618,32 @@ def plot_tradeoff(fg, chord=('C', 'A')):
     if ax.get_legend_handles_labels()[0]:  # none while pending
         ax.legend(fontsize=8)
     fig.tight_layout()
+
+def early_gaps(runs, pairs, seeds, within=40):
+    """General-loss gaps over steps 1 to `within` (nats per token), at
+    the evaluation steps the arms share: per pair (a, b) the largest
+    a - b and its step; for `seeds` (one configuration, other data orders)
+    the largest difference between any two of them and its step, the
+    yardstick. Defined whether or not an arm has a transient (claims 8b
+    and 8c, F21 review finding 3: rewarm_bump is NaN for a loss still
+    rising at the window's end). A DataFrame comparison / gap / step; a
+    comparison with an arm missing is left out."""
+    logs = runs.logs.dropna(subset=['general_loss'])
+    logs = logs[(logs['step'] > 0) & (logs['step'] <= within)]
+    loss = logs.pivot_table(index='step', columns='arm',
+                            values='general_loss')
+    rows = []
+    for a, b in pairs:
+        d = (loss[a] - loss[b]).dropna() if {a, b} <= set(loss) else ()
+        if len(d):
+            rows.append(dict(comparison=f'{a} − {b}', gap=d.max(),
+                             step=int(d.idxmax())))
+    L = loss[[a for a in seeds if a in loss]].dropna()
+    if L.shape[1] >= 2 and len(L):
+        spread = L.max(axis=1) - L.min(axis=1)
+        rows.append(dict(comparison=f"between {seeds[0]}'s seeds",
+                         gap=spread.max(), step=int(spread.idxmax())))
+    return pd.DataFrame(rows, columns=['comparison', 'gap', 'step'])
 ```
 
 ## The SmolLM3 Trajectory

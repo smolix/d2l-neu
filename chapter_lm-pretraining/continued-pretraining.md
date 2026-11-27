@@ -295,33 +295,17 @@ d2l.plot_cpt_curves(runs)
 
 ### What the Arms Learned, on a Test Set
 
-<!-- Placeholder (prose): a lower loss on held-out traces is not yet a skill. GSM8K (chapter 18) asks the question directly, in two formats: the 8-shot completion format of a base model (chapter 18's gsm8k_cot, 256 new tokens) and one ChatML user turn with room to think (4,096 new tokens), the format of the traces; greedy, the same 500 items for every model; the answer is the number after the reply's </think>, and a reply cut at the budget or one that never closes its think block counts as no answer. Most training traces stop at the dataset's generation cap without closing </think> (about two thirds), so an arm may learn to think past any budget: the columns "chat cut" and "chat no </think>" show it, and "8-shot chat tokens" shows chat markers leaking into the completion format (Olmo 3 §3.5.4). Claim 13: quote changes against the base only where the paired interval excludes 0; "no measurable change at 80M tokens" if none does; a chat drop that comes with more never-closed think blocks than the base's is a format effect of the truncated traces, not forgetting; a completion drop that comes with chat tokens is a format effect. -->
+<!-- Placeholder (prose): a lower loss on held-out traces is not yet a skill. GSM8K (chapter 18) asks the question directly, in two formats: the 8-shot completion format of a base model (chapter 18's gsm8k_cot, 256 new tokens) and one ChatML user turn with room to think (4,096 new tokens), the format of the traces; greedy, the same 500 items for every model; the answer is the boxed number (else the last number) after the reply's </think>, and a reply cut at the budget or one that never closes its think block counts as no answer (the pre-registered "chat" column). The "forced" column (budget forcing, s1, Muennighoff et al. 2025; F21 review finding 1) closes the think block of such a reply, adds "The final answer is \boxed{" and lets the model write the number (at most 32 tokens): every item then has an answer, and "cut" says how many needed the push. Which of the two chat columns claim 13 reads, and whether the budget stays at 4,096, is the author's ruling before F23 (pending). Most training traces stop at the dataset's generation cap without closing </think> (about two thirds), so an arm may learn to think past any budget: the columns "chat cut" and "chat no </think>" show it, and "8-shot chat tokens" shows chat markers leaking into the completion format (Olmo 3 §3.5.4). Claim 13: quote changes against the base only where the paired interval excludes 0; "no measurable change at 80M tokens" if none does; a chat drop that comes with more never-closed think blocks than the base's is a format effect of the truncated traces, not forgetting; a completion drop that comes with chat tokens is a format effect. Under the T1 fallback the cell prints one line (GSM8K is scored for the Qwen arms only). -->
 
 ```{.python .input #continued-pretraining-gsm8k}
 %%tab pytorch
-if len(runs.gsm8k):  # T2 only: empty for the T1 stand-in
-    gsm = runs.gsm8k.assign(open=lambda d: d['thinks'] & ~d['closed'])
-    by = gsm.groupby(['arm', 'format'], sort=False)[[
-        'score', 'cut', 'open', 'chat_tokens']].mean().unstack('format')
-    print(f'{"model":<6}{"8-shot":>8}{"chat":>8}{"chat cut":>10}'
-          f'{"chat no </think>":>18}{"8-shot chat tokens":>20}')
-    for arm, r in by.iterrows():
-        print(f'{arm:<6}{r["score", "completion"]:>8.1%}'
-              f'{r["score", "chat"]:>8.1%}{r["cut", "chat"]:>10.0%}'
-              f'{r["open", "chat"]:>18.0%}'
-              f'{r["chat_tokens", "completion"]:>20.0%}')
-    wide = gsm.pivot_table(index=['format', 'item_id'], columns='arm',
-                           values='score')
+tables = d2l.gsm8k_tables(runs.gsm8k)
+if tables is None:  # the T1 stand-in
+    print('GSM8K: scored for the Qwen arms only')
+else:
+    print(tables[0].to_string(index=False))
     print('change against the base, points [95% CI, paired items]')
-    print(f'{"arm":<6}{"8-shot":<24}chat')
-    for arm in [a for a in by.index if a != 'base']:
-        cells = []
-        for fmt in ('completion', 'chat'):
-            r = d2l.paired_bootstrap(wide.loc[fmt, arm],
-                                     wide.loc[fmt, 'base'])
-            cells.append(f'{100 * r.mean:+.1f} [{100 * r.ci[0]:+.1f}, '
-                         f'{100 * r.ci[1]:+.1f}]')
-        print(f'{arm:<6}{cells[0]:<24}{cells[1]}')
+    print(tables[1].to_string(index=False))
 ```
 
 ### The Re-Warm Bump
@@ -385,7 +369,7 @@ d2l.plot_tradeoff(fg, chord=('C', 'A'))
 
 <!-- Placeholder (prose): claim 5: B's forgetting as a fraction of A's and B's gain as a fraction of A's, as printed with their intervals (paired: the same document resamples); "most" only if the forgetting fraction's interval lies under 50%, "small cost" only if the kept-gain interval lies over 75%; else the measured fractions. The plot: the dashed line from the base through C to A is the no-replay lower bound the next cell tests B against. Under the T1 fallback there is no arm C: the cell says so. -->
 
-<!-- Placeholder (prose): claim 6, the test (investigation of 2026-11-25: the line from the base through C, extended past C, lies above a concave frontier, so it tested nothing). Without replay the arms trace a frontier through the base that is concave (quadratic model: slope 1/sqrt(F) - 1), so the chord between two no-replay points lies on or under it: B, whose forgetting falls between C's and A's, is measured against the chord from C to A at its own forgetting. Pre-registered out-of-range cases: if B forgets less than C, the reference is the segment from the base to C (also a lower bound there); if B forgets more than A, nothing measured bounds the frontier and the cell says so, no verdict. Wording: "above the no-replay frontier" only if the interval excludes 0 and the excess exceeds the A/A′ spread; "on the frontier within the seed spread" otherwise; "below the chord" if the interval lies under 0 (then C is the better trade-off at these settings); never "above the line". The second line gives the seed spread and the excess against the chord to A′ instead. -->
+<!-- Placeholder (prose): claim 6, the test (investigation of 2026-11-25: the line from the base through C, extended past C, lies above a concave frontier, so it tested nothing). Without replay the arms trace a frontier through the base that is concave (quadratic model: slope 1/sqrt(F) - 1), so the chord between two no-replay points lies on or under it: B, whose forgetting falls between C's and A's, is measured against the chord from C to A at its own forgetting. Pre-registered out-of-range cases: if B forgets less than C, the reference is the segment from the base to C (also a lower bound there); if B forgets more than A, nothing measured bounds the frontier and the cell says so, no verdict. If B does not forget at all (point estimate at or below 0), the segment's extension below 0 bounds the frontier from above, not below: no verdict either (F21 review finding 5). Wording (F21 review finding 4: the chord is a lower bound, so only "below" places B relative to the frontier itself): "above the measured no-replay frontier (the C → A chord)", or "beats every interpolation of the no-replay runs", only if the interval excludes 0 and the excess exceeds the A/A′ spread, never "above the no-replay frontier" plain; "on the chord within the seed spread" otherwise; "below the chord" if the interval lies under 0, and then the reading is "a no-replay run between C and A does at least as well" (not "C is the better trade-off": the run that beats B is the no-replay run at B's forgetting); never "above the line". The second line gives the seed spread and the excess against the chord to A′ instead. -->
 
 ```{.python .input #continued-pretraining-frontier-chord}
 %%tab pytorch
@@ -463,9 +447,13 @@ cols = dict(arm='arm', bump='bump', domain_loss='trace',
             general_loss='general', book_loss='book')
 print(table[list(cols)].rename(columns=cols).to_string(
     index=False, na_rep='–', float_format='{:.3f}'.format))
+gaps = d2l.early_gaps(t1, [('cold-plateau', 'branch'), ('cold', 'A')],
+                      seeds=['A', 'A′', 'A″'])
+print('largest general-loss gap over steps 1-40 (nats/token)')
+print(gaps.to_string(index=False, float_format='{:.3f}'.format))
 ```
 
-<!-- Placeholder (prose): the table's units (nats per token; "–" is an arm with no transient bump, or the base). Claim 8b: the cold restart (final checkpoint, fresh moments, the base run's peak 6e-4 with no warmup) spikes, read against the range of A's three seeds ("no spike resolved" if inside it). Claim 8c (fix pass: run B compared the branch with A at another rate, which tested nothing): branch and cold-plateau start from the same plateau weights at the same rate and schedule and differ only in the AdamW moments, restored against fresh; the branch's bump minus cold-plateau's, against A's seed range, is what the restored moments buy ("the restored moments removed / reduced the spike by x"; "no difference resolved"). Branching from a plateau is the cheap way to continue a run that one controls; a released model ships no moments, which is the Qwen case. -->
+<!-- Placeholder (prose): the table's units (nats per token; "–" is an arm with no transient bump, or the base). Claims 8b and 8c are read from the second table (F21 review finding 3: on traces the arms' general loss may still rise at step 40, so the bump is "–" and a bump difference undefined; the gaps are defined either way). Claim 8c (fix pass: run B compared the branch with A at another rate, which tested nothing): branch and cold-plateau start from the same plateau weights with the same data order, rate and schedule and differ only in the AdamW moments, restored against fresh, so forgetting cancels in their paired curves; the statistic is the largest gap cold-plateau − branch in general loss over steps 1-40, against the yardstick, the largest gap between A's three seeds over the same steps ("the restored moments removed / reduced the early rise by x" if the gap exceeds the yardstick; "no difference resolved" otherwise). Mechanism for the prose: the s5100 moments were estimated at 128 x 4,096 = 524K tokens per step, the branch steps at 64 x 1,024 = 65K, so its gradient noise is larger than the restored second moments expect and it takes larger steps until v adapts (beta2 = 0.95, about 20 steps); run B's branch bump of 0.195 fits that. Claim 8b: the cold restart (final checkpoint, fresh moments, the base run's peak 6e-4 with no warmup) against A at matched steps, the largest gap cold − A over steps 1-40 against the same yardstick ("no spike resolved" if inside it; the gap includes cold's doubled peak rate, so a resolved gap reads "the cold restart's general loss rose faster", and "spike" only if cold's bump is a transient in the first table). Branching from a plateau is the cheap way to continue a run that one controls; a released model ships no moments, which is the Qwen case. -->
 
 ## Mid-Training Stages and the SmolLM3 Trajectory
 

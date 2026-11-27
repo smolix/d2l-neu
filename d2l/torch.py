@@ -21438,7 +21438,7 @@ PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'pdp-throughput', 'pdp-mask-runs',
     't1-runs', 'inst-t1-none', 'inst-t1-qkclip', 'inst-t1-qknorm',
     'inst-t1-softcap', 'inst-t1-clip', 'inst-t1-warmup', 'size-xfer-pilot',
-    'spike-replay', 'reference-run', 'ladder', 'inst-t2',
+    'spike-replay', 'eps-headroom', 'reference-run', 'ladder', 'inst-t2',
     'reference-evals', 't1-evals', 'ladder-evals',
     'gemm-sweep', 'lowp-runs',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
@@ -21455,7 +21455,7 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     'inst-t1-qkclip': 'instability-t1', 'inst-t1-qknorm': 'instability-t1',
     'inst-t1-softcap': 'instability-t1', 'inst-t1-clip': 'instability-t1',
     'inst-t1-warmup': 'instability-t1', 'size-xfer-pilot': 'size-transfer',
-    'spike-replay': 'spike-replay',
+    'spike-replay': 'spike-replay', 'eps-headroom': 'eps-headroom',
     'reference-run': 'reference-run-log', 'ladder': 'ladder-logs',
     'inst-t2': 'instability-t2', 'reference-evals': 'reference-evals',
     't1-evals': 't1-evals', 'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
@@ -22618,6 +22618,7 @@ d2l.PRETRAIN_ARTIFACTS['instability-t1'] = (
 d2l.PRETRAIN_ARTIFACTS['instability-t2'] = (
     'lm-r2-inst-t2-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v2', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['eps-headroom'] = ('lm-r2-eps-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['size-transfer'] = (
     'lm-r2-size-xfer-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['throughput-probe'] = ('lm-r2-probe-v1', 'json-table')
@@ -22659,6 +22660,8 @@ d2l.PRETRAIN_JOBS['size-xfer-pilot'] = (
     'size_transfer', lambda: d2l._size_xfer_job())
 d2l.PRETRAIN_JOBS['spike-replay'] = (
     'spike_replay', lambda: d2l._spike_job())
+d2l.PRETRAIN_JOBS['eps-headroom'] = (
+    'adam_eps_headroom', lambda: dict(lr=1e-3))
 
 REFERENCE_STEPS = (500, 1000, 2000, 3000, 4000, 4500, 4800, 5100, 5400, 5700,
                    6000)
@@ -24962,6 +24965,232 @@ def plot_size_transfer(xfer, fit, held, figsize=(5.5, 3)):
     ax.set_xticks(Ns, [f'{n / 1e6:.1f}M' for n in Ns])
     ax.xaxis.set_minor_locator(d2l.plt.NullLocator())
     fig.tight_layout()
+
+EpsHeadroom = collections.namedtuple(
+    'EpsHeadroom', ['readout', 'pair', 'traces', 'eps', 'matrix_median',
+                    'registered', 'label'])
+
+EPS_STATES = {'t1': 'lm-r2t1-s1297-state-v1',  # t1 seed 0 at its plateau
+              'r2': 'lm-r2-s5100-state-v1'}  # the reference run at 5,100
+
+EPS_GROUPS = {'token_emb': 'embedding', 'W_q': 'attention',
+              'W_k': 'attention', 'W_v': 'attention', 'W_o': 'attention',
+              'W_g': 'MLP', 'W_1': 'MLP', 'W_2': 'MLP', 'norm': 'gains'}
+
+EPS_MATRICES = ('attention', 'MLP')  # their pooled median sets the new eps
+EPS_BELOW = (1e-5, 1e-7)  # the readout's thresholds on sqrt(v)
+EPS_BASE = 1e-8  # the presets' eps (PyTorch's default): the grid cell's
+EPS_STATS = 1  # version of the readout and pair statistics
+
+_EPS_TABLES = dict(  # the columns of an EpsHeadroom's tables
+    readout=['model', 'group', 'n', 'median', 'below_hi', 'below_lo'],
+    pair=['eps', 'seed', 'val_loss', 'final_loss', 'first_nonfinite',
+          'update_rms', 'source'],
+    traces=['step', 'loss', 'grad_norm', 'update_rms', 'eps', 'seed'])
+
+def _adam_sqrt_v(state):
+    """sqrt of AdamW's bias-corrected second moment, the quantity eps is
+    added to, per group of EPS_GROUPS (in that order) as one flat float
+    tensor, from a full state of _PretrainRun (its optimizer groups carry
+    the parameter names).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    optim, out = state['optim'], {}
+    for g in optim['param_groups']:
+        beta2 = g['betas'][1]
+        for name, i in zip(g['names'], g['params']):
+            s = optim['state'][i]
+            v = s['exp_avg_sq'].float() / (1 - beta2 ** float(s['step']))
+            out.setdefault(EPS_GROUPS[_module_kind(name)], []).append(
+                v.sqrt().flatten())
+    order = list(dict.fromkeys(EPS_GROUPS.values()))
+    return {k: torch.cat(out[k]) for k in order if k in out}
+
+def _eps_readout(state, model):
+    """(table, matrix median): per group the coordinate count, the median
+    of sqrt(v) (the lower middle value for an even count, as torch.median)
+    and the shares of coordinates below each of EPS_BELOW; and the median
+    over the coordinates of EPS_MATRICES pooled.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    groups, rows = _adam_sqrt_v(state), []
+    for group, x in groups.items():
+        hi, lo = ((x < t).double().mean().item() for t in EPS_BELOW)
+        rows.append(dict(model=model, group=group, n=x.numel(),
+                         median=x.median().item(), below_hi=hi, below_lo=lo))
+    pooled = torch.cat([groups[g] for g in EPS_MATRICES if g in groups])
+    return pd.DataFrame(rows), pooled.median().item()
+
+def _eps_update_rms(trace, cfg):
+    """An arm's update RMS (in units of the learning rate): the median over
+    the probe steps of the constant phase (end of warmup to the decay's
+    start) of the mean over the matrix kinds (EPS_MATRICES) of rms_<kind>
+    (_update_rms: the median over layers).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    kinds = [f'rms_{k}' for k, g in EPS_GROUPS.items() if g in EPS_MATRICES]
+    t = trace.set_index('step')[kinds].dropna(how='all')
+    t = t.loc[cfg.warmup:cfg.steps - cfg.decay]
+    return float(t.mean(axis=1).median()) if len(t) else math.nan
+
+def _eps_pair_check(cell, new):
+    """Refuse a pair (PretrainConfigs of the grid cell and the new run)
+    whose configurations differ in anything but eps, or not in eps.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    a, b = _cfg_json(cell), _cfg_json(new)
+    diff = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+    if diff != ['eps']:
+        raise ValueError('the eps pair must differ in eps only; it differs '
+                         f'in {diff or "nothing"}')
+
+def _eps_cell(grid, lr, seeds=(0, 1)):
+    """The T1 grid's 'clip' cell at lr: (its PretrainConfig at seed 0, its
+    table rows and traces at seeds), checked: the grid ran the full t1
+    schedule, the 'clip' variant, lr and the seeds, with this library's
+    recipe (INST_CLIP, the statistics).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    stored = d2l._stored_config(grid)
+    d = d2l._config_diff(d2l._jsonable(_inst_recipe()), stored['recipe'])
+    if d:
+        raise ValueError(f'the T1 grid ran another recipe: recipe.{d[0]} '
+                         f'{d[1]!r} != {d[2]!r}')
+    if (stored['steps'] is not None or 'clip' not in stored['variants']
+            or lr not in stored['lrs']
+            or not set(seeds) <= set(stored['seeds'])):
+        raise ValueError(f'the T1 grid has no full-schedule clip cell at lr '
+                         f'{lr:g}, seeds {list(seeds)}')
+    cell, _ = _inst_arm(_cfg_from_json(stored['cfg']), 'clip', lr, seeds[0])
+    t, tr = grid.table, grid.traces
+    rows = t[(t['variant'] == 'clip') & (t['lr'] == lr)
+             & t['seed'].isin(seeds)].sort_values('seed')
+    traces = tr[(tr['variant'] == 'clip') & (tr['lr'] == lr)
+                & tr['seed'].isin(seeds)]
+    return cell, rows, traces
+
+def _eps_register(eps, readout, held):
+    """Write the new eps (with the readout it came from and the UTC time)
+    to _job_root()/eps-headroom/eps.json before the new run starts; a
+    restarted job finds it and checks it. Refused if the run (file held)
+    is kept without it. Returns the time.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    path = os.path.join(_job_root(), 'eps-headroom', 'eps.json')
+    if os.path.exists(path):
+        with open(path) as f:
+            doc = json.load(f)
+        stored = pd.DataFrame(doc['readout'])[readout.columns]
+        if doc['eps'] != eps or not stored.equals(readout):
+            raise ValueError(f'{path} differs from this readout')
+        return doc['registered']
+    if os.path.exists(held):
+        raise RuntimeError('the eps run is kept without its registered eps: '
+                           'the eps is written before it runs')
+    doc = dict(registered=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+               eps=eps, readout=readout.to_dict('list'))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path + '.tmp', 'w') as f:
+        json.dump(doc, f, indent=1)
+    os.replace(path + '.tmp', path)
+    print(f'eps headroom: eps {eps:g} registered {doc["registered"]}',
+          flush=True)  # the job's log
+    return doc['registered']
+
+def _eps_headroom(lr, device=None):
+    """The job behind adam_eps_headroom (device: tests only): the readout
+    of both committed states (CPU), the new eps = the t1 matrix median to
+    one significant digit, registered; then one t1 run of the grid's clip
+    recipe at lr, seed 0, with that eps (kept under
+    _job_root()/eps-headroom/, so that a restarted job reads it), paired
+    with the grid's clip cell (eps EPS_BASE) at seeds 0 and 1.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if device is None and not torch.cuda.is_available():
+        raise RuntimeError('the eps run trains on a GPU')
+    tables, medians = [], {}
+    for model, key in EPS_STATES.items():
+        state = torch.load(_spike_state_file(key), map_location='cpu',
+                           weights_only=False, mmap=True)
+        table, medians[model] = _eps_readout(state, model)
+        tables.append(table)
+        del state
+    readout = pd.concat(tables, ignore_index=True)
+    eps = float(f'{medians["t1"]:.0e}')
+    cell, rows, cell_traces = _eps_cell(d2l.load_artifact('instability-t1'),
+                                        lr)
+    c, extra = _inst_arm(d2l.r2_config('t1', clip=None), 'clip', lr, 0)
+    c = dataclasses.replace(c, eps=eps)
+    _eps_pair_check(cell, c)
+    if cell.eps != EPS_BASE:
+        raise ValueError(f'the grid cell ran eps {cell.eps:g}, not '
+                         f'{EPS_BASE:g}')
+    held = os.path.join(_job_root(), 'eps-headroom',
+                        f'clip-{lr:g}-eps{eps:g}-s0.json.gz')
+    registered = _eps_register(eps, readout, held)
+    config = d2l._jsonable(dict(cfg=_cfg_json(c), variant='clip',
+                                model=extra, recipe=_inst_recipe(), tau=None))
+    shards = _train_shards(c)
+    val = _val_fn(dataclasses.replace(c, val_tokens=INST_VAL_TOKENS))
+
+    def compute():
+        log = _inst_run(c, extra, 'clip', None, shards, val,
+                        torch.device(device or 'cuda'))
+        return (_arm_summary(log, 'clip', lr, 0, peak_end=c.steps - c.decay),
+                _arm_trace(log, 'clip', lr, 0))
+    row, trace = _inst_kept(held, config, compute)
+    pair, traces = [], []
+    for e, r, tr, source in (
+            [(EPS_BASE, r, cell_traces[cell_traces['seed'] == r['seed']],
+              'instability-t1') for _, r in rows.iterrows()]
+            + [(eps, row, trace, 'eps-headroom')]):
+        pair.append(dict(eps=e, seed=int(r['seed']), val_loss=r['val_loss'],
+                         final_loss=r['final_loss'],
+                         first_nonfinite=r['first_nonfinite'],
+                         update_rms=_eps_update_rms(tr, c), source=source))
+        if r['seed'] == 0:
+            kinds = [f'rms_{k}' for k, g in EPS_GROUPS.items()
+                     if g in EPS_MATRICES]
+            traces.append(tr[['step', 'loss', 'grad_norm']].assign(
+                update_rms=tr[kinds].mean(axis=1, skipna=False), eps=e,
+                seed=0))
+    return EpsHeadroom(readout, pd.DataFrame(pair), pd.concat(
+        traces, ignore_index=True), eps, medians['t1'], registered, '')
+
+def _eps_recipe():
+    """The library constants a stored epsilon headroom was computed with.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return dict(states=dict(EPS_STATES), groups=dict(EPS_GROUPS),
+                matrices=list(EPS_MATRICES), below=list(EPS_BELOW),
+                base=EPS_BASE, inst=_inst_recipe(), stats=EPS_STATS)
+
+def adam_eps_headroom(lr):
+    """How far Adam's sqrt(v) sits above eps, and what eps at its median
+    does. The readout: per group (embedding, attention, MLP, gains) of the
+    committed t1 and r2 states (EPS_STATES) the median of sqrt(v), the
+    bias-corrected second moment's root, and the shares of coordinates
+    below 1e-5 and 1e-7. The pair at peak rate lr on the T1 grid's 'clip'
+    recipe (full t1 schedule, clipping at INST_CLIP): eps = EPS_BASE is
+    the grid's cell (seeds 0 and 1, read from 'instability-t1', not
+    re-run); one new run (seed 0) has eps = the t1 median of sqrt(v) over
+    the matrices to one significant digit, registered before it runs; the
+    two configurations differ in eps only (checked). EpsHeadroom(readout,
+    pair, traces, eps, matrix_median, registered, label): pair rows carry
+    the final validation loss and the update RMS (_eps_update_rms).
+    Regeneration: eps-headroom (after inst-t1-clip).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    run, _ = _inst_arm(d2l.r2_config('t1', clip=None), 'clip', lr, 0)
+    run = _cfg_json(run)
+    del run['eps']  # the job sets it from the readout
+    config = dict(lr=lr, run=run, recipe=_eps_recipe(), cell=dict(
+        key=d2l.PRETRAIN_ARTIFACTS['instability-t1'][0], variant='clip',
+        seeds=[0, 1]))
+    res = d2l._pretrain_result('eps-headroom', lambda: _eps_headroom(lr),
+                               config)
+    return d2l._show_label(_as_tuple(EpsHeadroom, res, _EPS_TABLES, dict(
+        eps=math.nan, matrix_median=math.nan)))
 
 d2l.DATA_HUB['lm-lowp-runs-v1'] = (
     d2l.LM_DATA_URL + 'lm-lowp-runs-v1.json.gz',

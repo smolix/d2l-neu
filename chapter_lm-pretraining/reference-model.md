@@ -545,6 +545,39 @@ for m in MODULES:
           f'{absolute[m]:9.2f}')
 ```
 
+### Epsilon Headroom
+
+<!-- Placeholder (prose): Adam divides by sqrt(v) + eps. eps = 1e-8 is correct at this scale and wrong at large scale without a visible error: once sqrt(v) of many coordinates falls toward eps, eps silently shrinks their updates (OLMo 2 moved from 1e-5 to 1e-8; Molybog et al. see it at 7B-546B). The readout: per parameter group (embedding, attention, MLP, gains) the median of sqrt(v), the bias-corrected second moment's root that eps is added to, and the shares of coordinates below 1e-5 and 1e-7, from two committed full states: t1 at step 1,297 (end of its plateau) and the reference run at 5,100. Then one pair at t1: the T1 grid's clip cell at lr 1e-3 (eps 1e-8, seeds 0 and 1; the same run, not re-run) against one new run, seed 0, whose eps is the t1 median of sqrt(v) over the matrices to one significant digit, fixed before it ran; the two runs differ in eps only. "update RMS ÷ lr" is the median over the constant phase (steps 76 to 1,297) of the matrices' update RMS in units of the learning rate (the measure of "Update Size by Module"). -->
+
+```{.python .input #reference-model-epsilon-headroom}
+%%tab pytorch
+PAIR_LR = 1e-3  # t1's peak rate; the T1 grid's clip cell at it is eps 1e-8
+headroom = d2l.adam_eps_headroom(PAIR_LR)
+med = headroom.readout.set_index(['model', 'group'])['median']
+if len(headroom.pair):  # the new eps: the t1 matrices' median, 1 digit
+    assert headroom.eps == float(f'{headroom.matrix_median:.0e}')
+    assert (min(med['t1', 'attention'], med['t1', 'MLP'])
+            <= headroom.matrix_median
+            <= max(med['t1', 'attention'], med['t1', 'MLP']))
+    sci = lambda x: f'{x:.0e}'.replace('e-0', 'e-')
+    print(f'{"model":>5} {"group":>9} {"median sqrt(v)":>14} '
+          f'{"below 1e-5":>10} {"below 1e-7":>10}')
+    for r in headroom.readout.itertuples():
+        print(f'{r.model:>5} {r.group:>9} {r.median:14.1e} '
+              f'{r.below_hi:10.2%} {r.below_lo:10.2%}')
+    base = headroom.pair[headroom.pair['source'] == 'instability-t1']
+    base = base.set_index('seed')
+    new = headroom.pair[headroom.pair['source'] == 'eps-headroom'].iloc[0]
+    print(f't1 pair at lr {sci(PAIR_LR)}: eps {sci(d2l.EPS_BASE)} → val '
+          f'{base.at[0, "val_loss"]:.3f} (seed 1: '
+          f'{base.at[1, "val_loss"]:.3f}), update RMS ÷ lr '
+          f'{base.at[0, "update_rms"]:.3f}')
+    print(f'{"":19} eps {sci(new["eps"])} → val {new["val_loss"]:.3f}, '
+          f'update RMS ÷ lr {new["update_rms"]:.3f}')
+```
+
+<!-- Placeholder (prose): claim 25 as measured: whether sqrt(v) sits far above 1e-8 in every group of both models (medians, and how small the shares below 1e-5 and 1e-7 are; the embedding has the most small coordinates, rows of rare tokens), how much eps at the median shrank the update RMS (the ratio of the two lines), and the change in the val loss against the two seeds' difference at eps 1e-8 ("eps at the median changed the val loss by x, within the seed spread" is a result). Then the scale argument: the r2 medians sit below t1's, so the margin to eps shrinks with model size and training; never present the t1 pair as a measurement at scale. -->
+
 ### Who Moves First
 
 <!-- Placeholder (prose): a change point per series: each series goes on one grid of 10-step blocks (the block median; the largest logit is probed every 10 steps, so every series meets the same detector, and a dense series is not judged by a stricter test than a sparse one), a line is fitted to the 20 blocks of the 200 steps before the event, and the series has moved at the first 20-step mean of the residual, within 200 steps, that leaves 3 standard errors of that line's prediction (the residual scatter plus the line's own extrapolation error; on white noise this fires in about 6-9% of windows, dense or sparse). Detrended, so that a curve that keeps falling at the same rate does not count as moving; and the line needs a stationary reference: an event whose 200 steps before fall inside warmup's ramp (the end of warmup itself; the reference run's gradient event at step 223) is not read, because the line extrapolates a convex, flattening curve and fires on its own misfit. The last row is the null: how often each series moves at 20 evenly spaced stable-phase steps (every reference window from step 1,000, horizons nearly disjoint) where nothing happens. Resolution: 10 steps (50 in the t1 stand-in, whose largest logit is probed every 50). -->

@@ -9,7 +9,7 @@ Qwen3-0.6B-Base config (6 N_mm = 3,575,906,304, F(T=2,048) =
 4,985,192,448), `causal_half`, `T=None`; `mfu` arithmetic; `r2_config`
 overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
 `_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
-chapter's 38 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
+chapter's 39 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
 vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
 (losses 1e-6) and a branch from a saved state; the stats-step columns
 `entropy_<l>` and `log_z` (finite; `log_z` the explicit mean logsumexp
@@ -66,7 +66,13 @@ twins clip from their state; a committed late state of another beta2
 refused; the run states removed), the regeneration (v2, the recipe, a
 changed period or recipe refused, pending), the page's 10-line table and
 the plot; OLMo 2's repeated n-gram rule (32 repeats of periods 1, 7 and 13
-flagged with period, repeats and start, 31 not; max_n).
+flagged with period, repeats and start, 31 not; max_n); Adam's epsilon
+headroom: the readout of a hand-built AdamW state (bias-corrected sqrt(v)
+per group, medians and shares exact, the pooled matrix median), the pair
+check (any field but eps refused), the driver on mocked runs (eps
+registered before the run, the grid cell read not re-run, kept and
+resumed; a changed readout, an unregistered kept run, a grid without the
+cell or of another recipe refused), the regeneration, the page's table.
 """
 import collections
 import contextlib
@@ -108,7 +114,7 @@ torch.set_num_threads(min(8, torch.get_num_threads()))
 RERUN_NAMES = (
     'pdp-throughput', 'pdp-mask-runs', 't1-runs', 'inst-t1-none',
     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'inst-t1-clip',
-    'inst-t1-warmup', 'size-xfer-pilot', 'spike-replay',
+    'inst-t1-warmup', 'size-xfer-pilot', 'spike-replay', 'eps-headroom',
     'reference-run', 'ladder', 'inst-t2', 'reference-evals', 't1-evals',
     'ladder-evals',
     'gemm-sweep', 'lowp-runs', 'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B',
@@ -2375,6 +2381,309 @@ class SpikeTest(unittest.TestCase):
         clean = d2l.repeated_ngram_flags(_Shards(x[3 * T:4 * T + 1]), T=T,
                                          tokenizer=None)
         self.assertEqual((len(clean.table), clean.windows), (0, 1))
+
+
+def eps_state(beta2=0.5, step=1):
+    """A hand-built full state of _PretrainRun's form: sqrt of the
+    bias-corrected second moment is a power of two per coordinate."""
+    groups = [  # (names, sqrt(v-hat) per parameter)
+        (['blks.0.attention.W_q.weight', 'blks.0.ffn.W_1.weight'],
+         [[2 ** -14, 2 ** -14, 2 ** -20],
+          [2 ** -16, 2 ** -18, 2 ** -25, 2 ** -12]]),
+        (['token_emb.weight', 'blks.0.norm1.weight', 'norm.weight'],
+         [[2 ** -24, 2 ** -17], [1.0, 2 ** -10], [2 ** -30]])]
+    state, param_groups, i = {}, [], 0
+    for names, values in groups:
+        idx = []
+        for s in values:
+            v = torch.tensor(s, dtype=torch.float64) ** 2 * (
+                1 - beta2 ** step)
+            state[i] = dict(step=torch.tensor(float(step)),
+                            exp_avg=torch.zeros(len(s)),
+                            exp_avg_sq=v.float())
+            idx.append(i)
+            i += 1
+        param_groups.append(dict(names=names, params=idx,
+                                 betas=(0.9, beta2)))
+    return dict(optim=dict(state=state, param_groups=param_groups),
+                step=step)
+
+
+class EpsHeadroomTest(unittest.TestCase):
+    """Adam's epsilon headroom (cell 15b) on CPU: the readout, the pair
+    check, the driver with mocked runs, the regeneration and the page."""
+    LR = 1e-3
+
+    def test_readout(self):
+        table, pooled = d2l._eps_readout(eps_state(), 't1')
+        self.assertEqual(table['group'].tolist(),
+                         ['embedding', 'attention', 'MLP', 'gains'])
+        self.assertEqual(table['n'].tolist(), [2, 3, 4, 3])
+        self.assertEqual(table['median'].tolist(),  # lower middle value
+                         [2 ** -24, 2 ** -14, 2 ** -18, 2 ** -10])
+        self.assertEqual(table['below_hi'].tolist(), [1.0, 1 / 3, 0.5, 1 / 3])
+        self.assertEqual(table['below_lo'].tolist(), [0.5, 0.0, 0.25, 1 / 3])
+        self.assertEqual(set(table['model']), {'t1'})
+        self.assertEqual(pooled, 2 ** -16)  # 4th of the 7 matrix values
+        self.assertEqual(float(f'{pooled:.0e}'), 2e-5)  # the new eps
+        # the bias correction at a real step and beta2
+        table, pooled = d2l._eps_readout(eps_state(0.95, 1297), 'r2')
+        self.assertAlmostEqual(pooled / 2 ** -16, 1, places=6)
+        self.assertEqual(list(table.columns), d2l._EPS_TABLES['readout'])
+
+    def test_pair_check(self):
+        cfg = d2l.r2_config('t1', clip=None)
+        cell, _ = d2l._inst_arm(cfg, 'clip', self.LR, 0)
+        new = dataclasses.replace(cell, eps=5e-5)
+        d2l._eps_pair_check(cell, new)  # eps only: accepted
+        for field, value in dict(
+                seed=1, data_seed=1, peak_lr=2e-3, clip=None, warmup=305,
+                steps=1000, decay=100, z_loss=0.0, wd=0.0,
+                betas=(0.9, 0.999), micro_batch=8, stats_every=50,
+                probe_every=10, clip_from=10, data='4b',
+                arch=cell.arch._replace(qk_norm=True)).items():
+            with self.assertRaisesRegex(ValueError, f"'{field}'"):
+                d2l._eps_pair_check(cell, dataclasses.replace(
+                    new, **{field: value}))
+        with self.assertRaisesRegex(ValueError, 'nothing'):
+            d2l._eps_pair_check(cell, cell)
+
+    def test_update_rms(self):
+        c, _ = d2l._inst_arm(d2l.r2_config('t1', clip=None), 'clip',
+                             self.LR, 0)
+        tr = self.trace(0.2)
+        tr.loc[tr['step'] < 76, 'rms_W_q'] = 9.0  # warmup: not read
+        tr.loc[tr['step'] > 1297, 'rms_W_1'] = 9.0  # the decay: not read
+        self.assertAlmostEqual(d2l._eps_update_rms(tr, c), 0.2)
+        tr.loc[tr['step'] == 600, 'rms_W_2'] = 0.9  # one step: the median
+        self.assertAlmostEqual(d2l._eps_update_rms(tr, c), 0.2)
+        tr['rms_W_o'] = np.where(tr['rms_W_o'].notna(), 0.9, np.nan)
+        self.assertAlmostEqual(d2l._eps_update_rms(tr, c),
+                               (6 * 0.2 + 0.9) / 7)
+
+    @staticmethod
+    def trace(rms, steps=1526, every=50, loss=4.0):
+        step = np.arange(1, steps + 1)
+        t = pd.DataFrame(dict(step=step, loss=loss, grad_norm=0.3,
+                              max_logit_0=np.where(step % 10 == 0, 20.0,
+                                                   np.nan),
+                              entropy_0=np.where(step % 10 == 0, 2.0,
+                                                 np.nan)))
+        for k in ('token_emb', 'norm', 'W_q', 'W_k', 'W_v', 'W_o', 'W_g',
+                  'W_1', 'W_2'):
+            t[f'rms_{k}'] = np.where(step % every == 0, rms, np.nan)
+        return t
+
+    def grid(self, lrs=(1e-3, 2e-3), variants=('none', 'clip'),
+             steps=None):
+        rows, traces = [], []
+        for v in variants:
+            for lr in lrs:
+                for s in (0, 1):
+                    rows.append(dict(variant=v, lr=lr, seed=s,
+                                     final_loss=4.0, val_loss=3.9 + s / 100,
+                                     first_nonfinite=None))
+                    traces.append(self.trace(0.2 + s / 100).assign(
+                        variant=v, lr=lr, seed=s))
+        table = pd.DataFrame(rows)
+        table.attrs['config'] = d2l._jsonable(dict(
+            cfg=d2l._cfg_json(d2l.r2_config('t1', clip=None)),
+            lrs=list(lrs), variants=list(variants), seeds=[0, 1],
+            steps=steps, tau=30, recipe=d2l._inst_recipe()))
+        return d2l.InstabilityRuns(table, pd.concat(traces,
+                                                    ignore_index=True), 30,
+                                   '', 7.0)
+
+    def test_driver(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp:
+            states = {}
+            for m, (b2, step) in dict(t1=(0.5, 1), r2=(0.95, 1297)).items():
+                states[m] = os.path.join(tmp, f'{m}.pt')
+                torch.save(eps_state(b2, step), states[m])
+            reg = os.path.join(tmp, 'eps-headroom', 'eps.json')
+
+            def run(c, extra, variant, tau, shards, val, device):
+                self.assertTrue(os.path.exists(reg))  # registered first
+                calls.append((c, extra, variant, tau))
+                log = self.trace(0.1, loss=4.2)
+                log['val_loss'] = np.where(log['step'] == 1526, 3.95, np.nan)
+                return log
+            grid = self.grid()
+            patches = [
+                mock.patch.object(d2l, 'EPS_STATES', states),
+                mock.patch.object(d2l, '_job_root', lambda: tmp),
+                mock.patch.object(d2l, '_inst_run', run),
+                mock.patch.object(d2l, '_train_shards', lambda c: None),
+                mock.patch.object(d2l, '_val_fn', lambda c: None),
+                mock.patch.object(d2l, 'load_artifact', lambda n: grid)]
+            for p in patches:
+                p.start()
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    res = d2l._eps_headroom(self.LR, device='cpu')
+                    again = d2l._eps_headroom(self.LR, device='cpu')
+                self.assertEqual(len(calls), 1)  # the kept run is read
+                pd.testing.assert_frame_equal(res.pair, again.pair)
+                self.assertEqual(res.registered, again.registered)
+                # a changed readout against the registered eps: refused
+                changed = eps_state(0.95, 1297)
+                changed['optim']['state'][0]['exp_avg_sq'] *= 4
+                torch.save(changed, states['r2'])
+                with self.assertRaisesRegex(ValueError, 'readout'):
+                    d2l._eps_headroom(self.LR, device='cpu')
+                torch.save(eps_state(0.95, 1297), states['r2'])
+                os.remove(reg)  # a kept run without its registration
+                with self.assertRaisesRegex(RuntimeError, 'kept without'):
+                    d2l._eps_headroom(self.LR, device='cpu')
+                grid = self.grid(lrs=(2e-3,))
+                with self.assertRaisesRegex(ValueError, 'no full-schedule'):
+                    d2l._eps_headroom(self.LR, device='cpu')
+                grid = self.grid(steps=400)
+                with self.assertRaisesRegex(ValueError, 'no full-schedule'):
+                    d2l._eps_headroom(self.LR, device='cpu')
+                grid = self.grid()
+                with mock.patch.object(d2l, 'INST_CLIP', 0.5), \
+                        self.assertRaisesRegex(ValueError, 'recipe.clip'):
+                    d2l._eps_headroom(self.LR, device='cpu')
+            finally:
+                for p in reversed(patches):
+                    p.stop()
+        c, extra, variant, tau = calls[0]
+        self.assertEqual((res.eps, c.eps, extra, variant, tau),
+                         (2e-5, 2e-5, {}, 'clip', None))
+        self.assertEqual(res.matrix_median, 2 ** -16)
+        cell, _ = d2l._inst_arm(d2l.r2_config('t1', clip=None), 'clip',
+                                self.LR, 0)
+        self.assertEqual(dataclasses.replace(c, eps=1e-8), cell)
+        self.assertEqual((c.clip, c.steps, c.decay, c.stats_every),
+                         (1.0, 1526, 229, 10))
+        self.assertEqual(list(res.readout['model']), ['t1'] * 4 + ['r2'] * 4)
+        p = res.pair
+        self.assertEqual(list(p.columns), d2l._EPS_TABLES['pair'])
+        self.assertEqual(p[['eps', 'seed', 'source']].values.tolist(), [
+            [1e-8, 0, 'instability-t1'], [1e-8, 1, 'instability-t1'],
+            [2e-5, 0, 'eps-headroom']])
+        np.testing.assert_allclose(p['val_loss'], [3.9, 3.91, 3.95])
+        np.testing.assert_allclose(p['update_rms'], [0.2, 0.21, 0.1])
+        self.assertEqual(list(res.traces.columns), d2l._EPS_TABLES['traces'])
+        self.assertEqual(sorted(set(res.traces['eps'])), [1e-8, 2e-5])
+        self.assertEqual(len(res.traces), 2 * 1526)
+        self.assertEqual(res.traces['update_rms'].notna().sum(), 2 * 30)
+
+    def fake_result(self):
+        rows = []
+        for m, scale in (('t1', 1.0), ('r2', 0.15)):
+            for g, med, hi, lo in (('embedding', 1.9e-5, 0.187, 0.0074),
+                                   ('attention', 6.7e-5, 0.0072, 0.0),
+                                   ('MLP', 4.5e-5, 0.0, 0.0),
+                                   ('gains', 9.5e-5, 0.0, 0.0)):
+                rows.append(dict(model=m, group=g, n=1000, median=med * scale,
+                                 below_hi=hi, below_lo=lo))
+        pair = pd.DataFrame(dict(
+            eps=[1e-8, 1e-8, 5e-5], seed=[0, 1, 0],
+            val_loss=[3.912, 3.906, 3.95], final_loss=4.0,
+            first_nonfinite=None, update_rms=[0.183, 0.185, 0.121],
+            source=['instability-t1'] * 2 + ['eps-headroom']))
+        traces = pd.DataFrame(dict(step=[1, 2], loss=4.0, grad_norm=0.3,
+                                   update_rms=np.nan, eps=1e-8, seed=0))
+        return d2l.EpsHeadroom(pd.DataFrame(rows), pair, traces, 5e-5,
+                               4.7e-5, '2026-11-27T10:00:00Z', '')
+
+    def page_cell(self):
+        path = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'chapter_lm-pretraining',
+            'reference-model.md')
+        with open(path) as f:
+            src = f.read()
+        return src.split('#reference-model-epsilon-headroom}\n')[1].split(
+            '```')[0].replace('%%tab pytorch\n', '')
+
+    def page_output(self, res):
+        out = io.StringIO()
+        with mock.patch.object(d2l, 'adam_eps_headroom', lambda lr: res), \
+                contextlib.redirect_stdout(out):
+            exec(self.page_cell(), dict(d2l=d2l, pd=pd))
+        return out.getvalue().splitlines()
+
+    def test_regeneration_and_page(self):
+        page = self.page_cell()
+        self.assertIn('PAIR_LR = 1e-3', page)
+        self.assertEqual(d2l.PRETRAIN_JOBS['eps-headroom'],
+                         ('adam_eps_headroom',
+                          d2l.PRETRAIN_JOBS['eps-headroom'][1]))
+        self.assertEqual(d2l.PRETRAIN_JOBS['eps-headroom'][1](),
+                         dict(lr=1e-3))
+        res = self.fake_result()
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp, uncommitted(), \
+                mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset()), \
+                mock.patch.dict(os.environ, {'D2L_RERUN': 'eps-headroom'}):
+            cwd = os.getcwd()
+            os.makedirs(os.path.join(tmp, 'chapter'))
+            os.chdir(os.path.join(tmp, 'chapter'))
+            try:
+                with mock.patch.object(d2l, '_eps_headroom', lambda lr:
+                                       calls.append(lr) or res), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    got = d2l.adam_eps_headroom(self.LR)
+                    path = '../data/lm/rerun/lm-r2-eps-v1.json.gz'
+                    config = d2l._stored_config(d2l._read_result(
+                        path, 'json-table'))
+                    os.environ['D2L_RERUN'] = 't1-runs'
+                    pending = d2l.adam_eps_headroom(self.LR)
+                    os.environ['D2L_RERUN'] = ''
+                    d2l.DATA_HUB['lm-r2-eps-v1'] = ('url', 'sha1')
+                    with mock.patch.object(d2l, 'download_keyed',
+                                           lambda key: path):
+                        loaded = d2l.adam_eps_headroom(self.LR)
+                        with self.assertRaisesRegex(ValueError, 'lr'):
+                            d2l.adam_eps_headroom(2e-3)
+                        with mock.patch.object(d2l, 'EPS_STATES', dict(
+                                t1='lm-r2t1-s1526-state-v1', r2='x')), \
+                                self.assertRaisesRegex(ValueError,
+                                                       'recipe.states'):
+                            d2l.adam_eps_headroom(self.LR)
+                        with mock.patch.dict(d2l.PRETRAIN_ARTIFACTS, {
+                                'instability-t1': ('lm-r2-inst-t1-v3',
+                                                   'json-table')}), \
+                                self.assertRaisesRegex(ValueError, 'cell'):
+                            d2l.adam_eps_headroom(self.LR)
+            finally:
+                os.chdir(cwd)
+        self.assertEqual(calls, [self.LR])
+        self.assertEqual((config['lr'], config['cell']['key'],
+                          config['recipe']['base']),
+                         (1e-3, 'lm-r2-inst-t1-v2', 1e-8))
+        self.assertNotIn('eps', config['run'])  # set by the job
+        self.assertEqual(config['run']['clip'], 1.0)
+        self.assertEqual(got.eps, 5e-5)
+        self.assertTrue(pending.label.endswith('pending'))
+        self.assertEqual(list(pending.pair.columns),
+                         d2l._EPS_TABLES['pair'])
+        self.assertTrue(math.isnan(pending.eps))
+        self.assertEqual((loaded.label, loaded.eps, loaded.matrix_median),
+                         ('', 5e-5, 4.7e-5))
+        pd.testing.assert_frame_equal(loaded.pair, got.pair,
+                                      check_dtype=False)
+        pd.testing.assert_frame_equal(loaded.readout, got.readout,
+                                      check_dtype=False)
+        lines = self.page_output(loaded)
+        self.assertEqual(len(lines), 11)  # header, 8 groups, the pair
+        self.assertLessEqual(max(map(len, lines)), 80)
+        self.assertEqual(lines[0].split(), ['model', 'group', 'median',
+                                            'sqrt(v)', 'below', '1e-5',
+                                            'below', '1e-7'])
+        self.assertEqual(lines[1].split(), ['t1', 'embedding', '1.9e-05',
+                                            '18.70%', '0.74%'])
+        self.assertEqual(lines[9], 't1 pair at lr 1e-3: eps 1e-8 → val '
+                         '3.912 (seed 1: 3.906), update RMS ÷ lr 0.183')
+        self.assertEqual(lines[10], ' ' * 20 + 'eps 5e-5 → val 3.950, '
+                         'update RMS ÷ lr 0.121')
+        self.assertEqual(self.page_output(pending), [])
+        bad = loaded._replace(eps=6e-5)  # not the median's rounding
+        with self.assertRaises(AssertionError):
+            self.page_output(bad)
 
 
 class LibraryStructureTest(unittest.TestCase):

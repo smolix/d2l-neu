@@ -1469,7 +1469,8 @@ class ResultTest(unittest.TestCase):
         when the others' files appear while it computes (run A: smollm3-5
         started before smollm3-4 finished and left the merge pending)."""
         names = [f'smollm3-{i}' for i in range(3)]
-        d2l.DATA_HUB.pop('lm-smollm3-trajectory-v1', None)  # a copy
+        key = d2l.PRETRAIN_ARTIFACTS['smollm3-trajectory'][0]
+        d2l.DATA_HUB.pop(key, None)  # a copy
 
         def call(compute):
             parts = {n: (compute, dict(name=n)) for n in names}
@@ -1488,7 +1489,7 @@ class ResultTest(unittest.TestCase):
             return self.compute()
         os.environ['D2L_RERUN'] = 'smollm3-2'
         self.assertEqual(len(call(late)), 6)
-        merged = '../data/lm/rerun/lm-smollm3-trajectory-v1.json.gz'
+        merged = f'../data/lm/rerun/{key}.json.gz'
         self.assertTrue(os.path.exists(merged))
         os.remove(merged)
         # --merge: the named part's file exists, so nothing is computed

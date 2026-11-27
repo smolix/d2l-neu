@@ -26,7 +26,12 @@ that the section explains in a sentence but does not show
 - the frontier test behind the replay claim (`frontier_excess`: the
   replay arm against the chord between two no-replay arms) and the
   early general-loss gaps behind the cold-restart claims (`early_gaps`);
-- the SmolLM3 trajectory (`smollm3_trajectory`) and its plot.
+- the SmolLM3 trajectory (`smollm3_trajectory`: the cloze suite, bits per
+  byte with no prefix token on four domains, calibration and GSM8K in two
+  formats per checkpoint; the conditional MATH-500 and GSM-Symbolic
+  rungs), the page's live GSM8K check (`smollm3_gsm8k`), the changes
+  between stages (`stage_deltas`), the calibration table and the two
+  plots.
 
 Every block is tagged `%%tab pytorch` and imports what it needs beyond the
 library preamble inside its functions (`transformers`, `huggingface_hub`,
@@ -92,7 +97,10 @@ arms) instead of failing. The arms' results on the trace corpus are
 `lm-cpt-runs-v2` and `lm-cpt-t1-v2` (their stored configurations name the
 data they trained on, so a result from another corpus is refused); the
 peS2o runs `lm-cpt-runs-v1` and `lm-cpt-t1-v1` stay registered until the
-section's close-out, but no page reads them.
+section's close-out, but no page reads them. The SmolLM3 trajectory is
+`lm-smollm3-trajectory-v2` (bits per byte with no prefix token, the
+trace domain, calibration, GSM8K); `lm-smollm3-trajectory-v1` stays
+registered because version 2 copies its per-item cloze scores.
 
 ```{.python .input #continued-pretraining-lib-artifacts}
 %%tab pytorch
@@ -108,7 +116,7 @@ d2l.PRETRAIN_ARTIFACTS['cpt-t1'] = (
 d2l.PRETRAIN_ARTIFACTS['cpt-runs'] = (
     'lm-cpt-runs-v2', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['smollm3-trajectory'] = (
-    'lm-smollm3-trajectory-v1', 'json-table')
+    'lm-smollm3-trajectory-v2', 'json-table')
 ```
 
 The long jobs that `tools/lm_regen.py` runs (one card each): the four Qwen
@@ -795,8 +803,26 @@ def gsm8k_force_prompt(prompt, text):
     close = '\n</think>' if opened and not closed else ''
     return prompt + text + close + '\n\n' + _GSM8K_CUE
 
+def _answer_rules(kind):
+    """How score_gsm8k reads and compares answers of kind 'gsm8k' (the
+    chain-of-thought format, stop at 'Q:', numbers compared as
+    extract_answer writes them) or 'math' (MATH-500's numeric subset:
+    the Minerva format, stop at 'Problem:', values compared as
+    fractions)."""
+    if kind == 'gsm8k':
+        num = lambda t: d2l.extract_answer(t, 'gsm8k')
+        return dict(stop='Q:', completion=num, chat=gsm8k_chat_answer,
+                    force_stop='}', forced=num)
+    if kind == 'math':
+        return dict(stop='Problem:', completion=math_completion_answer,
+                    chat=math_chat_answer, force_stop='}$',
+                    forced=lambda t: math_value(d2l.extract_answer(
+                        '\\boxed{' + t + '}', 'boxed')))
+    raise ValueError(f"kind is 'gsm8k' or 'math', not {kind!r}")
+
 def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
-                budget=None, batch_size=None, chat_prompt=None, force=None):
+                budget=None, batch_size=None, chat_prompt=None, force=None,
+                end_token='<|endoftext|>', kind='gsm8k'):
     """GSM8K replies of model (greedy) per item and format ('completion':
     the 8-shot prompt; 'chat': chat_prompt(question), by default
     gsm8k_chat_prompt): a DataFrame with format, item_id, score (exact
@@ -808,18 +834,22 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
     new_tokens, and the columns of _GSM8K_TEXT: the reply's text, its
     answer (pred), the forced answer and the forced continuation's text
     (None when not forced). budget is {format: n}, batch_size {format or
-    'force': n}."""
+    'force': n}; end_token is the tokenizer's document end (Qwen3's
+    <|endoftext|>, SmolLM3's <|end_of_text|>), which ends a completion,
+    and with <|im_end|> a chat reply. kind 'math' scores MATH-500 items
+    (_answer_rules) in the same two formats."""
     budget = {**_CPT_GSM8K['budget'], **(budget or {})}
     batch = {**_GSM8K_BATCH, **(batch_size or {})}
     force = _CPT_GSM8K['force'] if force is None else force
     chat_prompt = chat_prompt or gsm8k_chat_prompt
+    rules = _answer_rules(kind)
     ids = {m: tokenizer.convert_tokens_to_ids(m) for m in
-           ('<|endoftext|>', '<|im_end|>')}
+           (end_token, '<|im_end|>')}
     rows = []
     for fmt in formats:
         if fmt == 'completion':  # a ChatML end is text here, not a stop
-            prompts, stop, eos = ([it['prompt'] for it in items], ['Q:'],
-                                  [ids['<|endoftext|>']])
+            prompts, stop, eos = ([it['prompt'] for it in items],
+                                  [rules['stop']], [ids[end_token]])
         elif fmt == 'chat':
             prompts, stop, eos = ([chat_prompt(it['question'])
                                    for it in items], None, list(ids.values()))
@@ -829,8 +859,7 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
                             eos_token_ids=eos, stop=stop,
                             batch_size=batch[fmt])
         if fmt == 'chat':
-            preds = [gsm8k_chat_answer(g.text, g.finish_reason)
-                     for g in gens]
+            preds = [rules['chat'](g.text, g.finish_reason) for g in gens]
             todo = [i for i, g in enumerate(gens) if force and (
                 g.finish_reason == 'length'
                 or _think_state(g.text) == (True, False))]  # no answer
@@ -840,14 +869,15 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
                     model, tokenizer, [gsm8k_force_prompt(prompts[i],
                                                           gens[i].text)
                                        for i in todo], force,
-                    eos_token_ids=eos, stop=['}'], batch_size=batch['force'])
+                    eos_token_ids=eos, stop=[rules['force_stop']],
+                    batch_size=batch['force'])
                 for i, m in zip(todo, more):
-                    forced[i] = d2l.extract_answer(m.text, 'gsm8k')
+                    forced[i] = rules['forced'](m.text)
                     more_text[i] = m.text
         else:  # the reply has ended at its first chat marker
-            preds = [d2l.extract_answer(g.text[:min(
+            preds = [rules['completion'](g.text[:min(
                 [g.text.find(m) for m in _CHAT_MARKS if m in g.text],
-                default=None)], 'gsm8k') for g in gens]
+                default=None)]) for g in gens]
             forced, more_text = preds, [None] * len(gens)
         right = lambda p, it: float(p is not None and p == it['reference'])
         for it, g, pred, fp, mt in zip(items, gens, preds, forced, more_text):
@@ -1696,25 +1726,77 @@ def early_gaps(runs, pairs, seeds, within=40):
 
 Six base-model checkpoints of `HuggingFaceTB/SmolLM3-3B-checkpoints` (the
 ends of the three pretraining stages, the two long-context stages and the
-mid-training checkpoint), each scored with the suite (MMLU on a seeded
-2,000-item subset, the other tasks in full) and with bits per byte on 500
-documents of each evaluation set's texts (FineWeb-Edu validation, peS2o
-validation) and on every held-out book section. Bits per byte put
-`<|begin_of_text|>` before each document, not the tokenizer's end token
-(`_smollm3_bpb_tokenizer` says why). Token counts: steps times
-the global batch of the stage configurations (`smollm3-configs`: 192
-replicas of 3 sequences of 4,096 tokens, 2,359,296 tokens per step; the
-long-context stages keep 2,359,296 tokens per step over 20,000 steps
-each); mid-training adds the blog's 140B tokens. One regeneration per
-checkpoint (`smollm3-0` to `-5`), merged when all six exist. With `n`
-given the suite is scored live on `n` items per task (seed 0) and nothing
-is loaded.
+mid-training checkpoint), each read with four instruments. Token counts:
+steps times the global batch of the stage configurations
+(`smollm3-configs`: 192 replicas of 3 sequences of 4,096 tokens, 2,359,296
+tokens per step; the long-context stages keep 2,359,296 tokens per step
+over 20,000 steps each); mid-training adds the blog's 140B tokens.
+
+- **Cloze suite** (the six tasks, MMLU on a seeded 2,000-item subset): the
+  per-item scores of `lm-smollm3-trajectory-v1`, scored at the same pins
+  with the same suite (version 2 changes neither), are copied; without
+  that artifact the suite is scored afresh.
+- **Bits per byte with no prefix token** on 500 FineWeb-Edu validation
+  documents, 500 peS2o validation documents, every held-out book section
+  and the 500 held-out reasoning-trace conversations (`traces (seen)`:
+  OpenThoughts3-1.2M, which SmolLM3's reasoning stage trained on, rendered
+  with `chatml`, one window of the first 2,048 tokens each). SmolLM3
+  trained with document masks and no BOS, so a document starts at
+  position 0 and its first token, which has no context, goes unscored (and
+  any next tokens up to the end of its character), as do the bytes it
+  spells (`_scored_doc`). Version 1 put `<|begin_of_text|>` before each
+  document instead, which the base checkpoints never saw in that place:
+  it costs mid-training's first token 26.5 nats on average and inflates
+  its book number by about 5% (S/investigate/smollm3/report.md, section
+  3). Long documents are read in windows of 2,048 tokens advancing by
+  1,024, each target scored once (`bits_per_byte`'s windows).
+- **Calibration**, from the same forward passes: per document the loss at
+  softmax temperatures `_SMOLLM3_TEMPS` (the logits divided by T), the
+  entropy of the T = 1 distribution and the number of targets that are
+  its top-1 token (`_logit_stats`).
+- **GSM8K in two formats** (`score_gsm8k`): the 500 items and both
+  formats of the Qwen arms (8-shot completion, budget 256; one ChatML user
+  turn with thinking, budget 4,096, the answer after `</think>`, a cut
+  reply or a think block never closed counts as no answer), greedy, with
+  the forced-answer readout. The prompt is the same for all six
+  checkpoints: the mid-training tokenizer's chat template is plain ChatML,
+  which is `gsm8k_chat_prompt`, and the base checkpoints ship none.
+  `<|end_of_text|>` ends a completion. Chat replies run 32 at a time:
+  SmolLM3-3B's key-value cache is 36 layers x 4 heads x 128 x 2 x 2 B =
+  72 KiB per position, about 10 GiB at 32 replies of 4,096 + 300
+  positions, next to 5.8 GiB of weights (launch with
+  `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`, F21 review).
+
+Two tokenizers serve all six checkpoints, so every checkpoint scores the
+same token ids: LC 64K's for the bits per byte and the cloze suite (it
+reads `<code>` as text, which the base checkpoints saw), mid-training's
+for generation (it decodes mid-training's own `<code>` tokens). The six
+branches' tokenizers have the same vocabulary and the same ChatML and
+think tokens; mid-training turns two reserved ids into `<code>` and
+`</code>`.
+
+One regeneration per checkpoint (`smollm3-0` to `-5`, about 40 minutes
+each on a 4090, at most 17 GiB), merged when all six exist. Each keeps its
+bits-per-byte rows and its GSM8K replies (with their text, so they can be
+read and re-scored) in `../data/lm/rerun/ch21/smollm3/<checkpoint>/`, so
+an interrupted job resumes; the merged artifact holds no text. The
+conditional rungs of the gate (S/fix/gates/smollm3_gate.py, plan F26) are
+parts of the same merge once their names are in `PRETRAIN_RERUN_NAMES`
+(with `PRETRAIN_JOBS` and `_RERUN_ARTIFACT` entries like `smollm3-0`'s):
+`smollm3-math-2`, `-4` and `-5` score MATH-500's numeric subset in both
+formats (the 4-shot Minerva prompt; chat budget 8,192, 16 at a time) for
+stage 3, LC 64K and mid-training, and `smollm3-symbolic` scores
+GSM-Symbolic (`gsm_symbolic_items`; chapter 18's `gsm-symbolic-test`, CC
+BY-NC-ND 4.0: read at run time, no text kept in the artifact) for LC 64K
+and mid-training. `smollm3_gsm8k` is the page's live check: two
+checkpoints on the first n of the 500 items, both formats, no forced
+answers.
 
 ```{.python .input #continued-pretraining-lib-smollm3}
 %%tab pytorch
 #@save
 SmolTrajectory = collections.namedtuple(
-    'SmolTrajectory', ['table', 'bpb', 'items', 'docs', 'label'])
+    'SmolTrajectory', ['table', 'bpb', 'items', 'docs', 'answers', 'label'])
 
 #@save
 SMOLLM3_TASKS = ('hellaswag', 'arc_easy', 'arc_challenge', 'piqa',
@@ -1730,7 +1812,72 @@ _SMOLLM3 = {  # name: (row label, tokens seen in billions)
     'mid': ('mid-training', 4_760_000 * 2_359_296 / 1e9 + 140)}
 
 #@save
-_SMOLLM3_DOMAINS = ('web', 'science', 'book')
+_SMOLLM3_DOMAINS = ('web', 'science', 'book', 'traces')
+
+#@save
+_SMOLLM3_TEMPS = (0.8, 1.0, 1.25, 1.5, 2.0)  # the calibration grid
+
+#@save
+_SMOLLM3_CTX = 2048  # window of the bits per byte; a trace's one window
+
+#@save
+_SMOLLM3_ANSWERS = {  # task: what score_gsm8k is given
+    'gsm8k': dict(n=500, seed=0, budget=dict(completion=256, chat=4096),
+                  force=32, batch=dict(completion=32, chat=32, force=8)),
+    'gsm-symbolic': dict(instances=5, budget=dict(completion=256,
+                                                  chat=4096),
+                         force=32, batch=dict(completion=32, chat=32,
+                                              force=8)),
+    'math500': dict(budget=dict(completion=1024, chat=8192), force=32,
+                    batch=dict(completion=16, chat=16, force=8))}
+
+#@save
+_SMOLLM3_LIVE = dict(budget=dict(completion=256, chat=4096),
+                     batch=dict(completion=25, chat=25))  # the page's check
+
+#@save
+_SMOLLM3_RUNGS = {  # conditional regeneration: (task, checkpoints)
+    'smollm3-math-2': ('math500', ('stage3',)),
+    'smollm3-math-4': ('math500', ('lc64k',)),
+    'smollm3-math-5': ('math500', ('mid',)),
+    'smollm3-symbolic': ('gsm-symbolic', ('lc64k', 'mid'))}
+
+#@save
+_MATH_SCORER = 1  # raise when math_value or the math answer rules change
+
+#@save
+_MINERVA_DEMOS = [  # the 4-shot MATH prompt after Lewkowycz et al. (2022)
+    ('Find the domain of the expression  $\\frac{\\sqrt{x-2}}'
+     '{\\sqrt{5-x}}$.',
+     'The expressions inside each square root must be non-negative. '
+     'Therefore, $x-2 \\ge 0$, so $x\\ge2$, and $5 - x \\ge 0$, so '
+     '$x \\le 5$. Also, the denominator cannot be equal to zero, so '
+     '$5-x>0$, which gives $x<5$. Therefore, the domain of the expression '
+     'is $\\boxed{[2,5)}$.\nFinal Answer: The final answer is $[2,5)$. I '
+     'hope it is correct.'),
+    ('If $\\det \\mathbf{A} = 2$ and $\\det \\mathbf{B} = 12,$ then find '
+     '$\\det (\\mathbf{A} \\mathbf{B}).$',
+     'We have that $\\det (\\mathbf{A} \\mathbf{B}) = (\\det \\mathbf{A})'
+     '(\\det \\mathbf{B}) = (2)(12) = \\boxed{24}.$\nFinal Answer: The '
+     'final answer is $24$. I hope it is correct.'),
+    ('Terrell usually lifts two 20-pound weights 12 times. If he uses two '
+     '15-pound weights instead, how many times must Terrell lift them in '
+     'order to lift the same total weight?',
+     'If Terrell lifts two 20-pound weights 12 times, he lifts a total of '
+     '$2\\cdot 12\\cdot20=480$ pounds of weight.  If he lifts two 15-pound '
+     'weights instead for $n$ times, he will lift a total of '
+     '$2\\cdot15\\cdot n=30n$ pounds of weight.  Equating this to 480 '
+     'pounds, we can solve for $n$:\n\\begin{align*}\n30n&=480\\\\\n'
+     '\\Rightarrow\\qquad n&=480/30=\\boxed{16}\n\\end{align*}\nFinal '
+     'Answer: The final answer is $16$. I hope it is correct.'),
+    ('If the system of equations\n\n\\begin{align*}\n6x-4y&=a,\\\\\n'
+     '6y-9x &=b.\n\\end{align*}has a solution $(x, y)$ where $x$ and $y$ '
+     'are both nonzero, find $\\frac{a}{b},$ assuming $b$ is nonzero.',
+     'If we multiply the first equation by $-\\frac{3}{2}$, we obtain\n\n'
+     '$$6y-9x=-\\frac{3}{2}a.$$Since we also know that $6y-9x=b$, we have'
+     '\n\n$$-\\frac{3}{2}a=b\\Rightarrow\\frac{a}{b}=\\boxed{-\\frac{2}'
+     '{3}}.$$\nFinal Answer: The final answer is $-\\frac{2}{3}$. I hope '
+     'it is correct.')]
 
 #@save
 def _smollm3_call():
@@ -1739,8 +1886,9 @@ def _smollm3_call():
 
 def _bpb_texts(n=500):
     """{domain: texts}: the first n FineWeb-Edu validation documents, the
-    first n of peS2o's validation file 0, and every held-out book
-    section."""
+    first n of peS2o's validation file 0, every held-out book section,
+    and the held-out reasoning-trace conversations rendered with chatml
+    (traces)."""
     import gzip
     from huggingface_hub import hf_hub_download
     root = d2l.reference_shards('val').root
@@ -1752,156 +1900,492 @@ def _bpb_texts(n=500):
                                'json.gz', repo_type='dataset', revision=rev)
     with gzip.open(path, 'rt') as f:
         science = [json.loads(line)['text'] for _, line in zip(range(n), f)]
+    traces = [chatml(m) for m in trace_conversations()['messages']]
     return dict(web=web, science=science,
-                book=[t for _, t in book_split()[1]])
+                book=[t for _, t in book_split()[1]], traces=traces)
 
-def _smollm3_bpb_tokenizer(repo, rev):
-    """SmolLM3's tokenizer with <|begin_of_text|> as bits_per_byte's
-    document boundary. Its own end token (<|end_of_text|>; <|im_end|> from
-    mid-training on) is no context for a new document: measured on 20
-    documents per domain, it raises the bits per byte of the stage-3 and
-    long-context checkpoints by 19-61% against <|begin_of_text|>, while
-    stages 1 and 2 and mid-training score within 2.5% either way."""
+def _smollm3_tokenizer(name):
+    """The pinned tokenizer of checkpoint name ('lc64k' or 'mid'), with
+    the config's clean_up_tokenization_spaces=True turned off (a BPE
+    tokenizer ignores it, and warns on every decode that does not say so)."""
     import transformers
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES[f'smollm3-{name}']
     with d2l._quiet():
-        tok = transformers.AutoTokenizer.from_pretrained(
-            repo, revision=rev, eos_token='<|begin_of_text|>')
-    bos = tok.convert_tokens_to_ids('<|begin_of_text|>')
-    assert d2l._lm_boundary_id(tok) == bos, (d2l._lm_boundary_id(tok), bos)
-    return tok
+        return transformers.AutoTokenizer.from_pretrained(
+            repo, revision=rev, clean_up_tokenization_spaces=False)
 
-def _smollm3_point(name, n=None, texts=None):
-    """One checkpoint: per-item suite scores, (with texts) per-document
-    bits per byte (each document after <|begin_of_text|>) and UTF-8 bytes,
-    and its context length."""
-    import unicodedata
+def _smollm3_load(name):
+    """Checkpoint name in bf16 on the GPU, quietly (no progress bars)."""
     from transformers.utils import logging as hf_logging
     _, repo, rev, _ = d2l.PRETRAIN_SOURCES[f'smollm3-{name}']
     bars = hf_logging.is_progress_bar_enabled()
     hf_logging.disable_progress_bar()  # a notebook shows them as widgets
     try:
         with d2l._quiet():
-            model, tok = d2l.load_hf(repo, revision=rev)
+            model, _ = d2l.load_hf(repo, revision=rev)
     finally:
         if bars:
             hf_logging.enable_progress_bar()
-    tok_bpb = _smollm3_bpb_tokenizer(repo, rev) if texts else None
-    suite = _cpt_suite(SMOLLM3_TASKS, n_max=n, n_task=None if n else dict(
-        mmlu=2000), name='smollm3', batch_size=8)
-    with d2l._quiet():
-        res = suite.run(model, tok)
-    items = res.per_item[['task', 'item_id', 'score']].assign(
-        checkpoint=_SMOLLM3[name][0])
-    rows = []
-    for dom, docs in (texts or {}).items():
-        for i, t in enumerate(docs):
-            with d2l._quiet():
-                b = d2l.bits_per_byte(model, tok_bpb, [t], ctx_len=2048)
-            rows.append(dict(checkpoint=_SMOLLM3[name][0], domain=dom, doc=i,
-                             bpb=b, bytes=len(unicodedata.normalize(
-                                 'NFC', t).encode())))
-    ctx = int(model.config.max_position_embeddings)
-    del model
-    d2l.lm_free()
-    return dict(items=items, docs=pd.DataFrame(rows), ctx=ctx)
+    return model
 
-def _smollm3_merge(points, names):
-    """SmolTrajectory from {name: point}."""
-    pts = {n: _part(points[n]) for n in names}
-    items = pd.concat([pts[n]['items'] for n in names], ignore_index=True)
-    acc = items.groupby(['checkpoint', 'task'], sort=False)['score'].mean(
-        ).unstack('task')
-    table = pd.DataFrame(dict(
-        checkpoint=[_SMOLLM3[n][0] for n in names],
-        tokens=[f'{_SMOLLM3[n][1] / 1e3:.1f}T' for n in names],
-        ctx=[f'{pts[n]["ctx"] // 1024}K' for n in names]))
-    table = table.join(acc[list(SMOLLM3_TASKS)], on='checkpoint')
-    docs = pd.concat([pts[n]['docs'] for n in names], ignore_index=True)
-    if len(docs):
-        g = docs.assign(bits=docs['bpb'] * docs['bytes']).groupby(
-            ['checkpoint', 'domain'], sort=False)[['bits', 'bytes']].sum()
-        bpb = (g['bits'] / g['bytes']).unstack('domain')[list(
-            _SMOLLM3_DOMAINS)].reindex(table['checkpoint']).reset_index()
+def _scored_doc(tokenizer, text, limit=None):
+    """(ids, first, n_bytes) of a document read with no prefix token: its
+    token ids (no special tokens added; at most the first `limit`, fewer
+    when the limit falls inside a character), how many of them go
+    unscored at the start (the first token, which has no context, and the
+    next ones up to the end of the character it starts, as
+    _lm_unscored_head), and the UTF-8 bytes of the text the scored tokens
+    spell."""
+    dec = lambda x: tokenizer.decode(x, clean_up_tokenization_spaces=False)
+    ids = tokenizer(text, add_special_tokens=False)['input_ids']
+    spelled = text
+    if limit is not None and len(ids) > limit:
+        ids = ids[:limit]
+        while ids and not text.startswith(dec(ids)):  # a cut character
+            ids = ids[:-1]
+        spelled = dec(ids)
+    first = 1
+    while first < len(ids):
+        head = dec(ids[:first])
+        if text.startswith(head) or '\ufffd' not in head:
+            break
+        first += 1
+    head = dec(ids[:first]) if ids else ''
+    return ids, first, len(spelled.encode('utf-8')) - len(
+        head.encode('utf-8'))
+
+def _logit_stats(z, y, temps=_SMOLLM3_TEMPS):
+    """Per position of fp32 logits z (n, V) with targets y (n,): the NLL of
+    y at each temperature in temps (the logits divided by T before the
+    softmax), the entropy of the T = 1 distribution, and 1 where y is its
+    top-1 token: an (n, len(temps) + 2) tensor."""
+    logp = F.log_softmax(z, -1)
+    nll = [F.cross_entropy(z / t, y, reduction='none') for t in temps]
+    return torch.stack(nll + [-(logp.exp() * logp).sum(-1),
+                              (z.argmax(-1) == y).float()], 1)
+
+@torch.no_grad()
+def _doc_stats(model, docs, ctx_len=_SMOLLM3_CTX, stride=None,
+               batch_size=4, temps=_SMOLLM3_TEMPS):
+    """Per document (ids, first) of docs, summed over its scored targets
+    ids[first:]: the NLL at each temperature, the entropy and the top-1
+    count of _logit_stats, and the number of targets, as an array (n_docs,
+    len(temps) + 3). A Transformers model with a plain linear output layer
+    reads windows of ctx_len tokens advancing by stride (default
+    ctx_len // 2), every target scored once, as bits_per_byte does with no
+    boundary token; the scored positions are projected in fp32, 1,024 at
+    a time."""
+    stride = ctx_len // 2 if stride is None else stride
+    windows = []
+    for d, (seq, first) in enumerate(docs):
+        seq, done = list(seq), first - 1  # targets seq[first:done + 1] done
+        while done < len(seq) - 1:
+            end = min(max(ctx_len, done + 1) if done == first - 1
+                      else done + stride, len(seq) - 1)
+            start = max(end - ctx_len, 0)
+            windows.append((d, seq[start:end], seq[done + 1:end + 1]))
+            done = end
+    head = d2l._label_output_layer(model)
+    if head is None:
+        raise ValueError('needs a Transformers model with a linear head')
+    W = head.weight.float()
+    bias = None if head.bias is None else head.bias.float()
+    dev = next(model.parameters()).device
+    decoder = d2l._lm_unwrap(model).get_decoder()
+    out = np.zeros((len(docs), len(temps) + 3))
+    for s in range(0, len(windows), batch_size):
+        w = windows[s:s + batch_size]
+        T = max(len(x) for _, x, _ in w)
+        X = torch.tensor([x + [0] * (T - len(x)) for _, x, _ in w],
+                         device=dev)
+        mask = (torch.arange(T, device=dev) < torch.tensor(
+            [len(x) for _, x, _ in w], device=dev)[:, None]).long()
+        H = decoder(input_ids=X, attention_mask=mask,
+                    use_cache=False).last_hidden_state
+        H = torch.cat([H[k, len(x) - len(ys):len(x)]
+                       for k, (_, x, ys) in enumerate(w)])
+        y = torch.tensor([t for _, _, ys in w for t in ys], device=dev)
+        stats = torch.cat([_logit_stats(F.linear(
+            H[i:i + 1024].float(), W, bias), y[i:i + 1024], temps)
+            for i in range(0, len(y), 1024)]).cpu().numpy()
+        doc = np.concatenate([[d] * len(ys) for d, _, ys in w])
+        np.add.at(out, doc, np.concatenate(
+            [stats, np.ones((len(doc), 1))], 1))
+    return out
+
+def _stat_columns(temps=_SMOLLM3_TEMPS):
+    return [f'nll_t{t:g}' for t in temps] + ['entropy', 'top1', 'tokens']
+
+def _smollm3_docs(model, tokenizer, texts):
+    """Per document of texts {domain: texts} (each in NFC form): domain,
+    doc, bytes, the sums of _doc_stats and bpb (the T = 1 NLL in bits per
+    scored byte); a trace is its first _SMOLLM3_CTX tokens."""
+    import unicodedata
+    rows, docs = [], []
+    for dom, ts in texts.items():
+        for i, t in enumerate(ts):
+            ids, first, n_bytes = _scored_doc(
+                tokenizer, unicodedata.normalize('NFC', t),
+                _SMOLLM3_CTX if dom == 'traces' else None)
+            if len(ids) > first:
+                rows.append(dict(domain=dom, doc=i, bytes=n_bytes))
+                docs.append((ids, first))
+    out = pd.DataFrame(rows).join(pd.DataFrame(_doc_stats(model, docs),
+                                               columns=_stat_columns()))
+    out['tokens'] = out['tokens'].astype(np.int64)
+    out['bpb'] = out['nll_t1'] / (math.log(2) * out['bytes'])
+    return out
+
+def math_value(s):
+    """An answer that is a number, as a canonical string ('-5', '2/3',
+    '5/4' for 1.25): an integer, a decimal or a simple fraction (a/b,
+    \\frac{a}{b}, \\dfrac, \\tfrac, \\frac34; a sign before any of them),
+    after removing $ signs, LaTeX spacing (\\!, \\,, \\;) and thousands
+    separators (1,000 or 1{,}000); None for anything else (a unit, a
+    variable, a list, a root, pi)."""
+    from fractions import Fraction
+    if s is None:
+        return None
+    t = str(s).strip()
+    for junk in ('$', '\\!', '\\,', '\\;', '{,}'):
+        t = t.replace(junk, '' if junk != '{,}' else ',')
+    t = t.replace(' ', '').replace('\u2212', '-')
+    m = (re.fullmatch(r'(-?)\\[dt]?frac\{(-?\d+)\}\{(-?\d+)\}', t)
+         or re.fullmatch(r'(-?)\\[dt]?frac(\d)(\d)', t)
+         or re.fullmatch(r'(-?)(\d+)/(\d+)', t))
+    if m:
+        if int(m.group(3)) == 0:
+            return None
+        v = Fraction(int(m.group(2)), int(m.group(3)))
+        v = -v if m.group(1) else v
+    elif re.fullmatch(r'-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?|-?\.\d+', t):
+        v = Fraction(t.replace(',', ''))
     else:
-        bpb = pd.DataFrame(columns=['checkpoint', *_SMOLLM3_DOMAINS])
-    return SmolTrajectory(table, bpb, items, docs, '')
+        return None
+    return str(v.numerator) if v.denominator == 1 else \
+        f'{v.numerator}/{v.denominator}'
 
-def smollm3_trajectory(names, n=None):
+def math_completion_answer(text):
+    """The answer of a Minerva-format completion: the math_value of what
+    follows its last 'final answer is' (up to '. I hope' or the line's
+    end), else of its last \\boxed{}."""
+    m = list(re.finditer(r'final answer is\s*(.*?)(?:\.\s*I hope|\n|$)',
+                         text, re.I))
+    v = math_value(m[-1].group(1).strip().rstrip('.')) if m else None
+    return v if v is not None else math_value(d2l.extract_answer(text,
+                                                                 'boxed'))
+
+def math_chat_answer(text, finish_reason):
+    """The answer of a chat reply to a MATH problem, or None: none for a
+    reply cut at the budget or with a think block never closed (as
+    gsm8k_chat_answer); else, after the last </think>, the math_value of
+    the last \\boxed{}, else math_completion_answer's."""
+    opened, closed = _think_state(text)
+    if finish_reason == 'length' or (opened and not closed):
+        return None
+    tail = text.split('</think>')[-1]
+    v = math_value(d2l.extract_answer(tail, 'boxed'))
+    return v if v is not None else math_completion_answer(tail)
+
+def math500_items():
+    """The MATH-500 problems whose reference answer is a number
+    (math_value is not None), as gsm8k_items: dicts with id (the unique
+    id), question, reference (canonical) and the 4-shot Minerva prompt
+    ('Problem:' / 'Solution:')."""
+    from huggingface_hub import hf_hub_download
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES['math500']
+    with d2l._quiet():
+        path = hf_hub_download(repo, d2l.PRETRAIN_SOURCE_FILES['math500'][0],
+                               repo_type='dataset', revision=rev)
+    with open(path, encoding='utf-8') as f:
+        rows = [json.loads(line) for line in f]
+    shots = ''.join(f'Problem:\n{q}\n\nSolution: {a}\n\n'
+                    for q, a in _MINERVA_DEMOS)
+    return [dict(id=r['unique_id'], question=r['problem'],
+                 reference=math_value(r['answer']),
+                 prompt=f'{shots}Problem:\n{r["problem"]}\n\nSolution:')
+            for r in rows if math_value(r['answer']) is not None]
+
+def gsm_symbolic_items(instances=5):
+    """GSM-Symbolic (apple/GSM-Symbolic, chapter 18's gsm-symbolic-test,
+    CC BY-NC-ND 4.0: read at run time, never stored): instances 0 to
+    instances - 1 of each of its 100 templates, as gsm8k_items (id
+    'template-instance', question, reference, the 8-shot prompt of
+    gsm8k_cot)."""
+    with d2l._quiet():
+        path = d2l.download_keyed('gsm-symbolic-test')
+    with open(path, encoding='utf-8') as f:
+        rows = sorted((json.loads(line) for line in f),
+                      key=lambda r: (r['id'], r['instance']))
+    return [dict(id=f'{r["id"]}-{r["instance"]}', question=r['question'],
+                 reference=d2l.extract_answer(r['answer'], 'gsm8k',
+                                              strict=True),
+                 prompt=d2l.fewshot_prompt(d2l.GSM8K_COT_DEMOS,
+                                           r['question'], 'qa'))
+            for r in rows if r['instance'] < instances]
+
+def _smollm3_items(task):
+    """The items of a reasoning task of _SMOLLM3_ANSWERS."""
+    cfg = _SMOLLM3_ANSWERS[task]
+    if task == 'gsm8k':
+        return gsm8k_items(cfg['n'], cfg['seed'])
+    if task == 'gsm-symbolic':
+        return gsm_symbolic_items(cfg['instances'])
+    return math500_items()
+
+def _smollm3_cached(name, what, ident, compute):
+    """compute(), kept in ../data/lm/rerun/ch21/smollm3/<name>/<what>
+    .json.gz under ident (read back when ident matches; a file of another
+    setting is refused), so an interrupted regeneration resumes."""
+    path = os.path.join(d2l._job_root(), 'smollm3', name,
+                        f'{what}.json.gz')
+    if os.path.exists(path):
+        res = d2l._read_result(path, 'json-table')
+        d2l._check_config(res, ident, path)
+        return res
+    res = compute()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    d2l._write_result(path, 'json-table', res, dict(config=ident, label=''))
+    return res
+
+def _smollm3_settings(task):
+    """The settings a cached or merged answer file of task records."""
+    scorer = _MATH_SCORER if task == 'math500' else _GSM8K_SCORER
+    return d2l._jsonable(dict(_SMOLLM3_ANSWERS[task], scorer=scorer,
+                              tokenizer=d2l.PRETRAIN_SOURCES[
+                                  'smollm3-mid'][2]))
+
+def _smollm3_answers(model, name, task, tokenizer):
+    """score_gsm8k of checkpoint name on task (its settings in
+    _SMOLLM3_ANSWERS), cached per checkpoint, with task and checkpoint
+    columns."""
+    cfg = _SMOLLM3_ANSWERS[task]
+    res = _smollm3_cached(name, task, dict(pin=d2l.PRETRAIN_SOURCES[
+        f'smollm3-{name}'][2], settings=_smollm3_settings(task)),
+        lambda: score_gsm8k(model(), tokenizer, _smollm3_items(task),
+                            budget=cfg['budget'], batch_size=cfg['batch'],
+                            force=cfg['force'], end_token='<|end_of_text|>',
+                            kind='math' if task == 'math500' else 'gsm8k'))
+    return res.assign(task=task, checkpoint=_SMOLLM3[name][0])
+
+def _smollm3_cloze(name):
+    """Checkpoint name's per-item cloze scores from
+    lm-smollm3-trajectory-v1 (same pins and suite), or None when that
+    artifact is not registered or lacks a task."""
+    key = 'lm-smollm3-trajectory-v1'
+    if key not in d2l.DATA_HUB:
+        return None
+    with d2l._quiet():
+        items = d2l._read_result(d2l.download_keyed(key), 'json-table').items
+    got = items[items['checkpoint'] == _SMOLLM3[name][0]]
+    if set(got['task']) != set(SMOLLM3_TASKS):
+        return None
+    return got[['task', 'item_id', 'score', 'checkpoint']].reset_index(
+        drop=True)
+
+def _smollm3_point(name, texts):
+    """One checkpoint (regeneration smollm3-k): per-item cloze scores,
+    per-document bits per byte and calibration sums (docs), GSM8K in both
+    formats with the replies' text (answers), and its context length."""
+    tok, chat_tok = _smollm3_tokenizer('lc64k'), _smollm3_tokenizer('mid')
+    held = {}
+
+    def model():  # loaded on first need: cached parts need no weights
+        if 'm' not in held:
+            held['m'] = _smollm3_load(name)
+        return held['m']
+    pin = d2l.PRETRAIN_SOURCES[f'smollm3-{name}'][2]
+    items = _smollm3_cloze(name)
+    if items is None:  # no committed scores to copy: score the suite
+        suite = _cpt_suite(SMOLLM3_TASKS, n_task=dict(mmlu=2000),
+                           name='smollm3', batch_size=8)
+        with d2l._quiet():
+            res = suite.run(model(), tok)
+        items = res.per_item[['task', 'item_id', 'score']].assign(
+            checkpoint=_SMOLLM3[name][0])
+    docs = _smollm3_cached(name, 'docs', dict(
+        pin=pin, ctx=_SMOLLM3_CTX, temps=_SMOLLM3_TEMPS,
+        tokenizer=d2l.PRETRAIN_SOURCES['smollm3-lc64k'][2],
+        n={k: len(v) for k, v in texts.items()}),
+        lambda: _smollm3_docs(model(), tok, texts)).assign(
+            checkpoint=_SMOLLM3[name][0])
+    answers = _smollm3_answers(model, name, 'gsm8k', chat_tok)
+    import transformers
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES[f'smollm3-{name}']
+    with d2l._quiet():
+        ctx = transformers.AutoConfig.from_pretrained(
+            repo, revision=rev).max_position_embeddings
+    held.clear()
+    d2l.lm_free()
+    return dict(items=items, docs=docs, answers=answers, ctx=int(ctx))
+
+def _smollm3_rung(task, names):
+    """A conditional rung: task of _SMOLLM3_ANSWERS ('math500' or
+    'gsm-symbolic') for checkpoints names, in both formats."""
+    chat_tok, out = _smollm3_tokenizer('mid'), []
+    for name in names:
+        held = {}
+
+        def model(name=name):  # loaded on first need
+            if 'm' not in held:
+                held['m'] = _smollm3_load(name)
+            return held['m']
+        out.append(_smollm3_answers(model, name, task, chat_tok))
+        held.clear()
+        d2l.lm_free()
+    return dict(answers=pd.concat(out, ignore_index=True))
+
+def _smollm3_answer_columns():
+    return ['checkpoint', 'task'] + _CPT_COLUMNS['gsm8k'][1:]
+
+def _smollm3_merge(results, names):
+    """SmolTrajectory from {part: result} of smollm3_trajectory (no reply
+    text): table per checkpoint (tokens seen, context length, cloze mean,
+    GSM8K 8-shot and chat accuracy, the share of chat replies cut at the
+    budget, bits per byte per domain), bpb per domain, the per-item cloze
+    scores, per-document rows and every answer row."""
+    order = list(_smollm3_call()['names'])
+    pts = {n: _part(results[f'smollm3-{order.index(n)}']) for n in names}
+    label = [_SMOLLM3[n][0] for n in names]
+    items = pd.concat([pts[n]['items'] for n in names], ignore_index=True)
+    answers = pd.concat([pts[n]['answers'] for n in names] + [
+        _part(r)['answers'] for p, r in results.items()
+        if p in _SMOLLM3_RUNGS], ignore_index=True)[_smollm3_answer_columns()]
+    docs = pd.concat([pts[n]['docs'] for n in names], ignore_index=True)
+    g = docs.assign(bits=docs['bpb'] * docs['bytes']).groupby(
+        ['checkpoint', 'domain'], sort=False)[['bits', 'bytes']].sum()
+    bpb = (g['bits'] / g['bytes']).unstack('domain').reindex(
+        index=label, columns=list(_SMOLLM3_DOMAINS)).rename_axis(
+        'checkpoint').reset_index().rename_axis(columns=None)
+    gsm = answers[answers['task'] == 'gsm8k'].groupby(
+        ['checkpoint', 'format'])[['score', 'cut']].mean().unstack('format')
+    acc = lambda col, fmt: gsm[col, fmt].reindex(label).to_numpy() if (
+        col, fmt) in gsm else np.full(len(label), np.nan)
+    table = pd.DataFrame({
+        'checkpoint': label,
+        'tokens': [f'{_SMOLLM3[n][1] / 1e3:.1f}T' for n in names],
+        'ctx': [f'{pts[n]["ctx"] // 1024}K' for n in names],
+        'cloze': suite_mean(items, by=('checkpoint',)).reindex(
+            label).to_numpy(),
+        '8-shot': acc('score', 'completion'), 'chat': acc('score', 'chat'),
+        'cut': acc('cut', 'chat')})
+    table = table.merge(bpb, on='checkpoint', how='left')
+    return SmolTrajectory(table, bpb, items, docs, answers, '')
+
+def smollm3_trajectory(names):
     """SmolLM3-3B's checkpoints `names` (of 'stage1', 'stage2', 'stage3',
     'lc32k', 'lc64k', 'mid'): SmolTrajectory(table, bpb, items, docs,
-    label). table: checkpoint, tokens seen, context length and accuracy per
-    task; bpb: bits per byte per domain (web, science, book). n=None: the
-    committed full-set result (regenerations smollm3-0 to smollm3-5, one
-    checkpoint each); n given: the suite scored live on n items per task
-    in every run (no bits per byte)."""
+    answers, label). table: checkpoint, tokens seen, context length, cloze
+    mean, GSM8K accuracy in the 8-shot and chat formats, the share of
+    chat replies cut at the budget and bits per byte (no prefix token) on
+    web, science, book and traces (seen); bpb: those four columns; items:
+    per-item cloze scores; docs: per document its bytes, scored tokens,
+    summed NLL at each temperature of _SMOLLM3_TEMPS, entropy and top-1
+    count; answers: per item and format GSM8K (and the conditional rungs'
+    MATH-500 or GSM-Symbolic) scores. The committed full-set result
+    (regenerations smollm3-0 to smollm3-5, one checkpoint each)."""
     names = list(names)
-    if n is not None:
-        return _smollm3_merge({k: _smollm3_point(k, n=n) for k in names},
-                              names)
     order = list(_smollm3_call()['names'])
     texts = {}
 
     def point(k):  # the texts are read once per process
         if 't' not in texts:
             texts['t'] = _bpb_texts()
-        return _smollm3_point(k, texts=texts['t'])
+        return _smollm3_point(k, texts['t'])
     parts = {f'smollm3-{order.index(k)}': (
         lambda k=k: point(k), dict(name=k, pin=d2l.PRETRAIN_SOURCES[
-            f'smollm3-{k}'][2])) for k in names}
+            f'smollm3-{k}'][2], ctx=_SMOLLM3_CTX, temps=_SMOLLM3_TEMPS,
+            gsm8k=_smollm3_settings('gsm8k'))) for k in names}
+    for rung, (task, ckpts) in _SMOLLM3_RUNGS.items():
+        if rung in d2l.PRETRAIN_RERUN_NAMES:  # ruled in by the gate (F26)
+            parts[rung] = (lambda task=task, ckpts=ckpts: _smollm3_rung(
+                task, ckpts), dict(task=task, checkpoints=list(ckpts),
+                                   settings=_smollm3_settings(task)))
     res = d2l._pretrain_merged(None, parts, lambda r: _smollm3_merge(
-        {k: r[f'smollm3-{order.index(k)}'] for k in names}, names),
-        dict(names=names))
+        r, names), dict(names=names))
+    cols = ['checkpoint', *_SMOLLM3_DOMAINS]
     return d2l._show_label(d2l._as_tuple(SmolTrajectory, res, dict(
-        table=['checkpoint', 'tokens', 'ctx', *SMOLLM3_TASKS],
-        bpb=['checkpoint', *_SMOLLM3_DOMAINS],
-        items=['task', 'item_id', 'score', 'checkpoint'],
-        docs=['checkpoint', 'domain', 'doc', 'bpb', 'bytes'])))
+        table=['checkpoint', 'tokens', 'ctx', 'cloze', '8-shot', 'chat',
+               'cut', *_SMOLLM3_DOMAINS],
+        bpb=cols, items=['task', 'item_id', 'score', 'checkpoint'],
+        docs=['domain', 'doc', 'bytes', *_stat_columns(), 'bpb',
+              'checkpoint'],
+        answers=_smollm3_answer_columns())))
 
-def plot_capability_bpb(ref, traj, tasks=('hellaswag', 'arc_easy', 'piqa',
-                                           'winogrande')):
-    """Mean accuracy on the tasks both suites share against bits per byte
-    on FineWeb-Edu validation text: the reference run's checkpoints (ref,
-    a CheckpointEvals) and SmolLM3's (traj, web BPB)."""
-    smol = traj.table.set_index('checkpoint')
-    xs = [ref.table['bpb'], traj.bpb.set_index('checkpoint')['web'].reindex(
-        smol.index)]
-    ys = [ref.table[list(tasks)].mean(axis=1), smol[list(tasks)].mean(axis=1)]
-    d2l.plot(xs, ys, 'bits per byte (FineWeb-Edu validation)',
-             'mean accuracy (4 tasks)',
-             legend=['reference model', 'SmolLM3-3B'], fmts=('o-', 's-'),
-             figsize=(4.5, 3.2))
+def smollm3_gsm8k(names, n=50):
+    """GSM8K scored live for SmolLM3 checkpoints names on the first n of
+    the 500 committed items, in both formats (greedy, the committed
+    budgets, no forced answers), one checkpoint loaded at a time: a
+    DataFrame checkpoint, format, item_id, score, cut and the other flags
+    of score_gsm8k (no text)."""
+    cfg = _SMOLLM3_ANSWERS['gsm8k']
+    items = gsm8k_items(cfg['n'], cfg['seed'])[:n]
+    tok, out = _smollm3_tokenizer('mid'), []
+    for name in names:
+        model = _smollm3_load(name)
+        res = score_gsm8k(model, tok, items, budget=_SMOLLM3_LIVE['budget'],
+                          batch_size=_SMOLLM3_LIVE['batch'], force=0,
+                          end_token='<|end_of_text|>')
+        out.append(res.drop(columns=_GSM8K_TEXT).assign(
+            checkpoint=_SMOLLM3[name][0]))
+        del model
+        d2l.lm_free()
+    res = pd.concat(out, ignore_index=True)
+    return res[['checkpoint'] + [c for c in res.columns if c != 'checkpoint']]
+
+def _paired_points(wide, a, b, n_boot, seed):
+    """Mean and 95% interval of b - a in points over the rows of wide
+    where both are present (paired items)."""
+    import warnings
+    keep = wide[[a, b]].notna().all(axis=1)
+    if not keep.any():
+        return math.nan, math.nan, math.nan
+    with warnings.catch_warnings():  # a smoke run has under 100 items
+        warnings.simplefilter('ignore')
+        r = d2l.paired_bootstrap(wide[b][keep], wide[a][keep], n_boot,
+                                 seed=seed)
+    return 100 * r.mean, 100 * r.ci[0], 100 * r.ci[1]
 
 def stage_deltas(traj, n_boot=2000, seed=0):
-    """Changes between adjacent checkpoints of traj: the suite mean in
-    points (every task weighs the same; items paired) and each domain's
-    byte-weighted bits per byte in percent (documents paired), each with a
-    95% bootstrap interval: columns transition, suite, suite_lo, suite_hi
-    and the same three for each of web, science and book."""
-    import warnings
+    """Changes between adjacent checkpoints of traj, each with a 95%
+    bootstrap interval: the cloze mean in points (every task weighs the
+    same; items paired), GSM8K's 8-shot and chat accuracy in points (items
+    paired), MATH-500's where both checkpoints have it (else NaN), and
+    each domain's byte-weighted bits per byte in percent (documents
+    paired). Columns transition, then cloze, gsm8k_completion, gsm8k_chat,
+    math500_completion, math500_chat, web, science, book and traces, each
+    with _lo and _hi."""
     short = {'stage 1 end': 'S1', 'stage 2 end': 'S2', 'stage 3 end': 'S3',
              'LC 32K': 'LC32K', 'LC 64K': 'LC64K', 'mid-training': 'mid'}
     names = list(traj.table['checkpoint'])
     wide = traj.items.pivot_table(index=['task', 'item_id'],
                                   columns='checkpoint', values='score')
     tasks = wide.index.get_level_values('task')
-    w = 1 / tasks.map(tasks.value_counts()).to_numpy()
-    w = w / w.mean()  # every task weighs the same in the suite mean
+    w = pd.Series(1 / tasks.map(tasks.value_counts()).to_numpy(),
+                  index=wide.index)
+    w = w / w.mean()  # every task weighs the same in the cloze mean
+    answer = {}
+    for task in ('gsm8k', 'math500'):
+        for fmt in ('completion', 'chat'):
+            a = traj.answers[(traj.answers['task'] == task)
+                             & (traj.answers['format'] == fmt)]
+            answer[f'{task}_{fmt}'] = a.pivot_table(
+                index='item_id', columns='checkpoint', values='score')
     docs = traj.docs.assign(bits=traj.docs['bpb'] * traj.docs['bytes'])
+    keys = ['cloze', *answer, *_SMOLLM3_DOMAINS]
     rows = []
     for a, b in zip(names, names[1:]):
         row = dict(transition=f'{short.get(a, a)} → {short.get(b, b)}')
-        keep = wide[[a, b]].notna().all(axis=1).to_numpy()
-        with warnings.catch_warnings():  # a smoke run has under 100 items
-            warnings.simplefilter('ignore')
-            r = d2l.paired_bootstrap(wide[b][keep] * w[keep],
-                                     wide[a][keep] * w[keep], n_boot,
-                                     seed=seed)
-        row.update(suite=100 * r.mean, suite_lo=100 * r.ci[0],
-                   suite_hi=100 * r.ci[1])
+        row['cloze'], row['cloze_lo'], row['cloze_hi'] = _paired_points(
+            wide.mul(w, axis=0), a, b, n_boot, seed)
+        for k, t in answer.items():
+            row[k], row[f'{k}_lo'], row[f'{k}_hi'] = (
+                _paired_points(t, a, b, n_boot, seed)
+                if {a, b} <= set(t.columns) else (math.nan,) * 3)
         for dom in _SMOLLM3_DOMAINS:
             d = docs[docs['domain'] == dom].pivot_table(
                 index='doc', columns='checkpoint', values=['bits', 'bytes'])
-            if not len(d):
+            if not len(d) or not {a, b} <= set(d['bits'].columns):
                 row.update(dict.fromkeys([dom, f'{dom}_lo', f'{dom}_hi'],
                                          math.nan))
                 continue
@@ -1914,23 +2398,105 @@ def stage_deltas(traj, n_boot=2000, seed=0):
                         f'{dom}_hi': est.hi})
         rows.append(row)
     return pd.DataFrame(rows, columns=['transition'] + [
-        f'{k}{q}' for k in ('suite', *_SMOLLM3_DOMAINS)
-        for q in ('', '_lo', '_hi')])
+        f'{k}{q}' for k in keys for q in ('', '_lo', '_hi')])
+
+def smollm3_calibration(traj):
+    """Per checkpoint and domain of traj, token-weighted over the
+    documents: loss (nats per token at T = 1), entropy, top-1 (accuracy),
+    best T (the temperature of _SMOLLM3_TEMPS with the lowest loss), loss
+    at best T, and recovered: the share of the loss's rise over the
+    previous checkpoint that the best temperature takes back (NaN when
+    the loss did not rise or the best temperature is 1)."""
+    cols = ['checkpoint', 'domain', 'loss', 'entropy', 'top-1', 'best T',
+            'loss at best T', 'recovered']
+    if not len(traj.docs):
+        return pd.DataFrame(columns=cols)
+    stat = _stat_columns()
+    g = traj.docs.groupby(['checkpoint', 'domain'], sort=False)[stat].sum()
+    order = [(c, d) for c in traj.table['checkpoint']
+             for d in _SMOLLM3_DOMAINS if (c, d) in g.index]
+    g = g.loc[order]
+    per = g[stat[:len(_SMOLLM3_TEMPS)]].div(g['tokens'], axis=0)
+    best = per.to_numpy().argmin(1)
+    out = pd.DataFrame(dict(
+        checkpoint=[c for c, _ in order], domain=[d for _, d in order],
+        loss=per['nll_t1'].to_numpy(),
+        entropy=(g['entropy'] / g['tokens']).to_numpy(),
+        top1=(g['top1'] / g['tokens']).to_numpy(),
+        best=np.asarray(_SMOLLM3_TEMPS)[best],
+        at_best=per.to_numpy()[np.arange(len(per)), best]))
+    prev = dict(zip(traj.table['checkpoint'][1:], traj.table['checkpoint']))
+    loss = out.set_index(['checkpoint', 'domain'])['loss']
+    rise = np.array([loss[c, d] - loss.get((prev.get(c), d), math.nan)
+                     for c, d in order])
+    ok = (rise > 0) & (out['best'] != 1.0).to_numpy()
+    out['recovered'] = math.nan
+    out.loc[ok, 'recovered'] = (out['loss'] - out['at_best'])[ok] / rise[ok]
+    out.columns = cols
+    return out
 
 def plot_smollm3(traj):
-    """Suite accuracy per task (left) and bits per byte per domain (right)
-    across the checkpoints."""
-    fig, (ax1, ax2) = d2l.plt.subplots(1, 2, figsize=(8, 3))
-    x = np.arange(len(traj.table))
-    for i, t in enumerate(SMOLLM3_TASKS):
-        ax1.plot(x, traj.table[t], '-o', ms=3, color=f'C{i}', label=t)
-    for i, dom in enumerate(_SMOLLM3_DOMAINS):
-        ax2.plot(x, traj.bpb[dom], '-o', ms=3, color=f'C{i}', label=dom)
-    for ax, what in ((ax1, 'accuracy'), (ax2, 'bits per byte')):
+    """Across the checkpoints: accuracy (left; the cloze mean with its 95%
+    interval over items, every task weighing the same, the six cloze
+    tasks as thin lines, GSM8K 8-shot and chat) and bits per byte per
+    domain (right)."""
+    import warnings
+    fig, (ax1, ax2) = d2l.plt.subplots(1, 2, figsize=(8, 3.2))
+    t = traj.table
+    x = np.arange(len(t))
+    d2l.plot(x, [t['cloze'], t['8-shot'], t['chat']], None, 'accuracy',
+             legend=['cloze mean', 'GSM8K 8-shot', 'GSM8K chat'],
+             fmts=('o-', 's--', '^-.'), axes=ax1, figsize=(8, 3.2))
+    per = traj.items.groupby(['checkpoint', 'task'])['score'].mean()
+    for task in SMOLLM3_TASKS:
+        ys = [per.get((c, task), math.nan) for c in t['checkpoint']]
+        ax1.plot(x, ys, '-', color='C0', linewidth=0.6, alpha=0.35)
+    lo, hi = [], []
+    for c in t['checkpoint']:
+        g = traj.items[traj.items['checkpoint'] == c]
+        if not len(g):
+            lo.append(math.nan), hi.append(math.nan)
+            continue
+        wt = 1 / g.groupby('task')['score'].transform('size')
+        with warnings.catch_warnings():  # a smoke run has under 100 items
+            warnings.simplefilter('ignore')
+            r = d2l.bootstrap_ci(g['score'] * wt / wt.mean(), 2000)
+        lo.append(r.ci[0]), hi.append(r.ci[1])
+    ax1.errorbar(x, t['cloze'], yerr=np.abs(np.stack([
+        t['cloze'] - lo, np.asarray(hi) - t['cloze']])), fmt='none',
+        color='C0', capsize=3)
+    d2l.plot(x, [traj.bpb[d] for d in _SMOLLM3_DOMAINS], None,
+             'bits per byte',
+             legend=['web', 'science', 'book', 'traces (seen)'],
+             fmts=('o-', 's-', '^-', 'D--'), axes=ax2, figsize=(8, 3.2))
+    for ax in (ax1, ax2):
         ax.set_xticks(x)
-        ax.set_xticklabels(traj.table['checkpoint'], rotation=30,
-                           ha='right', fontsize=8)
-        ax.set_ylabel(what)
-        ax.legend(fontsize=7)
+        ax.set_xticklabels(t['checkpoint'], rotation=30, ha='right',
+                           fontsize=8)
+        for text in (ax.get_legend().get_texts()
+                     if ax.get_legend() is not None else ()):
+            text.set_fontsize(7)
     fig.tight_layout()
+
+def plot_smollm3_calibration(calib):
+    """Entropy against loss (nats per token), one point per checkpoint
+    and domain of smollm3_calibration's table, with the diagonal (a
+    calibrated model's entropy equals its loss); the mid-training points
+    are labelled."""
+    if not len(calib):
+        return
+    doms = [d for d in _SMOLLM3_DOMAINS if d in set(calib['domain'])]
+    sub = [calib[calib['domain'] == d] for d in doms]
+    top = float(max(calib['loss'].max(), calib['entropy'].max())) * 1.05
+    d2l.plot([s['loss'] for s in sub] + [[0, top]],
+             [s['entropy'] for s in sub] + [[0, top]],
+             'loss (nats per token)', 'entropy (nats per token)',
+             legend=[*doms, 'entropy = loss'],
+             fmts=[('o', 's', '^', 'D')[i] for i in range(len(doms))]
+             + ['k:'], figsize=(4.2, 3.4))
+    ax = d2l.plt.gca()
+    for s in sub:
+        for _, r in s[s['checkpoint'] == 'mid-training'].iterrows():
+            ax.annotate('mid', (r['loss'], r['entropy']), fontsize=7,
+                        xytext=(4, -8), textcoords='offset points')
 ```

@@ -34,9 +34,19 @@ merge, the stored json-table read back, the step-0 row), a job folder of
 another arm refused, and a resumed arm equal to an uninterrupted one; the
 page's T2 cells on a pending result and the fallback's own label kept
 (and its configuration checked when given); the
-SmolLM3 merge (token counts, byte-weighted bits per byte) and
-`stage_deltas` with the page's cell; the regeneration jobs against the
-page's literals; the reasoning-trace corpus of
+SmolLM3 trajectory (F25): the merge (token counts, byte-weighted bits per
+byte, GSM8K accuracy and cut share, no reply text, a conditional rung's
+answers), the rungs only once they are regeneration names,
+`stage_deltas` (planted cloze, GSM8K and bits-per-byte changes; the
+MATH-500 line) and the page's four cells (shapes, widths, pending), the
+calibration table (best temperature, the share of the rise recovered), the
+cloze scores copied from version 1, the live call; bits per byte with no
+prefix token (`_scored_doc` on a hand count, `_doc_stats` against
+`bits_per_byte` without a boundary token and a full forward,
+`_logit_stats` on fixed logits); MATH-500's numeric filter and answers,
+the Minerva prompt, GSM-Symbolic items, the chat template of the
+mid-training tokenizer, `score_gsm8k` under SmolLM3's end token and with
+kind='math'; the regeneration jobs against the page's literals; the reasoning-trace corpus of
 tools/build_pretraining_data.py on a 30-document fixture (ids from the
 ChatML text, stable under the order of the files; decontamination and
 special strings; training selection in id order; held-out questions
@@ -892,83 +902,567 @@ class PendingPageTest(unittest.TestCase):
                     config, arms={'A': dict(peak_lr=1e-4)})))
 
 
+def smollm3_points(n_items=300, n_docs=60, seed=0, gain=None, rise=None,
+                   gsm=None):
+    """Synthetic smollm3-k parts: per-item cloze scores, per-document
+    calibration sums and GSM8K answers. gain(i) flips cloze items to
+    right from checkpoint i on; rise(i, dom) multiplies a domain's NLL;
+    gsm(i, fmt) is a checkpoint's GSM8K accuracy (items 0.. in order)."""
+    names = list(d2l._smollm3_call()['names'])
+    rng = np.random.default_rng(seed)
+    base = rng.random((len(d2l.SMOLLM3_TASKS), n_items)) < 0.6
+    flip = rng.random(base.shape) < 0.25
+    nbytes = rng.integers(500, 5000, n_docs)
+    ntok = (nbytes / 4).astype(int)
+    per_tok = 1.5 + 0.2 * np.sin(np.arange(n_docs))
+    temps = np.asarray(d2l._SMOLLM3_TEMPS)
+    pts = {}
+    for i, n in enumerate(names):
+        label = d2l._SMOLLM3[n][0]
+        score = base | flip if gain and gain(i) else base
+        items = pd.DataFrame([dict(task=t, item_id=j,
+                                   score=float(score[k, j]),
+                                   checkpoint=label)
+                              for k, t in enumerate(d2l.SMOLLM3_TASKS)
+                              for j in range(n_items)])
+        rows = []
+        for dom in d2l._SMOLLM3_DOMAINS:
+            f = rise(i, dom) if rise else 1.0
+            for k in range(n_docs):
+                nll = per_tok[k] * f * ntok[k]
+                row = dict(domain=dom, doc=k, bytes=int(nbytes[k]))
+                # the T = 1 loss is the grid's best for a factor of 1
+                row.update({f'nll_t{t:g}': nll * (1 + 0.1 * (t - 1) ** 2)
+                            for t in temps})
+                row.update(entropy=nll, top1=0.5 * ntok[k],
+                           tokens=int(ntok[k]),
+                           bpb=nll / (math.log(2) * nbytes[k]),
+                           checkpoint=label)
+                rows.append(row)
+        answers = []
+        for fmt in ('completion', 'chat'):
+            p = gsm(i, fmt) if gsm else 0.5
+            answers += [dict(format=fmt, item_id=str(j),
+                             score=float(j < p * 500), forced=float(
+                                 j < p * 500), cut=fmt == 'chat' and j >= 480,
+                             thinks=fmt == 'chat', closed=fmt == 'chat',
+                             chat_tokens=False, new_tokens=10, task='gsm8k',
+                             checkpoint=label, text='x', pred='1',
+                             forced_pred='1', forced_text=None)
+                        for j in range(500)]
+        pts[f'smollm3-{i}'] = dict(items=items, docs=pd.DataFrame(rows),
+                                   answers=pd.DataFrame(answers),
+                                   ctx=65536 if n in ('lc64k', 'mid')
+                                   else 4096)
+    return pts
+
+
+class ByteTokenizer:
+    """UTF-8 bytes as token ids (no boundary token), with the two calls
+    _scored_doc makes and the encode/decode bits_per_byte makes."""
+    def __call__(self, text, add_special_tokens=False):
+        return dict(input_ids=list(text.encode('utf-8')))
+
+    def encode(self, text):
+        return list(text.encode('utf-8'))
+
+    def decode(self, ids, clean_up_tokenization_spaces=False):
+        return bytes(ids).decode('utf-8', errors='replace')
+
+
+def tiny_llama(vocab=256, seed=0):
+    import transformers
+    cfg = transformers.LlamaConfig(
+        vocab_size=vocab, hidden_size=32, intermediate_size=64,
+        num_hidden_layers=2, num_attention_heads=4, num_key_value_heads=2,
+        max_position_embeddings=64, tie_word_embeddings=True)
+    torch.manual_seed(seed)
+    return transformers.LlamaForCausalLM(cfg).eval()
+
+
 class SmolLM3Test(unittest.TestCase):
     def test_merge(self):
+        pts = smollm3_points(n_items=4, n_docs=2)
         names = list(d2l._smollm3_call()['names'])
-        pts = {}
-        for i, n in enumerate(names):
-            items = pd.DataFrame([dict(task=t, item_id=f'{t}{j}',
-                                       score=float((i + j) % 2),
-                                       checkpoint=d2l._SMOLLM3[n][0])
-                                  for t in d2l.SMOLLM3_TASKS
-                                  for j in range(4)])
-            docs = pd.DataFrame([dict(checkpoint=d2l._SMOLLM3[n][0],
-                                      domain=dom, doc=k, bpb=1.0 + k,
-                                      bytes=100 * (k + 1))
-                                 for dom in d2l._SMOLLM3_DOMAINS
-                                 for k in range(2)])
-            pts[n] = dict(items=items, docs=docs,
-                          ctx=65536 if n in ('lc64k', 'mid') else 4096)
         traj = d2l._smollm3_merge(pts, names)
         self.assertEqual(list(traj.table['tokens']),
                          ['8.1T', '9.9T', '11.1T', '11.2T', '11.2T', '11.4T'])
         self.assertEqual(list(traj.table['ctx'])[-2:], ['64K', '64K'])
-        self.assertEqual(list(traj.table.columns),
-                         ['checkpoint', 'tokens', 'ctx', *d2l.SMOLLM3_TASKS])
-        # byte-weighted: (1 * 100 + 2 * 200) / 300
-        self.assertAlmostEqual(traj.bpb['web'].iloc[0], 500 / 300)
-        self.assertEqual(len(traj.bpb), 6)
-        short = dict(hellaswag='hswag', arc_easy='arc-e',
-                     arc_challenge='arc-c', winogrande='wino')
-        line = traj.table.rename(columns=short).to_string(
-            index=False, float_format=lambda v:
-                                    f'{100 * v:.1f}').splitlines()[0]
-        self.assertLessEqual(len(line), 80)
+        self.assertEqual(list(traj.table.columns), [
+            'checkpoint', 'tokens', 'ctx', 'cloze', '8-shot', 'chat', 'cut',
+            'web', 'science', 'book', 'traces'])
+        self.assertEqual(list(traj.bpb.columns),
+                         ['checkpoint', *d2l._SMOLLM3_DOMAINS])
+        # byte-weighted bits per byte over the documents
+        d = pts['smollm3-0']['docs']
+        web = d[d['domain'] == 'web']
+        self.assertAlmostEqual(traj.bpb['web'].iloc[0], (
+            web['bpb'] * web['bytes']).sum() / web['bytes'].sum())
+        self.assertAlmostEqual(traj.table['chat'].iloc[0], 0.5)
+        self.assertAlmostEqual(traj.table['cut'].iloc[0], 0.04)
+        self.assertNotIn('text', traj.answers.columns)  # no reply text
+        self.assertEqual(list(traj.answers.columns),
+                         d2l._smollm3_answer_columns())
+
+    def test_merge_with_a_rung(self):
+        """A conditional rung's answers join the merge (claim 10h)."""
+        pts = smollm3_points(n_items=4, n_docs=2)
+        rung = pts['smollm3-4']['answers'].assign(task='math500')
+        pts['smollm3-math-4'] = dict(answers=rung)
+        traj = d2l._smollm3_merge(pts, list(d2l._smollm3_call()['names']))
+        self.assertEqual(set(traj.answers['task']), {'gsm8k', 'math500'})
+        self.assertAlmostEqual(traj.table['8-shot'].iloc[4], 0.5)
+
+    def test_rungs_only_when_named(self):
+        """The conditional rungs are parts of the merge only once their
+        names are regeneration names (the gate ruled them in, F26)."""
+        seen = {}
+
+        def merged(name, parts, merge, config, **kw):
+            seen['parts'] = sorted(parts)
+            return d2l._pending_result('smollm3-trajectory')
+        names = list(d2l._smollm3_call()['names'])
+        with mock.patch.object(d2l, '_pretrain_merged', merged), \
+                contextlib.redirect_stdout(io.StringIO()):
+            d2l.smollm3_trajectory(names)
+            self.assertEqual(seen['parts'],
+                             sorted(f'smollm3-{k}' for k in range(6)))
+            with mock.patch.object(d2l, 'PRETRAIN_RERUN_NAMES',
+                                   d2l.PRETRAIN_RERUN_NAMES + (
+                                       'smollm3-math-5', 'smollm3-symbolic')):
+                traj = d2l.smollm3_trajectory(names)
+        self.assertEqual(seen['parts'], sorted(
+            [f'smollm3-{k}' for k in range(6)] + ['smollm3-math-5',
+                                                 'smollm3-symbolic']))
+        self.assertEqual(list(traj.answers.columns),
+                         d2l._smollm3_answer_columns())
+        self.assertEqual(d2l._SMOLLM3_RUNGS['smollm3-math-2'],
+                         ('math500', ('stage3',)))
 
     def test_stage_deltas(self):
-        """Paired changes between adjacent checkpoints: a planted +10
-        points on one transition and +20% bits per byte on one domain are
-        recovered, the rest is 0 within the interval; the page's cell fits
-        12 lines of at most 80 columns."""
-        names = list(d2l._smollm3_call()['names'])
-        rng = np.random.default_rng(0)
-        base = rng.random((len(d2l.SMOLLM3_TASKS), 300)) < 0.6
-        flip = rng.random(base.shape) < 0.25  # stage 2 -> 3 gains 10 points
-        nbytes = rng.integers(500, 5000, 60)
-        pts = {}
-        for i, n in enumerate(names):
-            score = base | flip if i >= 2 else base
-            items = pd.DataFrame([dict(task=t, item_id=j,
-                                       score=float(score[k, j]),
-                                       checkpoint=d2l._SMOLLM3[n][0])
-                                  for k, t in enumerate(d2l.SMOLLM3_TASKS)
-                                  for j in range(300)])
-            bpb = 0.7 + 0.1 * np.sin(np.arange(60))
-            docs = pd.DataFrame([dict(checkpoint=d2l._SMOLLM3[n][0],
-                                      domain=dom, doc=k, bytes=nbytes[k],
-                                      bpb=bpb[k] * (1.2 if dom == 'book'
-                                                    and i >= 3 else 1.0))
-                                 for dom in d2l._SMOLLM3_DOMAINS
-                                 for k in range(60)])
-            pts[n] = dict(items=items, docs=docs, ctx=4096)
-        traj = d2l._smollm3_merge(pts, names)
+        """Paired changes between adjacent checkpoints: a planted cloze
+        gain, a +20% bits-per-byte rise on one domain and a +10-point
+        GSM8K chat gain are recovered, the rest is 0 within the interval;
+        the page's cell fits 13 lines of at most 80 columns."""
+        pts = smollm3_points(gain=lambda i: i >= 2,
+                             rise=lambda i, dom: 1.2 if dom == 'book'
+                             and i >= 3 else 1.0,
+                             gsm=lambda i, fmt: 0.6 if fmt == 'chat'
+                             and i == 5 else 0.5)
+        traj = d2l._smollm3_merge(pts, list(d2l._smollm3_call()['names']))
         deltas = d2l.stage_deltas(traj).set_index('transition')
         self.assertEqual(list(deltas.index), ['S1 → S2', 'S2 → S3',
                                               'S3 → LC32K', 'LC32K → LC64K',
                                               'LC64K → mid'])
-        gain = 100 * (base | flip).mean() - 100 * base.mean()
-        self.assertAlmostEqual(deltas.suite['S2 → S3'], gain, places=6)
-        self.assertGreater(deltas.suite_lo['S2 → S3'], 0)
-        self.assertEqual(deltas.suite['S1 → S2'], 0)
+        self.assertGreater(deltas.cloze_lo['S2 → S3'], 0)
+        self.assertEqual(deltas.cloze['S1 → S2'], 0)
         self.assertAlmostEqual(deltas.book['S3 → LC32K'], 20, places=6)
         self.assertGreater(deltas.book_lo['S3 → LC32K'], 19.9)
         self.assertAlmostEqual(deltas.web['S3 → LC32K'], 0)
+        self.assertAlmostEqual(deltas.gsm8k_chat['LC64K → mid'], 10,
+                               places=6)
+        self.assertGreater(deltas.gsm8k_chat_lo['LC64K → mid'], 0)
+        self.assertEqual(deltas.gsm8k_completion['LC64K → mid'], 0)
+        self.assertTrue(deltas.math500_chat.isna().all())
         out = run_cell('continued-pretraining-stage-deltas',
                        dict(page_ns(), traj=traj))
         lines = out.splitlines()
-        self.assertEqual(len(lines), 12)
+        self.assertEqual(len(lines), 13)
         self.assertLessEqual(max(map(len, lines)), 80)
-        self.assertIn('+20.0 [+20.0, +20.0]', lines[9])
+        self.assertTrue(lines[0].startswith('Δ points      cloze [95% CI]'))
+        self.assertIn('+10.0 [+', lines[5])
+        self.assertEqual(lines[6].split(), ['Δ', 'BPB,', '%', 'web',
+                                            'science', 'book', 'traces'])
+        self.assertEqual(lines[9].split()[-2], '+20.0*')
+        # a MATH-500 rung adds one line for LC 64K → mid
+        rung = pts['smollm3-4']['answers'].assign(task='math500')
+        rung5 = pts['smollm3-5']['answers'].assign(task='math500')
+        pts.update({'smollm3-math-4': dict(answers=rung),
+                    'smollm3-math-5': dict(answers=rung5)})
+        traj = d2l._smollm3_merge(pts, list(d2l._smollm3_call()['names']))
+        deltas = d2l.stage_deltas(traj)
+        self.assertEqual(deltas['math500_chat'].notna().sum(), 1)
+        lines = run_cell('continued-pretraining-stage-deltas',
+                         dict(page_ns(), traj=traj)).splitlines()
+        self.assertEqual(len(lines), 14)
+        self.assertTrue(lines[6].startswith('LC64K → mid   MATH-500'))
+        self.assertLessEqual(max(map(len, lines)), 80)
+
+    def test_page_table_and_plot(self):
+        traj = d2l._smollm3_merge(smollm3_points(n_items=20, n_docs=4),
+                                  list(d2l._smollm3_call()['names']))
+        ns = page_ns()
+        with mock.patch.object(d2l, 'smollm3_trajectory',
+                               lambda names: traj):
+            lines = run_cell('continued-pretraining-smollm3',
+                             ns).splitlines()
+        self.assertEqual(len(lines), 7)
+        self.assertLessEqual(max(map(len, lines)), 80)
+        self.assertEqual(lines[0].split(), [
+            'checkpoint', 'tokens', 'ctx', 'cloze', '8-shot', 'chat', 'cut',
+            'web', 'science', 'book', 'traces'])
+        self.assertRegex(lines[6], r'^mid-training +11\.4T +64K +\d+\.\d '
+                                   r'+50\.0 +50\.0 +4% +\d\.\d{3}')
+        d2l.plt.close('all')
+
+    def test_calibration(self):
+        """Best temperature and the share of the rise it recovers, on
+        planted sums: LC 64K calibrated (best T 1), mid-training's loss
+        3.0 at T = 1 and 2.7 at T = 1.5 after LC 64K's 2.0."""
+        temps = d2l._SMOLLM3_TEMPS
+        curves = {'LC 64K': (2.2, 2.0, 2.1, 2.3, 2.6),
+                  'mid-training': (3.6, 3.0, 2.8, 2.7, 2.9)}
+        docs = pd.DataFrame([dict(checkpoint=c, domain='web', doc=k,
+                                  bytes=400, tokens=100, top1=40 + k,
+                                  entropy=100 * (2.0 if c == 'LC 64K'
+                                                 else 1.5),
+                                  **{f'nll_t{t:g}': 100 * v
+                                     for t, v in zip(temps, curve)})
+                             for c, curve in curves.items()
+                             for k in range(2)])
+        table = pd.DataFrame(dict(checkpoint=list(curves)))
+        traj = d2l.SmolTrajectory(table, None, None, docs, None, '')
+        calib = d2l.smollm3_calibration(traj).set_index('checkpoint')
+        self.assertEqual(list(calib.columns), [
+            'domain', 'loss', 'entropy', 'top-1', 'best T',
+            'loss at best T', 'recovered'])
+        self.assertEqual(calib.loc['LC 64K', 'best T'], 1.0)
+        self.assertTrue(np.isnan(calib.loc['LC 64K', 'recovered']))
+        self.assertEqual(calib.loc['mid-training', 'best T'], 1.5)
+        self.assertAlmostEqual(calib.loc['mid-training', 'loss at best T'],
+                               2.7)
+        self.assertAlmostEqual(calib.loc['mid-training', 'recovered'], 0.3)
+        self.assertAlmostEqual(calib.loc['mid-training', 'top-1'], 0.405)
+        self.assertAlmostEqual(calib.loc['mid-training', 'entropy'], 1.5)
+
+    def test_calibration_cell(self):
+        traj = d2l._smollm3_merge(smollm3_points(n_items=4, n_docs=4,
+                                                 rise=lambda i, dom: 1.5
+                                                 if i == 5 else 1.0),
+                                  list(d2l._smollm3_call()['names']))
+        lines = run_cell('continued-pretraining-smollm3-calibration',
+                         dict(page_ns(), traj=traj)).splitlines()
+        self.assertEqual(len(lines), 7)
+        self.assertLessEqual(max(map(len, lines)), 80)
+        self.assertEqual(lines[0].split()[:4], ['checkpoint', 'domain',
+                                                'loss', 'entropy'])
+        self.assertEqual([r.split()[0] for r in lines[1:]],
+                         ['LC'] * 3 + ['mid-training'] * 3)
+        self.assertTrue(lines[1].rstrip().endswith('–'))
+        d2l.plt.close('all')
+
+    def test_live_cell(self):
+        """Cell 17: four lines, the committed value next to the live one."""
+        traj = d2l._smollm3_merge(smollm3_points(n_items=4, n_docs=2),
+                                  list(d2l._smollm3_call()['names']))
+        live = pd.DataFrame([dict(checkpoint=c, format=f, item_id=str(j),
+                                  score=float(j < 20))
+                             for c in ('LC 64K', 'mid-training')
+                             for f in ('completion', 'chat')
+                             for j in range(50)])
+        with mock.patch.object(d2l, 'smollm3_gsm8k',
+                               lambda names, n: live):
+            lines = run_cell('continued-pretraining-smollm3-live',
+                             dict(page_ns(), traj=traj)).splitlines()
+        self.assertEqual(len(lines), 5)
+        self.assertLessEqual(max(map(len, lines)), 80)
+        self.assertEqual(lines[0].split()[:6], ['checkpoint', 'format',
+                                                'live', '(n', '=', '50)'])
+        self.assertTrue(lines[0].endswith('committed (n = 500)'))
+        self.assertEqual(lines[1].split()[-1], '50%')
+        self.assertIn('8-shot', lines[1])
+        self.assertRegex(lines[2], r'^LC 64K +chat +40% \[\d\d, \d\d\] +50%$')
+
+    def test_pending_cells(self):
+        """The four SmolLM3 cells run on a pending result."""
+        ns = page_ns()
+        hub = {k: v for k, v in d2l.DATA_HUB.items()
+               if k != d2l.PRETRAIN_ARTIFACTS['smollm3-trajectory'][0]}
+        names = {f'smollm3-{k}' for k in range(6)}
+        empty = pd.DataFrame(columns=['checkpoint', 'format', 'item_id',
+                                      'score'])
+        with mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset(names)), \
+                mock.patch.dict(os.environ, {'D2L_RERUN': ''}), \
+                mock.patch.dict(d2l.DATA_HUB, hub, clear=True), \
+                mock.patch.object(d2l, 'smollm3_gsm8k',
+                                  lambda names, n: empty), \
+                warnings_as_errors():
+            out = run_cell('continued-pretraining-smollm3', ns)
+            self.assertEqual(out.splitlines()[0],
+                             '[smollm3-trajectory pending]')
+            for cell in ('stage-deltas', 'smollm3-calibration',
+                         'smollm3-live'):
+                run_cell(f'continued-pretraining-{cell}', ns)
+        d2l.plt.close('all')
+
+    def test_cloze_copied_from_v1(self):
+        v1 = mock.Mock(items=pd.DataFrame([
+            dict(task=t, item_id=j, score=1.0, checkpoint=c)
+            for c in ('LC 64K', 'mid-training') for t in d2l.SMOLLM3_TASKS
+            for j in range(2)]))
+        with mock.patch.object(d2l, '_read_result', lambda p, k: v1), \
+                mock.patch.object(d2l, 'download_keyed', lambda k: k):
+            got = d2l._smollm3_cloze('mid')
+            self.assertEqual(len(got), 2 * len(d2l.SMOLLM3_TASKS))
+            self.assertEqual(set(got['checkpoint']), {'mid-training'})
+            self.assertIsNone(d2l._smollm3_cloze('stage1'))
+        with mock.patch.dict(d2l.DATA_HUB, {}, clear=True):
+            self.assertIsNone(d2l._smollm3_cloze('mid'))
+
+    def test_live_call(self):
+        """smollm3_gsm8k: the first n of the 500 committed items, both
+        formats, SmolLM3's end token, no forced answers, the live
+        batch."""
+        items = [dict(id=str(i), question='q', prompt='P', reference='1')
+                 for i in range(500)]
+        calls = []
+
+        def score(model, tok, its, **kw):
+            calls.append((model, its, kw))
+            return pd.DataFrame(dict(format='chat', item_id=[
+                it['id'] for it in its], score=1.0, text='t', pred='1',
+                forced_pred='1', forced_text=None))
+        with mock.patch.object(d2l, 'gsm8k_items', lambda n, seed: items), \
+                mock.patch.object(d2l, 'score_gsm8k', score), \
+                mock.patch.object(d2l, '_smollm3_load', lambda name: name), \
+                mock.patch.object(d2l, '_smollm3_tokenizer', lambda n: n), \
+                mock.patch.object(d2l, 'lm_free', lambda: None):
+            res = d2l.smollm3_gsm8k(['lc64k', 'mid'], n=50)
+        self.assertEqual([c[0] for c in calls], ['lc64k', 'mid'])
+        self.assertEqual(calls[0][1], items[:50])
+        kw = calls[0][2]
+        self.assertEqual((kw['force'], kw['end_token'], kw['budget']),
+                         (0, '<|end_of_text|>', dict(completion=256,
+                                                     chat=4096)))
+        self.assertEqual(kw['batch_size'], d2l._SMOLLM3_LIVE['batch'])
+        self.assertEqual(list(res.columns)[:2], ['checkpoint', 'format'])
+        self.assertNotIn('text', res.columns)
+        self.assertEqual(set(res['checkpoint']), {'LC 64K', 'mid-training'})
+
+
+class NoPrefixBpbTest(unittest.TestCase):
+    """Bits per byte with no prefix token (F25): the first token, which
+    has no context, goes unscored with the bytes it spells."""
+    def test_scored_doc_hand_count(self):
+        tok = ByteTokenizer()
+        ids, first, nb = d2l._scored_doc(tok, 'héllo wörld')
+        self.assertEqual((len(ids), first, nb), (13, 1, 12))
+        # a first character of two bytes: both go unscored
+        ids, first, nb = d2l._scored_doc(tok, 'éa')
+        self.assertEqual((ids, first, nb), ([195, 169, 97], 2, 1))
+        # a limit inside a character drops the cut character
+        ids, first, nb = d2l._scored_doc(tok, 'abé', limit=3)
+        self.assertEqual((ids, first, nb), ([97, 98], 1, 1))
+        ids, first, nb = d2l._scored_doc(tok, 'abcdef', limit=4)
+        self.assertEqual((ids, first, nb), ([97, 98, 99, 100], 1, 3))
+
+    def test_stats_against_bits_per_byte(self):
+        """At T = 1 the summed NLL over bytes equals bits_per_byte with no
+        boundary token, windows and all (ctx 8, stride 4); every target
+        is scored once; a short document equals one full forward."""
+        model, tok = tiny_llama(), ByteTokenizer()
+        texts = ['the quick brown fox jumps over the lazy dog', 'éa ok',
+                 'short']
+        docs = [d2l._scored_doc(tok, t) for t in texts]
+        stats = d2l._doc_stats(model, [(i, f) for i, f, _ in docs],
+                               ctx_len=8, stride=4, batch_size=3)
+        k1 = d2l._SMOLLM3_TEMPS.index(1.0)
+        self.assertEqual(list(stats[:, -1]), [len(i) - f for i, f, _ in docs])
+        with contextlib.redirect_stderr(io.StringIO()):
+            for t, (ids, f, nb), s in zip(texts, docs, stats):
+                want = d2l.bits_per_byte(model, tok, [t], ctx_len=8,
+                                         stride=4)
+                self.assertAlmostEqual(s[k1] / (math.log(2) * nb), want,
+                                       places=5)
+        ids, f, _ = docs[2]
+        with torch.no_grad():
+            logits = model(torch.tensor([ids])).logits[0].float()
+        direct = F.cross_entropy(logits[f - 1:-1], torch.tensor(ids[f:]),
+                                 reduction='sum').item()
+        one = d2l._doc_stats(model, [(ids, f)], ctx_len=8)
+        self.assertAlmostEqual(one[0, k1], direct, places=4)
+
+    def test_logit_stats_grid(self):
+        """The NLL at each temperature, the entropy and top-1 on fixed
+        logits, against a direct computation."""
+        z = torch.tensor([[1.0, 2.0, 3.0], [0.5, -1.0, 0.0]])
+        y = torch.tensor([0, 0])
+        temps = d2l._SMOLLM3_TEMPS
+        got = d2l._logit_stats(z, y, temps).numpy()
+        for j, t in enumerate(temps):
+            p = np.exp(z.numpy() / t)
+            p /= p.sum(1, keepdims=True)
+            np.testing.assert_allclose(got[:, j], -np.log(p[[0, 1], [0, 0]]),
+                                       rtol=1e-6)
+        p = np.exp(z.numpy())
+        p /= p.sum(1, keepdims=True)
+        np.testing.assert_allclose(got[:, len(temps)],
+                                   -(p * np.log(p)).sum(1), rtol=1e-6)
+        self.assertEqual(list(got[:, -1]), [0.0, 1.0])
+        # a uniform distribution: the same loss at every temperature
+        u = d2l._logit_stats(torch.zeros(1, 4), torch.tensor([2]), temps)
+        np.testing.assert_allclose(u[0, :len(temps)].numpy(),
+                                   [math.log(4)] * len(temps), rtol=1e-6)
+
+
+class SmolLM3AnswersTest(unittest.TestCase):
+    """The reasoning instruments: MATH-500's numeric subset, the two
+    formats' prompts, and score_gsm8k under SmolLM3's tokens."""
+    def test_math_value(self):
+        cases = {'9': '9', '-50': '-50', '\\frac{14}{3}': '14/3',
+                 '\\dfrac{6}{4}': '3/2', '-\\frac34': '-3/4', '0.15': '3/20',
+                 '1.25': '5/4', '2,000': '2000', '10{,}000': '10000',
+                 '$-5$': '-5', '3/56': '3/56', '-.5': '-1/2'}
+        for s, want in cases.items():
+            self.assertEqual(d2l.math_value(s), want, s)
+        for s in ('90^\\circ', '1,-2', '-\\frac{\\pi}{6}', '3\\sqrt{13}',
+                  'x=5', '\\text{Evelyn}', '52_8', '5/0', '6 - 5i', '1,00',
+                  None, '(-2,1)'):
+            self.assertIsNone(d2l.math_value(s), s)
+
+    def test_math_answers(self):
+        tail = ('\nFinal Answer: The final answer is $-\\frac{2}{3}$. I hope'
+                ' it is correct.')
+        self.assertEqual(d2l.math_completion_answer('so x = 3.' + tail),
+                         '-2/3')
+        self.assertEqual(d2l.math_completion_answer('so \\boxed{24}.'), '24')
+        self.assertEqual(d2l.math_completion_answer(
+            'The final answer is $24$'), '24')
+        self.assertIsNone(d2l.math_completion_answer('no answer'))
+        ans = d2l.math_chat_answer
+        self.assertEqual(ans('<think> 2/3 </think> $\\boxed{\\frac{2}{3}}$',
+                             'eos'), '2/3')
+        self.assertIsNone(ans('<think> \\boxed{1}', 'eos'))  # never closed
+        self.assertIsNone(ans('<think> a </think> \\boxed{1}', 'length'))
+        self.assertEqual(ans('\\boxed{0.5}', 'eos'), '1/2')
+
+    def test_math500_items(self):
+        """The numeric filter and the Minerva prompt on a fixture file."""
+        rows = [dict(problem='p1', answer='\\frac{1}{2}', unique_id='a'),
+                dict(problem='p2', answer='x^2', unique_id='b'),
+                dict(problem='p3', answer='42', unique_id='c')]
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'test.jsonl')
+            with open(path, 'w') as f:
+                f.writelines(json.dumps(r) + '\n' for r in rows)
+            with mock.patch('huggingface_hub.hf_hub_download',
+                            lambda *a, **k: path):
+                items = d2l.math500_items()
+        self.assertEqual([(i['id'], i['reference']) for i in items],
+                         [('a', '1/2'), ('c', '42')])
+        p = items[1]['prompt']
+        self.assertTrue(p.startswith('Problem:\nFind the domain'))
+        self.assertTrue(p.endswith('Problem:\np3\n\nSolution:'))
+        self.assertEqual(p.count('Problem:'), 5)
+        self.assertEqual(p.count('I hope it is correct.'), 4)
+        # each demonstration's own answer is read by the completion rule
+        for q, a in d2l._MINERVA_DEMOS[1:]:
+            self.assertIsNotNone(d2l.math_completion_answer(a), q)
+
+    @unittest.skipUnless(os.path.exists(os.path.join(
+        os.environ.get('HF_HOME', os.path.expanduser('~/.cache/huggingface')),
+        'hub', 'datasets--HuggingFaceH4--MATH-500')),
+        'MATH-500 is not on this machine')
+    def test_math500_count(self):
+        items = d2l.math500_items()
+        self.assertEqual(len(items), 376)  # F25: counted at build
+
+    def test_templates(self):
+        """One prompt per format for every checkpoint: the chat prompt is
+        the mid-training tokenizer's own chat template, and the
+        completion prompt is gsm8k_cot's 8-shot prompt."""
+        try:
+            tok = d2l._smollm3_tokenizer('mid')
+        except Exception as e:  # the tokenizer is not on this machine
+            self.skipTest(f'SmolLM3 tokenizer not available: {e}')
+        msgs = [dict(role='user', content='What is 2 + 2?')]
+        self.assertEqual(tok.apply_chat_template(
+            msgs, tokenize=False, add_generation_prompt=True),
+            d2l.gsm8k_chat_prompt('What is 2 + 2?'))
+        base = d2l._smollm3_tokenizer('lc64k')
+        prompt = d2l.gsm8k_chat_prompt('What is 2 + 2?')
+        for t in (tok, base):  # the same ids: ChatML markers are special
+            ids = d2l._lm_prompt_ids(t, [prompt])[0]
+            self.assertEqual((ids[0], ids.count(128011), ids.count(128012)),
+                             (128011, 2, 1))
+        self.assertEqual(d2l._lm_prompt_ids(tok, [prompt]),
+                         d2l._lm_prompt_ids(base, [prompt]))
+        self.assertEqual(tok.convert_tokens_to_ids('<|end_of_text|>'),
+                         128001)
+        self.assertIsNone(tok.bos_token)  # nothing goes before a prompt
+        self.assertFalse(tok.clean_up_tokenization_spaces)  # no warning
+        with self.assertNoLogs('transformers', level='WARNING'):
+            tok.batch_decode([[9906, 1174]], skip_special_tokens=True)
+
+    def test_gsm_symbolic_items(self):
+        rows = [dict(id=t, instance=i, question=f'q{t}{i}',
+                     answer=f'so #### {t + i}') for t in range(3)
+                for i in range(6)]
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'test.jsonl')
+            with open(path, 'w') as f:
+                f.writelines(json.dumps(r) + '\n' for r in rows)
+            with mock.patch.object(d2l, 'download_keyed', lambda k: path):
+                items = d2l.gsm_symbolic_items(5)
+        self.assertEqual(len(items), 15)
+        self.assertEqual((items[6]['id'], items[6]['reference']),
+                         ('1-1', '2'))
+        self.assertEqual(items[0]['prompt'], d2l.fewshot_prompt(
+            d2l.GSM8K_COT_DEMOS, 'q00', 'qa'))
+
+    def test_score_smollm3_tokens_and_math(self):
+        """score_gsm8k with SmolLM3's end token, and kind='math': stop at
+        'Problem:', fractions compared by value, forced answers read from
+        a box closed by '}$'."""
+        class SmolTok:
+            ids = {'<|end_of_text|>': 128001, '<|im_end|>': 128012}
+
+            def convert_tokens_to_ids(self, t):
+                return self.ids.get(t)
+        items = [dict(id=str(i), question=f'q{i}', prompt=f'P{i}',
+                      reference='2/3') for i in range(3)]
+        replies = {
+            'completion': [Gen('...\nFinal Answer: The final answer is '
+                               '$\\frac{4}{6}$. I hope it is correct.',
+                               'stop'), Gen('x = 3', 'stop'),
+                           Gen('\\boxed{0.5}', 'stop')],
+            'chat': [Gen('<think> a </think> \\boxed{\\dfrac{2}{3}}'),
+                     Gen('<think> long', 'length', 8192),
+                     Gen('<think> b </think> 0.66')],
+            'forced': [Gen('\\frac{2}{3}', 'stop')]}
+        calls = []
+
+        def generate(model, tok, prompts, max_new, **kw):
+            fmt = 'forced' if kw['stop'] == ['}$'] else 'chat' if prompts[
+                0].startswith('<|im_start|>') else 'completion'
+            calls.append((fmt, max_new, kw))
+            return replies[fmt]
+        cfg = d2l._SMOLLM3_ANSWERS['math500']
+        with mock.patch.object(d2l, 'generate', generate):
+            res = d2l.score_gsm8k(None, SmolTok(), items, budget=cfg[
+                'budget'], batch_size=cfg['batch'], end_token=
+                '<|end_of_text|>', kind='math')
+        comp, chat, forced = calls
+        self.assertEqual((comp[1], comp[2]['stop'], comp[2]['eos_token_ids']),
+                         (1024, ['Problem:'], [128001]))
+        self.assertEqual((chat[1], sorted(chat[2]['eos_token_ids'])),
+                         (8192, [128001, 128012]))
+        self.assertEqual(forced[2]['batch_size'], 8)
+        r = res.set_index(['format', 'item_id'])
+        self.assertEqual(list(r.loc['completion', 'score']), [1, 0, 0])
+        self.assertEqual(list(r.loc['chat', 'score']), [1, 0, 0])
+        self.assertEqual(list(r.loc['chat', 'forced']), [1, 1, 0])
+        with self.assertRaises(ValueError):
+            d2l.score_gsm8k(None, SmolTok(), items, kind='aime')
+
+
+@contextlib.contextmanager
+def warnings_as_errors():
+    import warnings
+    with warnings.catch_warnings():
+        for kind in (UserWarning, RuntimeWarning, FutureWarning):
+            warnings.simplefilter('error', kind)
+        yield
 
 
 class Gen:

@@ -24244,13 +24244,13 @@ SPIKE_WINDOW = 100  # steps after the bad batch that the statistics read
 SPIKE_CLIP = 1.0  # the clip twins' threshold, on from the replay's state
 SPIKE_LATE = {1297: ('lm-r2t1-s1297-state-v1', 0.95)}  # committed states:
 # step: (key, its beta2); t1-runs seed 0 at the end of its plateau
-SPIKE_STATS = 1  # version of the statistics: bump when they change
+SPIKE_STATS = 2  # version of the statistics: bump when they change
 
 _SPIKE_TABLES = dict(  # the columns of a SpikeReplay's tables
     table=['beta2', 'state', 'bad_step', 'batch', 'k', 'norm', 'median',
            'norm_ratio', 'peak', 'recover', 'total', 'norm_clip',
            'peak_clip', 'recover_clip', 'total_clip', 'clipped_before',
-           'clip_ratio', 'clip_predicted'],
+           'clip_ratio', 'clip_predicted', 'drift'],
     traces=['beta2', 'state', 'bad_step', 'batch', 'k', 'arm', 'step',
             'loss', 'grad_norm', 'clipped'])
 
@@ -24324,11 +24324,13 @@ def spike_excess(bad, ref, bad_step, floor, window=SPIKE_WINDOW):
     return dict(peak=float(e.max()), recover=recover, total=float(e.sum()))
 
 def _spike_arms(arms, global_batch, steps=SPIKE_STEPS, window=SPIKE_WINDOW,
-                late=None):
+                late=None, warmup=0):
     """The page's arm table as _SpikeArms, each (beta2, state, bad_step,
     batch, k, clip twin), checked: 'random' replaces all global_batch rows,
     'ngram' k of them; 0 < state < bad_step and the window fits into the
-    replay; a committed state (late) only at its own beta2; no arm twice.
+    replay; the state at or after the end of warmup (so every replay runs
+    at the constant peak rate); a committed state (late) only at its own
+    beta2; no arm twice.
 
     Defined in :numref:`sec_lm_reference_model`"""
     late = SPIKE_LATE if late is None else late
@@ -24350,6 +24352,10 @@ def _spike_arms(arms, global_batch, steps=SPIKE_STEPS, window=SPIKE_WINDOW,
                              f'{window}, batch random (k = {global_batch}) '
                              f'or ngram (1 <= k <= {global_batch}), clip '
                              'twin True or False')
+        if a.state < warmup:
+            raise ValueError(f'arm {tuple(a)}: the replay must start after '
+                             f'the {warmup} warmup steps (Adam\'s kick '
+                             'scales with the learning rate)')
         if a.state in late and a.beta2 != late[a.state][1]:
             raise ValueError(f'the committed state at step {a.state} has '
                              f'beta2 {late[a.state][1]}, not {a.beta2}')
@@ -24391,7 +24397,8 @@ def _spike(cfg, arms, period, source, steps=SPIKE_STEPS, window=SPIKE_WINDOW,
     Defined in :numref:`sec_lm_reference_model`"""
     import shutil
     late = SPIKE_LATE if late is None else late
-    arms = _spike_arms(arms, cfg.global_batch, steps, window, late)
+    arms = _spike_arms(arms, cfg.global_batch, steps, window, late,
+                       cfg.warmup)
     if cfg.clip is not None or cfg.clip_from is not None:
         raise ValueError('the states run with clipping off and the clip '
                          'twins switch it on themselves: pass clip=None '
@@ -24399,8 +24406,9 @@ def _spike(cfg, arms, period, source, steps=SPIKE_STEPS, window=SPIKE_WINDOW,
     if device is None and not torch.cuda.is_available():
         raise RuntimeError('the spike protocol trains on a GPU')
     device = device or 'cuda'
-    shards, folder = _train_shards(cfg), os.path.join(_job_root(), 'spike')
-    shutil.rmtree(folder, ignore_errors=True)  # this driver's own states
+    shards = _train_shards(cfg)  # the states: only this driver's folder
+    folder = os.path.join(_job_root(), 'spike', 'v2')
+    shutil.rmtree(folder, ignore_errors=True)
 
     def out(beta2):
         return os.path.join(folder, f'beta2-{beta2:g}')
@@ -24466,13 +24474,24 @@ def _spike(cfg, arms, period, source, steps=SPIKE_STEPS, window=SPIKE_WINDOW,
                      a, 'bad+clip')
     first = arms[0]
     keep(run(first.beta2, first.state), first, 'floor')
-    floor = float((logs[first[:2], 'floor']['loss'] - logs[
-        first[:2], 'skip']['loss']).loc[first.bad_step + 1:first.bad_step
-                                        + window].abs().max())
+
+    def gap(x, y, lo, hi):  # largest |loss difference| on steps lo..hi
+        return float((x['loss'] - y['loss']).loc[lo:hi].abs().max())
+    drift = {}  # every arm is a same-state replay before its bad step
+    for a in arms:
+        pre = [(logs[a[:5], 'bad'], logs[a[:2], 'skip'])] + (
+            [(logs[a[:5], 'bad+clip'], logs[a[:2], 'skip+clip'])]
+            if a.clip else [])
+        drift[a] = max([0.0] + [g for x, y in pre for g in [
+            gap(x, y, a.state + 1, a.bad_step - 1)] if not math.isnan(g)])
+    floor = max([gap(logs[first[:2], 'floor'], logs[first[:2], 'skip'],
+                     first.bad_step + 1, first.bad_step + window)]
+                + list(drift.values()))
     rows = []
     for a in arms:
         ref, bad = logs[a[:2], 'skip'], logs[a[:5], 'bad']
         row = dict(a._asdict(), norm=float(bad['grad_norm'][a.bad_step]),
+                   drift=drift[a],
                    median=float(ref['grad_norm'].median()),
                    **spike_excess(bad['loss'], ref['loss'], a.bad_step, floor,
                                   window))
@@ -24490,6 +24509,10 @@ def _spike(cfg, arms, period, source, steps=SPIKE_STEPS, window=SPIKE_WINDOW,
                        clip_predicted=min(1.0, SPIKE_CLIP / norm))
         rows.append(row)
     shutil.rmtree(folder, ignore_errors=True)  # the states served their runs
+    try:  # spike/ itself only if nothing else is in it
+        os.rmdir(os.path.dirname(folder))
+    except OSError:
+        pass
     return SpikeReplay(
         pd.DataFrame(rows).reindex(columns=_SPIKE_TABLES['table']),
         pd.concat(traces, ignore_index=True)[_SPIKE_TABLES['traces']], floor,
@@ -24504,15 +24527,18 @@ def spike_replay(cfg, arms, period=7, source=300):
     k rows of one n-gram of period tokens), built from the data batch of
     log step source so that every state sees the same one; its clip twin
     clips at SPIKE_CLIP from the state on. Each state's skip replay (with
-    clipping too where an arm has a twin) is the reference, and a second
-    skip replay of the first arm's state gives the floor (largest |loss
-    difference| over its window): SpikeReplay(table, traces, floor,
+    clipping too where an arm has a twin) is the reference. The floor is
+    the largest |loss difference| between replays of one state without a
+    bad batch: a second skip replay of the first arm's state over its
+    window, and every arm (and twin) against its skip replay before its
+    bad step (a row's own part: drift). SpikeReplay(table, traces, floor,
     label), one table row per arm (spike_excess's statistics, the
     pre-clip norm at the bad step over the skip replay's median).
 
     Defined in :numref:`sec_lm_reference_model`"""
     arms = tuple(tuple(a) for a in arms)
-    _spike_arms(arms, cfg.global_batch)  # refused before anything else
+    _spike_arms(arms, cfg.global_batch,  # refused before anything else
+                warmup=cfg.warmup)
     config = dict(cfg=_cfg_json(cfg), arms=d2l._jsonable(arms),
                   period=period, source=source, recipe=_spike_recipe())
     res = d2l._pretrain_result('spike-replay', lambda: _spike(
@@ -24531,7 +24557,7 @@ def _spike_job():
         (0.95, 250, 300, 'ngram', 64, True),
         (0.999, 250, 300, 'random', 64, True),
         (0.999, 250, 300, 'ngram', 8, True),
-        (0.95, 50, 54, 'ngram', 8, False),
+        (0.95, 76, 80, 'ngram', 8, False),
         (0.95, 1297, 1301, 'ngram', 8, False)), period=7, source=300)
 
 def _spike_label(batch, k):

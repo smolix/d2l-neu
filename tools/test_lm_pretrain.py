@@ -2007,9 +2007,11 @@ class SpikeTest(unittest.TestCase):
         cls.tmp.cleanup()
 
     def test_arms(self):
-        arms = d2l._spike_arms(d2l._spike_job()['arms'], 64)
+        job = d2l._spike_job()
+        arms = d2l._spike_arms(job['arms'], 64, warmup=job['cfg'].warmup)
+        self.assertEqual(job['cfg'].warmup, 76)
         self.assertEqual(len(arms), 8)
-        self.assertEqual(arms[6], (0.95, 50, 54, 'ngram', 8, False))
+        self.assertEqual(arms[6], (0.95, 76, 80, 'ngram', 8, False))
         self.assertEqual(arms[0].clip, True)
         for bad in ((0.95, 250, 300, 'random', 8, True),  # random = all rows
                     (0.95, 250, 300, 'ngram', 0, True),
@@ -2024,6 +2026,11 @@ class SpikeTest(unittest.TestCase):
             with self.assertRaises(ValueError, msg=bad):
                 d2l._spike_arms([bad], 64)
         d2l._spike_arms([(0.95, 1, 51, 'ngram', 8, True)], 64)  # the bounds
+        d2l._spike_arms([(0.95, 76, 77, 'ngram', 8, True)], 64, warmup=76)
+        with self.assertRaisesRegex(ValueError, '76 warmup steps'):
+            d2l._spike_arms([(0.95, 75, 80, 'ngram', 8, True)], 64, warmup=76)
+        with self.assertRaisesRegex(ValueError, '76 warmup steps'):
+            d2l.spike_replay(job['cfg'], [(0.95, 50, 80, 'ngram', 8, False)])
         with self.assertRaisesRegex(ValueError, 'beta2 0.95, not 0.999'):
             d2l._spike_arms([(0.999, 1297, 1301, 'ngram', 8, False)], 64)
         with self.assertRaisesRegex(ValueError, 'twice'):
@@ -2112,22 +2119,49 @@ class SpikeTest(unittest.TestCase):
                 (0.999, 6, 8, 'ngram', 2, True),
                 (0.95, 2, 4, 'ngram', 2, False),
                 (0.95, 10, 12, 'ngram', 2, False))
+        old = os.path.join(root, 'spike', 'log.jsonl')  # an earlier job's
+        os.makedirs(os.path.dirname(old))
+        with open(old, 'w') as f:
+            f.write('{}\n')
         with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
                 mock.patch.object(d2l, '_job_root', lambda: root), \
                 contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(ValueError, '2 warmup steps'):
+                d2l._spike(cfg, [(0.95, 1, 2, 'ngram', 2, False)], 3, 8,
+                           steps=12, window=6, late=late, device='cpu')
             r = d2l._spike(cfg, arms, 3, 8, steps=12, window=6, late=late,
                            device='cpu')
             with self.assertRaisesRegex(ValueError, 'betas'):  # not its
                 d2l._spike(dataclasses.replace(cfg, betas=(0.8, 0.95)),
                            arms[-1:], 3, 8, steps=12, window=6, late=late,
                            device='cpu')
-        self.assertFalse(os.path.exists(os.path.join(root, 'spike')))
+        # the driver removes its own states only, not the earlier log
+        self.assertFalse(os.path.exists(os.path.join(root, 'spike', 'v2')))
+        self.assertEqual(os.listdir(os.path.join(root, 'spike')),
+                         ['log.jsonl'])
         t = r.table
         self.assertEqual(list(t.columns), d2l._SPIKE_TABLES['table'])
         self.assertEqual([tuple(x) for x in t[['beta2', 'state', 'bad_step',
                                                'batch', 'k']].values],
                          [a[:5] for a in arms])
         self.assertEqual(r.floor, 0.0)  # CPU: two replays bit-identical
+        self.assertTrue((t['drift'] == 0).all())
+        orig = d2l.pretrain
+
+        def drifting(model, stream, c, **kw):  # 1e-3 off at the first step
+            log = orig(model, stream, c, **kw)
+            if stream.bad_step is not None:
+                log.loc[log.index[0], 'loss'] += 1e-3
+            return log
+        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
+                mock.patch.object(d2l, '_job_root', lambda: root), \
+                mock.patch.object(d2l, 'pretrain', drifting), \
+                contextlib.redirect_stdout(io.StringIO()):
+            d = d2l._spike(cfg, (arms[0], arms[3]), 3, 8, steps=12, window=6,
+                           late=late, device='cpu')
+        # a replay drift before the bad step is part of the floor
+        np.testing.assert_allclose(d.table['drift'], [1e-3, 1e-3], rtol=1e-6)
+        self.assertAlmostEqual(d.floor, 1e-3, places=9)
         tr = r.traces
         self.assertEqual(list(tr.columns), d2l._SPIKE_TABLES['traces'])
         runs = tr.groupby(['beta2', 'state', 'arm', 'batch', 'k'])['step']
@@ -2265,7 +2299,7 @@ class SpikeTest(unittest.TestCase):
             row = dict(beta2=b2, state=state, bad_step=step, batch=batch, k=k,
                        norm=12.0 + i, median=0.4, norm_ratio=(12.0 + i) / 0.4,
                        peak=0.5 + i, recover=None if i == 1 else 12 + i,
-                       total=4.0 + i)
+                       total=4.0 + i, drift=2e-4 * i)
             if clip:
                 row.update(norm_clip=12.0 + i, peak_clip=0.05, recover_clip=3,
                            total_clip=0.3, clipped_before=0,

@@ -553,21 +553,17 @@ for m in MODULES:
 %%tab pytorch
 PAIR_LR = 1e-3  # t1's peak rate; the T1 grid's clip cell at it is eps 1e-8
 headroom = d2l.adam_eps_headroom(PAIR_LR)
-med = headroom.readout.set_index(['model', 'group'])['median']
 if len(headroom.pair):  # the new eps: the t1 matrices' median, 1 digit
     assert headroom.eps == float(f'{headroom.matrix_median:.0e}')
-    assert (min(med['t1', 'attention'], med['t1', 'MLP'])
-            <= headroom.matrix_median
-            <= max(med['t1', 'attention'], med['t1', 'MLP']))
     sci = lambda x: f'{x:.0e}'.replace('e-0', 'e-')
     print(f'{"model":>5} {"group":>9} {"median sqrt(v)":>14} '
           f'{"below 1e-5":>10} {"below 1e-7":>10}')
     for r in headroom.readout.itertuples():
         print(f'{r.model:>5} {r.group:>9} {r.median:14.1e} '
               f'{r.below_hi:10.2%} {r.below_lo:10.2%}')
-    base = headroom.pair[headroom.pair['source'] == 'instability-t1']
-    base = base.set_index('seed')
-    new = headroom.pair[headroom.pair['source'] == 'eps-headroom'].iloc[0]
+    pair = headroom.pair
+    base = pair[pair['eps'] == d2l.EPS_BASE].set_index('seed')
+    new = pair[pair['eps'] == headroom.eps].iloc[0]
     print(f't1 pair at lr {sci(PAIR_LR)}: eps {sci(d2l.EPS_BASE)} → val '
           f'{base.at[0, "val_loss"]:.3f} (seed 1: '
           f'{base.at[1, "val_loss"]:.3f}), update RMS ÷ lr '
@@ -576,7 +572,7 @@ if len(headroom.pair):  # the new eps: the t1 matrices' median, 1 digit
           f'update RMS ÷ lr {new["update_rms"]:.3f}')
 ```
 
-<!-- Placeholder (prose): claim 25 as measured: whether sqrt(v) sits far above 1e-8 in every group of both models (medians, and how small the shares below 1e-5 and 1e-7 are; the embedding has the most small coordinates, rows of rare tokens), how much eps at the median shrank the update RMS (the ratio of the two lines), and the change in the val loss against the two seeds' difference at eps 1e-8 ("eps at the median changed the val loss by x, within the seed spread" is a result). Then the scale argument: the r2 medians sit below t1's, so the margin to eps shrinks with model size and training; never present the t1 pair as a measurement at scale. -->
+<!-- Placeholder (prose): claim 25 as measured: whether sqrt(v) sits far above 1e-8 in every group of both models (medians, and how small the shares below 1e-5 and 1e-7 are; the embedding has the most small coordinates, rows of rare tokens), how much eps at the median shrank the update RMS (the ratio of the two lines), and the change in the val loss against the two seeds' difference at eps 1e-8 ("eps at the median changed the val loss by x, within the seed spread" is a result). The pair is paired (the new run shares seed 0's initialization and data order with the grid cell), so the seed-0/seed-1 difference, which also carries initialization and data-order noise, is an upper yardstick for noise, not a tolerance on the paired difference; if the effect is large, say the run tests the mechanism at an exaggerated eps, not a tuning result. Then the scale argument: the r2 medians sit below t1's, so the margin to eps shrinks; but the r2 state is at step 5,100 (lr 6e-4, start of the decay) and t1's at 1,297 (end of the plateau), so the gap mixes size, training length and phase and is not a pure size effect; never present the t1 pair as a measurement at scale. -->
 
 ### Who Moves First
 

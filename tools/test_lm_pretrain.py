@@ -2609,6 +2609,7 @@ class EpsHeadroomTest(unittest.TestCase):
     def test_regeneration_and_page(self):
         page = self.page_cell()
         self.assertIn('PAIR_LR = 1e-3', page)
+        self.assertNotIn("'source'", page)  # rows by eps, not load names
         self.assertEqual(d2l.PRETRAIN_JOBS['eps-headroom'],
                          ('adam_eps_headroom',
                           d2l.PRETRAIN_JOBS['eps-headroom'][1]))

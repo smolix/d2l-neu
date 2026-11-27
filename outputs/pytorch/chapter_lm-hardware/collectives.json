@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cd7357637774a8db1d49ee9ee058f7a72f0354a5a3553e77fd617d22b7033aed",
+    "d2l_lib_fingerprint": "sha256:d4f0cfbb81a5cc262390d947a6b6011d709dd1cf40a8c3f1192a3d38023e8673",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (three pairs) on RTX 4090: 9 points, largest difference 39%\n"
+          "text": "live check (three pairs) on RTX 4090: 9 points, largest difference 42%\n"
         },
         {
           "type": "stream",
@@ -116,7 +116,7 @@
           "mime": "image/svg+xml",
           "asset": "collectives/collectives-forced-pairs-1.svg",
           "bytes": 59388,
-          "sha256": "sha256:769e728e65e996458cdb471fc81ed4209bada426d9f41c2cbede5b22c9e64665"
+          "sha256": "sha256:f475590cd91e9c7169b89371338b3e02a26a275ad31874034752bb565a02f392"
         }
       ]
     },
@@ -127,7 +127,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   algo       proto alpha (us) beta (GB/s)  beta 95%\ndefault     default         24        2.35 2.34-2.36\n   Ring          LL         33        2.31 2.21-2.42\n   Ring LL128 (off)         34        2.34 2.32-2.37\n   Ring      Simple         38        2.34 2.32-2.36\n   Tree          LL         31        2.12 2.05-2.18\n   Tree LL128 (off)         32        2.45 2.41-2.50\n   Tree      Simple         39        2.15 2.14-2.17\nRing/Simple overtakes Ring/LL at 87 KiB measured, 600 KiB predicted by the fits\nfit against measured, 16 KiB to 1 MiB: Ring/LL +2% to +78%, Ring/Simple -2% to\n  +47%; Ring/Simple's fit against Ring/LL's: +11% at 16 KiB, -0% at 1 MiB\n"
+          "text": "   algo       proto alpha (us) beta (GB/s)  beta 95%\ndefault     default         24        2.35 2.34-2.36\n   Ring          LL         33        2.31 2.21-2.42\n   Ring LL128 (off)         34        2.34 2.32-2.37\n   Ring      Simple         38        2.34 2.32-2.36\n   Tree          LL         31        2.12 2.05-2.18\n   Tree LL128 (off)         32        2.45 2.41-2.50\n   Tree      Simple         39        2.15 2.14-2.17\nRing/Simple overtakes Ring/LL at 87 KiB measured, 600 KiB predicted by the fits\nfit against measured, 16 KiB to 1 MiB: Ring/LL +2% to +78%, Ring/Simple -2% to\n  +47%; Ring/Simple's fit against Ring/LL's: +11% at 16 KiB, 0% at 1 MiB\n"
         }
       ]
     },
@@ -154,12 +154,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             16 MiB       256 MiB       \n                 ms model      ms  model\nflat gloo      19.3  18.5   342.0  277.1\nflat NCCL      11.4  10.7   185.1  170.7\nhierarchical   14.4  11.4   248.3  177.4\nintra stage     7.2   7.0   119.0  111.0\ninter stage     7.5   4.5   121.5   66.4\nat 256 MiB: hierarchical 1.4x faster than flat gloo (1.6x by the model)\n2-rank stages: intra/inter bandwidth 2.0x measured, 1.2x from the fits\nC4 gate: NCCL's shared memory 2.36 GB/s busbw, gloo on 4 ranks 1.46 (95%\n  1.45-1.47): 1.6x the bandwidth, 1/37 the latency; gloo's interval is not\n  below half, so C4 takes its fallback (gloo is slower by latency only)\n"
+          "text": "             16 MiB       256 MiB       \n                 ms model      ms  model\nflat gloo      19.3  18.9   342.0  285.0\nflat NCCL      11.4  10.7   185.1  170.7\nhierarchical   14.4  11.4   248.3  177.5\nintra stage     7.2   7.0   119.0  111.0\ninter stage     7.5   4.5   121.5   66.4\nat 256 MiB: hierarchical 1.4x faster than flat gloo (1.6x by the model)\n2-rank stages: intra/inter bandwidth 2.0x measured, 1.2x from the fits\nC4 gate: NCCL's shared memory 2.36 GB/s busbw, gloo on 4 ranks 1.42 (95%\n  1.25-1.58): 1.7x the bandwidth, 1/34 the latency; gloo's interval is not\n  below half, so C4 takes its fallback (gloo is slower by latency only)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (64 MiB) on RTX 4090: 3 points, largest difference 2%\nlive, 4 GPUs: hier_allreduce = CPU sum (rtol 1e-5, max error 1e-07)\n"
+          "text": "live check (64 MiB) on RTX 4090: 3 points, largest difference 3%\nlive, 4 GPUs: hier_allreduce = CPU sum (rtol 1e-5, max error 1e-07)\n"
         }
       ]
     },

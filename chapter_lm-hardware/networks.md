@@ -272,6 +272,14 @@ the per-message figure and the 4-to-2 ratio from box-net v3 only, never
 1,200. Possible pitfall for the reader: warm up after the first
 synchronization, not before it. -->
 
+<!-- Placeholder (prose): fix pass runs (N2, box-net v3, registered
+2026-11-27, group settled before the sweep): quote these, not v2's. gloo
+4 ranks alpha 1,100 us [1,100-1,100], about 190 us per message (6 ring
+steps), 3.3x the 2-rank alpha of 340 us [330-350] (1.1x per message);
+beta 1.4 GB/s [1.3-1.6] (wider than v2's: one of the three processes ran
+the 16 MiB point 10% faster). TCP round trip 42 us [39-44]; NCCL sockets
+120 us; NCCL shm 33 us. -->
+
 ## Which Axes Fit Where
 :label:`subsec_lm_hw_layout`
 

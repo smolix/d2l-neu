@@ -611,6 +611,12 @@ start-up transient inflates by about 10% (sec_lm_networks, N2); about 1/34
 from v2's steady points. Quote it from box-net v3. C4's branch, its gain
 and every bandwidth figure are unchanged (256 MiB is bandwidth-bound). -->
 
+<!-- Placeholder (prose): fix pass runs (C4 gate from box-net v3): gloo on
+4 ranks 1.42 GB/s busbw (95% 1.25-1.58) against NCCL's shared memory 2.36:
+1.7x the bandwidth, 1/34 the latency; the interval is not below half, so
+C4 stays at its fallback. At 256 MiB hierarchical 1.4x faster than flat
+gloo, 1.6x by the model (flat gloo model 285 ms, from v3's beta). -->
+
 <!-- Placeholder (prose): what the box cannot show. The ring/tree crossover
 of D1 needs a tree deeper than a chain (several nodes), the rail effect of
 D2 needs one NIC per GPU, and SHARP and NVLS need the switches. Campaign

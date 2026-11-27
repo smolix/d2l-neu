@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2517d1193ed84604b173e9c7b9d35f5e67a99141108ed19f49f1372867a36620",
+    "d2l_lib_fingerprint": "sha256:768cde4cfb3cc794c3a83ffeef8c6144eb417e2b2ff9168719e2f5847ae2cbc4",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "server-paths/server-paths-gpu-matrix-1.svg",
           "bytes": 30775,
-          "sha256": "sha256:e0d4a66ec9d14878a12ac2ffa1f0cfead2ce135094db07e092c1e8fd5600de40"
+          "sha256": "sha256:dca40a89607b3457bcb3fcd2f4d71f924c5d2dc9078bafaa6c345fc19b3e95ed"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "server-paths/server-paths-nccl-sweeps-1.svg",
           "bytes": 67313,
-          "sha256": "sha256:52bd3a1e55ca31d4226f9a1fcf4d186c04ceaa20b19ece319ec2946bdefb997f"
+          "sha256": "sha256:4ba70a03bf0aca8c518de4e9dba78897e8e019d44840c8e7f8026c7ed497f50c"
         }
       ]
     },
@@ -124,7 +124,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (both arms) on RTX 4090: 2 points, largest difference 3%\n"
+          "text": "live check (both arms) on RTX 4090: 2 points, largest difference 0%\n"
         }
       ]
     },
@@ -151,7 +151,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (all-to-all) on RTX 4090: 1 point, largest difference 4%\nall-to-all: tree 10 ms, star 14 ms, measured 24 ms (33 GB/s in all)\n      ring: tree 18 ms, star 29 ms, measured 39 ms (42 GB/s in all)\nNCCL all-to-all / all-reduce busbw at 256 MiB: 0.94 (tree 0.96)\n"
+          "text": "live check (all-to-all) on RTX 4090: 1 point, largest difference 3%\nall-to-all: tree 10 ms, star 14 ms, measured 24 ms (33 GB/s in all)\n      ring: tree 18 ms, star 29 ms, measured 39 ms (42 GB/s in all)\nNCCL all-to-all / all-reduce busbw at 256 MiB: 0.94 (tree 0.96)\n"
         }
       ]
     },

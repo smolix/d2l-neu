@@ -26069,9 +26069,9 @@ d2l.PRETRAIN_ARTIFACTS['cpt-traces-val'] = ('lm-traces-val-v1', 'shards')
 d2l.PRETRAIN_ARTIFACTS['cpt-fwedu-replay-12m'] = (
     'lm-fwedu-replay-12m-v1', 'shards')
 d2l.PRETRAIN_ARTIFACTS['cpt-t1'] = (
-    'lm-cpt-t1-v1', 'json-table')
+    'lm-cpt-t1-v2', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['cpt-runs'] = (
-    'lm-cpt-runs-v1', 'json-table')
+    'lm-cpt-runs-v2', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['smollm3-trajectory'] = (
     'lm-smollm3-trajectory-v1', 'json-table')
 
@@ -26121,6 +26121,9 @@ def _cpt_t1_call():
             'A″': dict(peak_lr=3e-4, replay=0.0, data_seed=2),
             'B': dict(peak_lr=3e-4, replay=0.25, data_seed=0),
             'cold': dict(peak_lr=None, replay=0.0, data_seed=0, warmup=0),
+            'cold-plateau': dict(peak_lr=None, replay=0.0, data_seed=0,
+                                 warmup=0, start='plateau',
+                                 schedule='linear', moments='fresh'),
             'branch': dict(peak_lr=None, replay=0.0, data_seed=0, warmup=0,
                            start='plateau', schedule='linear')}
     return dict(arms=arms, base='r2', tokens=12_000_000, seq_len=1024,
@@ -26225,13 +26228,14 @@ def _locked(path):
     return lock()
 
 def _book_shards(tier):
-    """{'book': train sections, 'val_book': held-out sections} as
-    TokenShards under the tier's tokenizer, built on first use."""
+    """{'val_book': the held-out sections} as TokenShards under the tier's
+    tokenizer, built on first use (the train sections are never trained,
+    so they are not built)."""
     tag = 'r2' if tier == 't1' else 'qwen'
     root = os.path.join('..', 'data', 'lm', f'cpt-book-{tag}-v1')
     out = {}
     with _locked(root + '.lock'):
-        for key, docs in zip(('book', 'val_book'), book_split()):
+        for key, docs in (('val_book', book_split()[1]),):
             folder = os.path.join(root, key)
             if not os.path.exists(os.path.join(folder, 'manifest.json')):
                 tmp = f'{folder}.{os.getpid()}.tmp'
@@ -26382,8 +26386,9 @@ def cpt_data(tier='t2'):
     documents, tokens, source and licence. 't1': the R2-tokenized shards.
     't2': in a normal run the committed manifest's table (no shard is
     opened, built or downloaded; shards is None); in a regeneration of the
-    Qwen arms the local Qwen-tokenized shards. shards also holds the book's
-    train sections ('book'), which no arm trains on."""
+    Qwen arms the local Qwen-tokenized shards. shards: 'traces', 'replay',
+    'val_domain', 'val_general', 'val_book' (the book is evaluation
+    only)."""
     if tier == 't1':
         shards = _cpt_t1_shards()
         return CptData(_shard_table(shards, 't1'), shards, '')
@@ -26400,6 +26405,30 @@ def cpt_data(tier='t2'):
             'stream', 'documents', 'tokens', 'source', 'licence']), None,
             'cpt-qwen-manifest pending'))
     raise KeyError('cpt-qwen-manifest is not committed yet')
+
+def _cpt_data_id(tier):
+    """The identity of a tier's training and evaluation streams (traces,
+    replay, val_domain, val_general; the book is left out): T2 the
+    committed manifest's layout hashes (the local shards are checked
+    against them when they are opened), T1 the sha1 of each hosted tar
+    (the local shards' layout hash before its upload) and the reference
+    model's validation shards' layout hash."""
+    keys = ('traces', 'replay', 'val_domain', 'val_general')
+    if tier == 't2':
+        if not _cpt_manifest_committed():
+            raise KeyError('cpt-qwen-manifest is not committed yet')
+        layout = d2l.load_artifact('cpt-qwen-manifest').layout
+        return {k: layout[k] for k in keys}
+    if tier != 't1':
+        raise ValueError(f"tier is 't1' or 't2', not {tier!r}")
+    out = {}
+    for k, name in _CPT_T1_KEYS.items():
+        key = d2l.PRETRAIN_ARTIFACTS[name][0]
+        out[k] = (d2l.DATA_HUB[key][1] if key in d2l.DATA_HUB else
+                  d2l._layout_hash(d2l.TokenShards(
+                      os.path.join(_CPT_DIRS['t1'], k), 'train')))
+    out['val_general'] = d2l._layout_hash(d2l.reference_shards('val'))
+    return {k: out[k] for k in keys}
 
 _CPT_EVAL_TOKENS = 2 ** 19  # the evaluations during training, per set
 
@@ -26505,21 +26534,205 @@ def _suite_items(suite, model, tokenizer):
     model.train(was_training)
     return res.per_item[['task', 'item_id', 'score']].reset_index(drop=True)
 
+_CPT_GSM8K = dict(n=500, seed=0, budget=dict(completion=256, chat=4096))
+
+_GSM8K_BATCH = dict(completion=32, chat=24)  # sequences per batch
+
+_CHAT_MARKS = ('<|im_start|>', '<|im_end|>', '<think>', '</think>')
+
+def gsm8k_items(n=500, seed=0):
+    """n GSM8K test items (the seeded subset of chapter 18's tasks): dicts
+    with id, question, reference and the 8-shot completion prompt of the
+    gsm8k_cot task.
+
+    Defined in :numref:`sec_lm_continued_pretraining`"""
+    with d2l._quiet():
+        suite = d2l.EvalSuite(['gsm8k_cot'], n=n, seed=seed)
+    return suite.items('gsm8k_cot')
+
+def gsm8k_chat_prompt(question):
+    """One ChatML user turn and the assistant's generation prompt."""
+    return (chatml([dict(role='user', content=question)])
+            + '<|im_start|>assistant\n')
+
+def _think_state(text):
+    """(opened, closed): whether a reply opened a <think> block, and
+    whether its last one is closed."""
+    if '<think>' not in text:
+        return False, '</think>' in text
+    return True, '</think>' in text.split('<think>')[-1]
+
+def gsm8k_chat_answer(text, finish_reason):
+    """The answer of a chat reply, or None: a reply cut at the budget, or
+    one that opened a think block and never closed it, has none; else the
+    number d2l.extract_answer finds after the last </think> (in the whole
+    reply when it did not think)."""
+    opened, closed = _think_state(text)
+    if finish_reason == 'length' or (opened and not closed):
+        return None
+    return d2l.extract_answer(text.split('</think>')[-1], 'gsm8k')
+
+def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
+                budget=None, batch_size=None, chat_prompt=None):
+    """GSM8K replies of model (greedy) per item and format ('completion':
+    the 8-shot prompt; 'chat': chat_prompt(question), by default
+    gsm8k_chat_prompt): a DataFrame with format, item_id, score (exact
+    match), cut (stopped at the budget), thinks and closed (opened and
+    closed a think block), chat_tokens (wrote a ChatML or think marker)
+    and new_tokens. budget and batch_size are {format: n}."""
+    budget = {**_CPT_GSM8K['budget'], **(budget or {})}
+    batch = {**_GSM8K_BATCH, **(batch_size or {})}
+    chat_prompt = chat_prompt or gsm8k_chat_prompt
+    ids = {m: tokenizer.convert_tokens_to_ids(m) for m in
+           ('<|endoftext|>', '<|im_end|>')}
+    rows = []
+    for fmt in formats:
+        if fmt == 'completion':  # a ChatML end is text here, not a stop
+            prompts, stop, eos = ([it['prompt'] for it in items], ['Q:'],
+                                  [ids['<|endoftext|>']])
+        elif fmt == 'chat':
+            prompts, stop, eos = ([chat_prompt(it['question'])
+                                   for it in items], None, list(ids.values()))
+        else:
+            raise ValueError(f"format is 'completion' or 'chat', not {fmt!r}")
+        gens = d2l.generate(model, tokenizer, prompts, budget[fmt],
+                            eos_token_ids=eos, stop=stop,
+                            batch_size=batch[fmt])
+        for it, g in zip(items, gens):
+            marks = [g.text.find(m) for m in _CHAT_MARKS if m in g.text]
+            if fmt == 'chat':
+                pred = gsm8k_chat_answer(g.text, g.finish_reason)
+            else:  # the reply has ended at its first chat marker
+                pred = d2l.extract_answer(g.text[:min(marks, default=None)],
+                                          'gsm8k')
+            opened, closed = _think_state(g.text)
+            rows.append(dict(format=fmt, item_id=it['id'], score=float(
+                pred is not None and pred == it['reference']),
+                cut=g.finish_reason == 'length', thinks=opened,
+                closed=closed, chat_tokens=bool(marks),
+                new_tokens=len(g.token_ids)))
+    return pd.DataFrame(rows, columns=[c for c in _CPT_COLUMNS['gsm8k']
+                                       if c != 'arm'])
+
+def _qwen3_hf_state(state, cfg):
+    """A Transformers Qwen3 state dict from a Qwen3GPT or PackedGPT state
+    dict (map_qwen3_state_dict inverted: names back, and the RoPE rows of
+    q_proj and k_proj and the gains of q_norm and k_norm permuted back to
+    Transformers' split halves); no lm_head when the embeddings are
+    tied. A KeyError lists the tensors not consumed or not produced."""
+    kw = d2l.qwen3_gpt_kwargs(cfg)
+    d_h = kw['head_dim'] or kw['num_hiddens'] // kw['num_heads']
+    inv = torch.argsort(d2l.qwen3_rope_permutation(d_h))
+    back = lambda W: W.unflatten(0, (-1, d_h))[:, inv.to(W.device)].flatten(
+        0, 1)
+    keep = lambda W: W
+    layer = {'norm1': ('input_layernorm', keep),
+             'attention.W_q': ('self_attn.q_proj', back),
+             'attention.W_k': ('self_attn.k_proj', back),
+             'attention.W_v': ('self_attn.v_proj', keep),
+             'attention.W_o': ('self_attn.o_proj', keep),
+             'attention.q_norm': ('self_attn.q_norm', back),
+             'attention.k_norm': ('self_attn.k_norm', back),
+             'norm2': ('post_attention_layernorm', keep),
+             'ffn.W_g': ('mlp.gate_proj', keep),
+             'ffn.W_1': ('mlp.up_proj', keep),
+             'ffn.W_2': ('mlp.down_proj', keep)}
+    names = {'token_emb': ('model.embed_tokens', keep),
+             'norm': ('model.norm', keep)}
+    for i in range(kw['num_blks']):
+        names.update({f'blks.{i}.{ours}': (f'model.layers.{i}.{hf}', f)
+                      for ours, (hf, f) in layer.items()})
+    if not kw['tie_embeddings']:
+        names['lm_head'] = ('lm_head', keep)
+    left, out = dict(state), {}
+    missing = [n for n in names if n + '.weight' not in left]
+    for ours, (hf, f) in names.items():
+        if ours + '.weight' in left:
+            out[hf + '.weight'] = f(left.pop(ours + '.weight'))
+    if left or missing:
+        raise KeyError(f'not consumed: {sorted(left)}; missing: {missing}')
+    return out
+
+def _load_into_hf(hf, path):
+    """Load the weights of a PackedGPT bf16 file (an arm's final
+    checkpoint) into the Transformers Qwen3 model hf of the same shape."""
+    from safetensors.torch import load_file
+    state = load_file(path, device=str(hf.device))
+    hf_state = _qwen3_hf_state(state, hf.config)
+    missing, unexpected = hf.load_state_dict(hf_state, strict=False)
+    tied = {'lm_head.weight'} if hf.config.tie_word_embeddings else set()
+    if unexpected or set(missing) - tied:
+        raise KeyError(f'{path}: missing {missing}, unexpected {unexpected}')
+
+def _cpt_hf_qwen(name='Qwen/Qwen3-0.6B-Base'):
+    """(Transformers model, tokenizer) of the pinned base, bf16, quietly."""
+    with d2l._quiet():
+        return d2l.load_hf(name, revision=d2l.HF_REVISIONS[name],
+                           dtype=torch.bfloat16)
+
+def _cpt_gsm8k_one(folder, ident, model_fn, items):
+    """score_gsm8k of the model model_fn() returns, kept in
+    folder/gsm8k.json.gz under ident (read back when ident matches; a file
+    of another model or setting is refused)."""
+    path = os.path.join(folder, 'gsm8k.json.gz')
+    if os.path.exists(path):
+        res = d2l._read_result(path, 'json-table')
+        d2l._check_config(res, ident, path)
+        return res
+    model, tok = model_fn()
+    res = score_gsm8k(model, tok, items)
+    os.makedirs(folder, exist_ok=True)
+    d2l._write_result(path, 'json-table', res, dict(config=ident, label=''))
+    return res
+
+def _cpt_gsm8k_all(cfgs):
+    """GSM8K in both formats for the base and every arm's final weights
+    (T2), one Transformers model whose weights are swapped per arm."""
+    cfg0 = next(iter(cfgs.values()))
+    items = gsm8k_items(_CPT_GSM8K['n'], _CPT_GSM8K['seed'])
+    settings, hf = d2l._jsonable(_CPT_GSM8K), {}
+
+    def model(path=None):  # loaded once, on first need
+        if not hf:
+            hf['m'], hf['tok'] = _cpt_hf_qwen(cfg0['base'])
+            hf['path'] = None
+        if path != hf['path']:
+            if path is None:
+                raise RuntimeError('the base must be scored before an arm')
+            _load_into_hf(hf['m'], path)
+            hf['path'] = path
+        return hf['m'], hf['tok']
+    out = [_cpt_gsm8k_one(
+        os.path.join(d2l._job_root(), 'cpt', 't2-base'), dict(
+            settings=settings, base=_cpt_base_id(cfg0)), model,
+        items).assign(arm='base')]
+    for arm, cfg in cfgs.items():
+        path = os.path.join(_cpt_job(cfg), 'ckpt',
+                            f's{cfg["steps"]}.safetensors')
+        out.append(_cpt_gsm8k_one(_cpt_job(cfg), dict(
+            settings=settings, weights=_file_id(path)),
+            lambda p=path: model(p), items).assign(arm=arm))
+    hf.clear()
+    d2l.lm_free()
+    return pd.concat(out, ignore_index=True)[_CPT_COLUMNS['gsm8k']]
+
 CptRuns = collections.namedtuple(
     'CptRuns', ['table', 'logs', 'base_docs', 'docs', 'equal', 'items',
-                'label'])
+                'gsm8k', 'label'])
 
 _CPT_COLUMNS = {
     'table': ['arm', 'peak_lr', 'replay', 'steps', 'domain_tokens',
-              'domain_loss', 'general_loss', 'book_loss', 'suite', 'tok_s',
-              'gib'],
+              'domain_loss', 'general_loss', 'book_loss', 'suite',
+              'gsm8k_completion', 'gsm8k_chat', 'tok_s', 'gib'],
     'logs': ['arm', 'step', 'tokens', 'domain_tokens', 'lr', 'loss',
              'grad_norm', 'domain_loss', 'general_loss', 'book_loss'],
     'base_docs': ['set', 'doc_id', 'sum_nll', 'n_tokens'],
     'docs': ['arm', 'set', 'doc_id', 'sum_nll', 'n_tokens'],
     'equal': ['arm', 'step', 'domain_tokens', 'domain_loss',
               'general_loss', 'book_loss'],
-    'items': ['arm', 'step', 'task', 'item_id', 'score']}
+    'items': ['arm', 'step', 'task', 'item_id', 'score'],
+    'gsm8k': ['arm', 'format', 'item_id', 'score', 'cut', 'thinks',
+              'closed', 'chat_tokens', 'new_tokens']}
 
 _CPT_MICRO = {'t1': 16, 't2': 1}  # sequences per micro-batch (D2 probe:
 # Qwen3-0.6B with fp32 master weights runs out of 24 GB at 2 x 2,048)
@@ -26551,6 +26764,12 @@ def _cpt_configs(arms, base, tokens, seq_len, batch_tokens, warmup,
     for name, a in arms.items():
         a = dict(dict(peak_lr=None, replay=0.0, data_seed=0, warmup=warmup,
                       start='final', schedule='cosine'), **a)
+        a.setdefault('moments', 'restored' if a['start'] == 'plateau'
+                     else 'fresh')
+        if a['moments'] not in ('fresh', 'restored') or (
+                a['moments'] == 'restored' and a['start'] != 'plateau'):
+            raise ValueError(f'arm {name}: moments {a["moments"]!r}; only '
+                             "the plateau state has moments to restore")
         r = replay.get(a['peak_lr']) if a['replay'] == 0 else None
         out[name] = dict(
             tier=tier, arm=name, base=base, steps=steps, seq_len=seq_len,
@@ -26628,7 +26847,8 @@ def _cpt_r2_files():
 def _cpt_base(cfg, dtype=torch.float32, device='cpu'):
     """(model, AdamW state or None, the base run's peak rate, label) of an
     arm's starting point: Qwen3-0.6B-Base, or the reference model's final
-    checkpoint (fresh moments) or its plateau state (restored moments)."""
+    checkpoint (fresh moments) or its plateau state (its weights, with its
+    moments restored unless cfg['moments'] is 'fresh')."""
     if cfg['tier'] == 't2':
         with d2l._quiet():
             q = d2l.load_qwen3(cfg['base'], dtype=dtype, device=device)
@@ -26640,8 +26860,10 @@ def _cpt_base(cfg, dtype=torch.float32, device='cpu'):
                            weights_only=False)
         model = d2l.PackedGPT.from_arch(d2l.Arch(**state['cfg']['arch']))
         model.load_state_dict(state['model'])
-        return (model.to(device, dtype), state['optim'],
-                state['cfg']['peak_lr'], label)
+        optim = (None if cfg.get('moments', 'restored') == 'fresh'
+                 else state['optim'])
+        return (model.to(device, dtype), optim, state['cfg']['peak_lr'],
+                label)
     model = d2l._load_bf16(ckpt, dtype, device)
     return model, None, d2l.r2_config(preset).peak_lr, label
 
@@ -26671,8 +26893,11 @@ def _cpt_base_id(cfg):
                              else ckpt)]
 
 def _cpt_identity(cfg):
-    """The record of an arm in its job folder: configuration and base."""
-    return dict(config=d2l._jsonable(cfg), base=_cpt_base_id(cfg))
+    """The record of an arm in its job folder: configuration, base and
+    data (_cpt_data_id), so a folder trained on another corpus is
+    refused."""
+    return dict(config=d2l._jsonable(cfg), base=_cpt_base_id(cfg),
+                data=_cpt_data_id(cfg['tier']))
 
 def _cpt_check_job(job, ident, name='DONE'):
     """Whether job holds file name; raise if that file records another
@@ -26736,7 +26961,7 @@ def _cpt_train(model, mix, sets, cfg, job, optim_state=None, peak=None,
             out = _cpt_step(run.model, run.optimizer, micro, pc, n_valid)
             done = step + 1
             row = dict(step=done, tokens=done * run.step_tokens, lr=lr,
-                       domain_tokens=_mix_tokens(mix, done, (0, 1)), **out)
+                       domain_tokens=_mix_tokens(mix, done, (0,)), **out)
             if done in grid:
                 row.update(_set_losses(_cpt_docs(run.raw, sets, T,
                                                  _CPT_EVAL_TOKENS)))
@@ -26757,14 +26982,14 @@ def _cpt_train(model, mix, sets, cfg, job, optim_state=None, peak=None,
     return run.finish()
 
 def _cpt_mix(shards, cfg):
-    """The arm's MixStream: peS2o, book and replay windows in the shares
-    (0.9 (1 - r), 0.1 (1 - r), r), data seed for streams and mixture."""
+    """The arm's MixStream: reasoning-trace and replay windows in the
+    shares (1 - r, r), the data seed for streams and mixture (the book is
+    never trained)."""
     T, B, seed, r = (cfg['seq_len'], cfg['global_batch'], cfg['data_seed'],
                      cfg['replay'])
     streams = [d2l.PackedStream(shards[k], T, B, seed=seed)
-               for k in ('pes2o', 'book', 'replay')]
-    return d2l.mix_streams(streams, (0.9 * (1 - r), 0.1 * (1 - r), r), B,
-                           seed=seed)
+               for k in ('traces', 'replay')]
+    return d2l.mix_streams(streams, (1 - r, r), B, seed=seed)
 
 def _cpt_suite_n(tier):
     return None if tier == 't2' else 2000  # T1: 2,000 items per task
@@ -26827,7 +27052,8 @@ def _part(p):
 
 def _cpt_merge(parts, cfgs):
     """CptRuns from the arms' parts {arm: part}: the base and each arm's
-    final weights on the full evaluation sets and the suite."""
+    final weights on the full evaluation sets and the suite, and at T2 on
+    GSM8K in two formats."""
     cfg0 = next(iter(cfgs.values()))
     tier, T = cfg0['tier'], cfg0['seq_len']
     dev = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -26877,30 +27103,38 @@ def _cpt_merge(parts, cfgs):
     table = pd.DataFrame(rows)
     table['suite'] = table['arm'].map(suite_mean(final, by=('arm',)))
     C = _CPT_COLUMNS
+    gsm = (_cpt_gsm8k_all(cfgs) if tier == 't2'
+           else pd.DataFrame(columns=C['gsm8k']))
+    for fmt in ('completion', 'chat'):
+        acc = gsm[gsm['format'] == fmt].groupby('arm')['score'].mean()
+        table[f'gsm8k_{fmt}'] = table['arm'].map(acc)
     return CptRuns(table.reindex(columns=C['table']),
                    pd.concat(logs, ignore_index=True).reindex(
                        columns=C['logs']),
                    base_docs, pd.concat(docs, ignore_index=True)[C['docs']],
                    pd.DataFrame(equal, columns=C['equal']),
-                   items[C['items']], label)
+                   items[C['items']], gsm, label)
 
 def cpt_arms(arms, base, tokens, seq_len, batch_tokens, warmup=10,
              final_frac=0.1):
-    """Continue base on the domain stream (90% peS2o, 10% the book's train
-    sections) with a replay share of FineWeb-Edu, one run per arm, and
-    evaluate it: CptRuns(table, logs, base_docs, docs, equal, items,
-    label). arms = {name: dict(peak_lr, replay, data_seed[, warmup, start,
-    schedule])}; peak_lr None is the base run's own peak; start 'plateau'
-    restores the reference run's plateau state (weights and AdamW moments)
-    instead of its final checkpoint; schedule 'cosine' (to final_frac of
-    the peak) or 'linear' (to zero). base 'Qwen/Qwen3-0.6B-Base' (T2: one
-    regeneration per arm, cpt-qwen-A, -B, -C, -A2, merged by
-    cpt-qwen-evals) or 'r2' (T1: the regeneration cpt-t1). Otherwise the
-    committed result; while the Qwen arms are pending, the T1 arms under a
-    printed label."""
+    """Continue base on reasoning traces with a replay share of
+    FineWeb-Edu (the book is evaluated, never trained), one run per arm,
+    and evaluate it: CptRuns(table, logs, base_docs, docs, equal, items,
+    gsm8k, label). arms = {name: dict(peak_lr, replay, data_seed[, warmup,
+    start, schedule, moments])}; peak_lr None is the base run's own peak;
+    start 'plateau' starts from the reference run's plateau state instead
+    of its final checkpoint, with its AdamW moments restored unless
+    moments is 'fresh'; schedule 'cosine' (to final_frac of the peak) or
+    'linear' (to zero). base 'Qwen/Qwen3-0.6B-Base' (T2: one regeneration
+    per arm, cpt-qwen-A, -B, -C, -A2, merged with GSM8K by cpt-qwen-evals)
+    or 'r2' (T1: the regeneration cpt-t1). Otherwise the committed result,
+    whose stored configuration, data included, must match; while the Qwen
+    arms are pending, the T1 arms under a printed label."""
+    tier = 't2' if base.startswith('Qwen/') else 't1'
+    data = _cpt_data_id(tier)
     config = dict(arms=arms, base=base, tokens=tokens, seq_len=seq_len,
                   batch_tokens=batch_tokens, warmup=warmup,
-                  final_frac=final_frac)
+                  final_frac=final_frac, data=data)
     cfgs = _cpt_configs(arms, base, tokens, seq_len, batch_tokens, warmup,
                         final_frac)
     if not base.startswith('Qwen/'):
@@ -26910,7 +27144,8 @@ def cpt_arms(arms, base, tokens, seq_len, batch_tokens, warmup=10,
         missing = set(arms) - set(_CPT_QWEN_NAMES)
         if missing:
             raise ValueError(f'no regeneration name for arms {missing}')
-        parts = {_CPT_QWEN_NAMES[a]: (lambda c=c: _cpt_arm_run(c), c)
+        parts = {_CPT_QWEN_NAMES[a]: (lambda c=c: _cpt_arm_run(c),
+                                      dict(c, data=data))
                  for a, c in cfgs.items()}
         names = {_CPT_QWEN_NAMES[a]: a for a in cfgs}
         res = d2l._pretrain_merged(
@@ -26954,9 +27189,9 @@ def cpt_probe(micro_batches=(1, 2), steps=15, warmup=3):
     return pd.DataFrame(rows)
 
 def plot_cpt_curves(runs, thin=('A′', 'A″')):
-    """Domain, general and held-out book loss against tokens, one panel
-    each, per arm (the arms in `thin` as thin lines), with the base's loss
-    as a dashed line.
+    """Held-out trace, general and held-out book loss against tokens, one
+    panel each, per arm (the arms in `thin` as thin lines), with the base's
+    loss as a dashed line.
 
     Defined in :numref:`sec_lm_continued_pretraining`"""
     fig, axes = d2l.plt.subplots(1, 3, figsize=(8, 2.6))
@@ -26972,42 +27207,65 @@ def plot_cpt_curves(runs, thin=('A′', 'A″')):
             ax.axhline(base[f'{s}_loss'].iloc[0], color='black', ls='--',
                        lw=1)
         ax.set_xlabel('tokens (millions)')
-        ax.set_title(f'{s} loss', fontsize=10)
+        ax.set_title(dict(domain='held-out traces', general='FineWeb-Edu',
+                          book='held-out book')[s], fontsize=10)
     axes[0].set_ylabel('nats per token')
-    axes[0].legend(fontsize=8)
+    if axes[0].get_legend_handles_labels()[0]:  # none while pending
+        axes[0].legend(fontsize=8)
     fig.tight_layout()
 
-Estimate = collections.namedtuple('Estimate', ['value', 'lo', 'hi', 'note'])
+Estimate = collections.namedtuple('Estimate', ['value', 'lo', 'hi', 'note',
+                                               'ref'], defaults=('',))
 
-def _estimate(x, note=''):
+def _estimate(x, note='', ref=''):
     """Estimate from replicates whose last entry is the point estimate.
 
     Defined in :numref:`sec_lm_continued_pretraining`"""
     if note:
-        return Estimate(math.nan, math.nan, math.nan, note)
+        return Estimate(math.nan, math.nan, math.nan, note, ref)
     lo, hi = np.percentile(x[:-1], [2.5, 97.5])
-    return Estimate(float(x[-1]), float(lo), float(hi), '')
+    return Estimate(float(x[-1]), float(lo), float(hi), '', ref)
 
-def frontier_excess(fg, arm='B', through='C'):
-    """How far arm's domain gain lies above the line from the base (no
-    gain, no forgetting) through arm `through`, at arm's forgetting, in
-    nats per token: an Estimate (value, lo, hi, note) with the 95% interval
-    from the document resamples of forgetting_gain (fg.attrs['draws']).
-    The line is undefined, and note says why, when an arm is missing or
-    `through`'s forgetting interval reaches 0 (the slope's replicates
-    would divide by about 0). The test is one-sided: on a concave frontier
-    the line through a low-forgetting arm lies above the frontier at
-    larger forgetting, so a positive excess shows arm above it and a
-    negative one shows nothing."""
+def frontier_excess(fg, arm='B', chord=('C', 'A')):
+    """arm's domain gain minus the no-replay reference at arm's
+    forgetting, in nats per token: an Estimate (value, lo, hi, note, ref)
+    with the 95% interval from the document resamples of forgetting_gain
+    (fg.attrs['draws']); ref names the reference. chord = (low, high) are
+    two no-replay arms, low forgetting less. A no-replay frontier through
+    the base (no gain, no forgetting) is concave, so between low's and
+    high's forgetting the chord from low to high lies on or under it, and
+    below low's forgetting so does the segment from the base to low: arm
+    is measured against the chord, or against the segment if it forgets
+    less than low (point estimates decide). Above high's forgetting
+    nothing measured bounds the frontier, and the note says there is no
+    verdict. A note also when an arm is missing, high does not forget more
+    than low, or the reference's span of forgetting is not resolved from
+    0 (its replicates would divide by about 0)."""
+    low, high = chord
     draws = fg.attrs.get('draws', {})
-    if not {arm, through} <= set(draws):
-        missing = sorted({arm, through} - set(draws))
+    if not {arm, low, high} <= set(draws):
+        missing = sorted({arm, low, high} - set(draws))
         return _estimate(None, f'needs arm {", ".join(missing)} (T2 only)')
     g, f = (lambda a: draws[a]['gain']), (lambda a: draws[a]['forget'])
-    if np.percentile(f(through)[:-1], 2.5) <= 0:
-        return _estimate(None, f"{through}'s forgetting is not resolved "
-                         'from 0: the line is undefined')
-    return _estimate(g(arm) - g(through) * f(arm) / f(through))
+    resolved = lambda x: np.percentile(x[:-1], 2.5) > 0
+    if f(high)[-1] <= f(low)[-1]:
+        return _estimate(None, f'{high} forgets no more than {low}: no '
+                         'chord')
+    if f(arm)[-1] > f(high)[-1]:
+        return _estimate(None, f"{arm}'s forgetting is outside the measured "
+                         f"no-replay range (above {high}'s): no verdict")
+    if f(arm)[-1] >= f(low)[-1]:
+        span = f(high) - f(low)
+        if not resolved(span):
+            return _estimate(None, f'{high} minus {low} forgetting is not '
+                             'resolved from 0: the chord is undefined')
+        ref = g(low) + (g(high) - g(low)) * (f(arm) - f(low)) / span
+        return _estimate(g(arm) - ref, ref=f'{low} → {high} chord')
+    if not resolved(f(low)):
+        return _estimate(None, f"{low}'s forgetting is not resolved from 0: "
+                         'the segment is undefined')
+    return _estimate(g(arm) - g(low) * f(arm) / f(low),
+                     ref=f'base → {low} segment')
 
 def replay_fractions(fg, arm='B', of='A'):
     """arm's domain gain and forgetting as fractions of arm `of`'s: two
@@ -27021,10 +27279,11 @@ def replay_fractions(fg, arm='B', of='A'):
     return tuple(_estimate(draws[arm][k] / draws[of][k])
                  for k in ('gain', 'forget'))
 
-def plot_tradeoff(fg, through='C'):
+def plot_tradeoff(fg, chord=('C', 'A')):
     """Domain gain against forgetting with 95% intervals per arm, the base
-    at the origin, and the line from the base through arm `through` (when
-    its forgetting is resolved from 0)."""
+    at the origin, and the no-replay lower bound through the chord's arms
+    (the segment from the base to the low arm, then the chord to the high
+    arm), as a dashed line when both arms are there."""
     fig, ax = d2l.plt.subplots(figsize=(4.2, 3.2))
     ax.plot([0], [0], 'ks')
     ax.annotate('base', (0, 0), xytext=(6, -10), textcoords='offset points',
@@ -27034,16 +27293,16 @@ def plot_tradeoff(fg, through='C'):
                                             [r.forget_hi - r.forget]],
                     yerr=[[r.gain - r.gain_lo], [r.gain_hi - r.gain]],
                     fmt='o', color=f'C{i}', capsize=2, label=r.arm)
-    c = fg.set_index('arm').reindex([through]).iloc[0]
-    if np.isfinite(c['forget_lo']) and c['forget_lo'] > 0:
-        x = np.array([0, fg['forget_hi'].max()])
-        ax.plot(x, x * c['gain'] / c['forget'], color='black', ls='--',
-                lw=1)
+    ends = fg.set_index('arm').reindex(list(chord))
+    if ends[['gain', 'forget']].notna().all().all():
+        ax.plot([0, *ends['forget']], [0, *ends['gain']], color='black',
+                ls='--', lw=1)
     ax.axhline(0, color='black', lw=0.6)
     ax.axvline(0, color='black', lw=0.6)
     ax.set_xlabel('forgetting (nats/token)')
-    ax.set_ylabel('domain gain (nats/token)')
-    ax.legend(fontsize=8)
+    ax.set_ylabel('trace gain (nats/token)')
+    if ax.get_legend_handles_labels()[0]:  # none while pending
+        ax.legend(fontsize=8)
     fig.tight_layout()
 
 SmolTrajectory = collections.namedtuple(

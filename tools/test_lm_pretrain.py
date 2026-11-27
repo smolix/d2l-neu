@@ -1458,8 +1458,8 @@ class ResultTest(unittest.TestCase):
         df = call()
         self.assertEqual(self.calls, 4)
         self.assertEqual(len(df), 8)
-        self.assertTrue(os.path.exists('../data/lm/rerun/lm-cpt-runs-v1'
-                                       '.json.gz'))
+        name = d2l.PRETRAIN_ARTIFACTS['cpt-runs'][0]
+        self.assertTrue(os.path.exists(f'../data/lm/rerun/{name}.json.gz'))
         os.environ['D2L_RERUN'] = ''
         with self.assertRaises(KeyError):
             call()

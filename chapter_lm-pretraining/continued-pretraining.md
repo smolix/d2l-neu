@@ -39,7 +39,7 @@ when the section is written.
 - Courses, tutorials and blogs: [SmolLM3 blog](https://huggingface.co/blog/smollm3) (the documented three-stage recipe whose checkpoints the cell reads); [SmolLM3 training logs](https://wandb.ai/huggingface/SmolLM3-training-logs) (the run's public logs); [Olmo 3 release post](https://allenai.org/blog/olmo3) (the model flow with every stage public).
 -->
 
-<!-- Placeholder (prose): opening. The reader has a pretrained base model (Qwen3-0.6B-Base) and a domain it barely knows (scientific prose and this book). Continue its training for a few million tokens and the domain loss falls, while the loss on general web text rises and the suite moves; the cell below shows arm A of this section's runs at its first evaluation (15 steps). The reader knows warmup and decay (sec_scheduler); here the schedule restarts on a model that has already decayed, with cold optimizer moments. Opening question: with and without replay, how do domain loss, general loss and the suite move, and what does a released model's sequence of stages look like from outside? -->
+<!-- Placeholder (prose): opening. The reader has a pretrained base model (Qwen3-0.6B-Base) and a target domain: reasoning traces, a question followed by a long think-aloud solution in chat markers (the base already predicts them better than web text, about 1.3 against 2.5 nats/token in the fix-pass probe; quote the arms' own step-0 numbers) (ruling 2026-11-25 ~16:30: traces, which every reader can read; the book is no longer trained, only evaluated). Continue its training for a few million tokens and the held-out trace loss falls, while the loss on general web text rises and the suite moves; the cell below shows arm A of this section's runs at its first suite evaluation (15 steps, 3.9M tokens). The reader knows warmup and decay (sec_scheduler); here the schedule restarts on a model that has already decayed, with cold optimizer moments. Opening question: with and without replay, how do domain loss, general loss and the suite move, and what does a released model's sequence of stages look like from outside? -->
 
 ```{.python .input #continued-pretraining-imports}
 %%tab pytorch
@@ -61,9 +61,10 @@ import pandas as pd
 runs = d2l.cpt_qwen_runs()
 look = runs.logs.set_index(['arm', 'step']).reindex([('base', 0), ('A', 15)])
 suite = d2l.suite_mean(runs.items).reindex([('base', 0), ('A', 15)])
-book, web = look['book_loss'].to_numpy(), look['general_loss'].to_numpy()
-print(f'after {look["tokens"].iloc[1] / 1e6:.1f}M tokens (arm A): held-out '
-      f'book loss {book[0]:.2f} → {book[1]:.2f} nats/token')
+trace, web = look['domain_loss'].to_numpy(), look['general_loss'].to_numpy()
+print(f'after {look["tokens"].iloc[1] / 1e6:.1f}M tokens of reasoning traces '
+      f'(arm A): held-out trace loss {trace[0]:.2f} → {trace[1]:.2f} '
+      'nats/token')
 print(f'general web text: {web[0]:.2f} → {web[1]:.2f}')
 print(f'suite ({len(d2l.CPT_TASKS)} tasks, mean accuracy): '
       f'{100 * suite.iloc[0]:.1f}% → {100 * suite.iloc[1]:.1f}%')
@@ -269,7 +270,7 @@ print(data.table.rename(columns=dict(tokens='tokens (Qwen)')).to_string(
 
 ### The Arms
 
-<!-- Placeholder (prose): the arm protocol as a markdown table (T = 2,048; 128 x 2,048 = 262,144 tokens per step; 305 steps = 79,953,920 tokens; AdamW (0.9, 0.95), eps 1e-8, weight decay 0.1, clip 1.0; no z-loss, since the base was not trained with the book's z-loss; bf16 autocast with fp32 master weights; loss chunk 2,048; document masks; warmup 10 steps then cosine to 10% of the peak; fresh AdamW moments). Arms: A peak 1e-4 without replay; B peak 1e-4 with 25% replay; C peak 1e-5 without replay; A′ is A under another data seed, the yardstick for "not resolved". Evaluations: every 3 steps for the first 30 (the bump), then every 15 on 0.5M tokens of each validation set; at the end the full sets (2M tokens each) and the suite with full item sets. Runtime on the 4090s and the A100 package (the campaign's measured numbers). -->
+<!-- Placeholder (prose): the arm protocol as a markdown table (T = 2,048; 128 x 2,048 = 262,144 tokens per step; 305 steps = 79,953,920 tokens; AdamW (0.9, 0.95), eps 1e-8, weight decay 0.1, clip 1.0; no z-loss, since the base was not trained with the book's z-loss; bf16 autocast with fp32 master weights; loss chunk 2,048; document masks; warmup 10 steps then cosine to 10% of the peak; fresh AdamW moments). Arms: A peak 1e-4 without replay; B peak 1e-4 with 25% replay; C peak 1e-5 without replay; A′ is A under another data seed, the yardstick for "not resolved". Evaluations: every 3 steps for the first 30 (the bump), then every 15 on 0.5M tokens of each validation set; at the end the full sets (2M tokens each), the suite with full item sets and GSM8K in two formats (500 items each, base and every arm). The domain stream is the reasoning traces alone, mixed with replay in the shares (1 − r, r); the book is never trained. Each arm's job folder records its configuration, its base and its data (the manifest's layout hashes), so a folder trained on another corpus is refused. Runtime on the 4090s and the A100 package (the campaign's measured numbers). -->
 
 ```{.python .input #continued-pretraining-arms}
 %%tab pytorch
@@ -280,16 +281,48 @@ ARMS = {'A': dict(peak_lr=1e-4, replay=0.0, data_seed=0),
 runs = d2l.cpt_arms(ARMS, base='Qwen/Qwen3-0.6B-Base', tokens=80_000_000,
                     seq_len=2048, batch_tokens=262_144, warmup=10,
                     final_frac=0.1)
-cols = {'arm': 'arm', 'domain_loss': 'domain loss',
-        'general_loss': 'general loss', 'book_loss': 'held-out book loss',
-        'suite': 'suite mean'}
+cols = {'arm': 'arm', 'domain_loss': 'trace loss',
+        'general_loss': 'general loss', 'book_loss': 'book loss',
+        'suite': 'suite mean', 'gsm8k_chat': 'GSM8K chat'}
+percent = lambda v: '–' if pd.isna(v) else f'{100 * v:.1f}%'
 print(runs.table[list(cols)].rename(columns=cols).to_string(
     index=False, float_format='{:.3f}'.format,
-    formatters={'suite mean': lambda v: f'{100 * v:.1f}%'}))
+    formatters={'suite mean': percent, 'GSM8K chat': percent}))
 d2l.plot_cpt_curves(runs)
 ```
 
-<!-- Placeholder (prose): read the table and the curves (claim 4): without replay the domain loss falls and the general loss rises, more at the higher rate (A against C); quote the differences only where they exceed the A/A′ spread, else "not resolved". The held-out book loss tracks the domain loss (or not: say which). -->
+<!-- Placeholder (prose): read the table and the curves (claim 4): without replay the held-out trace loss falls and the general loss rises, more at the higher rate (A against C); quote the differences only where they exceed the A/A′ spread, else "not resolved". The held-out book (never trained, old-domain English technical prose) is a second general set: say whether it moves with FineWeb-Edu. GSM8K is read in the next cell. -->
+
+### What the Arms Learned, on a Test Set
+
+<!-- Placeholder (prose): a lower loss on held-out traces is not yet a skill. GSM8K (chapter 18) asks the question directly, in two formats: the 8-shot completion format of a base model (chapter 18's gsm8k_cot, 256 new tokens) and one ChatML user turn with room to think (4,096 new tokens), the format of the traces; greedy, the same 500 items for every model; the answer is the number after the reply's </think>, and a reply cut at the budget or one that never closes its think block counts as no answer. Most training traces stop at the dataset's generation cap without closing </think> (about two thirds), so an arm may learn to think past any budget: the columns "chat cut" and "chat no </think>" show it, and "8-shot chat tokens" shows chat markers leaking into the completion format (Olmo 3 §3.5.4). Claim 13: quote changes against the base only where the paired interval excludes 0; "no measurable change at 80M tokens" if none does; a chat drop that comes with more never-closed think blocks than the base's is a format effect of the truncated traces, not forgetting; a completion drop that comes with chat tokens is a format effect. -->
+
+```{.python .input #continued-pretraining-gsm8k}
+%%tab pytorch
+if len(runs.gsm8k):  # T2 only: empty for the T1 stand-in
+    gsm = runs.gsm8k.assign(open=lambda d: d['thinks'] & ~d['closed'])
+    by = gsm.groupby(['arm', 'format'], sort=False)[[
+        'score', 'cut', 'open', 'chat_tokens']].mean().unstack('format')
+    print(f'{"model":<6}{"8-shot":>8}{"chat":>8}{"chat cut":>10}'
+          f'{"chat no </think>":>18}{"8-shot chat tokens":>20}')
+    for arm, r in by.iterrows():
+        print(f'{arm:<6}{r["score", "completion"]:>8.1%}'
+              f'{r["score", "chat"]:>8.1%}{r["cut", "chat"]:>10.0%}'
+              f'{r["open", "chat"]:>18.0%}'
+              f'{r["chat_tokens", "completion"]:>20.0%}')
+    wide = gsm.pivot_table(index=['format', 'item_id'], columns='arm',
+                           values='score')
+    print('change against the base, points [95% CI, paired items]')
+    print(f'{"arm":<6}{"8-shot":<24}chat')
+    for arm in [a for a in by.index if a != 'base']:
+        cells = []
+        for fmt in ('completion', 'chat'):
+            r = d2l.paired_bootstrap(wide.loc[fmt, arm],
+                                     wide.loc[fmt, 'base'])
+            cells.append(f'{100 * r.mean:+.1f} [{100 * r.ci[0]:+.1f}, '
+                         f'{100 * r.ci[1]:+.1f}]')
+        print(f'{arm:<6}{cells[0]:<24}{cells[1]}')
+```
 
 ### The Re-Warm Bump
 
@@ -347,13 +380,22 @@ pct = lambda e: f'{e.value:.0%} [{e.lo:.0%}, {e.hi:.0%}]'
 kept, forgot = d2l.replay_fractions(fg, 'B', of='A')
 print(kept.note or f"B: {pct(kept)} of A's gain, {pct(forgot)} of A's "
       'forgetting')
-ex = d2l.frontier_excess(fg, 'B', through='C')
-print('B above the line from the base through C: ' + (
-    ex.note or f'{ex.value:.3f} [{ex.lo:.3f}, {ex.hi:.3f}]'))
-d2l.plot_tradeoff(fg)
+d2l.plot_tradeoff(fg, chord=('C', 'A'))
 ```
 
-<!-- Placeholder (prose): claims 5 and 6: B's forgetting as a fraction of A's and B's gain as a fraction of A's, as printed with their intervals (paired: the same document resamples); "most" only if the forgetting fraction's interval lies under 50%, "small cost" only if the kept-gain interval lies over 75%. B's position against the line from the base through C, with the interval of the excess. The test is one-sided: the frontier is concave (quadratic model: slope 1/sqrt(F) - 1), so the line through a low-forgetting arm lies above the frontier at B's larger forgetting; a positive excess shows B above the no-replay frontier, a negative or unresolved one shows nothing about it (say "not shown", never "below"). If the cell prints that C's forgetting is not resolved, the line is undefined: say so. Under the T1 fallback there is no arm C: the cell says so. Compare with the quadratic model's prediction. -->
+<!-- Placeholder (prose): claim 5: B's forgetting as a fraction of A's and B's gain as a fraction of A's, as printed with their intervals (paired: the same document resamples); "most" only if the forgetting fraction's interval lies under 50%, "small cost" only if the kept-gain interval lies over 75%; else the measured fractions. The plot: the dashed line from the base through C to A is the no-replay lower bound the next cell tests B against. Under the T1 fallback there is no arm C: the cell says so. -->
+
+<!-- Placeholder (prose): claim 6, the test (investigation of 2026-11-25: the line from the base through C, extended past C, lies above a concave frontier, so it tested nothing). Without replay the arms trace a frontier through the base that is concave (quadratic model: slope 1/sqrt(F) - 1), so the chord between two no-replay points lies on or under it: B, whose forgetting falls between C's and A's, is measured against the chord from C to A at its own forgetting. Pre-registered out-of-range cases: if B forgets less than C, the reference is the segment from the base to C (also a lower bound there); if B forgets more than A, nothing measured bounds the frontier and the cell says so, no verdict. Wording: "above the no-replay frontier" only if the interval excludes 0 and the excess exceeds the A/A′ spread; "on the frontier within the seed spread" otherwise; "below the chord" if the interval lies under 0 (then C is the better trade-off at these settings); never "above the line". The second line gives the seed spread and the excess against the chord to A′ instead. -->
+
+```{.python .input #continued-pretraining-frontier-chord}
+%%tab pytorch
+ex = d2l.frontier_excess(fg, 'B', chord=('C', 'A'))
+print(ex.note or f'B − no-replay reference ({ex.ref}): {ex.value:+.3f} '
+      f'[{ex.lo:+.3f}, {ex.hi:+.3f}] nats/token')
+alt = d2l.frontier_excess(fg, 'B', chord=('C', 'A′'))
+print(f'seed spread (A vs A′): gain {abs(seed.gain.diff().iloc[-1]):.3f}; '
+      'against the C → A′ chord: ' + (alt.note or f'{alt.value:+.3f}'))
+```
 
 ### Equal-Token Accounting
 
@@ -398,7 +440,7 @@ for arm in [a for a in ('A', 'B', 'C') if a in wide]:
 
 ### The Branch Point at T1
 
-<!-- Placeholder (prose): the same machinery on the reference model (sec_lm_reference_model) at T1: 12M tokens per arm at T = 1,024 from the hosted R2-tokenized slices: the same reasoning traces as plain text (User: … Assistant: …, no chat tokens; same question split) and FineWeb-Edu. Arm A under three data seeds (the spread that decides "not resolved"), B with 25% replay, the cold restart (the final checkpoint at the base run's own peak 6e-4, no warmup, fresh moments: the pitfall), and the branch from the plateau state at step 5,100 (lm-r2-s5100-state: weights and AdamW moments restored, the rate continuing at 6e-4 and decaying linearly to zero). This is also the configuration every claim of the T2 arms falls back to while they are pending. -->
+<!-- Placeholder (prose): the same machinery on the reference model (sec_lm_reference_model) at T1: 12M tokens per arm at T = 1,024 from the hosted R2-tokenized slices: the same reasoning traces as plain text (User: … Assistant: …, no chat tokens; same question split) and FineWeb-Edu. Arm A under three data seeds (the spread that decides "not resolved"), B with 25% replay, the cold restart (the final checkpoint at the base run's own peak 6e-4, no warmup, fresh moments: the pitfall), the branch from the plateau state at step 5,100 (lm-r2-s5100-state: weights and AdamW moments restored, the rate continuing at 6e-4 and decaying linearly to zero), and cold-plateau, the branch with fresh moments (same weights, rate and schedule; fix pass, so that the two differ only in the moments). This is also the configuration every claim of the T2 arms falls back to while they are pending. -->
 
 ```{.python .input #continued-pretraining-t1-arms}
 %%tab pytorch
@@ -408,20 +450,22 @@ ARMS_T1 = {'A': dict(peak_lr=3e-4, replay=0.0, data_seed=0),
            'B': dict(peak_lr=3e-4, replay=0.25, data_seed=0),
            # peak_lr None: the base run's own peak (6e-4)
            'cold': dict(peak_lr=None, replay=0.0, data_seed=0, warmup=0),
+           'cold-plateau': dict(peak_lr=None, replay=0.0, data_seed=0,
+                                warmup=0, start='plateau',
+                                schedule='linear', moments='fresh'),
            'branch': dict(peak_lr=None, replay=0.0, data_seed=0, warmup=0,
                           start='plateau', schedule='linear')}
 t1 = d2l.cpt_arms(ARMS_T1, base='r2', tokens=12_000_000, seq_len=1024,
                   batch_tokens=65_536)
 table = t1.table.merge(d2l.rewarm_bump(t1)[['arm', 'bump']], on='arm',
                        how='left')
-cols = dict(arm='arm', bump='bump', domain_loss='domain',
+cols = dict(arm='arm', bump='bump', domain_loss='trace',
             general_loss='general', book_loss='book')
-print('losses and bump in nats per token (–: no transient bump)')
 print(table[list(cols)].rename(columns=cols).to_string(
     index=False, na_rep='–', float_format='{:.3f}'.format))
 ```
 
-<!-- Placeholder (prose): claim 8, T1 half: the cold restart spikes; the plateau branch (warm moments, no rate jump) shows no bump; the seeds of A give the spread every T1 comparison is read against. Branching from a plateau is the cheap way to continue a run that one controls; a released model ships no moments, which is the Qwen case. -->
+<!-- Placeholder (prose): the table's units (nats per token; "–" is an arm with no transient bump, or the base). Claim 8b: the cold restart (final checkpoint, fresh moments, the base run's peak 6e-4 with no warmup) spikes, read against the range of A's three seeds ("no spike resolved" if inside it). Claim 8c (fix pass: run B compared the branch with A at another rate, which tested nothing): branch and cold-plateau start from the same plateau weights at the same rate and schedule and differ only in the AdamW moments, restored against fresh; the branch's bump minus cold-plateau's, against A's seed range, is what the restored moments buy ("the restored moments removed / reduced the spike by x"; "no difference resolved"). Branching from a plateau is the cheap way to continue a run that one controls; a released model ships no moments, which is the Qwen case. -->
 
 ## Mid-Training Stages and the SmolLM3 Trajectory
 

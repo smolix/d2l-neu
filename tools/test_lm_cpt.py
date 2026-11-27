@@ -8,9 +8,19 @@ PackedStream within an epoch, resume through state_dict exact and a
 changed mixture refused, ranks 1/2/4 the same multiset); the page's
 quadratic cell (frontier identity and the 2-D points, run from the page);
 `forgetting_gain` (the page's planted check, identical arms give zero,
-paired resamples), `frontier_excess` (and its note when an arm is
-missing or the line's forgetting is not resolved from 0) and
-`replay_fractions`; `rewarm_bump` (from each arm's own step 0, transient
+paired resamples), `frontier_excess` against the C -> A chord on a
+synthetic concave frontier (on the chord 0, under it negative, a replay
+arm forgetting less than C against the base -> C segment, one forgetting
+more than A no verdict; notes when an arm is missing or a span is not
+resolved from 0) and `replay_fractions`; an arm's two-stream mixture
+(traces and replay in (1 - r, r), no book); the data in the job identity
+(T2 manifest layout, T1 tar sha1) and in a result's configuration;
+cold-plateau's fresh moments against the branch's restored ones; GSM8K in
+two formats (the ChatML prompt and its tokens, the answer after
+</think>, a cut or never-closed reply has none, chat markers in the
+completion format, budgets and end tokens; the Transformers weight map
+inverted; the per-model cache of cpt-qwen-evals); the page's T2 cells on a
+synthetic result (shapes, widths); `rewarm_bump` (from each arm's own step 0, transient
 or not); `book_split`
 (deterministic, disjoint, every fifth section held out); `cpt_data('t2')`
 in a normal run opens no shard; the arm schedule, configurations and
@@ -113,7 +123,7 @@ class Fixtures(unittest.TestCase):
         cls.tmp = tempfile.TemporaryDirectory()
         cls.shards = {k: fixture_shards(os.path.join(cls.tmp.name, k),
                                         seed=i)
-                      for i, k in enumerate(('pes2o', 'book', 'replay',
+                      for i, k in enumerate(('traces', 'replay',
                                              'val_domain', 'val_general',
                                              'val_book'))}
 
@@ -123,7 +133,7 @@ class Fixtures(unittest.TestCase):
 
     def streams(self, T=16, B=8, seeds=(0, 1)):
         return [d2l.PackedStream(self.shards[k], T, B, seed=s)
-                for k, s in zip(('pes2o', 'replay'), seeds)]
+                for k, s in zip(('traces', 'replay'), seeds)]
 
 
 class MixTest(Fixtures):
@@ -190,6 +200,26 @@ class MixTest(Fixtures):
                     p.batch(s)['input_ids'].numpy() for p in parts])))
                 self.assertEqual(got, want)
 
+    def test_cpt_mix_two_streams(self):
+        """An arm's mixture: reasoning traces and replay in the shares
+        (1 - r, r), within three binomial SE over 10,000 steps; the book is
+        not one of its streams."""
+        cfg = dict(seq_len=16, global_batch=128, data_seed=0, replay=0.25)
+        mix = d2l._cpt_mix(self.shards, cfg)
+        self.assertEqual([st.layout_hash for st in mix.streams],
+                         [d2l._layout_hash(self.shards[k])
+                          for k in ('traces', 'replay')])
+        counts = np.stack([mix.counts(s) for s in range(10_000)])
+        share = counts[:, 1].sum() / counts.sum()
+        self.assertLess(abs(share - 0.25),
+                        3 * math.sqrt(0.25 * 0.75 / counts.sum()))
+        none = d2l._cpt_mix(self.shards, dict(cfg, replay=0.0))
+        self.assertEqual(int(none.cursors(100)[1]), 0)
+        self.assertEqual(d2l._mix_tokens(none, 100, (0,)), 100 * 128 * 16)
+        with self.assertRaises(KeyError):  # no 'book' stream is read
+            d2l._cpt_mix({k: v for k, v in self.shards.items()
+                          if k != 'traces'}, cfg)
+
     def test_zero_weight_stream(self):
         mix = d2l.mix_streams(self.streams(), (1.0, 0.0), 8)
         self.assertTrue((mix.cursors(50)[1] == 0))
@@ -224,6 +254,17 @@ def synthetic_docs(n=300, seed=0, gain=0.05, forget=0.02, noise=0.05):
     return base, arm
 
 
+def shifted(base, gain, forget, noise, seed):
+    """An arm from base's documents: per-token loss lower by gain on the
+    domain set, higher by forget on the general set, plus noise."""
+    rng = np.random.default_rng(seed)
+    n = base['n_tokens'].to_numpy()
+    dom = (base['set'] == 'domain').to_numpy()
+    per = base['sum_nll'].to_numpy() / n + np.where(dom, -gain, forget)
+    return base.assign(sum_nll=(per + noise * rng.standard_normal(len(n)))
+                       * n)
+
+
 class ForgettingGainTest(unittest.TestCase):
     def test_page_check(self):
         out = run_cell('continued-pretraining-estimator-check', page_ns())
@@ -238,43 +279,88 @@ class ForgettingGainTest(unittest.TestCase):
 
     def test_two_arms_and_frontier(self):
         base, a = synthetic_docs(gain=0.10, forget=0.04, noise=0.01)
-        _, c = synthetic_docs(gain=0.05, forget=0.04, noise=0.01)
-        _, b = synthetic_docs(gain=0.08, forget=0.01, noise=0.01)
+        _, c = synthetic_docs(gain=0.05, forget=0.01, noise=0.01)
+        _, b = synthetic_docs(gain=0.08, forget=0.02, noise=0.01)
         docs = pd.concat([a.assign(arm='A'), b.assign(arm='B'),
                           c.assign(arm='C')])
         fg = d2l.forgetting_gain(base, docs)
         self.assertEqual(list(fg['arm']), ['A', 'B', 'C'])
         r = fg.set_index('arm')
-        for arm, g, f in (('A', .10, .04), ('B', .08, .01), ('C', .05, .04)):
+        for arm, g, f in (('A', .10, .04), ('B', .08, .02), ('C', .05, .01)):
             self.assertAlmostEqual(r.gain[arm], g, delta=0.005)
             self.assertAlmostEqual(r.forget[arm], f, delta=0.005)
             self.assertLess(r.gain_lo[arm], r.gain[arm])
-        ex = d2l.frontier_excess(fg, 'B', 'C')
-        self.assertAlmostEqual(ex.value, 0.08 - 0.05 * 0.01 / 0.04,
-                               delta=0.01)
+        ex = d2l.frontier_excess(fg, 'B', chord=('C', 'A'))
+        self.assertAlmostEqual(ex.value, 0.08 - (0.05 + 0.05 / 3),
+                               delta=0.005)
         self.assertGreater(ex.lo, 0)
-        self.assertEqual(ex.note, '')
-        miss = d2l.frontier_excess(fg, 'B', 'Z')
+        self.assertEqual((ex.note, ex.ref), ('', 'C → A chord'))
+        miss = d2l.frontier_excess(fg, 'B', chord=('C', 'Z'))
         self.assertTrue(math.isnan(miss.value))
         self.assertEqual(miss.note, 'needs arm Z (T2 only)')
         kept, forgot = d2l.replay_fractions(fg, 'B', of='A')
         self.assertAlmostEqual(kept.value, 0.8, delta=0.06)
-        self.assertAlmostEqual(forgot.value, 0.25, delta=0.15)
+        self.assertAlmostEqual(forgot.value, 0.5, delta=0.15)
         self.assertLess(kept.lo, kept.value)
         self.assertGreater(kept.hi, kept.value)
         self.assertIn('needs arm', d2l.replay_fractions(fg, 'B', 'Z')[0].note)
 
+    def frontier(self, b_gain, b_forget, noise=0.0):
+        """Arms C and A on the concave frontier G = 0.3 sqrt(F) (F = 0.01,
+        0.04) and B at (b_forget, b_gain), each with its own noise."""
+        base, _ = synthetic_docs()
+        docs = pd.concat([shifted(base, g, f, noise, seed).assign(arm=arm)
+                          for arm, g, f, seed in (
+                              ('C', 0.03, 0.01, 1), ('A', 0.06, 0.04, 2),
+                              ('B', b_gain, b_forget, 3))])
+        return d2l.forgetting_gain(base, docs)
+
+    def test_frontier_cases(self):
+        """The pre-registered cases of claim 6 on a synthetic concave
+        frontier: on the chord about 0, under it negative, a B that forgets
+        less than C against the segment from the base, a B that forgets
+        more than A no verdict."""
+        on = d2l.frontier_excess(self.frontier(0.045, 0.025))
+        self.assertEqual(on.ref, 'C → A chord')
+        self.assertLess(abs(on.value), 1e-9)
+        inside = d2l.frontier_excess(self.frontier(0.035, 0.025))
+        self.assertAlmostEqual(inside.value, -0.010, places=9)
+        # the frontier lies above the chord: a noisy B on it is above it
+        top = d2l.frontier_excess(self.frontier(0.3 * 0.025 ** 0.5, 0.025,
+                                                noise=0.003))
+        self.assertGreater(top.lo, 0)
+        self.assertLess(top.lo, top.value)
+        low = d2l.frontier_excess(self.frontier(0.02, 0.0049))
+        self.assertEqual(low.ref, 'base → C segment')
+        self.assertAlmostEqual(low.value, 0.02 - 0.03 * 0.49, places=9)
+        far = d2l.frontier_excess(self.frontier(0.07, 0.06))
+        self.assertTrue(math.isnan(far.value))
+        self.assertEqual(far.note, "B's forgetting is outside the measured "
+                                   "no-replay range (above A's): no verdict")
+        self.assertEqual(far.ref, '')
+
     def test_frontier_unresolved(self):
-        """C's forgetting interval reaches 0: no line, a note instead."""
-        base, a = synthetic_docs(gain=0.10, forget=0.04, noise=0.01)
-        _, c = synthetic_docs(gain=0.01, forget=0.0, noise=0.0)
-        _, b = synthetic_docs(gain=0.08, forget=0.01, noise=0.01)
-        fg = d2l.forgetting_gain(base, pd.concat([
-            a.assign(arm='A'), b.assign(arm='B'), c.assign(arm='C')]))
-        self.assertLessEqual(fg.set_index('arm').forget_lo['C'], 0)
-        ex = d2l.frontier_excess(fg, 'B', 'C')
+        """A reference whose span of forgetting is not resolved from 0, or
+        an A that forgets no more than C, gives a note instead."""
+        base, _ = synthetic_docs()
+        arms = lambda *spec: d2l.forgetting_gain(base, pd.concat([
+            shifted(base, g, f, nz, sd).assign(arm=arm)
+            for arm, g, f, nz, sd in spec]))
+        fg = arms(('C', 0.03, 0.010, 0.0, 1), ('A', 0.06, 0.012, 0.05, 3),
+                  ('B', 0.05, 0.011, 0.0, 3))
+        r = fg.set_index('arm')
+        self.assertGreater(r.forget['A'], r.forget['C'])
+        ex = d2l.frontier_excess(fg)
         self.assertTrue(math.isnan(ex.value))
         self.assertIn('not resolved', ex.note)
+        fg = arms(('C', 0.03, 0.002, 0.05, 1), ('A', 0.06, 0.04, 0.0, 2),
+                  ('B', 0.02, -0.01, 0.0, 3))
+        ex = d2l.frontier_excess(fg)
+        self.assertIn("C's forgetting is not resolved", ex.note)
+        fg = arms(('C', 0.03, 0.04, 0.0, 1), ('A', 0.06, 0.01, 0.0, 2),
+                  ('B', 0.05, 0.02, 0.0, 3))
+        self.assertEqual(d2l.frontier_excess(fg).note,
+                         'A forgets no more than C: no chord')
 
     def test_empty(self):
         cols = d2l._CPT_COLUMNS
@@ -294,7 +380,7 @@ class BumpTest(unittest.TestCase):
             step=[0, 0, 3, 6, 9, 45, 0, 3, 6, 0, 3, 6, 9],
             general_loss=[3.0, 3.0, 3.2, 3.1, 3.05, 2.9, 3.0, 3.01, 3.02,
                           3.3, 3.28, 3.25, 3.2]))
-        runs = d2l.CptRuns(None, logs, None, None, None, None, '')
+        runs = d2l.CptRuns(None, logs, None, None, None, None, None, '')
         b = d2l.rewarm_bump(runs).set_index('arm')
         self.assertEqual(list(b.index), ['A', 'C', 'branch'])
         self.assertAlmostEqual(b.bump['A'], 0.2)
@@ -391,10 +477,22 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(c['A']['global_batch'], 64)
         self.assertEqual({a: x['equal_step'] for a, x in c.items()},
                          {'A': 137, 'A′': 137, 'A″': 137, 'B': None,
-                          'cold': None, 'branch': None})
+                          'cold': None, 'cold-plateau': None,
+                          'branch': None})
         self.assertEqual((c['cold']['warmup'], c['branch']['start'],
                           c['branch']['schedule']), (0, 'plateau', 'linear'))
         self.assertEqual(c['A']['z_loss'], 1e-4)
+        # cold-plateau is the branch with fresh moments, nothing else
+        moments = {a: x['moments'] for a, x in c.items()}
+        self.assertEqual(moments, dict(dict.fromkeys(c, 'fresh'),
+                                       branch='restored'))
+        diff = {k for k in c['branch'] if c['branch'][k] !=
+                c['cold-plateau'][k]}
+        self.assertEqual(diff, {'arm', 'moments'})
+        with self.assertRaisesRegex(ValueError, 'moments'):
+            d2l._cpt_configs({'X': dict(peak_lr=1e-4, moments='restored')},
+                             'Qwen/Qwen3-0.6B-Base', 2 ** 20, 2048,
+                             262_144, 10, 0.1)
 
     def test_eval_steps(self):
         s = d2l._cpt_eval_steps(305, 't2')
@@ -451,6 +549,8 @@ class ArmsEndToEndTest(Fixtures):
                     None, self.shards, '')),
                 mock.patch.object(d2l, '_cpt_base_id',
                                   lambda cfg: ['toy', 'base-0']),
+                mock.patch.object(d2l, '_cpt_data_id',
+                                  lambda tier: {'traces': 'data-0'}),
                 mock.patch.object(d2l, '_cpt_tokenizer', lambda tier: None),
                 mock.patch.object(d2l, '_cpt_suite', lambda *a, **k: None),
                 mock.patch.object(d2l, '_suite_items',
@@ -474,7 +574,8 @@ class ArmsEndToEndTest(Fixtures):
             self.assertFalse(os.path.exists(os.path.join(root, 'cpt', 't1-A',
                                                          'state')))
             stored = d2l._read_result(os.path.join(
-                root, 'rerun', d2l._next_key('lm-cpt-t1-v1') + '.json.gz'),
+                root, 'rerun', d2l._next_key(d2l.PRETRAIN_ARTIFACTS['cpt-t1'][0])
+                + '.json.gz'),
                 'json-table')
         self.assertEqual(list(runs.table['arm']), ['base', 'A', 'B'])
         self.assertEqual(list(runs.table.columns),
@@ -500,6 +601,13 @@ class ArmsEndToEndTest(Fixtures):
         self.assertAlmostEqual(t.suite['base'], 0.75)
         self.assertEqual(list(stored.table['arm']), ['base', 'A', 'B'])
         self.assertEqual(stored.table.attrs['config']['tokens'], 4096)
+        self.assertEqual(stored.table.attrs['config']['data'],
+                         {'traces': 'data-0'})
+        self.assertEqual(len(runs.gsm8k), 0)  # T2 only
+        self.assertEqual(list(runs.gsm8k.columns),
+                         d2l._CPT_COLUMNS['gsm8k'])
+        self.assertTrue(t[['gsm8k_completion', 'gsm8k_chat']].isna().all(
+            ).all())
 
     def test_job_identity(self):
         """A finished or started folder of another arm is refused."""
@@ -519,9 +627,17 @@ class ArmsEndToEndTest(Fixtures):
                                    lambda cfg: ['toy', 'base-1']), \
                     self.assertRaisesRegex(ValueError, 'another arm'):
                 d2l._cpt_arm_run(cfg)
+            with mock.patch.object(d2l, '_cpt_data_id',  # another corpus
+                                   lambda tier: {'traces': 'data-1'}), \
+                    self.assertRaisesRegex(ValueError, 'data.traces'):
+                d2l._cpt_arm_run(cfg)
             os.remove(os.path.join(root, 'cpt', 't1-A', 'DONE'))
             with self.assertRaisesRegex(ValueError, 'config.data_seed'):
                 d2l._cpt_arm_run(dict(cfg, data_seed=1))  # arm.json
+            with mock.patch.object(d2l, '_cpt_data_id',
+                                   lambda tier: {'traces': 'data-1'}), \
+                    self.assertRaisesRegex(ValueError, 'data.traces'):
+                d2l._cpt_arm_run(cfg)  # arm.json of another corpus
 
     def test_resume_equal(self):
         cfg = dict(d2l._cpt_configs(
@@ -554,25 +670,30 @@ class PendingPageTest(unittest.TestCase):
     def test_cells(self):
         names = set(d2l._CPT_QWEN_NAMES.values()) | {'cpt-qwen-evals',
                                                      'cpt-t1'}
-        hub = {k: v for k, v in d2l.DATA_HUB.items()
-               if k not in ('lm-cpt-runs-v1', 'lm-cpt-t1-v1')}
+        stored = {d2l.PRETRAIN_ARTIFACTS[k][0] for k in ('cpt-runs',
+                                                         'cpt-t1')}
+        hub = {k: v for k, v in d2l.DATA_HUB.items() if k not in stored}
         ns = page_ns()
         with mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset(names)), \
                 mock.patch.dict(os.environ, {'D2L_RERUN': ''}), \
-                mock.patch.dict(d2l.DATA_HUB, hub, clear=True):
+                mock.patch.dict(d2l.DATA_HUB, hub, clear=True), \
+                mock.patch.object(d2l, '_cpt_data_id', lambda tier: {}):
             out = run_cell('continued-pretraining-opening', ns)
             self.assertEqual(out.splitlines()[0], '[cpt-qwen-evals pending]')
-            for cell in ('arms', 'bump-table', 'frontier', 'equal-tokens',
-                         'suite-deltas'):
+            for cell in ('arms', 'gsm8k', 'bump-table', 'frontier',
+                         'frontier-chord', 'equal-tokens', 'suite-deltas'):
                 out = run_cell(f'continued-pretraining-{cell}', ns)
-                if cell == 'frontier':
-                    self.assertIn('C: needs arm B, C (T2 only)', out)
+                if cell == 'gsm8k':
+                    self.assertEqual(out, '')
+                if cell == 'frontier-chord':
+                    self.assertEqual(out.splitlines()[0],
+                                     'needs arm A, B, C (T2 only)')
         self.assertIn('pending', ns['runs'].label)
 
     def test_fallback_label_kept(self):
         """The T1 fallback keeps its own label ('t1 preset')."""
         t1 = d2l.CptRuns(pd.DataFrame(), pd.DataFrame(), None, None, None,
-                         None, 't1 preset')
+                         None, None, 't1 preset')
         with mock.patch.object(d2l, 'load_artifact', lambda name: t1):
             res = d2l._pending_result('cpt-qwen-evals', 'cpt-t1')
         self.assertEqual(res.label, 'T2 run pending; showing the T1 '
@@ -656,6 +777,334 @@ class SmolLM3Test(unittest.TestCase):
         self.assertEqual(len(lines), 12)
         self.assertLessEqual(max(map(len, lines)), 80)
         self.assertIn('+20.0 [+20.0, +20.0]', lines[9])
+
+
+class Gen:
+    """A d2l.Generation."""
+    def __new__(cls, text, reason='eos', n=5):
+        return d2l.Generation(text, list(range(n)), None, reason)
+
+
+class FakeChatTokenizer:
+    ids = {'<|endoftext|>': 151643, '<|im_end|>': 151645}
+
+    def convert_tokens_to_ids(self, t):
+        return self.ids[t]
+
+
+class GSM8KTest(unittest.TestCase):
+    def test_chat_prompt(self):
+        self.assertEqual(d2l.gsm8k_chat_prompt('How many?'),
+                         '<|im_start|>user\nHow many?<|im_end|>\n'
+                         '<|im_start|>assistant\n')
+
+    def test_chat_prompt_tokens(self):
+        """Under Qwen3's tokenizer the prompt's markers are its special
+        tokens, and generate adds nothing before the prompt."""
+        try:
+            tok = d2l._cpt_tokenizer('t2')
+        except Exception as e:  # the tokenizer is not on this machine
+            self.skipTest(f'Qwen3 tokenizer not available: {e}')
+        prompt = d2l.gsm8k_chat_prompt('What is 2 + 2?')
+        ids = d2l._lm_prompt_ids(tok, [prompt])[0]
+        self.assertEqual(ids, tok(prompt, add_special_tokens=False)[
+            'input_ids'])
+        self.assertEqual((ids[0], ids.count(151644), ids.count(151645)),
+                         (151644, 2, 1))
+        self.assertEqual(tok.decode(ids), prompt)
+
+    def test_chat_answer(self):
+        ans = d2l.gsm8k_chat_answer
+        self.assertEqual(ans('<think> 3 + 15 </think> The answer is 18.',
+                             'eos'), '18')
+        self.assertIsNone(ans('<think> 3 + 15 = 18', 'length'))  # cut
+        self.assertIsNone(ans('<think> so 18 </think> 18 and', 'length'))
+        self.assertIsNone(ans('<think> so it is 18', 'eos'))  # never closed
+        self.assertEqual(ans('The answer is 18.', 'eos'), '18')  # no think
+        self.assertEqual(ans('<think> 17 </think> 18', 'eos'), '18')
+        self.assertIsNone(ans('<think> a </think> b <think> 18', 'eos'))
+
+    def test_score(self):
+        """score_gsm8k on canned replies: the scoring rules, the flags,
+        each format's budget, stop and end tokens."""
+        items = [dict(id=str(i), question=f'q{i}', prompt=f'P{i}',
+                      reference='18') for i in range(5)]
+        replies = {
+            'chat': [Gen('<think> 18 </think> The answer is 18.'),
+                     Gen('<think> 18 18 18', 'length', 4096),
+                     Gen('<think> it is 18'),
+                     Gen('The answer is 18.'),
+                     Gen('<think> 17 </think> 17')],
+            'completion': [Gen('So 18. The answer is 18.\n\n', 'stop'),
+                           Gen('The answer is 18.<|im_end|>\nThe answer '
+                               'is 19.', 'stop'),
+                           Gen('The answer is 17.', 'stop'),
+                           Gen('so 3', 'length', 256),
+                           Gen('<think> The answer is 18.', 'stop')]}
+        calls = []
+
+        def generate(model, tok, prompts, max_new, **kw):
+            fmt = 'chat' if prompts[0].startswith('<|im_start|>') else \
+                'completion'
+            calls.append((fmt, prompts, max_new, kw))
+            return replies[fmt]
+        with mock.patch.object(d2l, 'generate', generate):
+            res = d2l.score_gsm8k(None, FakeChatTokenizer(), items)
+        self.assertEqual(list(res.columns), d2l._CPT_COLUMNS['gsm8k'][1:])
+        comp, chat = calls
+        self.assertEqual((comp[0], comp[1][0], comp[2], comp[3]['stop'],
+                          comp[3]['eos_token_ids']),
+                         ('completion', 'P0', 256, ['Q:'], [151643]))
+        self.assertEqual((chat[1][0], chat[2], chat[3]['stop'],
+                          sorted(chat[3]['eos_token_ids'])),
+                         (d2l.gsm8k_chat_prompt('q0'), 4096, None,
+                          [151643, 151645]))
+        r = res.set_index(['format', 'item_id'])
+        self.assertEqual(list(r.loc['chat', 'score']), [1, 0, 0, 1, 0])
+        self.assertEqual(list(r.loc['chat', 'cut']),
+                         [False, True, False, False, False])
+        open_think = r.loc['chat', 'thinks'] & ~r.loc['chat', 'closed']
+        self.assertEqual(list(open_think), [False, True, True, False, False])
+        # completion: the text before a chat marker is the reply
+        self.assertEqual(list(r.loc['completion', 'score']), [1, 1, 0, 0, 0])
+        self.assertEqual(list(r.loc['completion', 'chat_tokens']),
+                         [False, True, False, False, True])
+        self.assertEqual(int(r.loc[('chat', '1'), 'new_tokens']), 4096)
+
+    def test_items(self):
+        try:
+            items = d2l.gsm8k_items(5)
+        except Exception as e:  # the dataset is not on this machine
+            self.skipTest(f'GSM8K not available: {e}')
+        self.assertEqual(len(items), 5)
+        self.assertEqual(items, d2l.gsm8k_items(5))
+        it = items[0]
+        self.assertTrue(it['prompt'].startswith('Q: There are 15 trees'))
+        self.assertTrue(it['prompt'].endswith(it['question'] + '\nA:'))
+        self.assertRegex(it['reference'], r'^-?\d+$')
+
+    def test_hf_state_round_trip(self):
+        """_qwen3_hf_state inverts map_qwen3_state_dict, and the weights it
+        loads into a Transformers Qwen3 give that model's logits."""
+        import transformers
+        from safetensors.torch import save_file
+        cfg = transformers.Qwen3Config(
+            vocab_size=96, hidden_size=32, intermediate_size=64,
+            num_hidden_layers=2, num_attention_heads=4,
+            num_key_value_heads=2, head_dim=8, max_position_embeddings=64,
+            tie_word_embeddings=True)
+        torch.manual_seed(0)
+        hf = transformers.Qwen3ForCausalLM(cfg).eval()
+        with torch.no_grad():  # norms away from 1, so a permutation shows
+            for name, p in hf.named_parameters():
+                if 'norm' in name:
+                    p.add_(torch.randn_like(p) * 0.3)
+        ref = {k: v.clone() for k, v in hf.state_dict().items()}
+        ours = d2l.map_qwen3_state_dict(dict(ref), cfg)
+        back = d2l._qwen3_hf_state(ours, cfg)
+        self.assertEqual(set(back), set(ref) - {'lm_head.weight'})
+        for k, v in back.items():
+            self.assertTrue(torch.equal(v, ref[k]), k)
+        with self.assertRaisesRegex(KeyError, 'not consumed'):
+            d2l._qwen3_hf_state(dict(ours, extra=torch.zeros(1)), cfg)
+        X = torch.randint(0, 96, (2, 12))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'arm.safetensors')
+            save_file({k: v.contiguous() for k, v in ours.items()}, path)
+            other = transformers.Qwen3ForCausalLM(cfg).eval()
+            d2l._load_into_hf(other, path)
+        with torch.no_grad():
+            self.assertTrue(torch.allclose(other(X).logits, hf(X).logits,
+                                           atol=1e-6))
+
+    def test_all_models_cached(self):
+        """cpt-qwen-evals' GSM8K: the base first, then each arm's weights;
+        each model's replies kept in its folder and read back; a file
+        written under other settings is refused."""
+        t2 = d2l._cpt_qwen_call()
+        cfgs = d2l._cpt_configs(t2['arms'], t2['base'], t2['tokens'],
+                                t2['seq_len'], t2['batch_tokens'], 10, 0.1)
+        log = []
+
+        def score(model, tok, items):
+            log.append(('score', model['w']))
+            return pd.DataFrame(dict(format=['chat'], item_id=['0'],
+                                     score=[1.0], cut=[False],
+                                     thinks=[True], closed=[True],
+                                     chat_tokens=[False], new_tokens=[9]))
+
+        def load(model, path):
+            log.append(('load', path))
+            model['w'] = path
+        with tempfile.TemporaryDirectory() as root, \
+                mock.patch.object(d2l, '_job_root', lambda: root), \
+                mock.patch.object(d2l, '_cpt_hf_qwen',
+                                  lambda name: (dict(w='base'), 'tok')), \
+                mock.patch.object(d2l, '_load_into_hf', load), \
+                mock.patch.object(d2l, 'score_gsm8k', score), \
+                mock.patch.object(d2l, 'gsm8k_items', lambda n, seed: []), \
+                mock.patch.object(d2l, '_file_id', lambda p: p), \
+                mock.patch.object(d2l, '_cpt_base_id',
+                                  lambda cfg: ['qwen', 'rev']):
+            res = d2l._cpt_gsm8k_all(cfgs)
+            self.assertEqual(list(res['arm']), ['base', 'A', 'B', 'C', 'A′'])
+            self.assertEqual(list(res.columns), d2l._CPT_COLUMNS['gsm8k'])
+            self.assertEqual(log[0], ('score', 'base'))
+            self.assertEqual([k for k, _ in log], ['score'] + ['load',
+                                                               'score'] * 4)
+            self.assertTrue(log[1][1].endswith(os.path.join(
+                't2-A', 'ckpt', 's305.safetensors')))
+            log.clear()
+            again = d2l._cpt_gsm8k_all(cfgs)  # read back: nothing scored
+            self.assertEqual(log, [])
+            pd.testing.assert_frame_equal(again, res, check_dtype=False)
+            with mock.patch.dict(d2l._CPT_GSM8K, n=100), \
+                    self.assertRaisesRegex(ValueError, 'settings.n'):
+                d2l._cpt_gsm8k_all(cfgs)
+
+
+class IdentityTest(Fixtures):
+    def test_data_id_t2(self):
+        layout = dict(traces='t', replay='r', val_domain='vd',
+                      val_general='vg', val_book='b')
+        with mock.patch.object(d2l, '_cpt_manifest_committed', lambda: True), \
+                mock.patch.object(d2l, 'load_artifact', lambda name: mock.Mock(
+                    layout=layout)):
+            self.assertEqual(d2l._cpt_data_id('t2'), dict(
+                traces='t', replay='r', val_domain='vd', val_general='vg'))
+        with mock.patch.object(d2l, '_cpt_manifest_committed', lambda: False), \
+                self.assertRaises(KeyError):
+            d2l._cpt_data_id('t2')
+        with self.assertRaises(ValueError):
+            d2l._cpt_data_id('t3')
+
+    def test_data_id_t1(self):
+        with mock.patch.object(d2l, 'reference_shards',
+                               lambda which: self.shards['val_general']):
+            got = d2l._cpt_data_id('t1')
+        hub = lambda name: d2l.DATA_HUB[d2l.PRETRAIN_ARTIFACTS[name][0]][1]
+        self.assertEqual(got, dict(
+            traces=hub('cpt-traces-12m'), replay=hub('cpt-fwedu-replay-12m'),
+            val_domain=hub('cpt-traces-val'),
+            val_general=d2l._layout_hash(self.shards['val_general'])))
+
+    def test_identity_has_data(self):
+        cfg = d2l._cpt_configs(**dict(d2l._cpt_qwen_call()))['A']
+        with mock.patch.object(d2l, '_cpt_base_id', lambda cfg: ['q', 'r']):
+            ids = []
+            for data in ({'traces': 'x'}, {'traces': 'y'}):
+                with mock.patch.object(d2l, '_cpt_data_id',
+                                       lambda tier, d=data: d):
+                    ids.append(d2l._cpt_identity(cfg))
+        self.assertEqual(ids[0]['config'], ids[1]['config'])
+        self.assertNotEqual(ids[0]['data'], ids[1]['data'])
+
+    def test_plateau_moments(self):
+        """cold-plateau starts from the plateau state's weights with fresh
+        moments; the branch restores them."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 's5100.pt')
+            model = toy_model()
+            torch.save(dict(cfg=dict(arch=TOY._asdict(), peak_lr=6e-4),
+                            model=model.state_dict(),
+                            optim=dict(state={}, param_groups=[])), path)
+            t1 = d2l._cpt_t1_call()
+            cfgs = d2l._cpt_configs(t1['arms'], t1['base'], t1['tokens'],
+                                    t1['seq_len'], t1['batch_tokens'], 10,
+                                    0.1)
+            with mock.patch.object(d2l, '_cpt_r2_files',
+                                   lambda: ('r2', 'ckpt', path)):
+                got = {a: d2l._cpt_base(cfgs[a]) for a in
+                       ('branch', 'cold-plateau')}
+        self.assertEqual(got['branch'][1], dict(state={}, param_groups=[]))
+        self.assertIsNone(got['cold-plateau'][1])
+        for m, _, peak, _ in got.values():
+            self.assertEqual(peak, 6e-4)
+            for k, v in model.state_dict().items():
+                self.assertTrue(torch.equal(m.state_dict()[k], v), k)
+
+
+def synthetic_runs(n=120, seed=0):
+    """CptRuns of the T2 shape: per-document losses for four arms on a
+    concave frontier and GSM8K replies of five models."""
+    base, _ = synthetic_docs()
+    spec = (('A', 0.06, 0.04, 2), ('B', 0.05, 0.02, 3), ('C', 0.03, 0.01, 1),
+            ('A′', 0.061, 0.041, 4))
+    docs = pd.concat([shifted(base, g, f, 0.003, sd).assign(arm=a)
+                      for a, g, f, sd in spec])
+    rng = np.random.default_rng(seed)
+    rows = [dict(arm=m, format=fmt, item_id=str(i),
+                 score=float(rng.random() < p), cut=bool(rng.random() < 0.2),
+                 thinks=True, closed=bool(rng.random() < 0.6),
+                 chat_tokens=bool(rng.random() < 0.05), new_tokens=100)
+            for m, p in (('base', 0.4), ('A', 0.3), ('B', 0.35), ('C', 0.4),
+                         ('A′', 0.3))
+            for fmt in ('completion', 'chat') for i in range(n)]
+    table = pd.DataFrame(dict(arm=['base', 'A', 'B', 'C', 'A′'],
+                              peak_lr=[None, 1e-4, 1e-4, 1e-5, 1e-4],
+                              domain_loss=[1.3, 1.1, 1.15, 1.25, 1.1],
+                              general_loss=[2.5, 2.6, 2.55, 2.52, 2.6],
+                              book_loss=[2.0, 2.2, 2.1, 2.05, 2.2],
+                              suite=[0.6, 0.55, 0.58, 0.6, 0.55],
+                              gsm8k_completion=[0.4] * 5,
+                              gsm8k_chat=[0.35] * 5)).reindex(
+        columns=d2l._CPT_COLUMNS['table'])
+    return d2l.CptRuns(table, pd.DataFrame(columns=d2l._CPT_COLUMNS['logs']),
+                       base, docs, None, None, pd.DataFrame(rows), '')
+
+
+class PageCellsTest(unittest.TestCase):
+    """The page's T2 cells on a synthetic result: shapes and widths."""
+    def test_arms_and_gsm8k(self):
+        runs = synthetic_runs()
+        ns = page_ns()
+        with mock.patch.object(d2l, 'cpt_arms', lambda *a, **k: runs), \
+                mock.patch.object(d2l, 'plot_cpt_curves'):
+            out = run_cell('continued-pretraining-arms', ns).splitlines()
+        self.assertEqual(len(out), 6)
+        self.assertEqual(out[0].split(), ['arm', 'trace', 'loss', 'general',
+                                          'loss', 'book', 'loss', 'suite',
+                                          'mean', 'GSM8K', 'chat'])
+        self.assertLessEqual(max(map(len, out)), 80)
+        out = run_cell('continued-pretraining-gsm8k', ns).splitlines()
+        self.assertEqual(len(out), 12)
+        self.assertLessEqual(max(map(len, out)), 80)
+        self.assertEqual(out[1].split()[0], 'base')
+        self.assertEqual(out[6], 'change against the base, points '
+                                 '[95% CI, paired items]')
+        self.assertRegex(out[8], r'^A +[-+]\d+\.\d \[[-+]\d+\.\d, '
+                                 r'[-+]\d+\.\d\] +[-+]')
+
+    def test_frontier_cells(self):
+        ns = dict(page_ns(), runs=synthetic_runs())
+        with mock.patch.object(d2l, 'plot_tradeoff'):
+            out = run_cell('continued-pretraining-frontier', ns).splitlines()
+        self.assertEqual(len(out), 7)
+        out = run_cell('continued-pretraining-frontier-chord',
+                       ns).splitlines()
+        self.assertEqual(len(out), 2)
+        self.assertRegex(out[0], r"^B − no-replay reference \(C → A chord\):"
+                                 r" \+0\.0\d\d \[")
+        self.assertTrue(out[1].startswith('seed spread (A vs A′): gain '))
+        self.assertLessEqual(max(map(len, out)), 80)
+
+    def test_t1_cell(self):
+        arms = ['base', 'A', 'A′', 'A″', 'B', 'cold', 'cold-plateau',
+                'branch']
+        table = pd.DataFrame(dict(arm=arms, domain_loss=1.0,
+                                  general_loss=3.0, book_loss=2.5)).reindex(
+            columns=d2l._CPT_COLUMNS['table'])
+        logs = pd.DataFrame(dict(arm=np.repeat(arms[1:], 3),
+                                 step=np.tile([0, 3, 40], 7),
+                                 general_loss=np.tile([3.0, 3.2, 3.0], 7)))
+        runs = d2l.CptRuns(table, logs, None, None, None, None, None, '')
+        with mock.patch.object(d2l, 'cpt_arms', lambda *a, **k: runs):
+            out = run_cell('continued-pretraining-t1-arms',
+                           page_ns()).splitlines()
+        self.assertEqual(len(out), 9)
+        self.assertEqual(out[0].split(), ['arm', 'bump', 'trace', 'general',
+                                          'book'])
+        self.assertIn('cold-plateau', out[7])
 
 
 class JobsTest(unittest.TestCase):

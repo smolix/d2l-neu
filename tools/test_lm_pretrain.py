@@ -15,14 +15,15 @@ vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
 `entropy_<l>` and `log_z` (finite; `log_z` the explicit mean logsumexp
 1e-5; only at stats steps, absent without stats); `clip_from` (clipping
 after that many updates; losses before it equal an unclipped run's;
-clip_from = bad_step - 1 clips the bad batch, `_spike` refuses a later
-one; `_cpt_step` refuses clip_from);
+clip_from = bad_step - 1 clips the bad batch, `_spike` refuses a
+configuration that clips; `_cpt_step` refuses clip_from);
 `_cfg_json` of a default config equal to the committed `lm-r2-config-v1`;
 `attn_logit_stats` against the explicit softmax input; the `qk_clip_`
 contract; `softcap`; `make_bad_batch` ('ngram': shape, period, one n-gram
 of the batch's own ids, untouched rows bit-identical; an unknown kind
 raises); `_BadBatchStream` argument checks (kind, period 1-13, k, one
-rank for 'ngram'); `lr_sensitivity`; `_pretrain_result` and
+rank for 'ngram'; `source` puts the same bad batch at any step);
+`lr_sensitivity`; `_pretrain_result` and
 `_pretrain_merged` with a temporary registry (regenerate with the config
 stored, load, configuration mismatch, absent in a normal run, pending,
 two regeneration names with other calls in the same process, D2L_RERUN=1
@@ -56,7 +57,16 @@ other run; the prediction is registered before the held-out shape's first
 run and equals the page's fit of the stored runs; a changed prediction or
 a held-out run kept without one is refused), a real 2-layer run kept and
 read back, the regeneration names (pilot, full after a go, pending) and
-the plot.
+the plot; one bad batch under Adam: the arm table's checks,
+`spike_excess` on a synthetic pair (peak, steps until it stays below twice
+the floor, sum; the bad step excluded; a stopped replay), the paired driver
+on a 2-layer toy (two skip replays of one state bit-identical, so the
+floor is 0; every arm equal to its skip replay before the bad step; clip
+twins clip from their state; a committed late state of another beta2
+refused; the run states removed), the regeneration (v2, the recipe, a
+changed period or recipe refused, pending), the page's 10-line table and
+the plot; OLMo 2's repeated n-gram rule (32 repeats of periods 1, 7 and 13
+flagged with period, repeats and start, 31 not; max_n).
 """
 import collections
 import contextlib
@@ -68,6 +78,7 @@ import re
 import sys
 import tempfile
 import time
+import types
 import unittest
 import warnings
 from unittest import mock
@@ -857,9 +868,13 @@ class MeasurementTest(unittest.TestCase):
         self.assertEqual(on.tolist(), [False] * 4 + [True] * 3)
         self.assertTrue(on[5])  # the bad batch's update is clipped
         self.assertFalse(clipped(5)[5])
-        with self.assertRaisesRegex(ValueError, 'at most 7'):
-            d2l._spike(self.toy_cfg(clip=1.0, clip_from=8), 8, 'random', (),
-                       steps=14, device='cpu')
+        # the spike driver sets clipping per arm (from the state, so the bad
+        # step is always clipped) and refuses a configuration that clips
+        arms = ((0.95, 6, 8, 'random', 8, True),)
+        for kw in (dict(clip=1.0), dict(clip=None, clip_from=4)):
+            with self.assertRaisesRegex(ValueError, 'clip=None'):
+                d2l._spike(self.toy_cfg(**kw), arms, 3, 8, steps=12,
+                           window=6, device='cpu')
 
     def toy_cfg(self, **kw):
         return toy_config(preset='t1', compile=False, warmup=2, **kw)
@@ -1138,28 +1153,6 @@ class MeasurementTest(unittest.TestCase):
         pd.testing.assert_frame_equal(tr, tr2)
         d2l._inst_kept(path, dict(a=2), compute)  # another configuration
         self.assertEqual(len(calls), 2)
-
-    def test_spike(self):
-        replays = (('from 6, same batches', 6, (), None),
-                   ('from 6, skip 8', 6, (8,), None),
-                   ('from 2, same batches', 2, (), None),
-                   ('clip 1.0', 0, (), 1.0))
-        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
-                mock.patch.object(d2l, '_job_root', lambda: self.tmp.name):
-            r = d2l._spike(self.toy_cfg(clip=None, z_loss=0.0), 8, 'random',
-                           replays, steps=14, window=(1, 14), device='cpu')
-        self.assertEqual(r.table['run'].tolist(), ['spiked run'] + [
-            x[0] for x in replays])
-        t = r.table.set_index('run')
-        # same state, same batches: equal up to the floor (CPU: exact)
-        self.assertLessEqual(t.loc['from 6, same batches', 'max_dloss'],
-                             2 * r.floor + 1e-6)
-        self.assertGreater(t.loc['from 6, skip 8', 'max_dloss'], 1e-4)
-        self.assertNotAlmostEqual(t.loc['spiked run', 'loss_at_bad'],
-                                  t.loc['from 6, skip 8', 'loss_at_bad'], 4)
-        self.assertAlmostEqual(t.loc['spiked run', 'loss_at_bad'],
-                               t.loc['from 2, same batches', 'loss_at_bad'], 4)
-        self.assertEqual(set(r.traces['run']), set(t.index))
 
     def test_launch_jobs_arguments(self):
         calls = []
@@ -1985,6 +1978,369 @@ class SizeTransferTest(unittest.TestCase):
         d2l.plt.close('all')
         d2l.plot_size_transfer(res, fit.iloc[:0], held='r2')  # nothing drawn
         self.assertEqual(d2l.plt.get_fignums(), [])
+
+
+class _Shards:
+    """A token array that reads like TokenShards (n_tokens, read)."""
+    def __init__(self, x):
+        self.x, self.n_tokens = np.asarray(x, np.int32), len(x)
+
+    def read(self, start, n):
+        return self.x[start:start + n]
+
+
+class SpikeTest(unittest.TestCase):
+    """One bad batch under Adam (cell 27) and OLMo 2's repeated n-gram rule
+    (cell 27b) on CPU: the arm table's checks, the excess statistic, the
+    same bad batch at every state, the paired driver on a 2-layer toy
+    (skip replays of one state bit-identical, so the floor is 0; every arm
+    equals its skip replay before the bad step; states removed), the
+    regeneration, the page's table and the plot, and the n-gram flags."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.shards = dp.fixture_shards(os.path.join(cls.tmp.name, 'set'),
+                                       n_docs=600)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_arms(self):
+        arms = d2l._spike_arms(d2l._spike_job()['arms'], 64)
+        self.assertEqual(len(arms), 8)
+        self.assertEqual(arms[6], (0.95, 50, 54, 'ngram', 8, False))
+        self.assertEqual(arms[0].clip, True)
+        for bad in ((0.95, 250, 300, 'random', 8, True),  # random = all rows
+                    (0.95, 250, 300, 'ngram', 0, True),
+                    (0.95, 250, 300, 'ngram', 65, True),
+                    (0.95, 250, 300, 'n-gram', 8, True),
+                    (0.95, 0, 30, 'ngram', 8, True),  # no state 0
+                    (0.95, 250, 250, 'ngram', 8, True),
+                    (0.95, 250, 301, 'ngram', 8, True),  # window past 400
+                    (1.0, 250, 300, 'ngram', 8, True),
+                    (0.95, 250, 300, 'ngram', 8, 1),
+                    (0.95, 250, 300, 'ngram', 8)):
+            with self.assertRaises(ValueError, msg=bad):
+                d2l._spike_arms([bad], 64)
+        d2l._spike_arms([(0.95, 1, 51, 'ngram', 8, True)], 64)  # the bounds
+        with self.assertRaisesRegex(ValueError, 'beta2 0.95, not 0.999'):
+            d2l._spike_arms([(0.999, 1297, 1301, 'ngram', 8, False)], 64)
+        with self.assertRaisesRegex(ValueError, 'twice'):
+            d2l._spike_arms([(0.95, 250, 300, 'ngram', 8, True),
+                             (0.95, 250, 300, 'ngram', 8, False)], 64)
+        with self.assertRaisesRegex(ValueError, 'no arms'):
+            d2l._spike_arms([], 64)
+
+    def test_excess(self):
+        steps = range(1, 21)
+        ref = pd.Series(1.0, index=steps)
+        e = pd.Series(0.0, index=steps)
+        e.loc[10] = 5.0  # the bad step itself is not read
+        e.loc[11:15] = [0.5, -0.2, 0.05, 0.01, 0.004]
+        ex = d2l.spike_excess(ref + e, ref, 10, 0.003, window=8)
+        self.assertEqual(ex['recover'], 4)  # last |e| >= 0.006 at step 14
+        self.assertAlmostEqual(ex['peak'], 0.5)
+        self.assertAlmostEqual(ex['total'], 0.5 - 0.2 + 0.05 + 0.01 + 0.004)
+        self.assertEqual(d2l.spike_excess(ref, ref, 10, 0.003, 8)['recover'],
+                         0)
+        late = e.copy()
+        late.loc[18] = 0.01  # still above at the window's last step
+        self.assertIsNone(d2l.spike_excess(ref + late, ref, 10, 0.003,
+                                           8)['recover'])
+        late.loc[18] = 0.0
+        late.loc[17] = 0.01
+        self.assertEqual(d2l.spike_excess(ref + late, ref, 10, 0.003,
+                                          8)['recover'], 7)
+        nan = (ref + e).copy()
+        nan.loc[13] = math.nan
+        self.assertEqual(d2l.spike_excess(nan, ref, 10, 0.003, 8),
+                         dict(peak=math.inf, recover=None, total=math.inf))
+        short = (ref + e).loc[:15]  # a replay that stopped
+        self.assertEqual(d2l.spike_excess(short, ref, 10, 0.003, 8)['peak'],
+                         math.inf)
+
+    def test_same_bad_batch_at_every_state(self):
+        """source fixes the bad batch: the n-gram rows put at log step 4
+        equal those put at step 8 (both built from step 8's data); the
+        default (source None) is the old stream; make_bad_batch's pool."""
+        plain = d2l.PackedStream(self.shards, TOY.T, 8)
+
+        def bad(step, source):
+            s = d2l._BadBatchStream(self.shards, TOY.T, 8, step, 'ngram', 512,
+                                    k=3, period=4, source=source)
+            b = s.batch(step - 1)
+            rows = (b['input_ids'] != plain.batch(step - 1)['input_ids']).any(1)
+            return b, rows
+        (b4, r4), (b8, r8) = bad(4, 8), bad(8, 8)
+        self.assertEqual(int(r4.sum()), 3)
+        self.assertTrue(torch.equal(r4, r8))
+        for key in ('input_ids', 'labels', 'pos_ids', 'doc_ids'):
+            self.assertTrue(torch.equal(b4[key][r4], b8[key][r8]), key)
+        self.assertTrue(torch.equal(b4['input_ids'][~r4],
+                                    plain.batch(3)['input_ids'][~r4]))
+        default, _ = bad(8, None)
+        self.assertTrue(torch.equal(default['input_ids'], b8['input_ids']))
+        ref = d2l.make_bad_batch(plain.batch(3), 'ngram', 512, seed=8, k=3,
+                                 period=4, pool=plain.batch(7)['input_ids'])
+        self.assertTrue(torch.equal(ref['input_ids'], b4['input_ids']))
+        # random: the same ids at any step
+        rnd = [d2l._BadBatchStream(self.shards, TOY.T, 8, s, 'random', 512,
+                                   source=8).batch(s - 1)['input_ids']
+               for s in (4, 8)]
+        self.assertTrue(torch.equal(*rnd))
+        with self.assertRaisesRegex(ValueError, 'source'):
+            d2l._BadBatchStream(self.shards, TOY.T, 8, 4, 'random', 512,
+                                source=0)
+
+    def toy_cfg(self, **kw):
+        return toy_config(preset='t1', compile=False, warmup=2, clip=None,
+                          z_loss=0.0, **kw)
+
+    def test_driver(self):
+        root = tempfile.mkdtemp(dir=self.tmp.name)
+        cfg = self.toy_cfg()
+        late = os.path.join(root, 'late')  # a committed state at step 10
+        with contextlib.redirect_stdout(io.StringIO()):
+            d2l.pretrain(toy_model(), d2l.PackedStream(self.shards, TOY.T, 8),
+                         d2l._inst_config(cfg, cfg.peak_lr, 0, 10,
+                                          stats_every=0, state_steps=(10,),
+                                          out_dir=late))
+        late = {10: (d2l._state_path(late, 10), 0.95)}
+        arms = ((0.95, 6, 8, 'random', 8, True),
+                (0.95, 6, 8, 'ngram', 2, True),
+                (0.999, 6, 8, 'ngram', 2, True),
+                (0.95, 2, 4, 'ngram', 2, False),
+                (0.95, 10, 12, 'ngram', 2, False))
+        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
+                mock.patch.object(d2l, '_job_root', lambda: root), \
+                contextlib.redirect_stdout(io.StringIO()):
+            r = d2l._spike(cfg, arms, 3, 8, steps=12, window=6, late=late,
+                           device='cpu')
+            with self.assertRaisesRegex(ValueError, 'betas'):  # not its
+                d2l._spike(dataclasses.replace(cfg, betas=(0.8, 0.95)),
+                           arms[-1:], 3, 8, steps=12, window=6, late=late,
+                           device='cpu')
+        self.assertFalse(os.path.exists(os.path.join(root, 'spike')))
+        t = r.table
+        self.assertEqual(list(t.columns), d2l._SPIKE_TABLES['table'])
+        self.assertEqual([tuple(x) for x in t[['beta2', 'state', 'bad_step',
+                                               'batch', 'k']].values],
+                         [a[:5] for a in arms])
+        self.assertEqual(r.floor, 0.0)  # CPU: two replays bit-identical
+        tr = r.traces
+        self.assertEqual(list(tr.columns), d2l._SPIKE_TABLES['traces'])
+        runs = tr.groupby(['beta2', 'state', 'arm', 'batch', 'k'])['step']
+        self.assertEqual(len(runs), 7 + 4 + 2 + 2)  # skip, clip, floor
+        self.assertTrue((runs.count() == 12).all())
+
+        def loss(b2, state, arm, batch='none', k=0):
+            g = tr[(tr['beta2'] == b2) & (tr['state'] == state)
+                   & (tr['arm'] == arm) & (tr['batch'] == batch)
+                   & (tr['k'] == k)]
+            return g.set_index('step')['loss']
+        for a in arms:  # paired: equal to the skip replay before the bad step
+            b2, state, step, batch, k, clip = a
+            for arm, ref in (('bad', 'skip'),) + ((('bad+clip', 'skip+clip'),)
+                                                  if clip else ()):
+                x, y = loss(b2, state, arm, batch, k), loss(b2, state, ref)
+                self.assertEqual(x.index[0], state + 1)
+                pd.testing.assert_series_equal(x.loc[:step - 1],
+                                               y.loc[:step - 1])
+                self.assertGreater(abs(x[step] - y[step]), 1e-3, a)
+        row = t.iloc[0]
+        self.assertGreater(row.peak, 0)
+        self.assertIsNone(row.recover)  # 2 x floor = 0 on CPU: never below
+        bad = tr[(tr['arm'] == 'bad') & (tr['state'] == 6)
+                 & (tr['batch'] == 'random')].set_index('step')
+        self.assertAlmostEqual(row.norm, bad.loc[8, 'grad_norm'])
+        self.assertAlmostEqual(row['median'], tr[
+            (tr['arm'] == 'skip') & (tr['state'] == 6)
+            & (tr['beta2'] == 0.95)]['grad_norm'].median())
+        self.assertAlmostEqual(row.norm_ratio, row.norm / row['median'])
+        self.assertAlmostEqual(row.clip_ratio, row.peak_clip / row.peak)
+        self.assertAlmostEqual(row.clip_predicted, min(1, 1 / row.norm_clip))
+        self.assertGreaterEqual(row.clipped_before, 0)
+        self.assertTrue(t.iloc[3:][['peak_clip', 'clip_ratio']].isna()
+                        .all().all())
+        # the clip twins clip at 1.0 from their first step on (the bad step
+        # included); the other replays never clip
+        twin = tr['arm'].str.endswith('+clip')
+        self.assertTrue((tr.loc[twin, 'clipped']
+                         == (tr.loc[twin, 'grad_norm'] > 1.0)).all())
+        self.assertFalse(tr.loc[~twin, 'clipped'].any())
+        self.assertTrue(tr.loc[twin, 'clipped'].any())
+        # the two beta2 states differ (their runs), the late arm starts at 10
+        self.assertNotEqual(loss(0.95, 6, 'skip')[7],
+                            loss(0.999, 6, 'skip')[7])
+        self.assertEqual(loss(0.95, 10, 'skip').index[0], 11)
+
+    def test_regeneration_and_page(self):
+        kw = d2l._spike_job()
+        page = self.page_cells()
+        self.assertEqual(eval(page['arms'], dict(d2l=d2l)), kw['arms'])
+        self.assertIn('period=7', page['call'])
+        self.assertIn('source=300', page['call'])
+        res = self.fake_result()
+        with tempfile.TemporaryDirectory() as tmp, uncommitted(), \
+                mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset()), \
+                mock.patch.dict(os.environ, {'D2L_RERUN': 'spike-replay'}):
+            cwd = os.getcwd()
+            os.makedirs(os.path.join(tmp, 'chapter'))
+            os.chdir(os.path.join(tmp, 'chapter'))
+            try:
+                calls = []
+                with mock.patch.object(d2l, '_spike', lambda *a: calls.append(
+                        a) or res), contextlib.redirect_stdout(io.StringIO()):
+                    got = d2l.spike_replay(**kw)
+                    path = '../data/lm/rerun/lm-r2-spike-v2.json.gz'
+                    config = d2l._stored_config(d2l._read_result(
+                        path, 'json-table'))
+                    self.assertEqual(config['recipe']['late'], [
+                        [1297, 'lm-r2t1-s1297-state-v1', 0.95]])
+                    self.assertEqual((config['period'], config['source'],
+                                      len(config['arms'])), (7, 300, 8))
+                    os.environ['D2L_RERUN'] = 't1-runs'
+                    pending = d2l.spike_replay(**kw)
+                    os.environ['D2L_RERUN'] = ''
+                    d2l.DATA_HUB['lm-r2-spike-v2'] = ('url', 'sha1')
+                    with mock.patch.object(d2l, 'download_keyed',
+                                           lambda key: path):
+                        loaded = d2l.spike_replay(**kw)
+                        with self.assertRaisesRegex(ValueError, 'period'):
+                            d2l.spike_replay(**dict(kw, period=5))
+                        with mock.patch.object(d2l, 'SPIKE_STEPS', 200), \
+                                self.assertRaisesRegex(ValueError, 'recipe'):
+                            d2l.spike_replay(**kw)
+                    with self.assertRaises(ValueError):  # before any lookup
+                        d2l.spike_replay(kw['cfg'], kw['arms'][:1] * 2)
+            finally:
+                os.chdir(cwd)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(got.table), 8)
+        self.assertTrue(pending.label.endswith('pending'))
+        self.assertEqual(list(pending.table.columns),
+                         d2l._SPIKE_TABLES['table'])
+        self.assertTrue(math.isnan(pending.floor))
+        self.assertEqual(loaded.label, '')
+        pd.testing.assert_frame_equal(loaded.table, got.table,
+                                      check_dtype=False)
+        self.assertAlmostEqual(loaded.floor, res.floor)
+        # the page's table: header, 8 rows, floor line
+        lines = self.table_output(loaded)
+        self.assertEqual(len(lines), 10)
+        self.assertLessEqual(max(map(len, lines)), 80)
+        self.assertIn('peak excess', lines[0])
+        self.assertEqual(lines[1].split()[:3], ['0.95', '250', 'random'])
+        self.assertTrue(lines[7].rstrip().endswith('/ —'))
+        self.assertIn('>100 / 3', lines[2])  # not back within the window
+        self.assertEqual(lines[-1], 'replay floor (same state, same batches, '
+                         'no bad batch): 3.0e-03')
+        self.assertEqual(self.table_output(pending), [])
+
+    def page_cells(self):
+        path = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'chapter_lm-pretraining',
+            'reference-model.md')
+        with open(path) as f:
+            src = f.read()
+        call = src.split('#reference-model-spike}\n')[1].split('```')[0]
+        table = src.split('#reference-model-spike-table}\n')[1].split(
+            '```')[0]
+        arms = call.split('ARMS = ')[1].split('\nspike = ')[0]
+        return dict(arms=arms, call=call, table=table.replace(
+            '%%tab pytorch\n', ''))
+
+    def table_output(self, spike):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            exec(self.page_cells()['table'], dict(d2l=d2l, pd=pd,
+                                                  spike=spike))
+        return out.getvalue().splitlines()
+
+    def fake_result(self):
+        rows = []
+        for i, a in enumerate(d2l._spike_job()['arms']):
+            b2, state, step, batch, k, clip = a
+            row = dict(beta2=b2, state=state, bad_step=step, batch=batch, k=k,
+                       norm=12.0 + i, median=0.4, norm_ratio=(12.0 + i) / 0.4,
+                       peak=0.5 + i, recover=None if i == 1 else 12 + i,
+                       total=4.0 + i)
+            if clip:
+                row.update(norm_clip=12.0 + i, peak_clip=0.05, recover_clip=3,
+                           total_clip=0.3, clipped_before=0,
+                           clip_ratio=0.05 / (0.5 + i),
+                           clip_predicted=1 / (12.0 + i))
+            rows.append(row)
+        traces = []
+        for r in rows:
+            for arm in ('bad', 'skip') + (('bad+clip', 'skip+clip')
+                                          if 'peak_clip' in r else ()):
+                bad = arm.startswith('bad')
+                st = np.arange(r['state'] + 1, r['state'] + 151)
+                traces.append(pd.DataFrame(dict(
+                    beta2=r['beta2'], state=r['state'],
+                    bad_step=r['bad_step'] if bad else 0,
+                    batch=r['batch'] if bad else 'none',
+                    k=r['k'] if bad else 0, arm=arm, step=st,
+                    loss=3.0 + bad * np.exp(-(st - r['bad_step']).clip(0)
+                                            / 10.0) * (st >= r['bad_step']),
+                    grad_norm=0.4, clipped=False)))
+        traces = pd.concat(traces, ignore_index=True).drop_duplicates(
+            ['beta2', 'state', 'arm', 'batch', 'k', 'step'])
+        return d2l.SpikeReplay(pd.DataFrame(rows).reindex(
+            columns=d2l._SPIKE_TABLES['table']), traces, 3e-3, '')
+
+    def test_plot(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        d2l.plot_spike(self.fake_result())
+        ax = d2l.plt.gcf().axes[0]
+        labels = [t.get_text() for t in ax.get_legend().get_texts()]
+        self.assertEqual(labels, [
+            'β2 0.95, random', 'β2 0.95, n-gram ×1', 'β2 0.95, n-gram ×8',
+            'β2 0.95, n-gram ×64', 'β2 0.999, random',
+            'β2 0.95, random, clip 1.0', 'replay floor'])
+        self.assertEqual(ax.get_yscale(), 'log')
+        self.assertEqual(ax.lines[0].get_xdata()[0], 1)
+        self.assertEqual(len(ax.lines[0].get_xdata()), 100)
+        self.assertEqual(ax.lines[-1].get_linestyle(), ':')
+        d2l.plt.close('all')
+        empty = d2l.SpikeReplay(pd.DataFrame(columns=d2l._SPIKE_TABLES[
+            'table']), pd.DataFrame(), math.nan, 'spike-replay pending')
+        n = len(d2l.plt.get_fignums())
+        d2l.plot_spike(empty)
+        self.assertEqual(len(d2l.plt.get_fignums()), n)
+
+    def test_repeated_ngram_flags(self):
+        """Windows of T = 512 with 32 and 31 repeats of n-grams of periods 1,
+        7 and 13 (distinct ids, so the smallest period is the n-gram's
+        length) in random text: the 32s are flagged with their period,
+        repeats and start, the 31s are not; max_n = 12 misses period 13."""
+        rng = np.random.default_rng(0)
+        T, windows = 512, 7
+        x = rng.integers(32, 30000, windows * T + 1)
+        for w, (n, r) in enumerate([(1, 32), (1, 31), (7, 32), (7, 31),
+                                    (13, 32), (13, 31)]):
+            gram = np.arange(30001 + 20 * w, 30001 + 20 * w + n)
+            x[w * T + 50:w * T + 50 + n * r] = np.tile(gram, r)
+        tok = types.SimpleNamespace(decode=lambda ids: ' '.join(map(str,
+                                                                    ids)))
+        flags = d2l.repeated_ngram_flags(_Shards(x), T=T, tokenizer=tok)
+        self.assertEqual(flags.windows, windows)
+        t = flags.table
+        self.assertEqual(t['window'].tolist(), [0, 2, 4])
+        self.assertEqual(t['period'].tolist(), [1, 7, 13])
+        self.assertEqual(t['repeats'].tolist(), [32, 32, 32])
+        self.assertEqual(t['start'].tolist(), [50, 50, 50])
+        self.assertEqual(t['text'][0], '"' + ' '.join(['30001'] * 32)[:50]
+                         + '"')
+        short = d2l.repeated_ngram_flags(_Shards(x), T=T, max_n=12,
+                                         tokenizer=tok)
+        self.assertEqual(short.table['window'].tolist(), [0, 2])
+        clean = d2l.repeated_ngram_flags(_Shards(x[3 * T:4 * T + 1]), T=T,
+                                         tokenizer=None)
+        self.assertEqual((len(clean.table), clean.windows), (0, 1))
 
 
 class LibraryStructureTest(unittest.TestCase):

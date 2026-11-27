@@ -810,16 +810,17 @@ def softcap(x, c):
 
 #@save
 def make_bad_batch(batch, kind='random', vocab=32768, seed=0, k=None,
-                   period=None):
+                   period=None, pool=None):
     """A batch shaped like batch of one-document windows, targets shifted
     ids: uniform random ids >= 32 ('random'), one repeated id ('repeat'),
     or ('ngram') k of batch's rows (all if k is None; the others untouched)
-    replaced by one n-gram of period of batch's own ids >= 32, repeated."""
+    replaced by one n-gram of period of the ids >= 32 of pool (default:
+    batch's own), repeated."""
     B, T = batch['input_ids'].shape
     g = torch.Generator().manual_seed(seed)
     pos = torch.arange(T, dtype=torch.int32).expand(B, T).contiguous()
     if kind == 'ngram':  # OLMo 2's spike shape
-        pool = batch['input_ids'].flatten().cpu()
+        pool = (batch['input_ids'] if pool is None else pool).flatten().cpu()
         pool = pool[pool >= 32]
         start = int(torch.randint(len(pool) - period + 1, (), generator=g))
         ids = pool[start:start + period].repeat(T // period + 1)[:T + 1]
@@ -1187,33 +1188,66 @@ for _, r in t2.table.iterrows():
           f'{r["max_logit"]:13.0f} {first:>21}')
 ```
 
-### The Spike Protocol
+### One Bad Batch Under Adam
 
-<!-- Placeholder (prose): a bad batch on purpose at step 300 of the t1 preset with clipping off; PaLM's diagnosis by replay from the step-250 state with and without the batch and from the step-50 state; clipping at 1.0; the replay floor that sets every comparison on Ada (replays are not bit-exact). A table tab_lm_inst_diagnosis beside it maps outcomes to causes: bad data, unstable state, numerics. -->
+<!-- Placeholder (prose): one bad batch under Adam, paired. After one gradient far larger than its history, Adam's first step has size about lr(1 - beta1)/sqrt(1 - beta2) per coordinate (0.45 lr at beta2 = 0.95, 3.2 lr at 0.999; stated arithmetic, claim 22), and the kick decays like (beta1/sqrt(beta2))^k: second-moment underestimation in its simplest form, the reason for beta2 = 0.95 and PaLM's 1 - k^-0.8. Setup: t1 at 1e-3 with clipping off, one run per beta2 keeps full states (steps 50 and 250); the late state is the t1 run's own at step 1,297 (it trained with clipping at 1.0; the arms run clipping off from there, at the same constant rate). Every arm replays 150 steps from a state with the bad batch at its step, against the skip replay from the same state, which takes the ordinary batch at that step, so both see identical data before and after (skipping the step in the stream, as PaLM does, would shift every later batch). The bad batch is built from step 300's data at every state (the same n-gram, period 7, in the same rows): `random` replaces all 64 sequences, `n-gram ×k` k of them, the shape OLMo 2 found in its spiking batches. Early and late states see it 4 steps after their state (steps 54 and 1,301), the mid state at 300, 50 steps after its own. Clip twins clip at 1.0 from the state on and pair against a skip replay that clips too. Statistic: the excess loss over the skip replay on the 100 steps after the bad batch, its peak, the steps until it stays below twice the floor, its sum; the pre-clip norm at the bad step over the skip replay's median norm. The replay floor (two skip replays of the same state, claim 23) sets every comparison on Ada: replays are not bit-exact. Read claims 22, 24 (clip ratio against min(1, 1/norm), within a factor of 2, from the table's peak columns and the stored norm), 24b (beta2), 24c (k) and 24d (state) as measured. -->
 
 ```{.python .input #reference-model-spike}
 %%tab pytorch
-REPLAYS = (('from 250, same batches', 250, (), None),  # (label, from step,
-           ('from 250, skip 300', 250, (300,), None),  # skipped steps, clip)
-           ('from 50, same batches', 50, (), None),
-           ('clip 1.0', 0, (), 1.0))
-spike = d2l.spike_replay(r2_config('t1', clip=None), bad_step=300,
-                         kind='random', replays=REPLAYS)
-d2l.plot_traces(spike.traces, ['loss', 'grad_norm'], by='run',
-                logy=['grad_norm'], steps=(250, 400))
+ARMS = (  # β2, state (step), bad step, batch, sequences of 64, clip twin
+    (0.95, 250, 300, 'random', 64, True),
+    (0.95, 250, 300, 'ngram', 1, True),
+    (0.95, 250, 300, 'ngram', 8, True),
+    (0.95, 250, 300, 'ngram', 64, True),
+    (0.999, 250, 300, 'random', 64, True),
+    (0.999, 250, 300, 'ngram', 8, True),
+    (0.95, 50, 54, 'ngram', 8, False),
+    (0.95, 1297, 1301, 'ngram', 8, False))
+spike = d2l.spike_replay(r2_config('t1', clip=None), ARMS, period=7,
+                         source=300)
+d2l.plot_spike(spike)
 ```
 
 ```{.python .input #reference-model-spike-table}
 %%tab pytorch
-print(f'{"run":>22} {"loss at 300":>11} {"peak norm, 295-305":>18} '
-      f'{"max |Δ loss|, 301-400":>21}')
-for _, r in spike.table.iterrows():
-    print(f'{r["run"]:>22} {r["loss_at_bad"]:11.3f} '
-          f'{r["peak_grad_norm"]:18.2f} '
-          + ('—' if pd.isna(r['max_dloss']) else f'{r["max_dloss"]:.1e}')
-          .rjust(21))
-print(f'replay floor (same state, same batches, no bad batch): '
-      f'{spike.floor:.1e}')
+def show(v, fmt):  # steps: None (NaN) = not back within the window
+    if fmt != 'steps':
+        return f'{v:{fmt}}'
+    return f'>{d2l.SPIKE_WINDOW}' if pd.isna(v) else f'{v:.0f}'
+
+def pair(r, col, fmt):  # no clip / clip; '—' where there is no clip twin
+    twin = not pd.isna(r.peak_clip)
+    return (f'{show(getattr(r, col), fmt)} / '
+            + (show(getattr(r, col + '_clip'), fmt) if twin else '—'))
+
+if len(spike.table):  # nothing but the label while the result is pending
+    print(f'{"β2":>5} {"state":>5} {"batch":>10} {"norm÷med":>8} '
+          f'{"peak excess":>15} {"steps < 2×floor":>15} '
+          f'{"summed excess":>15}')
+    for r in spike.table.itertuples():
+        batch = 'random' if r.batch == 'random' else f'n-gram ×{r.k}'
+        print(f'{r.beta2:>5g} {r.state:>5} {batch:>10} {r.norm_ratio:8.1f} '
+              f'{pair(r, "peak", ".4f"):>15} {pair(r, "recover", "steps"):>15}'
+              f' {pair(r, "total", ".2f"):>15}')
+    print(f'replay floor (same state, same batches, no bad batch): '
+          f'{spike.floor:.1e}')
+```
+
+<!-- Placeholder (prose): tab_lm_inst_diagnosis, three causes, each row with the measured example of the table above that matches it or "none produced": bad data (a bad batch that hurts from every state: the rows whose excess exceeds the floor at all three states), unstable state (the same batch hurting from one state and not another: compare the n-gram ×8 rows at steps 50, 250 and 1,297), numerics (a difference the same-state replay shows without any bad batch: the floor itself). -->
+
+### OLMo 2's Repeated N-gram Rule
+
+<!-- Placeholder (prose): OLMo 2's data-side cure: drop documents with 32 or more consecutive repeats of an n-gram of 1 to 13 tokens, the shape of its spiking batches. Applied here to the training windows of the 100M-token t1 set on the CPU (claim 24e: a count, 0 would be a result too); the windows are the training sequences, not OLMo 2's documents. -->
+
+```{.python .input #reference-model-olmo-2-s-repeated-n-gram-rule}
+%%tab pytorch
+flags = d2l.repeated_ngram_flags(train, T=1024, min_repeats=32, max_n=13)
+k, n = len(flags.table), flags.windows
+print(f"windows flagged by OLMo 2's rule: {k:,} of {n:,} ({k / n:.3%})")
+if k:
+    r = flags.table.iloc[0]
+    print(f'example: n-gram of length {r["period"]} repeated '
+          f'{r["repeats"]} times: {r["text"]}')
 ```
 
 ## Optimizers as a Stated Fact

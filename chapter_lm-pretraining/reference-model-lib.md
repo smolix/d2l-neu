@@ -181,6 +181,9 @@ d2l.DATA_HUB['lm-r2-spike-v2'] = (
 d2l.DATA_HUB['lm-r2-eps-v1'] = (
     d2l.LM_DATA_URL + 'lm-r2-eps-v1.json.gz',
     'cee84660c4ed37114fd5b2d338204c19c0289e3e')
+d2l.DATA_HUB['lm-r2-size-xfer-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-size-xfer-v1.json.gz',
+    '5cb9f473e0ba7a7f447a528871115f0726255348')
 ```
 
 ```{.python .input #reference-model-lib-artifacts}

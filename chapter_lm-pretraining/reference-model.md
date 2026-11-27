@@ -1088,6 +1088,66 @@ else:
 
 <!-- Placeholder (prose): claim 6b as measured (F11 review findings 1-3). The loss crossed first, but the printed control line shows the same loss rule firing at rates whose entropy never fell below 0.1 nats (QK-norm trains faster early at every rate from 2e-3 up), so the loss crossing does not warn of collapse; of the four monitors only the entropy and the logit are specific. The last panel is that rule's series, the 20-step mean of baseline − QK-norm with the 0.1 line. The grad norm cannot be read here: every collapsed cell departs before or inside the detector's reference window (steps 76-275), and the detector searches only from step 276. 4e-3 is a borderline first collapsed rate (seed 0 at 0.068, seed 1 at 0.1002); its paired gap is no larger than at the uncollapsed 2e-3, and 8e-3 is where the loss first fails clearly. -->
 
+### The Largest Logit and Model Size
+
+<!-- Placeholder (prose): size transfer (Wortsman et al., Figure 1 and 9): the rate at which logit growth sets in falls as the model grows, so a rate tuned on a small proxy can fail on a larger model; the method is to fit the largest logit at an early step against model size per rate on small shapes and predict a larger one before running it. Here: four shapes at T = 1,024 (t1, the ladder's 10 x 576 and 10 x 768, the reference shape 18 x 768; non-embedding parameters 12.6M, 35.4M, 62.9M, 113.2M), the T1 grid's baseline recipe (clipping off, warmup 76, then a constant rate), 300 steps of 64 x 1,024 tokens, rates 2e-3 to 1.6e-2, two seeds; the statistic is the largest logit at step 300 (Wortsman et al. read theirs at step 2,000 of 100,000, also early). A pilot came first (t1 against 10 x 768 at 4e-3 and 8e-3, both seeds; go only if the larger shape's logit is higher at both rates with both seeds agreeing; pre-registered). The fit is a least-squares line of log logit on log N per rate through the three smaller shapes' six runs; its 95% prediction interval at 113.2M is for the mean of log logit over the two seeds there (t with 4 degrees of freedom); the job stored that prediction before it trained the 113.2M shape, and the cell checks that its own fit equals the stored one. -->
+
+```{.python .input #reference-model-the-largest-logit-and-model-size-1}
+%%tab pytorch
+#@save
+def logit_fit(runs, at, level=0.95):
+    """Per rate: the least-squares line of log largest logit on log N
+    through runs (columns lr, seed, N, logit; non-finite logits left out),
+    its slope with a level interval (slope_hw, the half-width), and its
+    prediction at N = at with a level prediction interval for the mean of
+    log logit over as many seeds as runs has, back in logit units."""
+    rows = []
+    for lr, g in runs[np.isfinite(runs['logit'])].groupby('lr'):
+        x, y = np.log(g['N'].to_numpy(float)), np.log(g['logit'].to_numpy())
+        n, x0 = len(x), math.log(at)
+        if n < 3:  # no interval from two points
+            continue
+        b, a = np.polyfit(x, y, 1)
+        s = math.sqrt(((y - a - b * x) ** 2).sum() / (n - 2))  # residual sd
+        sxx, t = ((x - x.mean()) ** 2).sum(), d2l.t_quantile(n - 2, level)
+        h = t * s * math.sqrt(1 / g['seed'].nunique() + 1 / n
+                              + (x0 - x.mean()) ** 2 / sxx)
+        y0 = a + b * x0
+        rows.append(dict(lr=lr, slope=b, slope_hw=t * s / math.sqrt(sxx),
+                         intercept=a, predicted=math.exp(y0),
+                         lo=math.exp(y0 - h), hi=math.exp(y0 + h)))
+    return pd.DataFrame(rows)
+```
+
+```{.python .input #reference-model-the-largest-logit-and-model-size-2}
+%%tab pytorch
+SHAPES = ('t1', 'ladder-54m', 'ladder-88m', 'r2')  # the last one held out
+xfer = d2l.size_transfer(SHAPES, lrs=(2e-3, 4e-3, 8e-3, 1.6e-2),
+                         seeds=(0, 1), steps=300)
+if xfer.gate == 'no-go':  # the pilot's pre-registered rule
+    print('pilot: no size trend over a ninefold range at 300 steps '
+          '(gate failed)')
+elif len(xfer.fit):  # the full transfer ran
+    runs, held = xfer.table, xfer.table['shape'] == SHAPES[-1]
+    N = runs.loc[held, 'N'].iloc[0]
+    fit = logit_fit(runs[~held], at=N)
+    assert np.allclose(fit.to_numpy(float),  # the prediction stored before
+                       xfer.fit[fit.columns].to_numpy(float))  # r2 ran
+    measured = np.exp(np.log(runs.loc[held, 'logit']).groupby(
+        runs['lr']).mean())  # the geometric mean of the two seeds
+    print(f'{"lr":>6} {"slope ± 95%":>11} '
+          f'{f"logit at {N / 1e6:.1f}M, predicted [95%]":>32} '
+          f'{"measured":>9}')
+    for r in fit.itertuples():
+        m = measured[r.lr]
+        pi = f'{r.predicted:,.0f} [{r.lo:,.0f}, {r.hi:,.0f}]'
+        print(f'{r.lr:6g} {r.slope:5.2f} ± {r.slope_hw:.2f} {pi:>32} '
+              f'{m:9,.0f} ' + ('inside' if r.lo <= m <= r.hi else 'outside'))
+    d2l.plot_size_transfer(xfer, fit, held=SHAPES[-1])
+```
+
+<!-- Placeholder (prose): claim 16b as measured. Go: per rate the slope with its interval (does the largest logit grow with size at every rate, the interval clear of zero?) and whether the 113.2M shape's measured logit falls inside the prediction interval ("inside", or "outside (measured x, predicted y)"); the open markers are the held-out runs. No-go: one sentence ("a ninefold range showed no trend at 300 steps"; the pilot itself compares 12.6M with 62.9M, a fivefold step), Wortsman et al. for the trend over three orders of magnitude, no figure. Cell 26's ten-times arms use another recipe (clip 1.0, T = 4,096, 128 sequences); say so when the two are read together (claim 16). -->
+
 ### Ten Times the Learning Rate
 
 <!-- Placeholder (prose): at the reference architecture and recipe (clip 1.0, z-loss), 500 steps at ten times the peak rate, with and without QK-clip at a tau fixed from the reference log's steps 300-500 before the arms ran; the reference run's own first 500 steps are the baseline. Pending T2 (C1d): campaign marker for lm-r2-inst-t2-v1. -->

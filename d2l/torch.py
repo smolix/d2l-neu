@@ -11974,6 +11974,31 @@ def departure(x, start, before=200, window=20, k=3):
                & ((roll - center).abs() > k * mad)]
     return int(out.index[0]) if len(out) else None
 
+def logit_fit(runs, at, level=0.95):
+    """Per rate: the least-squares line of log largest logit on log N
+    through runs (columns lr, seed, N, logit; non-finite logits left out),
+    its slope with a level interval (slope_hw, the half-width), and its
+    prediction at N = at with a level prediction interval for the mean of
+    log logit over as many seeds as runs has, back in logit units.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    rows = []
+    for lr, g in runs[np.isfinite(runs['logit'])].groupby('lr'):
+        x, y = np.log(g['N'].to_numpy(float)), np.log(g['logit'].to_numpy())
+        n, x0 = len(x), math.log(at)
+        if n < 3:  # no interval from two points
+            continue
+        b, a = np.polyfit(x, y, 1)
+        s = math.sqrt(((y - a - b * x) ** 2).sum() / (n - 2))  # residual sd
+        sxx, t = ((x - x.mean()) ** 2).sum(), d2l.t_quantile(n - 2, level)
+        h = t * s * math.sqrt(1 / g['seed'].nunique() + 1 / n
+                              + (x0 - x.mean()) ** 2 / sxx)
+        y0 = a + b * x0
+        rows.append(dict(lr=lr, slope=b, slope_hw=t * s / math.sqrt(sxx),
+                         intercept=a, predicted=math.exp(y0),
+                         lo=math.exp(y0 - h), hi=math.exp(y0 + h)))
+    return pd.DataFrame(rows)
+
 def fp8_quant(x, fmt='e4m3', granularity='tensor', scale_mode='current',
               state=None):
     """Cast x to fp8: (q, scale) with q.float() * scale ≈ x. One scale per
@@ -21408,8 +21433,8 @@ PRETRAIN_PENDING = frozenset()  # campaigns an author step declared pending
 PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'pdp-throughput', 'pdp-mask-runs',
     't1-runs', 'inst-t1-none', 'inst-t1-qkclip', 'inst-t1-qknorm',
-    'inst-t1-softcap', 'inst-t1-clip', 'inst-t1-warmup', 'spike-replay',
-    'reference-run', 'ladder', 'inst-t2',
+    'inst-t1-softcap', 'inst-t1-clip', 'inst-t1-warmup', 'size-xfer-pilot',
+    'spike-replay', 'reference-run', 'ladder', 'inst-t2',
     'reference-evals', 't1-evals', 'ladder-evals',
     'gemm-sweep', 'lowp-runs',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
@@ -21425,7 +21450,8 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     't1-runs': 't1-runs', 'inst-t1-none': 'instability-t1',
     'inst-t1-qkclip': 'instability-t1', 'inst-t1-qknorm': 'instability-t1',
     'inst-t1-softcap': 'instability-t1', 'inst-t1-clip': 'instability-t1',
-    'inst-t1-warmup': 'instability-t1', 'spike-replay': 'spike-replay',
+    'inst-t1-warmup': 'instability-t1', 'size-xfer-pilot': 'size-transfer',
+    'spike-replay': 'spike-replay',
     'reference-run': 'reference-run-log', 'ladder': 'ladder-logs',
     'inst-t2': 'instability-t2', 'reference-evals': 'reference-evals',
     't1-evals': 't1-evals', 'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
@@ -22588,6 +22614,8 @@ d2l.PRETRAIN_ARTIFACTS['instability-t1'] = (
 d2l.PRETRAIN_ARTIFACTS['instability-t2'] = (
     'lm-r2-inst-t2-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['size-transfer'] = (
+    'lm-r2-size-xfer-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['throughput-probe'] = ('lm-r2-probe-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['val-domains'] = ('lm-fwedu-val-domains-v1', 'jsonl')
 
@@ -22623,6 +22651,8 @@ d2l.PRETRAIN_JOBS['inst-t1-clip'] = (
     'instability_arms', lambda: d2l._inst_t1_job())
 d2l.PRETRAIN_JOBS['inst-t1-warmup'] = (
     'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['size-xfer-pilot'] = (
+    'size_transfer', lambda: d2l._size_xfer_job())
 d2l.PRETRAIN_JOBS['spike-replay'] = ('spike_replay', lambda: dict(
     cfg=d2l.r2_config('t1', clip=None), bad_step=300, kind='random',
     replays=(('from 250, same batches', 250, (), None),
@@ -24327,6 +24357,256 @@ def _inst_t1_job():
                 variants=('none', 'qk_norm', 'qk_clip', 'softcap', 'clip',
                           'warmup'),
                 seeds=(0, 1), tau=d2l.tau_rule(t1[t1['seed'] == 0], 76, 400))
+
+SizeTransfer = collections.namedtuple(
+    'SizeTransfer', ['table', 'traces', 'fit', 'gate', 'registered',
+                     'label'])
+
+XFER_PILOT = dict(shapes=('t1', 'ladder-88m'), lrs=(4e-3, 8e-3))  # the gate
+XFER_LEVEL = 0.95  # the prediction interval and the slope's interval
+XFER_STATS = 1  # version of the run statistics: bump when they change
+
+_XFER_TABLES = dict(  # the columns of a SizeTransfer's tables
+    table=['shape', 'N', 'lr', 'seed', 'logit', 'loss', 'first_nonfinite'],
+    traces=['step', 'loss', 'max_logit', 'shape', 'lr', 'seed'],
+    fit=['lr', 'slope', 'slope_hw', 'intercept', 'predicted', 'lo', 'hi'])
+
+def t_quantile(dof, level=0.95):
+    """The two-sided level quantile of Student's t with dof degrees of
+    freedom.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if level == 0.95 and 1 <= dof <= len(d2l._T975):
+        return d2l._T975[dof - 1]
+    from scipy import stats
+    return float(stats.t.ppf((1 + level) / 2, dof))
+
+def _non_embedding(arch):
+    """The parameters of a PackedGPT of arch without its embedding (and
+    head, if untied), counted on the meta device.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    with torch.device('meta'):
+        model = d2l.PackedGPT.from_arch(arch)
+    P = sum(p.numel() for p in model.parameters())
+    return P - arch.vocab * arch.d * (1 if arch.tie else 2)
+
+def _xfer_config(shape, lr, seed, steps):
+    """One size-transfer run: shape's architecture at t1's T = 1,024 on the
+    T1 grid's baseline recipe (t1's 64 sequences, warmup 76, z-loss and
+    weight decay; clipping off), then a constant rate for the rest of
+    steps; statistics every INST_STATS_EVERY steps, no validation, nothing
+    saved. The seed sets the data order too, so every shape at a seed sees
+    the same batches.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    base = d2l.r2_config('t1', clip=None)
+    arch = d2l.r2_config(shape).arch._replace(T=base.arch.T)
+    return _inst_config(dataclasses.replace(base, preset=shape, arch=arch),
+                        lr, seed, steps, data_seed=seed)
+
+def _xfer_recipe():
+    """The library constants a stored size transfer was computed with.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return dict(pilot=d2l._jsonable(XFER_PILOT), level=XFER_LEVEL,
+                stats_every=INST_STATS_EVERY, stats=XFER_STATS)
+
+def _xfer_path(shape, lr, seed):
+    """Where one finished size-transfer run is kept (a restarted job
+    reads it instead of training again).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return os.path.join(_job_root(), 'size-xfer',
+                        f'{shape}-{lr:g}-s{seed}.json.gz')
+
+def _xfer_run(shape, lr, seed, steps, shards, device):
+    """One run's (row, trace), kept at _xfer_path: the largest attention
+    logit at the last step (over layers; NaN if the loss went non-finite),
+    the final loss (mean of the last 20 steps; inf after a non-finite
+    loss), the first non-finite step, and the trace at the statistics
+    steps.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    c = _xfer_config(shape, lr, seed, steps)
+    config = d2l._jsonable(dict(cfg=_cfg_json(c), recipe=_xfer_recipe()))
+
+    def compute():
+        log = _inst_run(c, {}, 'none', None, shards, None, device)
+        s = _arm_summary(log, 'none', lr, seed)
+        last = log.loc[log['step'] == steps].filter(like='max_logit_')
+        logit = (float(last.max(axis=1).iloc[0]) if len(last)
+                 and s['first_nonfinite'] is None else math.nan)
+        row = dict(shape=shape, N=_non_embedding(c.arch), lr=lr, seed=seed,
+                   logit=logit, loss=s['final_loss'],
+                   first_nonfinite=s['first_nonfinite'])
+        tr = _arm_trace(log, 'none', lr, seed)
+        tr = tr.loc[tr['max_logit'].notna(), ['step', 'loss', 'max_logit']]
+        return row, tr.assign(shape=shape, lr=lr, seed=seed).reset_index(
+            drop=True)
+    return _inst_kept(_xfer_path(shape, lr, seed), config, compute)
+
+def _xfer_gate(table, seeds):
+    """The pilot's pre-registered rule: 'go' if at each of XFER_PILOT's
+    rates and for every seed the larger pilot shape's largest logit is
+    above the smaller one's (the seeds agree on the order); else 'no-go'
+    (a missing or non-finite logit counts against the order).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    small, large = XFER_PILOT['shapes']
+    t = table.set_index(['shape', 'lr', 'seed'])['logit']
+    above = [t.get((large, lr, s), math.nan) > t.get((small, lr, s), math.nan)
+             for lr in XFER_PILOT['lrs'] for s in seeds]
+    return 'go' if all(above) else 'no-go'
+
+def _xfer_register(fit, held):
+    """Write the prediction (fit, at the held-out shape) with its UTC time
+    to _job_root()/size-xfer/prediction.json before the first run of the
+    held-out shape; a restarted job finds it and checks it against fit
+    (the kept runs give the same fit). Refused if a held-out run is kept
+    without a prediction (it would have run first). Returns the time.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    path = os.path.join(_job_root(), 'size-xfer', 'prediction.json')
+    if os.path.exists(path):
+        with open(path) as f:
+            doc = json.load(f)
+        stored = pd.DataFrame(doc['fit'])[fit.columns].to_numpy(float)
+        if stored.shape != fit.shape or not np.allclose(
+                stored, fit.to_numpy(float), rtol=1e-12, equal_nan=True):
+            raise ValueError(f'{path} differs from the fit of the kept runs')
+        return doc['registered']
+    if any(os.path.exists(p) for p in held):
+        raise RuntimeError('a held-out run is kept without a prediction: '
+                           'the prediction is written before it runs')
+    doc = dict(registered=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+               fit=fit.to_dict('list'))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path + '.tmp', 'w') as f:
+        json.dump(doc, f, indent=1)
+    os.replace(path + '.tmp', path)
+    print(f'size transfer: prediction registered {doc["registered"]}\n'
+          f'{fit.to_string(index=False)}', flush=True)  # the job's log
+    return doc['registered']
+
+def _size_transfer(shapes, lrs, seeds, steps, full, device=None):
+    """The pilot (XFER_PILOT's runs and the gate) or, if full, every run:
+    the pilot's runs first (a no-go stops the job), then every shape but
+    the last, the fit (logit_fit) at the last shape's N registered
+    (_xfer_register), and only then the last shape. device: tests only.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if device is None and not torch.cuda.is_available():
+        raise RuntimeError('the size-transfer runs train on a GPU')
+    device = torch.device(device or 'cuda')
+    shards = _train_shards(_xfer_config(shapes[0], lrs[0], seeds[0], steps))
+    done = {}
+
+    def run(shapes_, lrs_):
+        for shape in shapes_:
+            for lr in lrs_:
+                for seed in seeds:
+                    if (shape, lr, seed) not in done:
+                        done[shape, lr, seed] = _xfer_run(
+                            shape, lr, seed, steps, shards, device)
+
+    def result(fit, gate, registered=None):
+        keys = [(s, lr, seed) for s in shapes for lr in lrs for seed in seeds
+                if (s, lr, seed) in done]
+        return SizeTransfer(pd.DataFrame([done[k][0] for k in keys]),
+                            pd.concat([done[k][1] for k in keys],
+                                      ignore_index=True),
+                            fit, gate, registered, '')
+    run(XFER_PILOT['shapes'], XFER_PILOT['lrs'])
+    gate = _xfer_gate(result(None, None).table, seeds)
+    print(f'size transfer: pilot gate {gate}', flush=True)
+    if not full:
+        return result(pd.DataFrame(columns=_XFER_TABLES['fit']), gate)
+    if gate != 'go':
+        raise RuntimeError("the pilot's gate is no-go: the full size "
+                           'transfer does not run')
+    *fitted, held = shapes
+    run(fitted, lrs)
+    at = _non_embedding(_xfer_config(held, lrs[0], seeds[0], steps).arch)
+    fit = d2l.logit_fit(result(None, None).table, at, XFER_LEVEL)
+    registered = _xfer_register(fit, [_xfer_path(held, lr, s) for lr in lrs
+                                      for s in seeds])
+    run([held], lrs)
+    return result(fit, gate, registered)
+
+def size_transfer(shapes, lrs, seeds=(0, 1), steps=300):
+    """The largest attention logit against model size (Wortsman et al.):
+    runs of each shape (a preset's architecture at t1's T = 1,024; the T1
+    grid's baseline recipe, _xfer_config) per rate and seed for steps, and
+    a fit on every shape but the last that predicts the last. The
+    statistic is the largest logit at the last step, over layers.
+    SizeTransfer(table, traces, fit, gate, registered, label): a row per
+    run (shape, non-embedding parameters N, lr, seed, logit, final loss,
+    first non-finite step), the traces at the statistics steps, the
+    prediction (logit_fit at the last shape's N) as the job stored it
+    before it ran the last shape and when (registered, UTC), and the
+    pilot's gate ('go' or 'no-go'). Regenerations: size-xfer-pilot
+    (XFER_PILOT's runs and the gate; nothing else runs, the fit is empty)
+    and, after a go, size-xfer (every run; the pilot's runs are reused).
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    if not (set(XFER_PILOT['shapes']) <= set(shapes[:-1])
+            and set(XFER_PILOT['lrs']) <= set(lrs)):
+        raise ValueError(f'the pilot {XFER_PILOT} needs its shapes among '
+                         'the fitted shapes and its rates among lrs')
+    runs = {}
+    for s in shapes:  # each shape's run configuration, rate and seed aside
+        runs[s] = _cfg_json(_xfer_config(s, 0.0, 0, steps))
+        for k in ('peak_lr', 'seed', 'data_seed'):
+            del runs[s][k]
+    config = dict(shapes=list(shapes), lrs=list(lrs), seeds=list(seeds),
+                  steps=steps, runs=runs, recipe=_xfer_recipe())
+    full = 'size-xfer' in d2l._regenerating()
+    res = d2l._pretrain_result(
+        'size-xfer' if full else 'size-xfer-pilot',
+        lambda: _size_transfer(shapes, lrs, seeds, steps, full), config)
+    return d2l._show_label(_as_tuple(SizeTransfer, res, _XFER_TABLES, dict(
+        gate=None, registered=None)))
+
+def _size_xfer_job():
+    """The page's size-transfer call (cell 25c) for tools/lm_regen.py: the
+    pilot (size-xfer-pilot) and, after its go, the full job (size-xfer)
+    take the same arguments. The full job's name is conditional (spec
+    5.3): after a go, add 'size-xfer' to PRETRAIN_RERUN_NAMES and
+    _RERUN_ARTIFACT ('size-transfer', data-path-lib.md), its
+    PRETRAIN_JOBS entry (as size-xfer-pilot's) and the tests' list.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    return dict(shapes=('t1', 'ladder-54m', 'ladder-88m', 'r2'),
+                lrs=(2e-3, 4e-3, 8e-3, 1.6e-2), seeds=(0, 1), steps=300)
+
+def plot_size_transfer(xfer, fit, held, figsize=(5.5, 3)):
+    """The largest logit at the last step against non-embedding parameters
+    (log-log): per rate the fitted line (fit: logit_fit's table) extended
+    to the held-out shape, the fitted runs as points, the held-out shape's
+    runs as open markers.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    d2l.use_svg_display()
+    fig, ax = d2l.plt.subplots(figsize=figsize)
+    runs = xfer.table
+    grid = np.geomspace(runs['N'].min(), runs['N'].max(), 20)
+    lines, dots = [], []
+    for r in fit.itertuples():
+        lines.append(np.exp(r.intercept + r.slope * np.log(grid)).tolist())
+        g = runs[(runs['lr'] == r.lr) & (runs['shape'] != held)]
+        dots.append((g['N'].tolist(), g['logit'].tolist()))
+    k = range(len(fit))
+    d2l.plot([grid.tolist()] * len(fit) + [x for x, _ in dots],
+             lines + [y for _, y in dots], 'non-embedding parameters',
+             f'largest logit at step {int(xfer.traces["step"].max())}',
+             legend=[f'lr {lr:g}' for lr in fit['lr']], xscale='log',
+             yscale='log', fmts=[f'C{i}-' for i in k] + [f'C{i}o' for i in k],
+             axes=ax, legend_loc='outside')
+    for i, r in enumerate(fit.itertuples()):
+        g = runs[(runs['lr'] == r.lr) & (runs['shape'] == held)]
+        ax.plot(g['N'], g['logit'], 'o', color=f'C{i}', mfc='none')
+    fig.tight_layout()
 
 d2l.DATA_HUB['lm-lowp-runs-v1'] = (
     d2l.LM_DATA_URL + 'lm-lowp-runs-v1.json.gz',

@@ -9,7 +9,7 @@ Qwen3-0.6B-Base config (6 N_mm = 3,575,906,304, F(T=2,048) =
 4,985,192,448), `causal_half`, `T=None`; `mfu` arithmetic; `r2_config`
 overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
 `_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
-chapter's 37 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
+chapter's 38 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
 vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
 (losses 1e-6) and a branch from a saved state; the stats-step columns
 `entropy_<l>` and `log_z` (finite; `log_z` the explicit mean logsumexp
@@ -45,7 +45,18 @@ data order, a resumed job reads its finished arms, the merge
 keeps the zero-layer loss, the regeneration stores the recipe (with the
 statistics version; a changed one is refused); a 2-process
 gloo DDP `pretrain` equal to one process at the same global batch (loss and
-`log_z`, 1e-5).
+`log_z`, 1e-5); the size transfer: `t_quantile` against `scipy.stats.t`,
+`logit_fit` (a noiseless line recovered exactly; over 1,000 noisy draws the
+slope's interval and the prediction interval for a two-seed mean cover the
+truth at 95% within 2 points; non-finite logits and two-point rates left
+out), the run configurations (shapes at T = 1,024, N = 12.6M to 113.3M, the
+grid's recipe, the seed sets the data order), the pilot's gate, the driver
+(the pilot runs only its 8 runs; a no-go stops the full job before any
+other run; the prediction is registered before the held-out shape's first
+run and equals the page's fit of the stored runs; a changed prediction or
+a held-out run kept without one is refused), a real 2-layer run kept and
+read back, the regeneration names (pilot, full after a go, pending) and
+the plot.
 """
 import collections
 import contextlib
@@ -85,7 +96,7 @@ torch.set_num_threads(min(8, torch.get_num_threads()))
 RERUN_NAMES = (
     'pdp-throughput', 'pdp-mask-runs', 't1-runs', 'inst-t1-none',
     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'inst-t1-clip',
-    'inst-t1-warmup', 'spike-replay',
+    'inst-t1-warmup', 'size-xfer-pilot', 'spike-replay',
     'reference-run', 'ladder', 'inst-t2', 'reference-evals', 't1-evals',
     'ladder-evals',
     'gemm-sweep', 'lowp-runs', 'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B',
@@ -1531,6 +1542,330 @@ class ResultTest(unittest.TestCase):
             with mock.patch.object(d2l, 'INST_STATS', 3), \
                     self.assertRaisesRegex(ValueError, 'recipe.stats'):
                 call()
+
+    def test_size_transfer_regeneration(self):
+        """The pilot writes the result (its 8 runs, the gate); a normal run
+        loads it under the page's configuration; after a go the full job
+        (its name added) computes every run; another regeneration run
+        shows the pending result."""
+        calls = []
+
+        def fake(shapes, lrs, seeds, steps, full):
+            calls.append(full)
+            rows = [dict(shape='t1', N=1.0, lr=4e-3, seed=0, logit=2.0,
+                         loss=4.0, first_nonfinite=None)]
+            fit = pd.DataFrame(columns=d2l._XFER_TABLES['fit'])
+            return d2l.SizeTransfer(pd.DataFrame(rows), pd.DataFrame(
+                dict(step=[300], loss=[4.0], max_logit=[2.0])), fit,
+                'no-go', None, '')
+        kw = d2l._size_xfer_job()
+
+        def call(**over):
+            with contextlib.redirect_stdout(io.StringIO()):
+                return d2l.size_transfer(**dict(kw, **over))
+        path = '../data/lm/rerun/lm-r2-size-xfer-v1.json.gz'
+        with mock.patch.object(d2l, '_size_transfer', fake):
+            os.environ['D2L_RERUN'] = 'size-xfer-pilot'
+            res = call()
+            self.assertEqual((calls, res.gate, len(res.table)),
+                             ([False], 'no-go', 1))
+            self.assertTrue(os.path.exists(path))
+            config = d2l._stored_config(d2l._read_result(path, 'json-table'))
+            self.assertEqual(config['recipe']['pilot'],
+                             dict(shapes=['t1', 'ladder-88m'],
+                                  lrs=[4e-3, 8e-3]))
+            self.assertEqual(config['runs']['r2']['arch']['L'], 18)
+            self.assertNotIn('peak_lr', config['runs']['t1'])
+            os.environ['D2L_RERUN'] = 't1-runs'  # another job's run
+            res = call()
+            self.assertTrue(res.label.endswith('pending'))
+            self.assertIsNone(res.gate)
+            self.assertEqual(list(res.fit.columns), d2l._XFER_TABLES['fit'])
+            # after a go: the full job's name is added (spec 5.3)
+            names = d2l.PRETRAIN_RERUN_NAMES + ('size-xfer',)
+            with mock.patch.object(d2l, 'PRETRAIN_RERUN_NAMES', names), \
+                    mock.patch.dict(d2l._RERUN_ARTIFACT,
+                                    {'size-xfer': 'size-transfer'}):
+                os.environ['D2L_RERUN'] = 'size-xfer'
+                call()
+            self.assertEqual(calls, [False, True])
+        os.environ['D2L_RERUN'] = ''
+        d2l.DATA_HUB['lm-r2-size-xfer-v1'] = ('url', 'sha1')
+        with mock.patch.object(d2l, 'download_keyed', lambda key: path):
+            res = call()
+            self.assertEqual((res.gate, res.label), ('no-go', ''))
+            with self.assertRaisesRegex(ValueError, 'steps 400 != 300'):
+                call(steps=400)
+            with mock.patch.object(d2l, 'XFER_PILOT', dict(
+                    shapes=('t1', 'ladder-54m'), lrs=(4e-3, 8e-3))), \
+                    self.assertRaisesRegex(ValueError, 'recipe.pilot'):
+                call()
+
+
+class SizeTransferTest(unittest.TestCase):
+    """The size transfer of the largest logit (cell 25c) on CPU."""
+    SHAPES = ('t1', 'ladder-54m', 'ladder-88m', 'r2')
+    LRS = (2e-3, 4e-3, 8e-3, 1.6e-2)
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = os.path.join(self.tmp.name, 'ch21')
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    @staticmethod
+    def points(Ns, slope=0.7, a=-5.0, sigma=0.0, seeds=(0, 1), rng=None,
+               lrs=(1e-3,)):
+        rows = []
+        for lr in lrs:
+            for N in Ns:
+                for s in seeds:
+                    e = rng.normal(0, sigma) if sigma else 0.0
+                    rows.append(dict(lr=lr, seed=s, N=N, logit=math.exp(
+                        a + slope * math.log(N) + e)))
+        return pd.DataFrame(rows)
+
+    def test_t_quantile(self):
+        from scipy import stats
+        for dof in range(1, 16):
+            for level in (0.95, 0.9):
+                self.assertAlmostEqual(d2l.t_quantile(dof, level), float(
+                    stats.t.ppf((1 + level) / 2, dof)), delta=1e-4)
+
+    def test_logit_fit_exact(self):
+        Ns = (12.6e6, 35.4e6, 62.9e6)
+        fit = d2l.logit_fit(self.points(Ns, lrs=(2e-3, 4e-3)), at=113.2e6)
+        self.assertEqual(list(fit.columns), d2l._XFER_TABLES['fit'])
+        self.assertEqual(fit['lr'].tolist(), [2e-3, 4e-3])
+        truth = math.exp(-5 + 0.7 * math.log(113.2e6))
+        for r in fit.itertuples():
+            self.assertAlmostEqual(r.slope, 0.7, places=9)
+            self.assertAlmostEqual(r.intercept, -5.0, places=7)
+            self.assertAlmostEqual(r.predicted / truth, 1, places=7)
+            self.assertLess(r.slope_hw, 1e-6)
+            self.assertLess((r.hi - r.lo) / truth, 1e-6)
+
+    def test_logit_fit_coverage(self):
+        """Six points (three sizes, two seeds) per draw; the measured value
+        at the held-out size is the mean of log logit over two new seeds."""
+        rng = np.random.default_rng(0)
+        Ns, at, slope, a, sigma = (12.6e6, 35.4e6, 62.9e6), 113.2e6, 0.7, -5, .3
+        covered = slopes = 0
+        est = []
+        for _ in range(1000):
+            fit = d2l.logit_fit(self.points(Ns, slope, a, sigma, rng=rng),
+                                at).iloc[0]
+            new = a + slope * math.log(at) + rng.normal(0, sigma, 2).mean()
+            covered += math.log(fit.lo) <= new <= math.log(fit.hi)
+            slopes += abs(fit.slope - slope) <= fit.slope_hw
+            est.append(fit.slope)
+        self.assertLess(abs(covered / 1000 - 0.95), 0.02)
+        self.assertLess(abs(slopes / 1000 - 0.95), 0.02)
+        self.assertLess(abs(np.mean(est) - slope), 0.02)  # unbiased
+        # with one seed the interval is wider (1/m with m = 1)
+        one = d2l.logit_fit(self.points(Ns, sigma=sigma, seeds=(0,),
+                                        rng=rng), at).iloc[0]
+        two = d2l.logit_fit(self.points(Ns, sigma=sigma, rng=rng), at).iloc[0]
+        self.assertGreater(one.hi / one.lo, 1)
+        self.assertGreater(two.hi / two.lo, 1)
+
+    def test_logit_fit_non_finite(self):
+        pts = self.points((1e7, 3e7, 6e7), lrs=(2e-3, 4e-3))
+        pts.loc[0, 'logit'] = math.nan  # one point at 2e-3 left out
+        pts.loc[(pts['lr'] == 4e-3) & (pts['N'] > 1e7), 'logit'] = math.inf
+        fit = d2l.logit_fit(pts, at=1e8)
+        self.assertEqual(fit['lr'].tolist(), [2e-3])  # 4e-3: two points
+        self.assertAlmostEqual(fit['slope'].iloc[0], 0.7, places=9)
+
+    def test_xfer_config(self):
+        N = {s: d2l._non_embedding(d2l._xfer_config(s, 4e-3, 1, 300).arch)
+             for s in self.SHAPES}
+        self.assertEqual([round(n / 1e5) / 10 for n in N.values()],
+                         [12.6, 35.4, 62.9, 113.3])
+        for s in self.SHAPES:
+            c = d2l._xfer_config(s, 4e-3, 1, 300)
+            ref = d2l.r2_config(s).arch
+            self.assertEqual(c.arch, ref._replace(T=1024))
+            self.assertEqual((c.preset, c.steps, c.warmup, c.decay, c.clip,
+                              c.global_batch, c.micro_batch, c.peak_lr,
+                              c.seed, c.data_seed, c.stats_every, c.z_loss,
+                              c.wd, c.data, c.val_every, c.probe_every,
+                              c.ckpt_steps, c.state_steps, c.out_dir),
+                             (s, 300, 76, 0, None, 64, 16, 4e-3, 1, 1, 10,
+                              1e-4, 0.1, '100m', 0, 0, (), (), None))
+        # a constant rate after warmup
+        lr = [d2l.wsd_lr(k, c.steps, c.warmup, c.decay, c.peak_lr,
+                         c.final_lr) for k in range(76, 300)]
+        self.assertEqual(set(lr), {4e-3})
+        # N by formula (the embedding tied, counted once, left out)
+        a = d2l.r2_config('r2').arch
+        self.assertEqual(N['r2'], a.L * (2 * a.d * a.H * a.d_h + 2 * a.d
+                                         * a.H_kv * a.d_h + 3 * a.d * a.f
+                                         + 2 * a.d) + a.d)
+        with self.assertRaises(KeyError):
+            d2l._xfer_config('r3', 4e-3, 0, 300)
+
+    def table(self, larger=(1, 1, 1, 1)):
+        """A pilot table: at (4e-3, s0), (4e-3, s1), (8e-3, s0), (8e-3, s1)
+        the ladder-88m logit is above t1's where larger says 1."""
+        rows, i = [], 0
+        for lr in (4e-3, 8e-3):
+            for s in (0, 1):
+                rows.append(dict(shape='t1', lr=lr, seed=s, logit=100.0))
+                rows.append(dict(shape='ladder-88m', lr=lr, seed=s,
+                                 logit=150.0 if larger[i] else 90.0))
+                i += 1
+        return pd.DataFrame(rows)
+
+    def test_gate(self):
+        self.assertEqual(d2l._xfer_gate(self.table(), (0, 1)), 'go')
+        for i in range(4):  # one seed disagrees at one rate
+            larger = [1] * 4
+            larger[i] = 0
+            self.assertEqual(d2l._xfer_gate(self.table(larger), (0, 1)),
+                             'no-go')
+        self.assertEqual(d2l._xfer_gate(self.table((0, 0, 0, 0)), (0, 1)),
+                         'no-go')  # agreeing on the wrong order
+        t = self.table()
+        t.loc[1, 'logit'] = math.nan  # a non-finite run
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'no-go')
+        self.assertEqual(d2l._xfer_gate(self.table().iloc[1:], (0, 1)),
+                         'no-go')  # a missing run
+
+    def fake_runs(self, order, pilot_up=True):
+        """A _xfer_run that trains nothing: log logit linear in log N (two
+        seeds apart by 0.1), ladder-88m below t1 at 8e-3 unless pilot_up;
+        records the call order and whether the prediction existed."""
+        pred = os.path.join(self.root, 'size-xfer', 'prediction.json')
+
+        def run(shape, lr, seed, steps, shards, device):
+            N = d2l._non_embedding(d2l._xfer_config(shape, lr, seed,
+                                                    steps).arch)
+            y = 1 + 0.5 * math.log(N / 1e6) + 50 * lr + 0.1 * seed
+            if not pilot_up and shape == 'ladder-88m' and lr == 8e-3:
+                y = 0.0
+            order.append((shape, lr, seed, os.path.exists(pred)))
+            row = dict(shape=shape, N=N, lr=lr, seed=seed,
+                       logit=math.exp(y), loss=4.0, first_nonfinite=None)
+            tr = pd.DataFrame(dict(step=[10, steps], loss=[5.0, 4.0],
+                                   max_logit=[1.0, math.exp(y)]))
+            return row, tr.assign(shape=shape, lr=lr, seed=seed)
+        return run
+
+    def driver(self, full, run):
+        with mock.patch.object(d2l, '_xfer_run', run), \
+                mock.patch.object(d2l, '_train_shards', lambda c: None), \
+                mock.patch.object(d2l, '_job_root', lambda: self.root), \
+                contextlib.redirect_stdout(io.StringIO()):
+            return d2l._size_transfer(self.SHAPES, self.LRS, (0, 1), 300,
+                                      full, device='cpu')
+
+    def test_driver_pilot_and_full(self):
+        order = []
+        res = self.driver(False, self.fake_runs(order))
+        pilot = [(s, lr, seed) for s in ('t1', 'ladder-88m')
+                 for lr in (4e-3, 8e-3) for seed in (0, 1)]
+        self.assertEqual([o[:3] for o in order], pilot)
+        self.assertEqual((res.gate, len(res.table), len(res.fit),
+                          res.registered), ('go', 8, 0, None))
+        self.assertEqual(list(res.fit.columns), d2l._XFER_TABLES['fit'])
+        order.clear()
+        res = self.driver(True, self.fake_runs(order))
+        self.assertEqual(len(res.table), 32)
+        self.assertEqual(res.table[['shape', 'lr', 'seed']].values.tolist(),
+                         [[s, lr, seed] for s in self.SHAPES
+                          for lr in self.LRS for seed in (0, 1)])
+        r2 = [o for o in order if o[0] == 'r2']
+        self.assertEqual(len(r2), 8)
+        self.assertTrue(all(o[3] for o in r2))  # registered before r2 ran
+        self.assertFalse(any(o[3] for o in order if o[0] != 'r2'))
+        self.assertEqual(order[-8:], r2)  # r2 last
+        self.assertRegex(res.registered, r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$')
+        # the page's check: its own fit of the stored runs = the prediction
+        held = res.table['shape'] == 'r2'
+        N = res.table.loc[held, 'N'].iloc[0]
+        page = d2l.logit_fit(res.table[~held], at=N)
+        np.testing.assert_allclose(page.to_numpy(float),
+                                   res.fit[page.columns].to_numpy(float))
+        self.assertTrue(np.allclose(res.fit['slope'], 0.5))
+        # a restart reads the same prediction; a changed one is refused
+        again = self.driver(True, self.fake_runs([]))
+        self.assertEqual(again.registered, res.registered)
+        path = os.path.join(self.root, 'size-xfer', 'prediction.json')
+        import json
+        with open(path) as f:
+            doc = json.load(f)
+        doc['fit']['predicted'][0] *= 1.01
+        with open(path, 'w') as f:
+            json.dump(doc, f)
+        with self.assertRaisesRegex(ValueError, 'differs from the fit'):
+            self.driver(True, self.fake_runs([]))
+
+    def test_driver_refusals(self):
+        order = []
+        res = self.driver(False, self.fake_runs(order, pilot_up=False))
+        self.assertEqual(res.gate, 'no-go')
+        order.clear()
+        with self.assertRaisesRegex(RuntimeError, 'no-go'):
+            self.driver(True, self.fake_runs(order, pilot_up=False))
+        self.assertEqual({o[0] for o in order}, {'t1', 'ladder-88m'})
+        self.assertEqual(len(order), 8)  # no run beyond the pilot's
+        # a held-out run kept before any prediction was written
+        with mock.patch.object(d2l, '_job_root', lambda: self.root):
+            held = d2l._xfer_path('r2', 2e-3, 0)
+        os.makedirs(os.path.dirname(held), exist_ok=True)
+        open(held, 'w').close()
+        with self.assertRaisesRegex(RuntimeError, 'without a prediction'):
+            self.driver(True, self.fake_runs([]))
+        with self.assertRaisesRegex(ValueError, 'pilot'):
+            d2l.size_transfer(('t1', 'ladder-54m', 'r2'), self.LRS)
+        with self.assertRaisesRegex(ValueError, 'pilot'):
+            d2l.size_transfer(self.SHAPES, (2e-3, 8e-3))
+
+    def test_xfer_run_trains_and_keeps(self):
+        shards = dp.fixture_shards(os.path.join(self.tmp.name, 'set'),
+                                   n_docs=300)
+
+        def config(shape, lr, seed, steps):
+            return toy_config(preset=shape, steps=steps, warmup=2, decay=0,
+                              clip=None, stats_every=5, peak_lr=lr, seed=seed,
+                              data_seed=seed)
+        with mock.patch.object(d2l, '_xfer_config', config), \
+                mock.patch.object(d2l, '_job_root', lambda: self.root), \
+                contextlib.redirect_stdout(io.StringIO()):
+            row, tr = d2l._xfer_run('toy', 3e-3, 1, 10, shards, 'cpu')
+            with mock.patch.object(d2l, '_inst_run', None):  # not trained
+                again, tr2 = d2l._xfer_run('toy', 3e-3, 1, 10, shards, 'cpu')
+        self.assertEqual(row['N'], d2l._non_embedding(TOY))
+        self.assertEqual(row['N'], sum(p.numel() for p in toy_model()
+                                       .parameters()) - TOY.vocab * TOY.d)
+        self.assertTrue(math.isfinite(row['logit']) and row['logit'] > 0)
+        self.assertEqual(tr['step'].tolist(), [5, 10])
+        self.assertEqual(row['logit'], tr['max_logit'].iloc[-1])
+        self.assertIsNone(row['first_nonfinite'])
+        self.assertEqual(str(row), str(again))
+        pd.testing.assert_frame_equal(tr, tr2)
+
+    def test_plot(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        res = self.driver(True, self.fake_runs([]))
+        held = res.table['shape'] == 'r2'
+        fit = d2l.logit_fit(res.table[~held], at=res.table.loc[held, 'N']
+                            .iloc[0])
+        d2l.plot_size_transfer(res, fit, held='r2')
+        ax = d2l.plt.gcf().axes[0]
+        self.assertEqual((ax.get_xscale(), ax.get_yscale()), ('log', 'log'))
+        self.assertEqual(len(ax.lines), 12)  # 4 fits, 4 fitted, 4 held out
+        self.assertEqual([ln.get_markerfacecolor() for ln in ax.lines[8:]],
+                         ['none'] * 4)
+        self.assertEqual(len(ax.lines[4].get_xdata()), 6)  # 3 shapes x 2
+        self.assertEqual(ax.get_ylabel(), 'largest logit at step 300')
+        labels = [t.get_text() for t in ax.get_legend().get_texts()]
+        self.assertEqual(labels, ['lr 0.002', 'lr 0.004', 'lr 0.008',
+                                  'lr 0.016'])
+        d2l.plt.close('all')
 
 
 class LibraryStructureTest(unittest.TestCase):

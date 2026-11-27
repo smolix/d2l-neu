@@ -31,7 +31,7 @@ configurations; the simulator's topology and its claim line
 ```{.python .input #collectives-lib-entries}
 %%tab pytorch
 #@save
-d2l.HW_ARTIFACTS['box-coll'] = ('lm-hw-buildbox-coll-v1', 'tar')
+d2l.HW_ARTIFACTS['box-coll'] = ('lm-hw-buildbox-coll-v2', 'tar')
 ```
 
 The box result, committed with the book (tools/hw_regen.py writes it).
@@ -39,9 +39,9 @@ The box result, committed with the book (tools/hw_regen.py writes it).
 ```{.python .input #collectives-lib-data-hub}
 %%tab pytorch
 #@save
-d2l.DATA_HUB['lm-hw-buildbox-coll-v1'] = (
-    d2l.LM_DATA_URL + 'lm-hw-buildbox-coll-v1.tar',
-    '2d0e6e2ec405653039d1e00c942b4f014b8e7c98')
+d2l.DATA_HUB['lm-hw-buildbox-coll-v2'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-coll-v2.tar',
+    '9c5a66511ce69f9e30c26133501f3fe6ff6e1242')
 ```
 
 ```{.python .input #collectives-lib-jobs}

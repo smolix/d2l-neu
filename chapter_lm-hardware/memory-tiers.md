@@ -248,11 +248,11 @@ measured outcome of the question the opening asks. -->
 bench (STREAM's operations as tensor operations, bytes counted as STREAM
 counts them) and labelled "torch bench"; STREAM's kernel names belong to
 the compiled binary only. The binary (STREAM 5.10, OpenMP, 8 to 32
-threads, arrays 4x the caches) checked it, CPU only, but on a loaded host
-(four chapter-21 GPU jobs, load average 6-13; the torch bench beside it
-lost 13% at 16 threads), so the text says the check ran under load until
-F12's quiet re-run replaces it: its Triad, about 90 GB/s, matches the
-bench's 89 (the gate, a Triad above 1.2 x 88.5 = 106, did not fire), so
+threads, arrays 4x the caches) checked it, CPU only, on a quiet host
+(fix pass F12, 2026-11-27: load average below 1 at the start, no other
+job; the first, loaded run gave the same values): its Triad, about 90
+GB/s (89 at 16 threads, 91 at 8), matches the bench's 88-89 (the gate, a
+Triad above 1.2 x 88.5 = 106, did not fire), so
 the committed numbers stand; its Copy, about 120 GB/s, is higher because
 the copy loop becomes memcpy, whose non-temporal stores skip the
 write-allocate read. Both say the DIMMs move about 120 GB/s, near 60% of

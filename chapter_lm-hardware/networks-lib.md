@@ -35,16 +35,16 @@ tagged `%%tab pytorch`.
 d2l.DATA_HUB['lm-hw-systems-v1'] = (
     d2l.LM_DATA_URL + 'lm-hw-systems-v1.json',
     '4ef586baa5a2e50dd5dc2d063f5b5a62b84270f5')
-d2l.DATA_HUB['lm-hw-buildbox-net-v1'] = (
-    d2l.LM_DATA_URL + 'lm-hw-buildbox-net-v1.tar',
-    '95533e1cbaaf28e4eef31f00d41d508f4b3699db')
+d2l.DATA_HUB['lm-hw-buildbox-net-v2'] = (
+    d2l.LM_DATA_URL + 'lm-hw-buildbox-net-v2.tar',
+    '67685fc787593ba701de124e0155c4caef1d4792')
 ```
 
 ```{.python .input #networks-lib-entries}
 %%tab pytorch
 #@save
 d2l.HW_STATIC['hw-systems'] = ('lm-hw-systems-v1', 'json')
-d2l.HW_ARTIFACTS['box-net'] = ('lm-hw-buildbox-net-v1', 'tar')
+d2l.HW_ARTIFACTS['box-net'] = ('lm-hw-buildbox-net-v2', 'tar')
 d2l.HW_CAMPAIGNS['cluster-nccl'] = (
     'lm-hw-cluster-nccl-v1', 'tar', 'C-T4',
     'two 8 x A100 nodes with RDMA')

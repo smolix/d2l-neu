@@ -2089,19 +2089,10 @@ class TestLiveConfigs(unittest.TestCase):
         self.loopback('tcp', ranks=(2,), max_bytes=2**24)
 
     def test_gloo(self):
+        # box-net v2 (fix pass F12) records the pinned rank settings, so the
+        # live check compares (a mismatch is tested in TestNetworks)
         r, _ = self.committed('box-net', 'gloo')
-        if r.attrs.get('gloo_env') != d2l._gloo_env():
-            # box-net v1 ran unpinned ranks (before fix pass F6): the live
-            # check says so and is not run; v2 (F12) records the settings
-            gpu = 'NVIDIA GeForce RTX 4090'
-            with mock.patch.object(d2l, '_gloo_sweep') as sweep, \
-                    mock.patch.object(d2l, '_cpu_model',
-                                      lambda: r.attrs.get('cpu')):
-                lines, _ = lines_of(self, d2l._host_live, r, {})
-            sweep.assert_not_called()
-            self.assertEqual(lines, ['gloo live check (same CPU): not run: '
-                                     'the committed ranks ran other settings'])
-            return
+        self.assertEqual(r.attrs.get('gloo_env'), d2l._gloo_env())
         self.loopback('gloo', ranks=(2, 4), max_bytes=2**24)
 
     def test_nccl_sockets(self):
@@ -2463,21 +2454,23 @@ class TestCommittedClaims(unittest.TestCase):
         self.assertEqual(len(lines), 11)
 
     def test_c2_residuals(self):
-        """C2: measured crossover 83 KiB, predicted 280 KiB; between 16 KiB
-        and 1 MiB the fits miss the measured times by far more than the two
-        fitted lines differ (Ring/LL +2% to +72%, Ring/Simple -1% to +48%;
-        the lines +19% to -3% apart)."""
+        """C2 on box-coll v2: measured crossover 87 KiB, predicted 600 KiB
+        (v1: 83 and 280; the two fitted lines are nearly parallel above 128
+        KiB, so their intersection moves far with small changes); between
+        16 KiB and 1 MiB the fits miss the measured times by far more than
+        the two fitted lines differ (Ring/LL +2% to +78%, Ring/Simple -2% to
+        +47%; the lines +11% to 0% apart)."""
         if not d2l.hw_registered('box-coll'):
             self.skipTest('box-coll is not registered yet')
         with quiet():
             pairs = d2l.nccl_algo_proto_sweeps('box')
         x = d2l.fit_pairs(pairs).attrs['crossover']
-        self.assertEqual(d2l._approx_bytes(x['measured']), '83 KiB')
-        self.assertEqual(d2l._approx_bytes(x['predicted']), '280 KiB')
+        self.assertEqual(d2l._approx_bytes(x['measured']), '87 KiB')
+        self.assertEqual(d2l._approx_bytes(x['predicted']), '600 KiB')
         r = {n: tuple(round(100 * e) for e in v)
              for n, v in x['resid'].items()}
-        self.assertEqual(r, {'Ring/LL': (2, 72), 'Ring/Simple': (-1, 48)})
-        self.assertEqual(tuple(round(100 * g) for g in x['gap']), (19, -3))
+        self.assertEqual(r, {'Ring/LL': (2, 78), 'Ring/Simple': (-2, 47)})
+        self.assertEqual(tuple(round(100 * g) for g in x['gap']), (11, 0))
         self.assertGreater(min(max(map(abs, v)) for v in x['resid'].values()),
                            max(map(abs, x['gap'])))
 

@@ -118,7 +118,8 @@ and nccl-tests' columns, `path='loopback'`), so `fit_collectives` fits it:
 alpha from the messages up to 64 KiB, beta from those of 4 MiB and more.
 The CPU-only sweeps (tcp, gloo) record the CPU model, and their live check
 compares on the same CPU model with or without a GPU; NCCL's needs two
-GPUs.
+GPUs. A live check re-runs the committed 2-rank sweep (its sizes,
+iterations and warm-up, in one launch) and compares three of its sizes.
 
 ```{.python .input #networks-lib-configs}
 %%tab pytorch
@@ -136,7 +137,7 @@ _HW_NET = {  # the page's calls, by backend: ranks, sizes, iterations
 _HW_NET_REGIMES = dict(alpha_below=2**16, plateau_from=2**22)  # bytes
 
 #@save
-_HW_NET_LIVE = dict(sizes=(2**10, 2**17, 2**24), timeout_s=60)
+_HW_NET_LIVE = dict(sizes=(2**10, 2**17, 2**24))  # compared, on 2 ranks
 ```
 
 ```{.python .input #networks-lib-tcp}
@@ -305,10 +306,16 @@ def _net_info(k, env):
     return dict(version=ver, transports=via)
 
 #@save
+def _loopback_sizes(min_bytes, max_bytes):
+    """The message sizes of a loopback sweep: min_bytes to max_bytes in
+    factors of 2."""
+    return [int(min_bytes * 2**i) for i in range(
+        int(round(math.log2(max_bytes / min_bytes))) + 1)]
+
+#@save
 def _loopback_compute(backend, ranks, env, min_bytes, max_bytes, iters,
                       warmup):
-    sizes = [int(min_bytes * 2**i) for i in range(
-        int(round(math.log2(max_bytes / min_bytes))) + 1)]
+    sizes = _loopback_sizes(min_bytes, max_bytes)
     if backend == 'tcp':  # one ping-pong pair; ranks is (2,)
         rows, run = _tcp_pingpong(sizes, iters, warmup)
         if run.refused or not rows:
@@ -387,41 +394,52 @@ def _show_loopback(r):
               f'{_ci(x.beta_lo, x.beta_hi, 1e-9)}')
 
 #@save
-def _loopback_live_us(backend, env, size):
-    """The live time (us) of one all-reduce of size bytes on 2 ranks (a
-    round trip for tcp), or None when the run was refused."""
+def _loopback_live_us(backend, config):
+    """The live times (us) by message size on 2 ranks (round trips for
+    tcp): the 2-rank sweep of the committed configuration config (the
+    loopback_sweep call's, which _hw_result has checked against the stored
+    one: sizes, iterations, warm-up, NCCL's env) run again, in one launch
+    as the committed run ran it; {} when the run was refused."""
+    sizes = _loopback_sizes(config['min_bytes'], config['max_bytes'])
+    iters, warmup = config['iters'], config['warmup']
     if backend == 'tcp':
-        rows, _ = _tcp_pingpong([size], _HW_NET['tcp']['iters'],
-                                _HW_NET['tcp']['warmup'],
-                                _HW_NET_LIVE['timeout_s'])
-        return rows[0]['rt_us'] if rows else None
+        rows, _ = _tcp_pingpong(sizes, iters, warmup)
+        return {int(x['size']): float(x['rt_us']) for x in rows}
     if backend == 'gloo':
-        rows, _ = _gloo_sweep(2, [size], 20, 5, _HW_NET_LIVE['timeout_s'])
-        return rows[0]['time_us'] if rows else None
-    df = d2l.nccl_sweep('all_reduce', (0, 1), env=env, min_bytes=size,
-                        max_bytes=size, timeout_s=_HW_NET_LIVE['timeout_s'])
-    return None if df.empty else float(df.oop_us.iloc[0])
+        rows, _ = _gloo_sweep(2, sizes, iters, warmup)
+        return {int(x['size']): float(x['time_us']) for x in rows}
+    df = d2l.nccl_sweep('all_reduce', (0, 1), env=config['env'],
+                        min_bytes=config['min_bytes'],
+                        max_bytes=config['max_bytes'], iters=iters,
+                        warmup=warmup)
+    return dict(zip(df['size'].astype(int), df.oop_us.astype(float)))
 
 #@save
-def _loopback_live(r, same):
-    """The live check of a loopback sweep: 2 ranks at three sizes, one
-    short line (the cell names the backend); same says whether this is
-    the committed run's GPU (nccl) or CPU model (tcp, gloo)."""
+def _loopback_live(r, same, config):
+    """The live check of a loopback sweep: the committed 2-rank sweep
+    (config) run again, compared at three sizes, one short line (the cell
+    names the backend); same says whether this is the committed run's GPU
+    (nccl) or CPU model (tcp, gloo). A gloo result whose recorded rank
+    settings (attrs['gloo_env']; none before box-net v2) are not
+    _gloo_env()'s is not compared: the live ranks could not run them."""
     backend = r.attrs.get('backend')
+    if backend == 'gloo' and r.attrs.get('gloo_env') != _gloo_env():
+        return 'not run: the committed ranks ran other settings'
     col = 'rt_us' if backend == 'tcp' else 'oop_us'
-    pts = []
+    hits = []
     for size in _HW_NET_LIVE['sizes']:
         row = r['size'] == size
         if backend != 'tcp':  # the tcp table has one pair only
             row &= r.g == 2
         hit = np.flatnonzero(row.to_numpy())
-        if not len(hit):
-            continue
-        live = _loopback_live_us(backend, r.attrs.get('env', ''), size)
-        if live is None:
+        if len(hit):
+            hits.append((size, int(hit[0])))
+    live = _loopback_live_us(backend, config) if hits else {}
+    pts = []
+    for size, i in hits:
+        if size not in live:
             return f'{d2l._hw_bytes(size)}: not run'
-        i = int(hit[0])
-        pts.append((d2l._hw_bytes(size), float(r[col].iloc[i]), live,
+        pts.append((d2l._hw_bytes(size), float(r[col].iloc[i]), live[size],
                     d2l._spread(r, col, i, 0.05)))
     if not same:
         return d2l._hw_agreement(pts, same, 'us')
@@ -435,16 +453,16 @@ def _loopback_live(r, same):
             + (' (differs)' if bad else ''))
 
 #@save
-def _host_live(r):
-    """The live line of a CPU-only sweep (tcp, gloo), keyed to the CPU
-    model, with or without a GPU; nothing in a regeneration run or while
-    the result is pending."""
+def _host_live(r, config):
+    """The live line of a CPU-only sweep (tcp, gloo) of the committed
+    configuration config, keyed to the CPU model, with or without a GPU;
+    nothing in a regeneration run or while the result is pending."""
     if 'box-net' in d2l._hw_regenerating() or r.empty:
         return
     same = r.attrs.get('cpu') == _cpu_model()
     try:
         with d2l._quiet():
-            text = _loopback_live(r, same)
+            text = _loopback_live(r, same, config)
     except Exception as e:  # report, never fail the page
         text = f'not run ({type(e).__name__})'
     name = {'tcp': 'TCP', 'gloo': 'gloo'}[r.attrs.get('backend')]
@@ -459,8 +477,8 @@ def loopback_sweep(backend='gloo', ranks=(2, 4), env='', max_bytes=2**24):
     'nccl' with env (the variables that force its socket transport) on the
     first cards; the collectives as the long sweep table of nccl_sweeps
     (path 'loopback'). Committed in box-net; a normal run prints the fits
-    and re-times 2 ranks at three sizes (tcp and gloo on any host, nccl
-    with two GPUs). env is NCCL's only: tcp and gloo run in their fixed
+    and re-runs the committed 2-rank sweep, compared at three sizes (tcp
+    and gloo on any host, nccl with two GPUs). env is NCCL's only: tcp and gloo run in their fixed
     settings (gloo in _gloo_env)."""
     if env and backend != 'nccl':
         raise ValueError(f'env applies to backend nccl only, not {backend}')
@@ -472,12 +490,13 @@ def loopback_sweep(backend='gloo', ranks=(2, 4), env='', max_bytes=2**24):
                                         spec['min_bytes'], max_bytes,
                                         spec['iters'], spec['warmup'])
     two_gpus = torch.cuda.device_count() >= 2
+    live = lambda r, same: _loopback_live(r, same, config)
     r = d2l._hw_result('box-net', compute, config, entry=backend,
-                       live_check=(_loopback_live if backend == 'nccl'
-                                   and two_gpus else None),
+                       live_check=(live if backend == 'nccl' and two_gpus
+                                   else None),
                        show=_show_loopback, live_label='')
     if backend != 'nccl':
-        _host_live(r)
+        _host_live(r, config)
     elif not (two_gpus or r.empty or 'box-net' in d2l._hw_regenerating()):
         print('live check needs two GPUs: the committed box run is shown')
     return r

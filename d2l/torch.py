@@ -30395,19 +30395,38 @@ def _hw_load(name, entry=None):
         raise KeyError(f'{name} has no entry {entry!r}')
     return _hw_read(path)
 
+def _hw_on_committed_card(env):
+    """True when this process's first GPU is one of the cards the committed
+    run measured (env['uuids'], the short UUIDs _hw_env records), False
+    when it is another card, None when either is unknown. Two cards of one
+    model differ by several percent (the box's L2 latency: 98 ns on the
+    card of box-microbench, 108 ns on two others at the same clocks).
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    committed = env.get('uuids')
+    try:
+        mine = [u[4:12] for u in _hw_visible_uuids()]
+    except Exception:  # no device properties (a test, a broken driver)
+        return None
+    if not committed or not mine:
+        return None
+    return mine[0] in committed
+
 def _hw_live(live_check, result, meta, label=''):
     """Print the one agreement line of a live check, naming what it checks
-    (label): compared when this GPU is the committed run's GPU, else this
-    GPU's values uncompared, after a line naming the committed run's GPU
-    (the tables above show its numbers, their live columns this GPU's). A
-    live check never fails a run and never changes the committed
-    numbers.
+    (label): compared when this GPU is the committed run's GPU model, else
+    this GPU's values uncompared, after a line naming the committed run's
+    GPU (the tables above show its numbers, their live columns this
+    GPU's). A comparison on another card of the model than the committed
+    run's says 'another' (_hw_on_committed_card). A live check never fails
+    a run and never changes the committed numbers.
 
     Defined in :numref:`sec_lm_accelerator_design`"""
     if live_check is None or not torch.cuda.is_available():
         return
     gpu = torch.cuda.get_device_name(0)
-    committed = (meta.get('env') or {}).get('gpu')
+    env = meta.get('env') or {}
+    committed = env.get('gpu')
     same = gpu == committed
     try:
         with d2l._quiet():
@@ -30418,8 +30437,11 @@ def _hw_live(live_check, result, meta, label=''):
     if not same:
         print(f'committed run on {_gpu_short(committed) or "no GPU"}; '
               f'live values on {_gpu_short(gpu)}')
+    card = _gpu_short(gpu)
+    if same and _hw_on_committed_card(env) is False:
+        card = f'another {card}'
     print(textwrap.fill(  # a long "differs:" list wraps, within the page
-        f'live {"check" if same else "values"}{what} on {_gpu_short(gpu)}: '
+        f'live {"check" if same else "values"}{what} on {card}: '
         f'{text}', width=80, subsequent_indent='  '))
 
 def _hw_result(name, compute, config, *, entry=None, live_check=None,
@@ -31116,11 +31138,26 @@ def _chase_ns(nbytes, steps=16384, repeats=5, warm_lines=2**20):
     return dict(bytes=nbytes, ns_per_load=ms * 1e6 / steps,
                 mad=mad * 1e6 / steps)
 
-def _latency_live(r, same):
-    picks = r.iloc[[0, len(r) // 2, -1]] if len(r) else r
-    pairs = [(f"{_hw_bytes(b)}", ns, _chase_ns(int(b))['ns_per_load'],
-              mad / ns) for b, ns, mad in zip(picks.bytes, picks.ns_per_load,
-                                               picks.mad)]
+def _latency_sweep(sizes):
+    """The pointer-chase sweep: one row per working set (bytes) that fits,
+    in the order given, each measured after the ones before it.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    return _hw_frame([_chase_ns(s) for s in sizes if _hw_fits(s)])
+
+def _latency_live(r, same, sizes):
+    """The latency live check: the committed sweep over sizes (the stored
+    configuration, which _hw_result has checked) run again in its order,
+    compared at the first, the middle and the last committed point.
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    if not len(r):
+        return 'no committed points'
+    live = _latency_sweep(sizes).set_index('bytes').ns_per_load
+    picks = r.iloc[[0, len(r) // 2, -1]]
+    pairs = [(f"{_hw_bytes(b)}", ns, float(live[b]), mad / ns)
+             for b, ns, mad in zip(picks.bytes, picks.ns_per_load, picks.mad)
+             if b in live.index]
     return _hw_agreement(pairs, same, 'ns')
 
 def _latency_plateaus(lat):
@@ -31148,9 +31185,10 @@ def hw_latency_bench(sizes):
 
     Defined in :numref:`sec_lm_accelerator_design`"""
     sizes = [int(s) for s in sizes]
-    compute = lambda: _hw_frame([_chase_ns(s) for s in sizes if _hw_fits(s)])
-    return _hw_result('box-microbench', compute, dict(sizes=sizes),
-                      entry='latency', live_check=_latency_live,
+    return _hw_result('box-microbench', lambda: _latency_sweep(sizes),
+                      dict(sizes=sizes), entry='latency',
+                      live_check=lambda r, same: _latency_live(r, same,
+                                                               sizes),
                       show=_show_latency, live_label='latency')
 
 def _hw_sig(x, digits=2):
@@ -33789,19 +33827,31 @@ def parse_stream(text):
                 threads=int(threads[1]) if threads else 1,
                 validates='Solution Validates' in text)
 
+def _dram_live_config(r):
+    """(threads, nbytes) the host DRAM live check measures: a configuration
+    of the committed bench r, its best triad thread count (one of the
+    counts it ran) on its array size.
+
+    Defined in :numref:`sec_lm_memory_tiers`"""
+    by = r['by_threads']
+    threads = max(by, key=lambda k: by[k]['triad'])
+    return int(threads), int(r['nbytes'])
+
 def hw_host_mem_bench(threads=(8, 16, 32), nbytes=2**31):
     """The torch bench on host memory: read, copy and triad (GB/s, bytes
     counted as STREAM counts them), arrays of nbytes (2 GiB, 16 times the
     L3 cache), the best of the thread counts for each kernel; the live
-    check repeats the triad at its best thread count on 1 GiB arrays.
+    check repeats the bench at the committed triad's thread count on the
+    committed array size (_dram_live_config) and compares the triad.
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     threads = [int(k) for k in threads]
 
     def live(r, same):
-        x = _stream_kernels(int(r['triad_threads']), 2**30, repeats=3)
-        return d2l._hw_agreement([('triad', r['triad'], x['triad'],
-                                   r['triad_mad'])], same, 'GB/s')
+        k, n = _dram_live_config(r)
+        x = _stream_kernels(k, n)
+        return d2l._hw_agreement([('triad', r['by_threads'][str(k)]['triad'],
+                                   x['triad'], r['triad_mad'])], same, 'GB/s')
     return d2l._hw_result('box-storage',
                           lambda: _stream_best(threads, nbytes),
                           dict(threads=threads, nbytes=nbytes), entry='dram',
@@ -34299,11 +34349,13 @@ def _adam_seconds(n_params, threads, repeats=5, size=2**22):
 def hw_cpu_adam_bench(threads=8, n_params=10**8):
     """s_adam: seconds per parameter of the CPU update of an offloaded
     step (bf16 gradient in, fused AdamW in fp32, bf16 weights out) on
-    `threads` cores; the live check repeats it with three timings.
+    `threads` cores; the live check repeats it as the committed run ran
+    it (the stored configuration is this call's: _hw_result checks that
+    before the live check runs).
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     def live(r, same):
-        x = _adam_seconds(n_params, threads, repeats=3)
+        x = _adam_seconds(n_params, threads)
         return d2l._hw_agreement([('AdamW', r * 1e9, x * 1e9, 0.05)], same,
                                  'ns per parameter')
     return d2l._hw_result('box-storage',
@@ -34540,9 +34592,13 @@ def _offload_compute(c, tokens=None, arms=('compute', 'offload',
     return df
 
 def _offload_live(r, same, c):
+    """The offloaded run's live check: the offload arm at the smallest and
+    the largest token count of the committed configuration c, with its
+    steps, warm-up and threads.
+
+    Defined in :numref:`sec_lm_memory_tiers`"""
     picks = [min(c['tokens']), max(c['tokens'])]
-    live = _offload_compute(c, picks, arms=('offload',), alone=False,
-                            steps=3)
+    live = _offload_compute(c, picks, arms=('offload',), alone=False)
     pts = []
     for T, s in zip(live.tokens, live.seconds):
         i = _row(r, tokens=T, arm='offload')
@@ -34556,7 +34612,8 @@ def hw_offload_run(config='box'):
     tokens per step for the arms compute, offload and offload-32, the
     transfer-only and CPU-only times (rows with tokens 0), the parameter
     count N and the peak GPU memory (attrs); the live check repeats the
-    smallest and largest token counts, offloaded.
+    smallest and largest token counts, offloaded, with the committed
+    steps (_offload_live).
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     c = HW_OFFLOAD_CONFIG[config]
@@ -36242,7 +36299,7 @@ _HW_NET = {  # the page's calls, by backend: ranks, sizes, iterations
 
 _HW_NET_REGIMES = dict(alpha_below=2**16, plateau_from=2**22)  # bytes
 
-_HW_NET_LIVE = dict(sizes=(2**10, 2**17, 2**24), timeout_s=60)
+_HW_NET_LIVE = dict(sizes=(2**10, 2**17, 2**24))  # compared, on 2 ranks
 
 _TCP_PINGPONG = '''
 import json, os, socket, sys, time
@@ -36408,10 +36465,17 @@ def _net_info(k, env):
                   if ' via ' in l})
     return dict(version=ver, transports=via)
 
+def _loopback_sizes(min_bytes, max_bytes):
+    """The message sizes of a loopback sweep: min_bytes to max_bytes in
+    factors of 2.
+
+    Defined in :numref:`sec_lm_networks`"""
+    return [int(min_bytes * 2**i) for i in range(
+        int(round(math.log2(max_bytes / min_bytes))) + 1)]
+
 def _loopback_compute(backend, ranks, env, min_bytes, max_bytes, iters,
                       warmup):
-    sizes = [int(min_bytes * 2**i) for i in range(
-        int(round(math.log2(max_bytes / min_bytes))) + 1)]
+    sizes = _loopback_sizes(min_bytes, max_bytes)
     if backend == 'tcp':  # one ping-pong pair; ranks is (2,)
         rows, run = _tcp_pingpong(sizes, iters, warmup)
         if run.refused or not rows:
@@ -36488,44 +36552,55 @@ def _show_loopback(r):
               f'{d2l._hw_sig(x.beta / 1e9)} GB/s'
               f'{_ci(x.beta_lo, x.beta_hi, 1e-9)}')
 
-def _loopback_live_us(backend, env, size):
-    """The live time (us) of one all-reduce of size bytes on 2 ranks (a
-    round trip for tcp), or None when the run was refused.
+def _loopback_live_us(backend, config):
+    """The live times (us) by message size on 2 ranks (round trips for
+    tcp): the 2-rank sweep of the committed configuration config (the
+    loopback_sweep call's, which _hw_result has checked against the stored
+    one: sizes, iterations, warm-up, NCCL's env) run again, in one launch
+    as the committed run ran it; {} when the run was refused.
 
     Defined in :numref:`sec_lm_networks`"""
+    sizes = _loopback_sizes(config['min_bytes'], config['max_bytes'])
+    iters, warmup = config['iters'], config['warmup']
     if backend == 'tcp':
-        rows, _ = _tcp_pingpong([size], _HW_NET['tcp']['iters'],
-                                _HW_NET['tcp']['warmup'],
-                                _HW_NET_LIVE['timeout_s'])
-        return rows[0]['rt_us'] if rows else None
+        rows, _ = _tcp_pingpong(sizes, iters, warmup)
+        return {int(x['size']): float(x['rt_us']) for x in rows}
     if backend == 'gloo':
-        rows, _ = _gloo_sweep(2, [size], 20, 5, _HW_NET_LIVE['timeout_s'])
-        return rows[0]['time_us'] if rows else None
-    df = d2l.nccl_sweep('all_reduce', (0, 1), env=env, min_bytes=size,
-                        max_bytes=size, timeout_s=_HW_NET_LIVE['timeout_s'])
-    return None if df.empty else float(df.oop_us.iloc[0])
+        rows, _ = _gloo_sweep(2, sizes, iters, warmup)
+        return {int(x['size']): float(x['time_us']) for x in rows}
+    df = d2l.nccl_sweep('all_reduce', (0, 1), env=config['env'],
+                        min_bytes=config['min_bytes'],
+                        max_bytes=config['max_bytes'], iters=iters,
+                        warmup=warmup)
+    return dict(zip(df['size'].astype(int), df.oop_us.astype(float)))
 
-def _loopback_live(r, same):
-    """The live check of a loopback sweep: 2 ranks at three sizes, one
-    short line (the cell names the backend); same says whether this is
-    the committed run's GPU (nccl) or CPU model (tcp, gloo).
+def _loopback_live(r, same, config):
+    """The live check of a loopback sweep: the committed 2-rank sweep
+    (config) run again, compared at three sizes, one short line (the cell
+    names the backend); same says whether this is the committed run's GPU
+    (nccl) or CPU model (tcp, gloo). A gloo result whose recorded rank
+    settings (attrs['gloo_env']; none before box-net v2) are not
+    _gloo_env()'s is not compared: the live ranks could not run them.
 
     Defined in :numref:`sec_lm_networks`"""
     backend = r.attrs.get('backend')
+    if backend == 'gloo' and r.attrs.get('gloo_env') != _gloo_env():
+        return 'not run: the committed ranks ran other settings'
     col = 'rt_us' if backend == 'tcp' else 'oop_us'
-    pts = []
+    hits = []
     for size in _HW_NET_LIVE['sizes']:
         row = r['size'] == size
         if backend != 'tcp':  # the tcp table has one pair only
             row &= r.g == 2
         hit = np.flatnonzero(row.to_numpy())
-        if not len(hit):
-            continue
-        live = _loopback_live_us(backend, r.attrs.get('env', ''), size)
-        if live is None:
+        if len(hit):
+            hits.append((size, int(hit[0])))
+    live = _loopback_live_us(backend, config) if hits else {}
+    pts = []
+    for size, i in hits:
+        if size not in live:
             return f'{d2l._hw_bytes(size)}: not run'
-        i = int(hit[0])
-        pts.append((d2l._hw_bytes(size), float(r[col].iloc[i]), live,
+        pts.append((d2l._hw_bytes(size), float(r[col].iloc[i]), live[size],
                     d2l._spread(r, col, i, 0.05)))
     if not same:
         return d2l._hw_agreement(pts, same, 'us')
@@ -36538,10 +36613,10 @@ def _loopback_live(r, same):
     return (f'{len(pts)} sizes on 2 ranks, largest difference {worst:.0%}'
             + (' (differs)' if bad else ''))
 
-def _host_live(r):
-    """The live line of a CPU-only sweep (tcp, gloo), keyed to the CPU
-    model, with or without a GPU; nothing in a regeneration run or while
-    the result is pending.
+def _host_live(r, config):
+    """The live line of a CPU-only sweep (tcp, gloo) of the committed
+    configuration config, keyed to the CPU model, with or without a GPU;
+    nothing in a regeneration run or while the result is pending.
 
     Defined in :numref:`sec_lm_networks`"""
     if 'box-net' in d2l._hw_regenerating() or r.empty:
@@ -36549,7 +36624,7 @@ def _host_live(r):
     same = r.attrs.get('cpu') == _cpu_model()
     try:
         with d2l._quiet():
-            text = _loopback_live(r, same)
+            text = _loopback_live(r, same, config)
     except Exception as e:  # report, never fail the page
         text = f'not run ({type(e).__name__})'
     name = {'tcp': 'TCP', 'gloo': 'gloo'}[r.attrs.get('backend')]
@@ -36563,8 +36638,8 @@ def loopback_sweep(backend='gloo', ranks=(2, 4), env='', max_bytes=2**24):
     'nccl' with env (the variables that force its socket transport) on the
     first cards; the collectives as the long sweep table of nccl_sweeps
     (path 'loopback'). Committed in box-net; a normal run prints the fits
-    and re-times 2 ranks at three sizes (tcp and gloo on any host, nccl
-    with two GPUs). env is NCCL's only: tcp and gloo run in their fixed
+    and re-runs the committed 2-rank sweep, compared at three sizes (tcp
+    and gloo on any host, nccl with two GPUs). env is NCCL's only: tcp and gloo run in their fixed
     settings (gloo in _gloo_env).
 
     Defined in :numref:`sec_lm_networks`"""
@@ -36578,12 +36653,13 @@ def loopback_sweep(backend='gloo', ranks=(2, 4), env='', max_bytes=2**24):
                                         spec['min_bytes'], max_bytes,
                                         spec['iters'], spec['warmup'])
     two_gpus = torch.cuda.device_count() >= 2
+    live = lambda r, same: _loopback_live(r, same, config)
     r = d2l._hw_result('box-net', compute, config, entry=backend,
-                       live_check=(_loopback_live if backend == 'nccl'
-                                   and two_gpus else None),
+                       live_check=(live if backend == 'nccl' and two_gpus
+                                   else None),
                        show=_show_loopback, live_label='')
     if backend != 'nccl':
-        _host_live(r)
+        _host_live(r, config)
     elif not (two_gpus or r.empty or 'box-net' in d2l._hw_regenerating()):
         print('live check needs two GPUs: the committed box run is shown')
     return r

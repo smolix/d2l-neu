@@ -534,17 +534,35 @@ def _hw_load(name, entry=None):
     return _hw_read(path)
 
 #@save
+def _hw_on_committed_card(env):
+    """True when this process's first GPU is one of the cards the committed
+    run measured (env['uuids'], the short UUIDs _hw_env records), False
+    when it is another card, None when either is unknown. Two cards of one
+    model differ by several percent (the box's L2 latency: 98 ns on the
+    card of box-microbench, 108 ns on two others at the same clocks)."""
+    committed = env.get('uuids')
+    try:
+        mine = [u[4:12] for u in _hw_visible_uuids()]
+    except Exception:  # no device properties (a test, a broken driver)
+        return None
+    if not committed or not mine:
+        return None
+    return mine[0] in committed
+
+#@save
 def _hw_live(live_check, result, meta, label=''):
     """Print the one agreement line of a live check, naming what it checks
-    (label): compared when this GPU is the committed run's GPU, else this
-    GPU's values uncompared, after a line naming the committed run's GPU
-    (the tables above show its numbers, their live columns this GPU's). A
-    live check never fails a run and never changes the committed
-    numbers."""
+    (label): compared when this GPU is the committed run's GPU model, else
+    this GPU's values uncompared, after a line naming the committed run's
+    GPU (the tables above show its numbers, their live columns this
+    GPU's). A comparison on another card of the model than the committed
+    run's says 'another' (_hw_on_committed_card). A live check never fails
+    a run and never changes the committed numbers."""
     if live_check is None or not torch.cuda.is_available():
         return
     gpu = torch.cuda.get_device_name(0)
-    committed = (meta.get('env') or {}).get('gpu')
+    env = meta.get('env') or {}
+    committed = env.get('gpu')
     same = gpu == committed
     try:
         with d2l._quiet():
@@ -555,8 +573,11 @@ def _hw_live(live_check, result, meta, label=''):
     if not same:
         print(f'committed run on {_gpu_short(committed) or "no GPU"}; '
               f'live values on {_gpu_short(gpu)}')
+    card = _gpu_short(gpu)
+    if same and _hw_on_committed_card(env) is False:
+        card = f'another {card}'
     print(textwrap.fill(  # a long "differs:" list wraps, within the page
-        f'live {"check" if same else "values"}{what} on {_gpu_short(gpu)}: '
+        f'live {"check" if same else "values"}{what} on {card}: '
         f'{text}', width=80, subsequent_indent='  '))
 
 #@save
@@ -1290,11 +1311,23 @@ def _chase_ns(nbytes, steps=16384, repeats=5, warm_lines=2**20):
                 mad=mad * 1e6 / steps)
 
 #@save
-def _latency_live(r, same):
-    picks = r.iloc[[0, len(r) // 2, -1]] if len(r) else r
-    pairs = [(f"{_hw_bytes(b)}", ns, _chase_ns(int(b))['ns_per_load'],
-              mad / ns) for b, ns, mad in zip(picks.bytes, picks.ns_per_load,
-                                               picks.mad)]
+def _latency_sweep(sizes):
+    """The pointer-chase sweep: one row per working set (bytes) that fits,
+    in the order given, each measured after the ones before it."""
+    return _hw_frame([_chase_ns(s) for s in sizes if _hw_fits(s)])
+
+#@save
+def _latency_live(r, same, sizes):
+    """The latency live check: the committed sweep over sizes (the stored
+    configuration, which _hw_result has checked) run again in its order,
+    compared at the first, the middle and the last committed point."""
+    if not len(r):
+        return 'no committed points'
+    live = _latency_sweep(sizes).set_index('bytes').ns_per_load
+    picks = r.iloc[[0, len(r) // 2, -1]]
+    pairs = [(f"{_hw_bytes(b)}", ns, float(live[b]), mad / ns)
+             for b, ns, mad in zip(picks.bytes, picks.ns_per_load, picks.mad)
+             if b in live.index]
     return _hw_agreement(pairs, same, 'ns')
 
 #@save
@@ -1321,9 +1354,10 @@ def hw_latency_bench(sizes):
     """Nanoseconds per dependent load (one thread chasing a random cycle)
     for working sets of each size in bytes: L1, L2 and DRAM latency."""
     sizes = [int(s) for s in sizes]
-    compute = lambda: _hw_frame([_chase_ns(s) for s in sizes if _hw_fits(s)])
-    return _hw_result('box-microbench', compute, dict(sizes=sizes),
-                      entry='latency', live_check=_latency_live,
+    return _hw_result('box-microbench', lambda: _latency_sweep(sizes),
+                      dict(sizes=sizes), entry='latency',
+                      live_check=lambda r, same: _latency_live(r, same,
+                                                               sizes),
                       show=_show_latency, live_label='latency')
 ```
 

@@ -69,6 +69,12 @@ rule.
 Fix pass F7 (TestInferenceX): the snapshot precision per row (weights and
 KV, each chip predicted at its own), an unmodelled format raising, the
 pending predictions equal to the committed cell.
+Fix pass F10 (TestLiveConfigs): every live check (host DRAM, CPU AdamW,
+the offloaded run, the latency sweep, TCP, gloo and NCCL sockets) measures
+a configuration of the committed tar, through the page's call with the
+measurement primitive mocked; a gloo result recorded without the current
+rank settings is not compared; a live line on another card of the
+committed model says "another".
 Fix pass F9 (TestFp8Gating): fp8 on chapter 21's has_fp8_cores with the
 capability mocked: (8, 9) and newer build and run the scaled-mm product on
 chapter 21's per-tensor fp8_quant (the call recorded); (8, 0) and (8, 6)
@@ -1883,6 +1889,185 @@ class TestLiveLine(unittest.TestCase):
         self.assertTrue(all(len(l) <= 80 for l in lines))
         self.assertTrue(lines[1].startswith('  '))
 
+    def test_another_card(self):
+        """Fix pass F10: a comparison on another card of the committed
+        model says so (the box's cards differ by 10% in L2 latency); the
+        committed card, or unknown cards, keep the plain label."""
+        gpu = 'NVIDIA GeForce RTX 4090'
+        meta = {'env': {'gpu': gpu, 'uuids': ['3312b7bc']}}
+
+        def line(uuids):
+            out = io.StringIO()
+            with mock.patch.object(torch.cuda, 'is_available', lambda: True), \
+                    mock.patch.object(torch.cuda, 'get_device_name',
+                                      lambda i=0: gpu), \
+                    mock.patch.object(d2l, '_hw_visible_uuids', uuids), \
+                    contextlib.redirect_stdout(out):
+                d2l._hw_live(lambda r, same: '1 point', None, meta, 'latency')
+            return out.getvalue().strip()
+        self.assertEqual(line(lambda: ['GPU-915651cf-c603']),
+                         'live check (latency) on another RTX 4090: 1 point')
+        self.assertEqual(line(lambda: ['GPU-3312b7bc-4842']),
+                         'live check (latency) on RTX 4090: 1 point')
+        self.assertEqual(line(lambda: []),
+                         'live check (latency) on RTX 4090: 1 point')
+
+        def broken():
+            raise RuntimeError('no device properties')
+        self.assertEqual(line(broken),
+                         'live check (latency) on RTX 4090: 1 point')
+
+
+class TestLiveConfigs(unittest.TestCase):
+    """Fix pass F10: each live check measures a configuration of the
+    committed artifact (the registered tars, read on the CPU). The page's
+    call runs as on the committed GPU with the measurement primitive
+    mocked: the primitive records its arguments and returns the committed
+    numbers, so the line must read 0% and the arguments must be a
+    configuration the committed run measured."""
+
+    def committed(self, name, entry):
+        if not d2l.hw_registered(name):
+            self.skipTest(f'{name} is not registered yet')
+        return d2l._hw_load(name, entry)
+
+    def run_page(self, meta, fn, *args, **kwargs):
+        """The live line(s) fn prints, as on the committed run's GPU."""
+        gpu = meta['env']['gpu']
+        out = io.StringIO()
+        with mock.patch.object(torch.cuda, 'is_available', lambda: True), \
+                mock.patch.object(torch.cuda, 'get_device_name',
+                                  lambda i=0: gpu), \
+                mock.patch.object(torch.cuda, 'device_count', lambda: 2), \
+                mock.patch.object(d2l, '_hw_visible_uuids', lambda: []), \
+                contextlib.redirect_stdout(out):
+            fn(*args, **kwargs)
+        lines = [l for l in out.getvalue().splitlines() if 'live' in l]
+        self.assertEqual(len(lines), 1, out.getvalue())
+        self.assertTrue(lines[0].endswith('largest difference 0%'), lines[0])
+        return lines[0]
+
+    def test_dram(self):
+        r, meta = self.committed('box-storage', 'dram')
+        cfg = meta['config']
+        k, n = d2l._dram_live_config(r)
+        self.assertIn(k, cfg['threads'])
+        self.assertEqual(n, cfg['nbytes'])
+        calls = []
+
+        def bench(threads, nbytes, repeats=5):
+            calls.append((threads, nbytes, repeats))
+            return dict(triad=r['by_threads'][str(threads)]['triad'])
+        with mock.patch.object(d2l, '_stream_kernels', bench):
+            self.run_page(meta, d2l.hw_host_mem_bench, threads=(8, 16, 32))
+        self.assertEqual(calls, [(k, cfg['nbytes'], 5)])
+        self.assertEqual(r['by_threads'][str(k)]['triad'], r['triad'])
+
+    def test_cpu_adam(self):
+        r, meta = self.committed('box-storage', 'cpu-adam')
+        cfg, calls = meta['config'], []
+
+        def bench(*args, **kwargs):
+            calls.append((args, kwargs))
+            return r
+        with mock.patch.object(d2l, '_adam_seconds', bench):
+            self.run_page(meta, d2l.hw_cpu_adam_bench, threads=8)
+        # the compute's own call: the committed size, threads and repeats
+        self.assertEqual(calls, [((cfg['n_params'], cfg['threads']), {})])
+
+    def test_offload(self):
+        r, meta = self.committed('box-storage', 'offload')
+        cfg, calls = dict(meta['config']), []
+        cfg.pop('config')
+
+        def compute(c, tokens=None, arms=(), alone=True, steps=None):
+            calls.append((dict(c), list(tokens), tuple(arms), steps))
+            rows = [dict(tokens=T, arm='offload', seconds=float(
+                r.seconds[(r.tokens == T) & (r.arm == 'offload')].iloc[0]))
+                    for T in tokens]
+            return pd.DataFrame(rows)
+        with mock.patch.object(d2l, '_offload_compute', compute):
+            self.run_page(meta, d2l.hw_offload_run, 'box')
+        (c, tokens, arms, steps), = calls
+        self.assertEqual(d2l._jsonable(c), cfg)
+        self.assertEqual(tokens, [min(cfg['tokens']), max(cfg['tokens'])])
+        self.assertEqual(arms, ('offload',))
+        self.assertIsNone(steps)  # _offload_compute then runs cfg['steps']
+
+    def test_latency(self):
+        r, meta = self.committed('box-microbench', 'latency')
+        cfg, calls = meta['config'], []
+        ns = dict(zip(r.bytes, r.ns_per_load))
+
+        def chase(nbytes, **kwargs):
+            calls.append((nbytes, kwargs))
+            return dict(bytes=nbytes, ns_per_load=ns[nbytes], mad=0.0)
+        with mock.patch.object(d2l, '_chase_ns', chase), \
+                mock.patch.object(d2l, '_hw_fits', lambda n: True):
+            self.run_page(meta, d2l.hw_latency_bench,
+                          sizes=2**np.arange(12, 31))
+        # the committed sweep, in its order, with the compute's settings
+        self.assertEqual(calls, [(s, {}) for s in cfg['sizes']])
+
+    def loopback(self, backend, **kwargs):
+        r, meta = self.committed('box-net', backend)
+        cfg, calls = meta['config'], []
+        col = 'rt_us' if backend == 'tcp' else 'oop_us'
+        two = r if backend == 'tcp' else r[r.g == 2]
+        times = dict(zip(two['size'].astype(int), two[col]))
+
+        def tcp(sizes, iters, warmup, timeout_s=None):
+            calls.append((2, list(sizes), iters, warmup, ''))
+            return [dict(size=s, rt_us=times[s]) for s in sizes], None
+
+        def gloo(k, sizes, iters, warmup, timeout_s=None):
+            calls.append((k, list(sizes), iters, warmup, ''))
+            return [dict(size=s, time_us=times[s]) for s in sizes], None
+
+        def nccl(op, gpus, env='', min_bytes=8, max_bytes=2**28, iters=20,
+                 warmup=5, **kw):
+            sizes = d2l._loopback_sizes(min_bytes, max_bytes)
+            calls.append((len(gpus), sizes, iters, warmup, env))
+            return pd.DataFrame(dict(size=sizes,
+                                     oop_us=[times[s] for s in sizes]))
+        with mock.patch.object(d2l, '_tcp_pingpong', tcp), \
+                mock.patch.object(d2l, '_gloo_sweep', gloo), \
+                mock.patch.object(d2l, 'nccl_sweep', nccl), \
+                mock.patch.object(d2l, '_cpu_model',
+                                  lambda: r.attrs.get('cpu')):
+            line = self.run_page(meta, d2l.loopback_sweep, backend=backend,
+                                 **kwargs)
+        self.assertEqual(calls, [(2, d2l._loopback_sizes(
+            cfg['min_bytes'], cfg['max_bytes']), cfg['iters'], cfg['warmup'],
+            cfg['env'])])
+        self.assertIn('3 sizes on 2 ranks', line)
+        for size in d2l._HW_NET_LIVE['sizes']:
+            self.assertIn(size, times)
+
+    def test_tcp(self):
+        self.loopback('tcp', ranks=(2,), max_bytes=2**24)
+
+    def test_gloo(self):
+        r, _ = self.committed('box-net', 'gloo')
+        if r.attrs.get('gloo_env') != d2l._gloo_env():
+            # box-net v1 ran unpinned ranks (before fix pass F6): the live
+            # check says so and is not run; v2 (F12) records the settings
+            gpu = 'NVIDIA GeForce RTX 4090'
+            with mock.patch.object(d2l, '_gloo_sweep') as sweep, \
+                    mock.patch.object(d2l, '_cpu_model',
+                                      lambda: r.attrs.get('cpu')):
+                lines, _ = lines_of(self, d2l._host_live, r, {})
+            sweep.assert_not_called()
+            self.assertEqual(lines, ['gloo live check (same CPU): not run: '
+                                     'the committed ranks ran other settings'])
+            return
+        self.loopback('gloo', ranks=(2, 4), max_bytes=2**24)
+
+    def test_nccl_sockets(self):
+        self.loopback('nccl', ranks=(2,), max_bytes=2**28,
+                      env='NCCL_P2P_DISABLE=1 NCCL_SHM_DISABLE=1 '
+                          'NCCL_IB_DISABLE=1 NCCL_SOCKET_IFNAME=lo')
+
 
 class TestInferenceX(unittest.TestCase):
     FIXTURE = ('model,hw,framework,precision,isl,osl,conc,tp,tps_per_gpu,'
@@ -3542,18 +3727,18 @@ class TestNetworks(unittest.TestCase):
     def test_host_live(self):
         """The CPU-only live line needs no GPU and is keyed to the CPU."""
         tcp = self.pingpong(40e-6, 2e9)
-        live = lambda b, e, size: float(tcp.rt_us[tcp['size'] == size].iloc[0])
+        live = lambda b, config: dict(zip(tcp['size'], tcp.rt_us))
         with mock.patch.object(d2l, '_loopback_live_us', side_effect=live), \
                 mock.patch.object(torch.cuda, 'is_available',
                                   return_value=False):
             with mock.patch.object(d2l, '_cpu_model',
                                    return_value='toy CPU'):
-                lines, _ = lines_of(self, d2l._host_live, tcp)
+                lines, _ = lines_of(self, d2l._host_live, tcp, {})
             self.assertEqual(lines, ['TCP live check (same CPU): 3 sizes on '
                                      '2 ranks, largest difference 0%'])
             with mock.patch.object(d2l, '_cpu_model',
                                    return_value='other CPU'):
-                lines, _ = lines_of(self, d2l._host_live, tcp)
+                lines, _ = lines_of(self, d2l._host_live, tcp, {})
             self.assertTrue(lines[0].startswith(
                 'TCP live values (other CPU): 1 KiB'))
 
@@ -3561,17 +3746,29 @@ class TestNetworks(unittest.TestCase):
         floor = self.loopback('gloo', (2, 4), 300e-6, 1.4e9)
         sizes = d2l._HW_NET_LIVE['sizes']
         floor = floor[floor['size'].isin(sizes) | (floor.g == 4)]
+        floor.attrs['gloo_env'] = d2l._gloo_env()  # as box-net v2 records
         if not set(sizes) <= set(floor['size']):
             self.skipTest('synthetic sweep lacks the live sizes')
+        two = floor[floor.g == 2]
         with mock.patch.object(d2l, '_loopback_live_us',
-                               side_effect=lambda b, e, size: float(
-                                   floor.oop_us[(floor.g == 2) & (
-                                       floor['size'] == size)].iloc[0])):
-            text = d2l._loopback_live(floor, True)
+                               side_effect=lambda b, config: dict(zip(
+                                   two['size'], two.oop_us))):
+            text = d2l._loopback_live(floor, True, {})
         self.assertEqual(text, '3 sizes on 2 ranks, largest difference 0%')
-        with mock.patch.object(d2l, '_loopback_live_us', return_value=1e9):
-            self.assertTrue(d2l._loopback_live(floor, True).endswith(
+        with mock.patch.object(d2l, '_loopback_live_us',
+                               return_value={s: 1e9 for s in sizes}):
+            self.assertTrue(d2l._loopback_live(floor, True, {}).endswith(
                 '(differs)'))
+        with mock.patch.object(d2l, '_loopback_live_us', return_value={}):
+            self.assertEqual(d2l._loopback_live(floor, True, {}),
+                             '1 KiB: not run')
+        # rank settings other than _gloo_env()'s (box-net v1 recorded none)
+        old = floor.copy()
+        old.attrs = {k: v for k, v in floor.attrs.items() if k != 'gloo_env'}
+        with mock.patch.object(d2l, '_loopback_live_us') as live:
+            self.assertEqual(d2l._loopback_live(old, True, {}),
+                             'not run: the committed ranks ran other settings')
+            live.assert_not_called()
 
     def test_regen_finish(self):
         with tempfile.TemporaryDirectory() as tmp:

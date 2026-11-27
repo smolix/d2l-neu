@@ -246,6 +246,16 @@ agg = d2l.hw_h2d_concurrent('box')
 dram = d2l.hw_host_mem_bench(threads=(8, 16, 32))  # read, copy, triad
 ```
 
+<!-- Placeholder (prose): fix pass F10: the torch triad at 16 threads is
+bimodal between processes on this box: about 89 GB/s or about 78 GB/s
+(fresh processes on a quiet host: 4 of 6 high; the committed run's three
+processes 77, 88.5, 89.5). Binding the OpenMP threads one per core
+(OMP_PROC_BIND=spread OMP_PLACES=cores) gave 89.4-89.6 in 3 of 3. Where
+unbound threads land (cores sharing an L3 and a CCD's link to memory) sets
+the bandwidth; the CPU AdamW time shows the same two modes (0.34 against
+0.41-0.57 ns per parameter). A sentence for the reader: pin threads before
+timing host memory. Quote the committed 89 GB/s only with the spread. -->
+
 ### Drives and Object Stores
 :label:`subsec_lm_hw_storage`
 

@@ -814,17 +814,28 @@ def parse_stream(text):
                 validates='Solution Validates' in text)
 
 #@save
+def _dram_live_config(r):
+    """(threads, nbytes) the host DRAM live check measures: a configuration
+    of the committed bench r, its best triad thread count (one of the
+    counts it ran) on its array size."""
+    by = r['by_threads']
+    threads = max(by, key=lambda k: by[k]['triad'])
+    return int(threads), int(r['nbytes'])
+
+#@save
 def hw_host_mem_bench(threads=(8, 16, 32), nbytes=2**31):
     """The torch bench on host memory: read, copy and triad (GB/s, bytes
     counted as STREAM counts them), arrays of nbytes (2 GiB, 16 times the
     L3 cache), the best of the thread counts for each kernel; the live
-    check repeats the triad at its best thread count on 1 GiB arrays."""
+    check repeats the bench at the committed triad's thread count on the
+    committed array size (_dram_live_config) and compares the triad."""
     threads = [int(k) for k in threads]
 
     def live(r, same):
-        x = _stream_kernels(int(r['triad_threads']), 2**30, repeats=3)
-        return d2l._hw_agreement([('triad', r['triad'], x['triad'],
-                                   r['triad_mad'])], same, 'GB/s')
+        k, n = _dram_live_config(r)
+        x = _stream_kernels(k, n)
+        return d2l._hw_agreement([('triad', r['by_threads'][str(k)]['triad'],
+                                   x['triad'], r['triad_mad'])], same, 'GB/s')
     return d2l._hw_result('box-storage',
                           lambda: _stream_best(threads, nbytes),
                           dict(threads=threads, nbytes=nbytes), entry='dram',
@@ -1346,9 +1357,11 @@ def _adam_seconds(n_params, threads, repeats=5, size=2**22):
 def hw_cpu_adam_bench(threads=8, n_params=10**8):
     """s_adam: seconds per parameter of the CPU update of an offloaded
     step (bf16 gradient in, fused AdamW in fp32, bf16 weights out) on
-    `threads` cores; the live check repeats it with three timings."""
+    `threads` cores; the live check repeats it as the committed run ran
+    it (the stored configuration is this call's: _hw_result checks that
+    before the live check runs)."""
     def live(r, same):
-        x = _adam_seconds(n_params, threads, repeats=3)
+        x = _adam_seconds(n_params, threads)
         return d2l._hw_agreement([('AdamW', r * 1e9, x * 1e9, 0.05)], same,
                                  'ns per parameter')
     return d2l._hw_result('box-storage',
@@ -1611,9 +1624,11 @@ def _offload_compute(c, tokens=None, arms=('compute', 'offload',
 
 #@save
 def _offload_live(r, same, c):
+    """The offloaded run's live check: the offload arm at the smallest and
+    the largest token count of the committed configuration c, with its
+    steps, warm-up and threads."""
     picks = [min(c['tokens']), max(c['tokens'])]
-    live = _offload_compute(c, picks, arms=('offload',), alone=False,
-                            steps=3)
+    live = _offload_compute(c, picks, arms=('offload',), alone=False)
     pts = []
     for T, s in zip(live.tokens, live.seconds):
         i = _row(r, tokens=T, arm='offload')
@@ -1628,7 +1643,8 @@ def hw_offload_run(config='box'):
     tokens per step for the arms compute, offload and offload-32, the
     transfer-only and CPU-only times (rows with tokens 0), the parameter
     count N and the peak GPU memory (attrs); the live check repeats the
-    smallest and largest token counts, offloaded."""
+    smallest and largest token counts, offloaded, with the committed
+    steps (_offload_live)."""
     c = HW_OFFLOAD_CONFIG[config]
     return d2l._hw_result('box-storage', lambda: _offload_compute(c),
                           dict(config=config, **c), entry='offload',

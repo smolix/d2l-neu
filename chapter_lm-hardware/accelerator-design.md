@@ -381,6 +381,14 @@ lat = d2l.hw_latency_bench(sizes=2**np.arange(12, 31))
 d2l.plot_latency(lat)
 ```
 
+<!-- Placeholder (prose): fix pass F10: four cards of one model are not one
+card. At the same SM and memory clocks the box's GPU 3 (the card of the
+committed run) takes 98 ns per dependent L2 load and 220 ns per DRAM load,
+GPUs 1 and 2 about 108 and 231 ns; L1 is 16-17 ns on all three. A live line
+run on a card other than the committed run's says "another RTX 4090". The
+live check re-runs the committed sweep in its order (the first sweep in a
+fresh process reads about 8% high while the clocks ramp). -->
+
 ### Datasheet against Measured
 
 <!-- Placeholder (prose): the summary table; claims C1 (DRAM read within 15%

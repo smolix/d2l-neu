@@ -782,6 +782,8 @@ Groq row is a bandwidth bound only: the table has no FLOP/s figure for it
 and the model has no inter-chip hops, so its number stays out of the prose
 (the compute term alone would cut it many times). -->
 
+<!-- Placeholder (prose): each chip at its own precision and TP from the snapshot, shown in a precision column; ServingModel models bf16, fp16 and fp8 weights and KV only, so a 4-bit row raises (ruling D3's 4-bit path is built only once a snapshot has such a row; none is committed) (fix F7). -->
+
 ```{.python .input #workload-hardware-other-chips}
 %%tab pytorch
 snap = d2l.inferencex_snapshot()

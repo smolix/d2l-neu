@@ -66,6 +66,9 @@ and after SIGTERM (a subprocess); the configurations and their checks; the
 driver's order on mocks; tools/hw_clock_sweep.sh (bash -n, pass-through,
 busy card refused, TERM resets before the job stops); hw_regen.py's smoke
 rule.
+Fix pass F7 (TestInferenceX): the snapshot precision per row (weights and
+KV, each chip predicted at its own), an unmodelled format raising, the
+pending predictions equal to the committed cell.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -1806,6 +1809,92 @@ class TestInferenceX(unittest.TestCase):
         self.assertEqual(t.loc['H100 SXM', 'tps_per_gpu'], 1700)
         lines, r = lines_of(self, d2l.rank_against, snap, committed_specs())
         self.assertEqual(int(r.tp['H100 SXM']), 4)
+
+    def _snap(self, text):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'snapshot.csv')
+            with open(path, 'w') as f:
+                f.write(text)
+            return d2l._read_snapshot(path, d2l.HW_SHAPES['dense-70b'])
+
+    def test_per_row_precision(self):
+        """Fix F7: precision per row (weights and KV), each chip predicted
+        at its own; unmeasured chips at the most common formats."""
+        mixed = (self.FIXTURE.replace('H100,vllm,fp8', 'H100,vllm,bf16')
+                 .replace('B200,vllm,fp8', 'B200,vllm,FP8-E4M3')
+                 .replace('2026-11-20\n', '2026-11-20,{}\n')
+                 .replace('retrieved\n', 'retrieved,kv_precision\n'))
+        mixed = mixed.format('', 'bf16', 'fp8', '')
+        snap = self._snap(mixed)
+        t = snap.table.set_index('chip')
+        self.assertEqual(t.dtype_bytes.to_dict(), {
+            'H100 SXM': 2, 'H200 SXM': 1, 'B200': 1, 'MI355X': 1})
+        self.assertEqual(t.kv_bytes.to_dict(), {  # empty KV: the weights'
+            'H100 SXM': 2, 'H200 SXM': 2, 'B200': 1, 'MI355X': 1})
+        self.assertEqual((snap.dtype_bytes, snap.kv_bytes), (1, 2))  # tie: 2
+        specs = committed_specs()
+        lines, r = lines_of(self, d2l.rank_against, snap, specs)
+        self.assertIn('weights/KV', lines[0])
+        self.assertEqual(r.precision.to_dict(), {
+            'H100 SXM': 'bf16/bf16', 'H200 SXM': 'FP8/bf16', 'B200': 'FP8/FP8',
+            'MI355X': 'FP8/FP8', 'RTX 4090': 'FP8/bf16',
+            'Groq LPU': 'FP8/bf16'})
+        for chip, (w, kv) in {'H100 SXM': (2, 2), 'H200 SXM': (1, 2),
+                              'B200': (1, 1), 'RTX 4090': (1, 2)}.items():
+            sm = d2l.ServingModel(snap.model_cfg, specs.loc[chip], n_chips=8,
+                                  dtype_bytes=w, kv_bytes=kv)
+            want = d2l._tps_at(sm, snap.user_tps, snap.context)
+            self.assertEqual(r.predicted[chip], want, chip)
+        bf16 = self._snap(self.FIXTURE.replace('H100,vllm,fp8',
+                                               'H100,vllm,bf16'))
+        uniform = self._snap(self.FIXTURE)
+        self.assertLess(lines_of(self, d2l.rank_against, bf16, specs)[1]
+                        .predicted['H100 SXM'],
+                        lines_of(self, d2l.rank_against, uniform, specs)[1]
+                        .predicted['H100 SXM'])  # bf16 reads twice the bytes
+
+    def test_unmodelled_precision_raises(self):
+        """Fix F7: a format ServingModel does not model raises, naming it
+        and the row; never read as bf16."""
+        for fmt in ('fp4', 'nvfp4', 'mxfp4', 'int4', 'w4a16', 'int8'):
+            with self.assertRaisesRegex(ValueError, f"'{fmt}'.*bf16, fp16"):
+                self._snap(self.FIXTURE.replace('B200,vllm,fp8',
+                                                f'B200,vllm,{fmt}'))
+        with self.assertRaisesRegex(ValueError, r'row 4 \(B200\)'):
+            self._snap(self.FIXTURE.replace('B200,vllm,fp8', 'B200,vllm,fp4'))
+        with self.assertRaisesRegex(ValueError, "nan"):  # not recorded
+            self._snap(self.FIXTURE.replace('B200,vllm,fp8', 'B200,vllm,'))
+        b300 = 'llama70b,B300,vllm,nvfp4,1024,1024,64,8,5000,50,abc,x\n'
+        with self.assertRaisesRegex(ValueError, 'nvfp4'):  # unmapped chip too
+            self._snap(self.FIXTURE + b300)
+        kv = (self.FIXTURE.replace('retrieved\n', 'retrieved,kv_precision\n')
+              .replace('2026-11-20\n', '2026-11-20,auto\n'))
+        with self.assertRaisesRegex(ValueError, "KV: precision 'auto'"):
+            self._snap(kv)
+        self.assertEqual(d2l._hw_ix_bytes('bfloat16', 'x'), 2)
+        self.assertEqual(d2l._hw_ix_bytes(' FP8_e4m3fn ', 'x'), 1)
+
+    def test_pending_matches_committed(self):
+        """Fix F7's gate: the pending predictions are the committed ones
+        (chips and predicted tok/s/GPU of cell workload-hardware-other-chips,
+        whatever columns follow)."""
+        if d2l.hw_registered('hw-inferencex-snapshot'):
+            self.skipTest('snapshot registered')
+        with open(os.path.join(REPO, 'outputs', 'pytorch',
+                               'chapter_lm-hardware',
+                               'workload-hardware.json')) as f:
+            cell = json.load(f)['cells']['workload-hardware-other-chips']
+        text = ''.join(o.get('text', '') for o in cell['outputs'])
+        lines, t = lines_of(self, d2l.rank_against, d2l.inferencex_snapshot(),
+                            committed_specs())
+        for chip in t.index:
+            row = [l for l in text.splitlines() if l.startswith(chip + ' ')]
+            self.assertEqual(len(row), 1, chip)
+            tp, predicted = row[0][len(chip):].split()[:2]
+            self.assertEqual(int(tp), int(t.tp[chip]), chip)
+            self.assertEqual(predicted, f'{t.predicted[chip]:,.0f}', chip)
+        self.assertIn('(dense 70B, FP8, 50 tokens/s per user, context 2,048)',
+                      lines)
 
     def test_tps_at(self):
         m = d2l.ServingModel(d2l.HW_SHAPES['dense-70b'],

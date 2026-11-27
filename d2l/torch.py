@@ -33673,13 +33673,14 @@ def _dram_sheet(machine='box'):
     return gbs, d['channels'], f"{d['kind']}-{d['mt_s']}, {how}"
 
 def _show_dram(r):
-    spec, channels, speed = _dram_sheet()
+    # The box's bench: hw_host_mem_bench reads box-storage only.
+    spec, channels, speed = _dram_sheet('box')
     moved = r['triad'] * 4 / 3  # with the read that allocates a's line
     print(f"host DRAM, torch bench: read {r['read']:.0f}, copy "
           f"{r['copy']:.0f}, triad {r['triad']:.0f} GB/s "
           f"(triad at {int(r['triad_threads'])} threads)")
     print(f"{channels} x {speed}: {spec:.1f} GB/s; triad "
-          f"{r['triad'] / spec:.0%}, write-allocate {moved:.0f} GB/s "
+          f"{r['triad'] / spec:.0%}, with write-allocate {moved:.0f} "
           f"({moved / spec:.0%})")
 
 def parse_stream(text):
@@ -34033,20 +34034,20 @@ def tier_measurements(links, agg, dram, fio, obj, gpu_tiers=True):
                     n_drives=int(best.get('n_drives', 1) or 1))
     return df
 
-def plot_tiers(tiers, measured):
+def plot_tiers(tiers, measured, machine='box'):
     """Datasheet bandwidth and latency of each tier (bars on log axes, as
     in fig_bandwidth_ladder and fig_latency_ladder) with this machine's
     measurements (dots); returns the rows where a datasheet figure states
     what was measured: datasheet, measured, their ratio and a note (the
     host links of all cards are drawn against n x the ceiling, not
     compared; RAID 1's pair against n x one drive; host DRAM's read
-    against the channels' peak, whose DIMM speed the note says is
-    assumed or configured).
+    against the channels' peak of `machine`, whose DIMM speed the note
+    says is assumed or configured).
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     t = tiers.set_index('tier')
     k, n = measured.attrs.get('n_cards', 1), measured.attrs.get('n_drives', 1)
-    dram, _, dram_note = _dram_sheet()
+    dram, _, dram_note = _dram_sheet(machine)
     spec = dict(t.bw_gbs, pcie_host_all=k * t.bw_gbs['pcie_host'],
                 nvme=n * t.bw_gbs['nvme'],  # the drives this machine reads
                 host_dram=dram)

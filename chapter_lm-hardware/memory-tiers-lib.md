@@ -705,8 +705,8 @@ def hw_h2d_concurrent(config='box'):
 The page measures host memory with a torch bench: STREAM's operations (a
 summing read, a copy, the triad) as tensor operations, bytes counted as
 STREAM counts them. Its numbers are labelled "torch bench": STREAM's kernel
-names (Copy, Triad) belong to numbers of the compiled STREAM binary only,
-whose licence does not let other results carry its name. The binary
+names (Copy, Triad) belong to numbers of the compiled STREAM binary only:
+STREAM's licence reserves its name for conforming runs of its code. The binary
 (`tools/build_hw_tools.sh ... stream`; `parse_stream` reads its output)
 checked the bench on this box: its Triad matches the bench's triad, so the
 committed numbers stand. Its Copy is higher, because the compiler turns
@@ -787,13 +787,14 @@ def _dram_sheet(machine='box'):
 
 #@save
 def _show_dram(r):
-    spec, channels, speed = _dram_sheet()
+    # The box's bench: hw_host_mem_bench reads box-storage only.
+    spec, channels, speed = _dram_sheet('box')
     moved = r['triad'] * 4 / 3  # with the read that allocates a's line
     print(f"host DRAM, torch bench: read {r['read']:.0f}, copy "
           f"{r['copy']:.0f}, triad {r['triad']:.0f} GB/s "
           f"(triad at {int(r['triad_threads'])} threads)")
     print(f"{channels} x {speed}: {spec:.1f} GB/s; triad "
-          f"{r['triad'] / spec:.0%}, write-allocate {moved:.0f} GB/s "
+          f"{r['triad'] / spec:.0%}, with write-allocate {moved:.0f} "
           f"({moved / spec:.0%})")
 
 #@save
@@ -1165,18 +1166,18 @@ def tier_measurements(links, agg, dram, fio, obj, gpu_tiers=True):
     return df
 
 #@save
-def plot_tiers(tiers, measured):
+def plot_tiers(tiers, measured, machine='box'):
     """Datasheet bandwidth and latency of each tier (bars on log axes, as
     in fig_bandwidth_ladder and fig_latency_ladder) with this machine's
     measurements (dots); returns the rows where a datasheet figure states
     what was measured: datasheet, measured, their ratio and a note (the
     host links of all cards are drawn against n x the ceiling, not
     compared; RAID 1's pair against n x one drive; host DRAM's read
-    against the channels' peak, whose DIMM speed the note says is
-    assumed or configured)."""
+    against the channels' peak of `machine`, whose DIMM speed the note
+    says is assumed or configured)."""
     t = tiers.set_index('tier')
     k, n = measured.attrs.get('n_cards', 1), measured.attrs.get('n_drives', 1)
-    dram, _, dram_note = _dram_sheet()
+    dram, _, dram_note = _dram_sheet(machine)
     spec = dict(t.bw_gbs, pcie_host_all=k * t.bw_gbs['pcie_host'],
                 nvme=n * t.bw_gbs['nvme'],  # the drives this machine reads
                 host_dram=dram)

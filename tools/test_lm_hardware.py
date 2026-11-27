@@ -2129,7 +2129,7 @@ class TestMemoryTiers(unittest.TestCase):
         self.assertEqual((r['elements'], r['threads']), (76_000_000, 16))
         self.assertTrue(r['validates'])
         # F5's gate: the binary's Triad against the committed torch triad
-        # (89 GB/s): the bench under-measures only above 1.2 x 89 = 107.
+        # (88.5 GB/s): the bench under-measures only above 1.2 x 88.5 = 106.
         self.assertLess(r['triad'], 1.2 * 88.5)
         failed = text.replace('Solution Validates', 'Failed Validation')
         self.assertFalse(d2l.parse_stream(failed)['validates'])
@@ -2299,7 +2299,7 @@ class TestMemoryTiers(unittest.TestCase):
         self.assertIn('triad 90 GB/s (triad at 16 threads)', lines[0])
         self.assertNotIn('STREAM', ' '.join(lines))  # the binary's name only
         self.assertTrue(lines[1].startswith('8 x DDR4-3200, assumed: 204.8'))
-        self.assertIn('triad 44%, write-allocate 120 GB/s (59%)', lines[1])
+        self.assertIn('triad 44%, with write-allocate 120 (59%)', lines[1])
         self.assertTrue(all(len(x) <= 80 for x in lines))
         lines, _ = lines_of(self, d2l._show_fio, fio)
         self.assertEqual(len(lines), 3)

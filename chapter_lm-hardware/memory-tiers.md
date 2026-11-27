@@ -203,8 +203,10 @@ re-measures one card the same way. On one socket in NPS1 mode the four
 root complexes look like one NUMA node; the node campaign shows a
 two-socket layout. NVIDIA's nvbandwidth (copy engines, 512 MiB buffers,
 each card alone; its output is read by d2l.parse_nvbandwidth) cross-checks
-the single-card figures in both directions. Host DRAM: STREAM's kernels
-(McCalpin) at 8, 16 and 32 threads, the best of each (a memory-bound
+the single-card figures in both directions. Host DRAM: a torch bench of
+STREAM's operations (fix pass F5: say "torch bench"; STREAM and McCalpin are
+named only for the compiled binary's check, below) at 8, 16 and 32 threads,
+the best of each (a memory-bound
 kernel peaks below all cores), counted as STREAM counts them (bytes read plus
 bytes written, no write-allocate traffic): a summing read, a copy and the
 triad a = b + s c. The datasheet's 8 x 25.6 GB/s is a peak no kernel
@@ -222,12 +224,21 @@ binds, not DRAM). -->
 bench (STREAM's operations as tensor operations, bytes counted as STREAM
 counts them) and labelled "torch bench"; STREAM's kernel names belong to
 the compiled binary only. The binary (STREAM 5.10, OpenMP, 8 to 32
-threads, arrays 4x the caches) checked it: its Triad, about 90 GB/s,
-matches the bench's 89, so the committed numbers stand; its Copy, about
-120 GB/s, is higher because the copy loop becomes memcpy, whose
-non-temporal stores skip the write-allocate read. Both say the DIMMs move
-about 120 GB/s, near 60% of 8 x DDR4-3200 (204.8 GB/s), a speed assumed,
-not read. The datasheet line now prints "8 x DDR4-3200, assumed". -->
+threads, arrays 4x the caches) checked it, CPU only, but on a loaded host
+(four chapter-21 GPU jobs, load average 6-13; the torch bench beside it
+lost 13% at 16 threads), so the text says the check ran under load until
+F12's quiet re-run replaces it: its Triad, about 90 GB/s, matches the
+bench's 89 (the gate, a Triad above 1.2 x 88.5 = 106, did not fire), so
+the committed numbers stand; its Copy, about 120 GB/s, is higher because
+the copy loop becomes memcpy, whose non-temporal stores skip the
+write-allocate read. Both say the DIMMs move about 120 GB/s, near 60% of
+8 x DDR4-3200 (204.8 GB/s), a speed assumed, not read. Evidence: no cell
+prints the binary's numbers; they come from the committed 16-thread sample
+(tools/lm_data/hw/samples/box_stream_16t.txt: Copy 123, Triad 88), read by
+test_parse_stream, so quote only "about 90" and "about 120" and name the
+source in a sentence (a compiled STREAM run on this box). The datasheet
+line now prints "8 x DDR4-3200, assumed" and the triad's traffic with the
+write-allocate read, "with write-allocate 118 (58%)": 118 GB/s, not 119. -->
 
 ```{.python .input #memory-tiers-four-cards}
 %%tab pytorch
@@ -282,10 +293,10 @@ memory, L2 and GDDR from sec_lm_accelerator_design's committed run, the RTX
 4090's, beside the table's A100 rows). Claim M8: measured within 20% of a
 datasheet that states the same quantity: the host link (plateau), GDDR and
 the RAID 1 pair against two drives. Not compared: the four host links
-(drawn against 4 x the ceiling; M2 answers what binds) and host DRAM, whose
-8 x 25.6 GB/s is a peak no kernel reaches (its STREAM fractions are
-printed above). The node's DRAM, CXL, LPDDR5X and the hard disk have no
-point here. -->
+(drawn against 4 x the ceiling; M2 answers what binds). Host DRAM is now
+compared (fix pass F5, next placeholder): its "not compared" clause and
+"its STREAM fractions" are superseded, the fractions are the torch bench's.
+The node's DRAM, CXL, LPDDR5X and the hard disk have no point here. -->
 
 <!-- Placeholder (prose): fix pass F5 (claim M8): the comparison gains the
 host-DRAM row, the torch bench's read against 8 x 25.6 = 204.8 GB/s (0.54),

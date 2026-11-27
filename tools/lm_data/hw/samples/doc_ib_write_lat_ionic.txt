@@ -1,0 +1,2 @@
+#bytes #iterations    t_min[usec]    t_max[usec]  t_typical[usec]    t_avg[usec]    t_stdev[usec]   99% percentile[usec]   99.9% percentile[usec] 
+ 2       10000          7.80           10.81        8.43     	       8.43        	0.06   		8.54    		9.44

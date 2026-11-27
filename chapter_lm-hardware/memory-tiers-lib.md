@@ -1825,7 +1825,11 @@ with the CPU and memory bound to each NUMA node, gdsio's reads through
 GPUDirect Storage (`-x 0`) and through a CPU bounce buffer (`-x 2`) on the
 node's scratch drive, and one fio read on the shared file system
 (`D2L_HW_SHARED_FS`); a missing tool or path is recorded in
-`raw/skipped.json`, never fatal.
+`raw/skipped.json`, never fatal. After the processes are combined,
+`regen_storage_finish` parses those files into the entry `node`
+(`_node_storage_entry`: host-copy sums per NUMA node, GPUDirect against the
+bounce buffer, the shared file system, the skips), which
+`show_node_storage` prints from the campaign log.
 
 ```{.python .input #memory-tiers-lib-node}
 %%tab pytorch
@@ -1912,6 +1916,86 @@ def _node_storage_raw(spec, folder):
     with open(os.path.join(raw, 'skipped.json'), 'w') as fh:
         json.dump(skipped, fh, indent=1)
     return skipped
+
+#@save
+_NVB_CASES = {'host_to_device_memcpy_ce': 'h2d',
+              'device_to_host_memcpy_ce': 'd2h'}
+
+#@save
+def _node_storage_entry(raw):
+    """The entry 'node' from the raw tool outputs in folder raw
+    (_node_storage_raw): 'numa' (one row per NUMA node and direction: the
+    host-copy SUM over the GPUs and each GPU's GB/s), 'gds' (gdsio's read
+    lines through GPUDirect and through the bounce buffer: GiB/s, mean
+    latency), 'shared_fs' (fio's read on the shared file system, None when
+    it did not run) and 'skipped' ({run: reason})."""
+    def text(name):
+        path = os.path.join(raw, f'{name}.txt')
+        if not os.path.exists(path):
+            return ''
+        with open(path, errors='replace') as f:
+            return f.read()
+    with open(os.path.join(raw, 'skipped.json')) as f:
+        skipped = json.load(f)
+    rows = []
+    nodes = sorted(int(m.group(1)) for m in (
+        re.fullmatch(r'nvbandwidth-numa(\d+)\.txt', n)
+        for n in os.listdir(raw)) if m)
+    for node in nodes:
+        parsed = parse_nvbandwidth(text(f'nvbandwidth-numa{node}'))
+        for case, direction in _NVB_CASES.items():
+            if case in parsed and parsed[case].size:
+                rows.append(dict(numa=node, direction=direction,
+                                 sum_gbs=parsed.get(f'{case}_sum', np.nan),
+                                 gpu_gbs=parsed[case][0].tolist()))
+    numa = pd.DataFrame(rows, columns=['numa', 'direction', 'sum_gbs',
+                                       'gpu_gbs'])
+    gds = [parse_gdsio(text(f'gdsio-read-x{x}')).assign(run=f'x{x}')
+           for x in (0, 2)]
+    gds = pd.concat([g for g in gds if len(g)] or [pd.DataFrame(
+        columns=['io', 'xfer', 'threads', 'io_size', 'gib_s', 'lat_us',
+                 'run'])], ignore_index=True)
+    gds = gds[gds.io == 'READ'].reset_index(drop=True)
+    shared = None
+    if 'fio-shared' not in skipped and text('fio-shared').strip():
+        try:
+            shared = parse_fio(text('fio-shared'))
+        except (ValueError, KeyError, IndexError) as e:
+            skipped['fio-shared'] = f'unparsed fio output ({e!r})'
+    return dict(numa=numa, gds=gds, shared_fs=shared, skipped=skipped)
+
+#@save
+def show_node_storage(log):
+    """The node campaign's raw tools in a few lines: per NUMA node and
+    direction the host-copy sum over the GPUs and its slowest and fastest
+    GPU (GB/s), gdsio's read through GPUDirect against the bounce buffer
+    (GiB/s, mean latency), the shared file system's read, and what did not
+    run; one status line while the log is pending."""
+    if isinstance(log, d2l.CampaignPending):
+        print(d2l.hw_status_line(log))
+        return
+    node = log.get('node')
+    if node is None:
+        print('node-storage: no node entry in this log')
+        return
+    numa = node['numa']
+    if len(numa):
+        d2l.show_table(pd.DataFrame({
+            'NUMA': numa.numa, 'copy': numa.direction,
+            'sum GB/s': numa.sum_gbs,
+            'GPU min': [min(g) for g in numa.gpu_gbs],
+            'GPU max': [max(g) for g in numa.gpu_gbs]}), digits=1,
+            width=79)
+    for r in node['gds'].itertuples():
+        print(f'gdsio read {r.xfer}: {r.gib_s:.2f} GiB/s, '
+              f'{r.lat_us:.0f} us mean ({r.threads} threads, '
+              f'{r.io_size >> 10} KiB)')
+    if node['shared_fs']:
+        f = node['shared_fs']
+        print(f"shared file system: {f['bw_gbs']:.2f} GB/s read "
+              f"(bs {f['bs'] >> 10} KiB, qd {f['qd']} x {f['jobs']})")
+    for run, why in node['skipped'].items():
+        print(f'not run: {run} ({why})')
 ```
 
 ```{.python .input #memory-tiers-lib-driver}
@@ -1923,11 +2007,7 @@ def _storage_check(config):
     if (os.environ.get('D2L_HW_CONFIG') or 'box') != config:
         raise ValueError(f'config {config!r} needs D2L_HW_CONFIG={config} '
                          '(tools/hw_regen.py --config)')
-    name = torch.cuda.get_device_name(0)
-    if config == 't3' and ('A100' not in name
-                           or torch.cuda.device_count() < 8):
-        raise RuntimeError(f'config t3 measures an 8 x A100 node, not '
-                           f'{torch.cuda.device_count()} x {name}')
+    d2l._hw_check_hardware('box-storage', config)  # t3: 8 x A100 40 GB
 
 #@save
 def _tiers_json(links, fio, obj, repeats=10):
@@ -2005,4 +2085,19 @@ def regen_storage(config='box'):
     if node is not None and proc in (None, '0'):  # the run's top folder
         _node_storage_raw(node['raw'], os.path.dirname(folder) if proc
                           else folder)
+
+#@save
+def regen_storage_finish(folder):
+    """After tools/hw_regen.py combined the processes: a campaign run's raw
+    tool outputs (folder/raw, written by _node_storage_raw) parsed into the
+    entry node.json.gz, its meta the tiers entry's; nothing for the box."""
+    raw = os.path.join(folder, 'raw')
+    if not os.path.exists(os.path.join(raw, 'skipped.json')):
+        return None
+    _, meta = d2l._hw_read(os.path.join(folder, 'tiers.json.gz'))
+    entry = _node_storage_entry(raw)
+    d2l._hw_write(os.path.join(folder, 'node.json.gz'), entry,
+                  dict(meta, entry='node', config=_HW_NODE_STORAGE[
+                      meta['run']]['raw']))
+    return entry
 ```

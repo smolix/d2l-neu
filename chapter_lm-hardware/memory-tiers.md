@@ -551,6 +551,11 @@ assert read['drive_bps'] > 1000 * need  # three orders of magnitude
 per-NUMA host-link sweeps on a two-socket node, GPUDirect Storage against
 a bounce buffer, a shared file system; the sentence is rewritten when the
 log is committed. -->
+<!-- Placeholder (prose and code, fix pass F14 review): the claim M7
+quantities live in the log's entry `node` (per-NUMA host-copy sums,
+GPUDirect against the bounce buffer, the shared file system, the skips),
+not in `tiers`; when the log is registered the cell below also calls
+`d2l.show_node_storage(log)` and the sentence quotes its lines. -->
 <!-- campaign: lm-hw-node-storage-v1 -->
 
 ```{.python .input #memory-tiers-node-twin}

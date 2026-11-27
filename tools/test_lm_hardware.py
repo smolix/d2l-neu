@@ -3637,6 +3637,18 @@ class TestNetworks(unittest.TestCase):
     def test_diloco(self):
         self.assertEqual(d2l.diloco_wan_bandwidth(8e9, 2, 100, 2.0), 8e7)
 
+    def test_perftest_published_samples(self):
+        """Real perftest output from published posts (F14 review finding
+        7): an ib_write_lat table parses; an ib_write_bw table in MB/sec
+        (run without --report_gbits) is refused, not misread as Gb/s."""
+        lat = d2l.parse_perftest(sample('doc_ib_write_lat_ionic.txt'), 'lat')
+        self.assertEqual(lat.bytes.tolist(), [2])
+        self.assertEqual(lat.iterations.tolist(), [10000])
+        self.assertEqual(float(lat.t_typical_us[0]), 8.43)
+        self.assertEqual(float(lat.t_p999_us[0]), 9.44)
+        with self.assertRaisesRegex(ValueError, 'Gb/sec'):
+            d2l.parse_perftest(sample('doc_ib_write_bw_mbsec.txt'), 'bw')
+
     def test_perftest(self):
         bw = d2l.parse_perftest(PERFTEST_BW, 'bw')
         self.assertEqual(list(bw.bytes), [2, 1024, 1048576, 2097152])
@@ -5886,23 +5898,69 @@ class TestCampaignPackage(unittest.TestCase):
                     self.assertEqual(float(f'{got:.2g}'),
                                      float(f"{float(c[field]):.2g}"),
                                      (cid, field))
+            self.assertEqual('optional' in c, 'optional' in e, cid)
+            for field, key in (('flop', 'flop'), ('predicted_hours', 'hours'),
+                               ('memory_gib', 'memory_gib')):
+                if 'optional' in c:
+                    self.assertEqual(
+                        float(f"{e['optional'][key]:.2g}"),
+                        float(f"{float(c['optional'][field]):.2g}"),
+                        (cid, 'optional', field))
 
     def test_check_hardware(self):
-        """A campaign configuration runs only on its chip row and GPU
-        count; the box run is never checked."""
-        def check(name, gib, n, config, regen='box-moe'):
+        """A campaign configuration runs only on its GPU models, GPU count
+        and (C-T2pair) NVLink between GPUs 0 and 1; the box run is never
+        checked; box-p2p and box-storage use the same check (F14 review
+        finding 1: an 8 x A100 80 GB NVSwitch node passed as C-T2pair)."""
+        def check(name, gib, n, config, regen='box-moe', rel='NV12',
+                  other=None, fn=None):
             p = mock.Mock(total_memory=int(gib * 2**30))
             p.name = name
+            props = [p] * n
+            if other:  # the last card another model
+                q = mock.Mock(total_memory=int(other[1] * 2**30))
+                q.name = other[0]
+                props[-1] = q
             with mock.patch.object(torch.cuda, 'device_count',
                                    return_value=n), \
+                    mock.patch.object(torch.cuda, 'is_available',
+                                      return_value=True), \
                     mock.patch.object(torch.cuda, 'get_device_properties',
-                                      return_value=p):
-                d2l._hw_check_hardware(regen, config)
+                                      side_effect=lambda i: props[i]), \
+                    mock.patch.object(d2l, '_smi_relations',
+                                      return_value=lambda i, j: rel), \
+                    mock.patch.dict(os.environ, {'D2L_HW_CONFIG': config}):
+                if fn:
+                    fn(config)
+                else:
+                    d2l._hw_check_hardware(regen, config)
         a100 = ('NVIDIA A100-PCIE-40GB', 39.4)
+        sxm40, sxm80 = ('NVIDIA A100-SXM4-40GB', 39.4), (
+            'NVIDIA A100-SXM4-80GB', 79.2)
         check(*a100, 1, 't2', 'box-workloads')
+        check(*a100, 4, 't2', 'box-workloads')  # C-T2 uses GPU 0
         check(*a100, 2, 't2pair')  # the pair's two cards are A100 rows
+        check(*a100, 2, 't2pair', fn=d2l._p2p_check)
         with self.assertRaisesRegex(RuntimeError, 'not 1 x NVIDIA'):
             check(*a100, 1, 't2pair')
+        with self.assertRaisesRegex(RuntimeError, 'not 8 x NVIDIA A100-SXM4'):
+            check(*sxm80, 8, 't2pair', fn=d2l._p2p_check)  # NVSwitch node
+        with self.assertRaisesRegex(RuntimeError, 'not 3 x'):
+            check(*a100, 3, 't2pair', fn=d2l._p2p_check)
+        with self.assertRaisesRegex(RuntimeError, 'joined by PHB, not '
+                                    'NVLink'):
+            check(*a100, 2, 't2pair', fn=d2l._p2p_check, rel='PHB')
+        check(*sxm40, 8, 't3', fn=d2l._p2p_check)
+        check(*a100, 8, 't3', fn=d2l._storage_check)
+        with self.assertRaisesRegex(RuntimeError, 'measures the one 8 x '
+                                    'A100 40 GB node'):
+            check(*sxm80, 8, 't3', fn=d2l._storage_check)
+        with self.assertRaisesRegex(RuntimeError, 'not 8 x'):
+            check(*sxm80, 8, 't3', fn=d2l._p2p_check)
+        with self.assertRaisesRegex(RuntimeError, r'\+'):  # one 80 GB card
+            check(*sxm40, 8, 't3', fn=d2l._p2p_check, other=sxm80)
+        with self.assertRaisesRegex(RuntimeError, 'not 16 x'):
+            check(*sxm40, 16, 't3', fn=d2l._p2p_check)
         with self.assertRaisesRegex(
                 RuntimeError, 'config t2 measures the A100 PCIe 40 GB, not '
                 '1 x NVIDIA GeForce RTX 4090'):
@@ -5944,7 +6002,7 @@ class TestCampaignPackage(unittest.TestCase):
                 mock.patch.dict(os.environ, {'D2L_HW_SHARED_FS': ''}):
             skipped = d2l._node_storage_raw(spec['raw'], tmp)
             files = sorted(os.listdir(os.path.join(tmp, 'raw')))
-            self.assertEqual(json.load(open(os.path.join(
+            self.assertEqual(json.loads(read(os.path.join(
                 tmp, 'raw', 'skipped.json'))), skipped)
         self.assertEqual(skipped, {'gdsio-read-x2': 'exit status 1',
                                    'fio-shared': 'D2L_HW_SHARED_FS is not a '
@@ -5956,6 +6014,57 @@ class TestCampaignPackage(unittest.TestCase):
                                         '--membind=1'])
         self.assertEqual([c[c.index('-I') + 1] for c in calls[2:]],
                          ['1', '0', '0'])
+
+    def test_node_storage_entry(self):
+        """C-T3's raw files become the entry node after the combine
+        (regen_storage_finish): per-NUMA sums and per-GPU rates from
+        nvbandwidth, gdsio's reads through GPUDirect and the bounce buffer,
+        fio on the shared file system, the skips; tested on the committed
+        samples (F14 review finding 2: M7 had no reader)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = os.path.join(tmp, 'raw')
+            os.makedirs(raw)
+            files = {'nvbandwidth-numa0.txt': 'box_nvbandwidth.txt',
+                     'nvbandwidth-numa1.txt': 'box_nvbandwidth.txt',
+                     'gdsio-read-x0.txt': 'doc_gdsio.txt',
+                     'gdsio-read-x2.txt': 'doc_gdsio.txt',
+                     'fio-shared.txt': 'box_fio_seqread.json'}
+            for dest, src in files.items():
+                with open(os.path.join(raw, dest), 'w') as f:
+                    f.write(sample(src))
+            with open(os.path.join(raw, 'skipped.json'), 'w') as f:
+                json.dump({'nvbandwidth-numa2': 'no nvbandwidth or numactl'},
+                          f)
+            d2l._hw_write(os.path.join(tmp, 'tiers.json.gz'), pd.DataFrame(
+                {'tier': ['dram']}), dict(name='box-storage', entry='tiers',
+                                          config={}, run='t3', env={}))
+            entry = d2l.regen_storage_finish(tmp)
+            node, meta = d2l._hw_read(os.path.join(tmp, 'node.json.gz'))
+            self.assertIsNone(d2l.regen_storage_finish(raw))  # the box
+        self.assertEqual(meta['entry'], 'node')
+        self.assertEqual(meta['run'], 't3')
+        numa = node['numa']
+        self.assertEqual(list(zip(numa.numa, numa.direction)),
+                         [(0, 'h2d'), (0, 'd2h'), (1, 'h2d'), (1, 'd2h')])
+        self.assertEqual(list(numa.sum_gbs[:2]), [102.76, 94.21])
+        self.assertEqual(list(numa.gpu_gbs[0]), [25.41, 25.69, 25.69, 25.97])
+        gds = node['gds']
+        self.assertEqual(set(gds.io), {'READ'})
+        self.assertEqual(set(gds.xfer), {'GPUD', 'CPU_GPU', 'CPUONLY'})
+        self.assertEqual(set(gds.run), {'x0', 'x2'})
+        self.assertGreater(node['shared_fs']['bw_gbs'], 0)
+        self.assertEqual(node['skipped'], entry['skipped'])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            d2l.show_node_storage(dict(node=node))
+            d2l.show_node_storage(d2l.CampaignPending(
+                'node-storage', 'C-T3', 'one 8 x A100 40 GB node'))
+        lines = out.getvalue().splitlines()
+        self.assertLessEqual(len(lines), 25)
+        self.assertTrue(any('gdsio read GPUD' in l for l in lines))
+        self.assertTrue(any(l.startswith('shared file system') for l in lines))
+        self.assertIn('not run: nvbandwidth-numa2', out.getvalue())
+        self.assertIn('campaign C-T3 not run yet', lines[-1])
 
     def test_regen_dry_run(self):
         import subprocess
@@ -6027,6 +6136,20 @@ class TestCampaignPackage(unittest.TestCase):
                     put(f'nccl/{s}-run{i}.rc', '0\n')
         put('nccl/onenic-run0.txt', nccl_tests_text(20e-6, 2.5e9, 16, sizes))
         put('nccl/onenic-run0.rc', '0\n')
+        os.makedirs(os.path.join(raw, 'steps'))
+        put('steps/ibstat.txt', '')  # the srun step's own (empty) output
+        os.makedirs(os.path.join(raw, 'hier'))
+        for nics, slow in (('all', 1), ('one', 8)):
+            lines = [json.dumps(dict(check=2**20, max_rel_err=1e-7, ok=True,
+                                     ranks=16, nodes=2))]
+            for S in (2**20, 2**22):
+                for v, t in (('flat NCCL', 2 * slow), ('hierarchical', 3),
+                             ('intra stage', 1), ('inter stage', slow)):
+                    lines.append(json.dumps(dict(variant=v, size=S,
+                                                 us=t * S / 1e3, mad_us=1.0)))
+            put(f'hier/{nics}.txt', 'NCCL WARN noise\n'
+                + '\n'.join(lines) + '\n')
+            put(f'hier/{nics}.rc', '0\n')
         return params, reasons
 
     def test_pack_t4(self):
@@ -6068,20 +6191,60 @@ class TestCampaignPackage(unittest.TestCase):
             self.assertEqual(meta['config']['config'], 't4')
             self.assertEqual(meta['env']['tier'], 'T4')
             self.assertFalse(meta['sample'])
-            recs = json.load(open(os.path.join(folder, 'alpha_beta.json')))
+            recs = json.loads(read(os.path.join(folder, 'alpha_beta.json')))
             self.assertEqual({r['scope'] for r in recs}, {'inter_node'})
             self.assertEqual({r['link'] for r in recs}, {'infiniband'})
             self.assertEqual(sorted(r['op'] for r in recs),
                              ['all_reduce'] * 3 + ['ib_write'])
-            text = ''.join(open(p, errors='replace').read() for p in glob.glob(
+            text = ''.join(read(p) for p in glob.glob(
                 os.path.join(folder, 'raw', '**', '*'), recursive=True)
                 if os.path.isfile(p))
+            self.assertEqual(sorted(log['ibstat']), ['node0', 'node1'])
+            hier = log['hier']  # F14 review finding 3: C5's second half
+            self.assertEqual(sorted(set(hier.nics)), ['all', 'one'])
+            self.assertEqual(len(hier), 16)
+            self.assertTrue(all(c['ok'] for c in hier.attrs['check']
+                                .values()))
+            big = hier[hier['size'] == 2**22].set_index(['nics', 'variant'])
+            self.assertLess(big.us[('one', 'hierarchical')],
+                            big.us[('one', 'flat NCCL')])
             self.assertNotIn('gpu-node-a', text)
             self.assertIn('<node1>', text)
             self.assertFalse(os.path.exists(os.path.join(folder, 'raw',
                                                          'nodes.txt')))
             with quiet():  # a second pack needs --replace
                 self.assertEqual(tool.pack(d2l, tmp), 2)
+
+    def test_pack_t4_refuses_other_gpus(self):
+        """A 16-rank run whose ranks are not A100 40 GB is not packed as
+        C-T4 (F14 review finding 1); a failed hierarchical run is recorded,
+        not fatal."""
+        tool = load_tool('hw_pack_t4g', os.path.join(CAMPAIGN_DIR,
+                                                     'pack_t4.py'))
+        for gpu in ('NVIDIA GeForce RTX 4090', 'NVIDIA H100 80GB HBM3',
+                    'NVIDIA A100-SXM4-80GB'):
+            with tempfile.TemporaryDirectory() as tmp:
+                raw = os.path.join(tmp, 'raw')
+                self.pack_fixture(raw)
+                path = os.path.join(raw, 'nccl', 'Ring-LL-run1.txt')
+                with open(path) as f:
+                    text = f.read()
+                with open(path, 'w') as f:  # one rank on another GPU
+                    f.write(text.replace('NVIDIA A100-SXM4-40GB', gpu, 1))
+                err = io.StringIO()
+                with quiet(), contextlib.redirect_stderr(err):
+                    self.assertEqual(tool.pack(d2l, tmp), 1)
+                self.assertIn(f'a rank ran on {gpu}', err.getvalue())
+                self.assertFalse(glob.glob(os.path.join(tmp, '*.tar')))
+        self.assertTrue(tool.gpu_ok(d2l, 'NVIDIA A100-PCIE-40GB'))
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = os.path.join(tmp, 'raw')
+            self.pack_fixture(raw)
+            with open(os.path.join(raw, 'hier', 'one.rc'), 'w') as f:
+                f.write('124\n')
+            hier = tool.hier_table(raw)
+        self.assertEqual(set(hier.nics), {'all'})
+        self.assertEqual(hier.attrs['failed'], {'one': 'timed out'})
 
     def test_pack_t4_samples(self):
         """The committed sample logs pack as a sample tar (never the key's
@@ -6116,6 +6279,9 @@ class TestCampaignPackage(unittest.TestCase):
         self.assertEqual(r.stdout.count(' nccl check '), len(pairs))
         self.assertEqual(r.stdout.count(' nccl run '), 3 * len(pairs) + 1)
         self.assertEqual(r.stdout.count('perftest-client'), 2)
+        self.assertEqual(r.stdout.count(' hier '), 2)
+        self.assertEqual(r.stdout.count('NCCL_IB_HCA=mlx5_0'), 2)
+        self.assertIn('/steps/ibstat.txt', r.stdout)
 
     def test_mix_reader(self):
         """run_mix_campaign.py's lookup by id still finds chapter 20's

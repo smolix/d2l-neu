@@ -10,6 +10,9 @@
 #       GPU by local rank). ALGO PROTO 'default default' leaves NCCL's choice; otherwise
 #       NCCL_ALGO and NCCL_PROTO are set. MODE check adds NCCL_DEBUG=INFO written to
 #       INFO_DIR/nccl.<host>.<pid>.log (not into the table); MODE run times without it.
+#   hw_job.sh hier SIZES_JSON ITERS WARMUP CHECK_BYTES
+#       one rank of the hierarchical all-reduce (hier_t4.py: the page's hier_allreduce
+#       against NCCL's default); MASTER_ADDR and MASTER_PORT come from the job script.
 #
 # Environment: D2L_HW_BIN (the nccl-tests binaries; default <repo>/data/hw-tools/bin, built by
 # tools/build_hw_tools.sh with NCCL_TESTS_MPI_HOME set, so all_reduce_perf runs under MPI),
@@ -18,7 +21,7 @@
 set -u
 REPO=${D2L_REPO:-$(cd "$(dirname "$0")/../.." && pwd)}
 BIN=${D2L_HW_BIN:-$REPO/data/hw-tools/bin}
-usage() { sed -n '2,13p' "$0" >&2; exit 2; }
+usage() { sed -n '2,16p' "$0" >&2; exit 2; }
 [ $# -ge 1 ] || usage
 cmd=$1; shift
 perf_args() {  # KIND HCA: the perftest arguments the parser expects
@@ -52,5 +55,11 @@ case "$cmd" in
       usage
     fi
     exec "$BIN/all_reduce_perf" -g 1 "$@" ;;
+  hier)
+    [ $# -eq 4 ] || usage
+    [ -f "$BIN/nccl-env.sh" ] && . "$BIN/nccl-env.sh"
+    export RANK=$SLURM_PROCID WORLD_SIZE=$SLURM_NTASKS LOCAL_RANK=$SLURM_LOCALID \
+           LOCAL_WORLD_SIZE=$((SLURM_NTASKS / SLURM_NNODES)) PYTHONPATH=$REPO
+    exec "$REPO/.venv-lm/bin/python" "$REPO/tools/hw_campaign/hier_t4.py" "$@" ;;
   *) usage ;;
 esac

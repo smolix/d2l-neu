@@ -1029,15 +1029,14 @@ def _p2p_check(config):
     if (os.environ.get('D2L_HW_CONFIG') or 'box') != config:
         raise ValueError(f'config {config!r} needs D2L_HW_CONFIG={config} '
                          '(tools/hw_regen.py --config)')
+    if config != 'box':  # the campaign's GPUs, count and link
+        d2l._hw_check_hardware('box-p2p', config)
+        return
     n = torch.cuda.device_count()
-    name = torch.cuda.get_device_name(0) if n else ''
-    need = {'box': 2, 't3': 8, 't2pair': 2}[config]
-    if n < need or (config != 'box' and 'A100' not in name):
-        raise RuntimeError(f'config {config} needs {need} GPUs'
-                           + ('' if config == 'box' else ' (A100)')
-                           + f', not {n} x {name}')
+    if n < 2:
+        raise RuntimeError(f'box-p2p needs 2 GPUs, not {n}')
     host = len(d2l._hw_smi('--query-gpu=index'))
-    if config == 'box' and n != host:
+    if n != host:
         raise RuntimeError(f'the box result needs every GPU of the host '
                            f'({host}), not {n}: lock them all')
 

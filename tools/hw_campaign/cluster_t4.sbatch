@@ -14,7 +14,8 @@
 #   bash tools/hw_campaign/cluster_t4.sbatch --dry-run OUT     (prints every step; no Slurm)
 #
 # Steps, raw outputs under OUT/raw (the layout tools/hw_campaign/pack_t4.py reads):
-#   1. node names (nodes.txt; scrubbed from the tar) and ibstat on each node;
+#   1. node names (nodes.txt; scrubbed from the tar) and ibstat on each node (ibstat-<i>.txt;
+#      the srun step's own output goes to steps/, never next to them);
 #   2. perftest per rail pair: ib_write_bw and ib_write_lat from node 1's rail i to node 0's
 #      rail i (perftest/<hca>-bw.txt, -lat.txt);
 #   3. nccl-tests all_reduce_perf on 16 ranks (srun, one rank per GPU) for NCCL's default and
@@ -23,14 +24,19 @@
 #      --verdict keeps the pair, REPEATS timed runs (-c 0); each run's exit status in .rc
 #      (124 after its timeout);
 #   4. the default pair once more with NCCL_IB_HCA set to the first rail (the one-NIC run);
-#   5. pack_t4.py OUT: lm-hw-cluster-nccl-v1.tar, with its size, sha1 and DATA_HUB line.
-# Not packaged: the hand-written hierarchical all-reduce across nodes (it runs on one node on
-# the box) and an NVLS/SHARP fabric test beyond the forced pairs (a pair the fabric lacks is
+#   5. the page's hier_allreduce against NCCL's default on 16 ranks (hier_t4.py: NCCL inside
+#      each node, NCCL across the nodes on each GPU's own rail), once on every rail and once
+#      with NCCL_IB_HCA set to the first rail (hier/all.txt, hier/one.txt; claim C5);
+#   6. pack_t4.py OUT: lm-hw-cluster-nccl-v1.tar, with its size, sha1 and DATA_HUB line.
+# Not packaged: an NVLS/SHARP fabric test beyond the forced pairs (a pair the fabric lacks is
 # dropped with its reason).
 #
 # Environment: D2L_REPO (default: the submit directory), D2L_HW_SRUN_MPI (srun --mpi=, default
-# pmix), D2L_HW_GID_INDEX (RoCE), D2L_HW_NODES (dry run only: two names, default "node-a
-# node-b"); see tools/hw_campaign/hw_job.sh for the tools' locations.
+# pmix), D2L_HW_GID_INDEX (RoCE), D2L_HW_RAILS (the rails' HCA names, space-separated, when
+# `ibstat -l` also lists storage or Ethernet adapters; the first is the one-NIC rail),
+# D2L_HW_MASTER_PORT (the hierarchical run's rendezvous port, default 29511), D2L_HW_NODES
+# (dry run only: two names, default "node-a node-b"); see tools/hw_campaign/hw_job.sh for the
+# tools' locations.
 set -u
 DRY=
 if [ "${1:-}" = --dry-run ]; then DRY=1; shift; fi
@@ -47,7 +53,7 @@ PACK="$PY $REPO/tools/hw_campaign/pack_t4.py"
 MPI=--mpi=${D2L_HW_SRUN_MPI:-pmix}
 eval "$($PACK --plan)" || { echo "pack_t4.py --plan failed" >&2; exit 2; }
 RAW=$OUT/raw
-mkdir -p "$RAW/nccl" "$RAW/perftest"
+mkdir -p "$RAW/nccl" "$RAW/perftest" "$RAW/hier" "$RAW/steps"
 ts() { date -u +%FT%TZ; }
 say() { echo "$(ts) $*"; }
 
@@ -62,17 +68,17 @@ step() {  # step NAME TIMEOUT_S CMD...: stdout to NAME.txt, stderr to NAME.err, 
 
 if [ -n "$DRY" ]; then
   read -r N0 N1 <<< "${D2L_HW_NODES:-node-a node-b}"
-  HCAS=mlx5_0
+  HCAS=${D2L_HW_RAILS:-mlx5_0}
 else
   mapfile -t NODES < <(scontrol show hostnames "$SLURM_JOB_NODELIST")
   N0=${NODES[0]} N1=${NODES[1]}
-  HCAS=$(srun -N1 -n1 -w "$N0" ibstat -l | tr '\n' ' ')
+  HCAS=${D2L_HW_RAILS:-$(srun -N1 -n1 -w "$N0" ibstat -l | tr '\n' ' ')}
 fi
 printf '%s\n' "$N0" "$N1" > "$RAW/nodes.txt"
 say "C-T4 on $N0 and $N1; $G ranks; rails: $HCAS; out $OUT"
 
 # 1. ibstat on each node
-step "$RAW/ibstat-step" 120 srun -N2 --ntasks-per-node=1 $JOB ibstat "$RAW"
+step "$RAW/steps/ibstat" 120 srun -N2 --ntasks-per-node=1 $JOB ibstat "$RAW"
 
 # 2. perftest per rail pair (node 1 -> node 0)
 for hca in $HCAS; do
@@ -116,7 +122,15 @@ first=${HCAS%% *}
 step "$RAW/nccl/onenic-run0" "$TIMEOUT_S" env NCCL_IB_HCA="$first" "${RANKS[@]}" $JOB nccl run \
   default default - "${SIZES[@]}" -w "$WARMUP" -n "$ITERS" -c 0
 
-# 5. pack
+# 5. the hierarchical all-reduce against the default: every rail, then one
+for nics in all one; do
+  hca=; [ "$nics" = one ] && hca=$first
+  step "$RAW/hier/$nics" "$HIER_TIMEOUT_S" env ${hca:+NCCL_IB_HCA=$hca} MASTER_ADDR="$N0" \
+    MASTER_PORT="${D2L_HW_MASTER_PORT:-29511}" "${RANKS[@]}" $JOB hier "$HIER_SIZES" \
+    "$HIER_ITERS" "$HIER_WARMUP" "$HIER_CHECK" || say "hierarchical run ($nics rails) failed"
+done
+
+# 6. pack
 if [ -n "$DRY" ]; then
   echo "+ $PACK $OUT"
 else

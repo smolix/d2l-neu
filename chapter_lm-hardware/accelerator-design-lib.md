@@ -1907,9 +1907,14 @@ section's (`_regen_kernels`, in `kernels-lib.md`: entries three-ways,
 shape-sweep, wave, rmsnorm, flash-sweep) and writes the fingerprint, `nvidia-smi topo -m` and one
 BenchLog record per measured point next to the entries. With `--config t2`
 the same calls run on the A100 of campaign C-T2 and write its log. A
-campaign configuration runs only on its chip-table row and number of GPUs
-(`_HW_CAMPAIGN_GPUS`; C-T2pair's two cards are each the A100 PCIe 40 GB
-row, so the check compares rows, not the log's description of the pair).
+campaign configuration runs only on its hardware (`_HW_CAMPAIGN_GPUS`):
+every visible GPU is one of the configuration's models (an A100 PCIe 40 GB
+for C-T2 and each card of C-T2pair; an A100 40 GB, PCIe or SXM4, on the
+node of C-T3), the number of GPUs is the campaign's (at least one for C-T2,
+exactly two and eight for the pair and the node), and C-T2pair's two cards
+are joined by NVLink (`nvidia-smi topo -m`). C-T4's 16 ranks on two nodes
+are checked by its packer (`tools/hw_campaign/pack_t4.py`) from the GPU
+names nccl-tests prints.
 
 ```{.python .input #accelerator-design-lib-driver}
 %%tab pytorch
@@ -1917,25 +1922,48 @@ row, so the check compares rows, not the log's description of the pair).
 _HW_TIERS = {'box': 'T1', 't2': 'T2'}
 
 #@save
-_HW_CAMPAIGN_GPUS = {'t2': ('A100 PCIe 40 GB', 1),  # chip-table row, GPUs
-                     't2pair': ('A100 PCIe 40 GB', 2)}
+_HW_CAMPAIGN_GPUS = {  # (GPU models, GPUs, exactly that many, link of 0-1)
+    't2': (('A100 PCIe 40 GB',), 1, False, None),
+    't2pair': (('A100 PCIe 40 GB',), 2, True, 'NV'),
+    't3': (('A100 PCIe 40 GB', 'A100 SXM4 40 GB'), 8, True, None),
+    't4': (('A100 PCIe 40 GB', 'A100 SXM4 40 GB'), 16, True, None)}
+
+#@save
+def _hw_gpu_is(gpu, mem_bytes, model):
+    """True when a device (name, memory in bytes) is the GPU model names:
+    the words before the capacity inside the device name (letters and
+    digits, case ignored) and the memory within 10% of the capacity ('A100
+    SXM4 40 GB' is 'NVIDIA A100-SXM4-40GB', not 'NVIDIA A100-SXM4-80GB')."""
+    *words, gb, _ = model.split()
+    key = lambda name: re.sub(r'[^a-z0-9]', '', (name or '').lower())
+    return (key(''.join(words)) in key(gpu)
+            and math.fabs(mem_bytes / 2**30 / float(gb) - 1) <= 0.1)
 
 #@save
 def _hw_check_hardware(name, config):
-    """Raise unless the visible GPUs are the chip-table row and at least the
-    number of GPUs of campaign configuration config (_HW_CAMPAIGN_GPUS; no
+    """Raise unless the visible GPUs are the hardware of campaign
+    configuration config (_HW_CAMPAIGN_GPUS: every GPU one of its models,
+    their number, NVLink between GPUs 0 and 1 where it asks for it; no
     check for the box run); the message names the campaign's hardware."""
     if config == 'box':
         return
-    row, need = _HW_CAMPAIGN_GPUS[config]
+    models, need, exact, link = _HW_CAMPAIGN_GPUS[config]
     hardware = d2l.HW_CAMPAIGNS[d2l.HW_CONFIG_LOGS[(name, config)]][3]
     n = torch.cuda.device_count()
-    p = torch.cuda.get_device_properties(0)
-    chip = _hw_chip_row(_gpu_short(p.name), p.total_memory, d2l.chip_specs())
-    if chip != row or n < need:
+    props = [torch.cuda.get_device_properties(i) for i in range(n)]
+    seen = sorted({f'{p.name} ({p.total_memory / 2**30:.0f} GiB)'
+                   for p in props}) or ['GPU']
+    if (n != need if exact else n < need) or not all(
+            any(_hw_gpu_is(p.name, p.total_memory, m) for m in models)
+            for p in props):
         raise RuntimeError(f'config {config} measures the {hardware}, not '
-                           f'{n} x {p.name} ({p.total_memory / 2**30:.0f} '
-                           'GiB)')
+                           f'{n} x {" + ".join(seen)}')
+    if link:
+        rel = d2l._smi_relations()(0, 1)
+        if not rel.startswith(link):
+            raise RuntimeError(f'config {config} measures the {hardware}; '
+                               f'GPUs 0 and 1 are joined by {rel}, not '
+                               'NVLink')
 
 #@save
 def regen_microbench(config='box'):

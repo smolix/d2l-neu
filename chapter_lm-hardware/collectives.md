@@ -621,6 +621,12 @@ hierarchical all-reduce against the default with all NICs and with one
 2x of D1, and the hierarchical all-reduce close to the default on all rails
 and faster than it on one NIC. Until the log is committed the cell prints
 one status line and the prose says "pending: part of the A100 campaign". -->
+<!-- Placeholder (prose and code, fix pass F14 review): C5's second half is
+the log's entry `hier` (tools/hw_campaign/hier_t4.py: the page's
+hier_allreduce with NCCL inside and across the two nodes against NCCL's
+default, column nics 'all' or 'one'); when the log is registered the cell
+below also prints the default and the hierarchical time at the largest
+size for each, and the sentence quotes them. -->
 <!-- campaign: lm-hw-cluster-nccl-v1 -->
 
 ```{.python .input #collectives-cluster-twin}

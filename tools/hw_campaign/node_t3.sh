@@ -9,7 +9,7 @@
 #   gdsio's files go there (data/hw-scratch is linked to $D2L_HW_NVME/hw-scratch).
 # D2L_HW_SHARED_FS (optional): a folder on the cluster's shared file system for one fio read;
 #   without it that run is recorded as skipped.
-# Pre-checks (any failure stops before a measurement): 8 or more GPUs, all A100 40 GB, no
+# Pre-checks (any failure stops before a measurement): exactly 8 GPUs, all A100 40 GB, no
 # compute process on them; 60 GB free on D2L_HW_NVME and 2 GB in OUT; the tools (fio,
 # nvbandwidth, all_reduce_perf, p2pBandwidthLatencyTest from tools/build_hw_tools.sh, numactl);
 # gdsio is optional (GPUDirect Storage; without it the GDS runs are recorded as skipped).
@@ -30,9 +30,10 @@ fail() { echo "$(ts) pre-check: $*" >&2; [ -n "$DRY" ] || exit 3; }
 mkdir -p "$OUT"
 OUT=$(cd "$OUT" && pwd)
 
-n=$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null \
-    | grep -c 'A100.*40[0-9][0-9][0-9] MiB')
-[ "$n" -ge 8 ] || fail "$n A100 40 GB GPU(s), the node campaign needs 8"
+gpus=$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null)
+total=$(grep -c . <<< "$gpus") n=$(grep -c 'A100.*40[0-9][0-9][0-9] MiB' <<< "$gpus")
+[ "$total" -eq 8 ] && [ "$n" -eq 8 ] \
+  || fail "$total GPU(s), $n of them A100 40 GB; the node campaign needs exactly 8 A100 40 GB"
 busy=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null | grep -c .)
 [ "$busy" = 0 ] || fail "$busy compute process(es) on the GPUs"
 [ -n "${D2L_HW_NVME:-}" ] && [ -d "$D2L_HW_NVME" ] || fail 'D2L_HW_NVME is not a folder'

@@ -16,6 +16,8 @@
   "box_stream_16t.txt": "STREAM 5.10 (stream.c, sha256 a52bae5e...; gcc 13.3 -O3 -fopenmp -mcmodel=medium -DSTREAM_ARRAY_SIZE=76000000 -DNTIMES=20, tools/build_hw_tools.sh), OMP_NUM_THREADS=16 OMP_PROC_BIND=spread OMP_PLACES=cores, CPU only, captured 2026-11-26 (four chapter-21 GPU jobs on the host, load average 6-11)",
   "doc_ib_write_bw.txt": "perftest ib_write_bw -a --report_gbits result table: a hand-written sample of the format (header and column layout of perftest 4.x; numbers made up, not measured, not copied), the same text as tools/test_lm_hardware.py's PERFTEST_BW; the box has no RDMA device",
   "doc_ib_write_lat.txt": "perftest ib_write_lat -a result table: a hand-written sample of the format (numbers made up, not measured), the same text as tools/test_lm_hardware.py's PERFTEST_LAT",
-  "doc_ibstat.txt": "ibstat (rdma-core) output of one HDR InfiniBand adapter: a hand-written sample of the format, GUIDs zeroed, not measured; read by tools/hw_campaign/pack_t4.py's sample run (link layer)"
+  "doc_ibstat.txt": "ibstat (rdma-core) output of one HDR InfiniBand adapter: a hand-written sample of the format, GUIDs zeroed, not measured; read by tools/hw_campaign/pack_t4.py's sample run (link layer)",
+  "doc_ib_write_lat_ionic.txt": "perftest ib_write_lat result table of one 2-byte row (an AMD IONIC NIC), copied from a user post on uccl-project/uccl issue 707, https://github.com/uccl-project/uccl/issues/707, retrieved 2026-11-27; published sample (GitHub issue), not measured here; the latency parser's real-output test",
+  "doc_ib_write_bw_mbsec.txt": "perftest ib_write_bw -D 10 -d mlx5_0 output without --report_gbits (RoCE, MB/sec columns, one 64 KiB row), copied from a user post on linux-rdma/perftest issue 234, https://github.com/linux-rdma/perftest/issues/234, retrieved 2026-11-27; published sample (GitHub issue), not measured here; the bandwidth parser must refuse it (the campaign runs ib_write_bw with --report_gbits)"
  }
 }

@@ -14,15 +14,38 @@ summed over the three processes). Time = the box's seconds of the same
 entries, scaled by the predicted A100/box ratio where the work is fixed
 (the workload grid, the MoE forward, collectives as bytes over the link's
 datasheet rate) and unscaled where a benchmark runs for a fixed time.
+Series that run with NCCL_P2P_DISABLE=1 take the box's own measured rate of
+that path (the registered box-p2p fit of NCCL's shared-memory transport,
+about 2.2 GB/s busbw), not a PCIe datasheet rate. The two-node collectives
+are timed per protocol over all eight rails (assumptions below, labelled
+as such); a pair the A100 cannot run (NVLS) costs its check only. The
+figures are predictions with stated assumptions, not measurements; the
+stop_hours of each entry leave room for them to be wrong. The optional
+C-T2pair MoE run is reported apart from that package's hours.
 Needs the registered box artifacts and the pinned model configurations
 (downloaded once; no weights).
 """
+import importlib.util
 import inspect
 import os
 import sys
 
+_spec = importlib.util.spec_from_file_location(
+    'pack_t4', os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'pack_t4.py'))
+pack_t4 = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(pack_t4)  # its HIER configuration
+
 DOWNLOAD_BPS = 100e6  # bytes/s assumed for weight downloads on the campaign host
 REPEATS_T4 = 3  # tools/hw_campaign/pack_t4.py
+# Assumptions of the time model (not measured; each entry's stop_hours covers them):
+NUMA_MAX = 8  # NUMA nodes of a two-socket node in NPS4 mode (the most there can be)
+NVB_CASE_S = 30  # seconds per nvbandwidth test case and NUMA node
+PAIR_CLASSES = 4  # GPU-pair relation classes of a node (NV#, PIX/PXB, NODE, SYS)
+RAILS_T4 = 8  # one HDR rail per GPU, eight per node
+PROTO_EFF = {'Simple': 1.0, 'LL128': 120 / 128, 'default': 1.0}  # of the rails' rate
+LL_RAILS = 0.5  # forced LL at large sizes: half of one rail (LL moves 4 data bytes per 8)
+LAUNCH_S = 20  # seconds per srun step (MPI start-up, NCCL communicator set-up)
 
 
 def lib():
@@ -102,7 +125,6 @@ def p2p_series(d2l, config, n_gpus):
 def estimates(d2l):
     specs, ch = d2l.chip_specs(), {}
     a100, box = specs.loc['A100 PCIe 40 GB'], specs.loc['RTX 4090']
-    pcie4 = 16 * d2l._PCIE_GTS[4] * 128 / 130 / 8 * 1e9  # bytes/s per dir
     # C-T2: one A100 PCIe 40 GB
     micro = sum(box_seconds(d2l, 'box-microbench').values())
     work = box_seconds(d2l, 'box-workloads')
@@ -129,8 +151,10 @@ def estimates(d2l):
     cfg = d2l._hw_model_config(moe['model'])
     sm = d2l.ServingModel(cfg, a100)
     tokens = (moe['n_prose'] + moe['n_code']) * moe['n_tokens']
+    # the split model computes one card at a time on both hosts: one card's rate
     moe_s = (box_seconds(d2l, 'box-moe')['coverage-box']
-             * 4 * box.p16_tflops / (2 * a100.p16_tflops))
+             * box.p16_tflops / a100.p16_tflops)
+    shm = d2l.box_alpha_beta(g=4)['beta']  # the box's NCCL shared-memory path
     spec = d2l._HW_P2P['t2pair']
     series = p2p_series(d2l, 't2pair', 2)
     bridge = a100.scaleup_gbs / 2 * 1e9  # per direction
@@ -139,16 +163,18 @@ def estimates(d2l):
                         for op, k, _ in series)
     p2p_s = 3 * sum(nccl_work(d2l, [(op, k)], k, spec['max_bytes'],
                               spec['iters'], spec['warmup'])
-                    / (pcie4 / 2 if 'P2P_DISABLE' in env else bridge)
+                    / (shm if 'P2P_DISABLE' in env else bridge)
                     for op, k, env in series)
     caps = box_seconds(d2l, 'box-p2p')
+    moe_opt = moe_s + sm.weight_bytes() / DOWNLOAD_BPS
     ch['22-hw-c-t2pair'] = dict(
-        flop=2 * sm.n_matmul() * tokens, bytes=p2p_bytes,
-        hours=(moe_s + p2p_s + caps['captures'] + caps['gpu-matrix']
-               + sm.weight_bytes() / DOWNLOAD_BPS) / 3600,
-        memory_gib=sm.weight_bytes() / 2 / 2**30,
-        parts=dict(moe=moe_s, p2p=p2p_s, download=sm.weight_bytes()
-                   / DOWNLOAD_BPS))
+        bytes=p2p_bytes,
+        hours=(p2p_s + caps['captures'] + caps['gpu-matrix']) / 3600,
+        memory_gib=2 * spec['max_bytes'] / 2**30,
+        optional=dict(flop=2 * sm.n_matmul() * tokens, hours=moe_opt / 3600,
+                      memory_gib=sm.weight_bytes() / 2 / 2**30),
+        parts=dict(p2p=p2p_s, optional_moe=moe_s,
+                   optional_download=sm.weight_bytes() / DOWNLOAD_BPS))
     # C-T3: one 8 x A100 40 GB node
     sxm = specs.loc['A100 SXM 80 GB']
     storage = box_seconds(d2l, 'box-storage')
@@ -156,37 +182,66 @@ def estimates(d2l):
         'box-storage'), 'offload.json.gz'))[0].attrs['peak_gib']  # the toy
     storage_s = sum(storage.values()) + storage['concurrent']  # 8 cards
     raw = d2l._HW_NODE_STORAGE['t3']['raw']
-    raw_s = (2 * 60 + 3 * 4 * 2**30 * raw['gdsio']['threads'] / 3e9
+    raw_s = (NUMA_MAX * len(raw['nvbandwidth']) * NVB_CASE_S
+             + 3 * 4 * 2**30 * raw['gdsio']['threads'] / 3e9
              + raw['shared_fio']['runtime'] + raw['shared_fio']['ramp'])
     spec = d2l._HW_P2P['t3']
+    places = [place for _, place, _, _ in spec['series']]
     series = p2p_series(d2l, 't3', 8)
     nvs = sxm.scaleup_gbs / 2 * 1e9
-    p2p_bytes = 3 * sum(nccl_work(d2l, [(op, k)], k, spec['max_bytes'],
-                                  spec['iters'], spec['warmup'])
-                        for op, k, _ in series)
-    p2p_s = 3 * sum(nccl_work(d2l, [(op, k)], k, spec['max_bytes'],
-                              spec['iters'], spec['warmup'])
-                    / (pcie4 / 2 if 'P2P_DISABLE' in env else nvs)
-                    for op, k, env in series)
+    runs = lambda place: PAIR_CLASSES if place == 'pairs' else 1
+    p2p_bytes = 3 * sum(runs(place) * nccl_work(
+        d2l, [(op, k)], k, spec['max_bytes'], spec['iters'], spec['warmup'])
+        for (op, k, _), place in zip(series, places))
+    p2p_s = 3 * sum(runs(place) * nccl_work(
+        d2l, [(op, k)], k, spec['max_bytes'], spec['iters'], spec['warmup'])
+        / (shm if 'P2P_DISABLE' in env else nvs)
+        for (op, k, env), place in zip(series, places))
     ch['22-hw-c-t3'] = dict(
         bytes=p2p_bytes, hours=(storage_s + raw_s + p2p_s + caps['captures']
                                 + caps['gpu-matrix'] * 4) / 3600,
         memory_gib=max(2 * spec['max_bytes'] / 2**30, offload_gib),
         parts=dict(storage=storage_s, raw=raw_s, p2p=p2p_s))
     # C-T4: two such nodes, 16 ranks
-    spec = d2l._HW_COLL['t4']
+    spec, g = d2l._HW_COLL['t4'], d2l._HW_COLL['t4']['g']
     rail = d2l.systems_table().loc['8 x A100 SXM 40 GB',
                                    'scaleout_gbs_per_chip'] * 1e9
-    per = nccl_work(d2l, [('all_reduce', spec['g'])], spec['g'],
-                    spec['max_bytes'], spec['iters'], spec['warmup'])
-    check = nccl_work(d2l, [('all_reduce', spec['g'])], spec['g'],
-                      spec['max_bytes'], 1, 0)
-    n_pairs = len(spec['pairs'])
-    t4_bytes = n_pairs * (check + REPEATS_T4 * per) + per  # + one NIC
+    rails = min(RAILS_T4 * rail, nvs)  # busbw over all rails, NVLink-bound
+    per = nccl_work(d2l, [('all_reduce', g)], g, spec['max_bytes'],
+                    spec['iters'], spec['warmup'])
+    check = nccl_work(d2l, [('all_reduce', g)], g, spec['max_bytes'], 1, 1)
+    rate = lambda algo, proto: (LL_RAILS * rail if proto == 'LL'
+                                else PROTO_EFF[proto] * rails)
+    t4_bytes = nccl_s = 0.0
+    launches = 0
+    for algo, proto in spec['pairs']:
+        timed = 0 if algo == 'NVLS' else REPEATS_T4  # no NVLS on the A100
+        t4_bytes += check + timed * per
+        nccl_s += (check + timed * per) / rate(algo, proto)
+        launches += 1 + timed
+    t4_bytes += per  # the default pair on one rail
+    nccl_s += per / rail
+    launches += 1
+    # the hierarchical runs: every rail, then one rail
+    sizes = sum(pack_t4.HIER['sizes'])
+    n_it = pack_t4.HIER['iters'] + pack_t4.HIER['warmup']
+    local = g // 2
+    phi = d2l.nccl_busbw_factor('all_reduce', g)
+    intra = 2 * (local - 1) / local * sizes  # reduce-scatter + all-gather
+    inter = sizes / local  # a 2-rank all-reduce of each shard
+    hier_bytes = 2 * n_it * (phi * sizes + 2 * (intra + inter))
+    hier_s = n_it * (phi * sizes / rails + 2 * (intra / nvs + inter / rail)
+                     + phi * sizes / rail + 2 * (intra / nvs
+                                                 + local * inter / rail))
+    launches += 2
+    perf_s = RAILS_T4 * 2 * 60  # one minute per rail and kind
+    t4_bytes += hier_bytes
     ch['22-hw-c-t4'] = dict(
-        bytes=t4_bytes, hours=(t4_bytes / rail + 8 * 2 * 60) / 3600,
+        bytes=t4_bytes, hours=(nccl_s + hier_s + perf_s
+                               + launches * LAUNCH_S) / 3600,
         memory_gib=2 * spec['max_bytes'] / 2**30,
-        parts=dict(nccl=t4_bytes / rail, perftest=8 * 2 * 60))
+        parts=dict(nccl=nccl_s, hier=hier_s, perftest=perf_s,
+                   launches=launches * LAUNCH_S))
     return ch
 
 
@@ -199,6 +254,10 @@ def main():
                           .items())
         print(f"{cid}: {work}; {e['hours']:.2f} h; "
               f"{e['memory_gib']:.0f} GiB per GPU\n  {parts}")
+        if 'optional' in e:
+            o = e['optional']
+            print(f"  optional run: flop {o['flop']:.2e}; {o['hours']:.2f} h; "
+                  f"{o['memory_gib']:.0f} GiB per GPU")
     return 0
 
 

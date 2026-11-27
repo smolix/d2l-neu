@@ -32712,26 +32712,50 @@ def hw_dtype_ladder(n, formats):
 
 _HW_TIERS = {'box': 'T1', 't2': 'T2'}
 
-_HW_CAMPAIGN_GPUS = {'t2': ('A100 PCIe 40 GB', 1),  # chip-table row, GPUs
-                     't2pair': ('A100 PCIe 40 GB', 2)}
+_HW_CAMPAIGN_GPUS = {  # (GPU models, GPUs, exactly that many, link of 0-1)
+    't2': (('A100 PCIe 40 GB',), 1, False, None),
+    't2pair': (('A100 PCIe 40 GB',), 2, True, 'NV'),
+    't3': (('A100 PCIe 40 GB', 'A100 SXM4 40 GB'), 8, True, None),
+    't4': (('A100 PCIe 40 GB', 'A100 SXM4 40 GB'), 16, True, None)}
+
+def _hw_gpu_is(gpu, mem_bytes, model):
+    """True when a device (name, memory in bytes) is the GPU model names:
+    the words before the capacity inside the device name (letters and
+    digits, case ignored) and the memory within 10% of the capacity ('A100
+    SXM4 40 GB' is 'NVIDIA A100-SXM4-40GB', not 'NVIDIA A100-SXM4-80GB').
+
+    Defined in :numref:`sec_lm_accelerator_design`"""
+    *words, gb, _ = model.split()
+    key = lambda name: re.sub(r'[^a-z0-9]', '', (name or '').lower())
+    return (key(''.join(words)) in key(gpu)
+            and math.fabs(mem_bytes / 2**30 / float(gb) - 1) <= 0.1)
 
 def _hw_check_hardware(name, config):
-    """Raise unless the visible GPUs are the chip-table row and at least the
-    number of GPUs of campaign configuration config (_HW_CAMPAIGN_GPUS; no
+    """Raise unless the visible GPUs are the hardware of campaign
+    configuration config (_HW_CAMPAIGN_GPUS: every GPU one of its models,
+    their number, NVLink between GPUs 0 and 1 where it asks for it; no
     check for the box run); the message names the campaign's hardware.
 
     Defined in :numref:`sec_lm_accelerator_design`"""
     if config == 'box':
         return
-    row, need = _HW_CAMPAIGN_GPUS[config]
+    models, need, exact, link = _HW_CAMPAIGN_GPUS[config]
     hardware = d2l.HW_CAMPAIGNS[d2l.HW_CONFIG_LOGS[(name, config)]][3]
     n = torch.cuda.device_count()
-    p = torch.cuda.get_device_properties(0)
-    chip = _hw_chip_row(_gpu_short(p.name), p.total_memory, d2l.chip_specs())
-    if chip != row or n < need:
+    props = [torch.cuda.get_device_properties(i) for i in range(n)]
+    seen = sorted({f'{p.name} ({p.total_memory / 2**30:.0f} GiB)'
+                   for p in props}) or ['GPU']
+    if (n != need if exact else n < need) or not all(
+            any(_hw_gpu_is(p.name, p.total_memory, m) for m in models)
+            for p in props):
         raise RuntimeError(f'config {config} measures the {hardware}, not '
-                           f'{n} x {p.name} ({p.total_memory / 2**30:.0f} '
-                           'GiB)')
+                           f'{n} x {" + ".join(seen)}')
+    if link:
+        rel = d2l._smi_relations()(0, 1)
+        if not rel.startswith(link):
+            raise RuntimeError(f'config {config} measures the {hardware}; '
+                               f'GPUs 0 and 1 are joined by {rel}, not '
+                               'NVLink')
 
 def regen_microbench(config='box'):
     """Driver of box-microbench: the accelerator-design page's calls on the
@@ -35856,17 +35880,94 @@ def _node_storage_raw(spec, folder):
         json.dump(skipped, fh, indent=1)
     return skipped
 
+_NVB_CASES = {'host_to_device_memcpy_ce': 'h2d',
+              'device_to_host_memcpy_ce': 'd2h'}
+
+def _node_storage_entry(raw):
+    """The entry 'node' from the raw tool outputs in folder raw
+    (_node_storage_raw): 'numa' (one row per NUMA node and direction: the
+    host-copy SUM over the GPUs and each GPU's GB/s), 'gds' (gdsio's read
+    lines through GPUDirect and through the bounce buffer: GiB/s, mean
+    latency), 'shared_fs' (fio's read on the shared file system, None when
+    it did not run) and 'skipped' ({run: reason}).
+
+    Defined in :numref:`sec_lm_memory_tiers`"""
+    def text(name):
+        path = os.path.join(raw, f'{name}.txt')
+        if not os.path.exists(path):
+            return ''
+        with open(path, errors='replace') as f:
+            return f.read()
+    with open(os.path.join(raw, 'skipped.json')) as f:
+        skipped = json.load(f)
+    rows = []
+    nodes = sorted(int(m.group(1)) for m in (
+        re.fullmatch(r'nvbandwidth-numa(\d+)\.txt', n)
+        for n in os.listdir(raw)) if m)
+    for node in nodes:
+        parsed = parse_nvbandwidth(text(f'nvbandwidth-numa{node}'))
+        for case, direction in _NVB_CASES.items():
+            if case in parsed and parsed[case].size:
+                rows.append(dict(numa=node, direction=direction,
+                                 sum_gbs=parsed.get(f'{case}_sum', np.nan),
+                                 gpu_gbs=parsed[case][0].tolist()))
+    numa = pd.DataFrame(rows, columns=['numa', 'direction', 'sum_gbs',
+                                       'gpu_gbs'])
+    gds = [parse_gdsio(text(f'gdsio-read-x{x}')).assign(run=f'x{x}')
+           for x in (0, 2)]
+    gds = pd.concat([g for g in gds if len(g)] or [pd.DataFrame(
+        columns=['io', 'xfer', 'threads', 'io_size', 'gib_s', 'lat_us',
+                 'run'])], ignore_index=True)
+    gds = gds[gds.io == 'READ'].reset_index(drop=True)
+    shared = None
+    if 'fio-shared' not in skipped and text('fio-shared').strip():
+        try:
+            shared = parse_fio(text('fio-shared'))
+        except (ValueError, KeyError, IndexError) as e:
+            skipped['fio-shared'] = f'unparsed fio output ({e!r})'
+    return dict(numa=numa, gds=gds, shared_fs=shared, skipped=skipped)
+
+def show_node_storage(log):
+    """The node campaign's raw tools in a few lines: per NUMA node and
+    direction the host-copy sum over the GPUs and its slowest and fastest
+    GPU (GB/s), gdsio's read through GPUDirect against the bounce buffer
+    (GiB/s, mean latency), the shared file system's read, and what did not
+    run; one status line while the log is pending.
+
+    Defined in :numref:`sec_lm_memory_tiers`"""
+    if isinstance(log, d2l.CampaignPending):
+        print(d2l.hw_status_line(log))
+        return
+    node = log.get('node')
+    if node is None:
+        print('node-storage: no node entry in this log')
+        return
+    numa = node['numa']
+    if len(numa):
+        d2l.show_table(pd.DataFrame({
+            'NUMA': numa.numa, 'copy': numa.direction,
+            'sum GB/s': numa.sum_gbs,
+            'GPU min': [min(g) for g in numa.gpu_gbs],
+            'GPU max': [max(g) for g in numa.gpu_gbs]}), digits=1,
+            width=79)
+    for r in node['gds'].itertuples():
+        print(f'gdsio read {r.xfer}: {r.gib_s:.2f} GiB/s, '
+              f'{r.lat_us:.0f} us mean ({r.threads} threads, '
+              f'{r.io_size >> 10} KiB)')
+    if node['shared_fs']:
+        f = node['shared_fs']
+        print(f"shared file system: {f['bw_gbs']:.2f} GB/s read "
+              f"(bs {f['bs'] >> 10} KiB, qd {f['qd']} x {f['jobs']})")
+    for run, why in node['skipped'].items():
+        print(f'not run: {run} ({why})')
+
 def _storage_check(config):
     if not torch.cuda.is_available():
         raise RuntimeError('box-storage needs a CUDA GPU')
     if (os.environ.get('D2L_HW_CONFIG') or 'box') != config:
         raise ValueError(f'config {config!r} needs D2L_HW_CONFIG={config} '
                          '(tools/hw_regen.py --config)')
-    name = torch.cuda.get_device_name(0)
-    if config == 't3' and ('A100' not in name
-                           or torch.cuda.device_count() < 8):
-        raise RuntimeError(f'config t3 measures an 8 x A100 node, not '
-                           f'{torch.cuda.device_count()} x {name}')
+    d2l._hw_check_hardware('box-storage', config)  # t3: 8 x A100 40 GB
 
 def _tiers_json(links, fio, obj, repeats=10):
     """tiers.json records (blueprint schema): measured tiers only. Host
@@ -35946,6 +36047,22 @@ def regen_storage(config='box'):
     if node is not None and proc in (None, '0'):  # the run's top folder
         _node_storage_raw(node['raw'], os.path.dirname(folder) if proc
                           else folder)
+
+def regen_storage_finish(folder):
+    """After tools/hw_regen.py combined the processes: a campaign run's raw
+    tool outputs (folder/raw, written by _node_storage_raw) parsed into the
+    entry node.json.gz, its meta the tiers entry's; nothing for the box.
+
+    Defined in :numref:`sec_lm_memory_tiers`"""
+    raw = os.path.join(folder, 'raw')
+    if not os.path.exists(os.path.join(raw, 'skipped.json')):
+        return None
+    _, meta = d2l._hw_read(os.path.join(folder, 'tiers.json.gz'))
+    entry = _node_storage_entry(raw)
+    d2l._hw_write(os.path.join(folder, 'node.json.gz'), entry,
+                  dict(meta, entry='node', config=_HW_NODE_STORAGE[
+                      meta['run']]['raw']))
+    return entry
 
 d2l.DATA_HUB['lm-hw-links-v2'] = (
     d2l.LM_DATA_URL + 'lm-hw-links-v2.csv',
@@ -36852,15 +36969,14 @@ def _p2p_check(config):
     if (os.environ.get('D2L_HW_CONFIG') or 'box') != config:
         raise ValueError(f'config {config!r} needs D2L_HW_CONFIG={config} '
                          '(tools/hw_regen.py --config)')
+    if config != 'box':  # the campaign's GPUs, count and link
+        d2l._hw_check_hardware('box-p2p', config)
+        return
     n = torch.cuda.device_count()
-    name = torch.cuda.get_device_name(0) if n else ''
-    need = {'box': 2, 't3': 8, 't2pair': 2}[config]
-    if n < need or (config != 'box' and 'A100' not in name):
-        raise RuntimeError(f'config {config} needs {need} GPUs'
-                           + ('' if config == 'box' else ' (A100)')
-                           + f', not {n} x {name}')
+    if n < 2:
+        raise RuntimeError(f'box-p2p needs 2 GPUs, not {n}')
     host = len(d2l._hw_smi('--query-gpu=index'))
-    if config == 'box' and n != host:
+    if n != host:
         raise RuntimeError(f'the box result needs every GPU of the host '
                            f'({host}), not {n}: lock them all')
 

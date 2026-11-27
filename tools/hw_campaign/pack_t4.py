@@ -10,7 +10,8 @@ job script runs and the packer of its raw logs.
 
 `--plan` prints, as shell assignments, the configuration the job script
 (cluster_t4.sbatch) runs: `d2l._HW_COLL['t4']` (ranks, sizes, iterations,
-timeout, the NCCL_ALGO x NCCL_PROTO pairs) and the number of timed repeats.
+timeout, the NCCL_ALGO x NCCL_PROTO pairs), the number of timed repeats and
+the hierarchical run's sizes, iterations, check size and timeout (HIER).
 `--verdict` exits 0 when a pair's check run (OUT/raw/nccl/<pair>-check.*)
 keeps the pair, else 1 with the reason: the rules of the box's
 `d2l._pair_check` (refused, timed out, wrong results, an INFO choice other
@@ -19,16 +20,21 @@ CollNet allows NCCL's CollNetDirect and CollNetChain).
 
 `pack_t4.py OUT` reads OUT/raw (written by the job script: node names,
 ibstat per node, ib_write_bw and ib_write_lat per rail, the nccl-tests
-check and timed runs per pair, the one-NIC run) and writes
+check and timed runs per pair, the one-NIC run, the hierarchical runs)
+and writes
 OUT/<key>/ and OUT/<key>.tar, the campaign log `cluster-nccl`
 (`d2l.HW_CAMPAIGNS`; key lm-hw-cluster-nccl-v1 while it is unregistered):
 entries `pairs` (the forced-pair table of the box's box-coll, with
 config 't4', every repeat's times in attrs['proc_us']), `info` (NCCL's INFO
 digest of the default pair), `perftest` ({rail: {'bw': text, 'lat':
 text}}, read by `d2l.fit_perftest`), `ibstat`, `onenic` (the default pair
-with NCCL_IB_HCA set to one rail), `alpha_beta.json` (one record per kept
+with NCCL_IB_HCA set to one rail), `hier` (box-coll's `hier` table for 16
+ranks: variant, size, us, mad_us, plus `nics` 'all' or 'one'; the checks
+and any failed run in attrs), `alpha_beta.json` (one record per kept
 pair and per rail, scope inter_node) and the scrubbed raw files (node
-names become <node0>, <node1>). Then it prints the size, the sha1 and the
+names become <node0>, <node1>). Every rank of every nccl-tests run must be
+an A100 40 GB (the node campaign's GPUs, `d2l._HW_CAMPAIGN_GPUS['t4']`),
+and a real pack needs 16 ranks. Then it prints the size, the sha1 and the
 DATA_HUB statement to register.
 
 `--make-sample OUT` writes OUT/raw from the committed sample logs
@@ -55,6 +61,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 SAMPLES = os.path.join(REPO, 'tools', 'lm_data', 'hw', 'samples')
 CONFIG, NAME, REPEATS = 't4', 'cluster-nccl', 3
+HIER = dict(sizes=[2**s for s in range(20, 31, 2)], iters=10, warmup=3,
+            check_bytes=2**20, timeout_s=900)  # 1 MiB to 1 GiB
 ALIASES = {'CollNet': ('CollNetDirect', 'CollNetChain')}  # NCCL_ALGO=CollNet
 
 
@@ -81,6 +89,10 @@ def plan(d2l):
           f"ITERS={s['iters']} WARMUP={s['warmup']} "
           f"TIMEOUT_S={s['timeout_s']} REPEATS={REPEATS}")
     print(f'PAIRS="{pairs}"')
+    print(f"HIER_SIZES='{json.dumps(HIER['sizes'], separators=(',', ':'))}' "
+          f"HIER_ITERS={HIER['iters']} HIER_WARMUP={HIER['warmup']} "
+          f"HIER_CHECK={HIER['check_bytes']} "
+          f"HIER_TIMEOUT_S={HIER['timeout_s']}")
     return 0
 
 
@@ -118,11 +130,67 @@ def verdict(d2l, raw, algo, proto):
     return '', used, tuner
 
 
+def gpu_names(text):
+    """The GPU name of every rank from nccl-tests' '#  Rank' lines."""
+    return [r.strip() for r in re.findall(
+        r'^#\s+Rank\s+\d+ .*? device\s+\d+ \[[^\]]*\] (.+)$', text, re.M)]
+
+
 def ranks(text):
     """(number of ranks, GPU name) from nccl-tests' '#  Rank' lines."""
-    rows = re.findall(r'^#\s+Rank\s+\d+ .*? device\s+\d+ \[[^\]]*\] (.+)$',
-                      text, re.M)
-    return len(rows), (rows[0].strip() if rows else None)
+    rows = gpu_names(text)
+    return len(rows), (rows[0] if rows else None)
+
+
+def gpu_ok(d2l, name):
+    """True when a device name is one of the campaign's GPU models
+    (d2l._HW_CAMPAIGN_GPUS['t4']: an A100 40 GB, PCIe or SXM4); nccl-tests
+    prints no memory size, so the name's capacity is compared."""
+    key = lambda x: re.sub(r'[^a-z0-9]', '', x.lower())
+    for model in d2l._HW_CAMPAIGN_GPUS[CONFIG][0]:
+        *words, gb, _ = model.split()
+        if key(''.join(words)) in key(name) and f'{gb}gb' in key(name):
+            return True
+    return False
+
+
+def wrong_gpus(d2l, raw):
+    """{device name: file} of nccl-tests ranks that are not the campaign's
+    GPUs (empty when every rank of every run is one)."""
+    bad = {}
+    for path in sorted(glob.glob(os.path.join(raw, 'nccl', '*.txt'))):
+        for name in gpu_names(read(path)):
+            if not gpu_ok(d2l, name):
+                bad.setdefault(name, os.path.relpath(path, raw))
+    return bad
+
+
+def hier_table(raw):
+    """The hierarchical runs (raw/hier/all.txt and one.txt, rank 0's JSON
+    lines from hier_t4.py) as box-coll's `hier` table with a column nics,
+    or None when neither ran; attrs: the checks and the failed runs."""
+    import pandas as pd
+    frames, checks, failed = [], {}, {}
+    for nics in ('all', 'one'):
+        base = os.path.join(raw, 'hier', nics)
+        why = status(base)
+        recs = [json.loads(line) for line in (
+            read(base + '.txt').splitlines() if not why else ())
+            if line.startswith('{')]
+        rows = [r for r in recs if 'variant' in r]
+        if why or not rows:
+            failed[nics] = why or 'no rows'
+            continue
+        checks[nics] = next((r for r in recs if 'check' in r), None)
+        frames.append(pd.DataFrame(rows).assign(nics=nics))
+    if not frames:
+        return None
+    out = pd.concat(frames, ignore_index=True)
+    out.attrs.update(check=checks, failed=failed,
+                     intra='the 8 ranks of a node (NCCL)',
+                     inter='the ranks of one local rank across the nodes '
+                           '(NCCL, one rail each)')
+    return out
 
 
 def nccl_version(info, text):
@@ -214,6 +282,13 @@ def pack(d2l, out, replace=False, sample=False):
         print(f"{g} ranks recorded, the configuration has {spec['g']}",
               file=sys.stderr)
         return 1
+    bad = wrong_gpus(d2l, raw)
+    if bad and not sample:
+        name, path = next(iter(bad.items()))
+        print(f'{path}: a rank ran on {name}, not one of '
+              f"{', '.join(d2l._HW_CAMPAIGN_GPUS[CONFIG][0])}",
+              file=sys.stderr)
+        return 1
     pairs = pd.concat(frames, ignore_index=True)
     pairs['g'] = g
     info = d2l._parse_info(info_text)
@@ -231,7 +306,7 @@ def pack(d2l, out, replace=False, sample=False):
         if os.path.exists(lat):
             perf[rail] = dict(bw=read(bw), lat=read(lat))
     ibstat = {f'node{i}': scrub(d2l, read(p), nodes) for i, p in enumerate(
-        sorted(glob.glob(os.path.join(raw, 'ibstat-*.txt'))))}
+        sorted(glob.glob(os.path.join(raw, 'ibstat-[0-9]*.txt'))))}
     stamp = key + ('-sample' if sample else '')
     folder = os.path.join(out, stamp if sample else d2l._next_key(key))
     tar = folder + '.tar'
@@ -256,6 +331,9 @@ def pack(d2l, out, replace=False, sample=False):
     onenic = os.path.join(raw, 'nccl', 'onenic-run0')
     if not status(onenic):
         entries['onenic'] = d2l.parse_nccl_tests(read(onenic + '.txt'))
+    hier = hier_table(raw)
+    if hier is not None:
+        entries['hier'] = hier
     for entry, result in entries.items():
         d2l._hw_write(os.path.join(folder, f'{entry}.json.gz'), result, meta)
     layer = link_layer(list(ibstat.values()))
@@ -286,7 +364,9 @@ def pack(d2l, out, replace=False, sample=False):
     kept = [n for n in pairs.algo.unique() if n not in dropped]
     print(f'{NAME}: {g} ranks, {len(proc_us)} repeats, pairs kept '
           f"{', '.join(kept) or 'none'}; {len(dropped)} dropped; "
-          f'{len(perf)} rail(s)')
+          f'{len(perf)} rail(s); hierarchical runs: '
+          + (', '.join(sorted(set(hier.nics))) if hier is not None
+             else 'none'))
     print(f'wrote {tar}\n  size {os.path.getsize(tar) / 1e6:.2f} MB, '
           f'sha1 {sha1}')
     if sample:

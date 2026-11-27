@@ -9,15 +9,22 @@ output files with their `DATA_HUB` keys, and the steps after a run:
 | Entry | Hardware | Launcher | Logs (`DATA_HUB` keys) |
 |---|---|---|---|
 | `22-hw-c-t2` | one A100 PCIe 40 GB | `tools/hw_regen.py ... --config t2 --out OUT`, `tools/hw_clock_sweep.sh` | `lm-hw-a100-microbench-v1`, `lm-hw-a100-workloads-v1`, `lm-hw-a100-clocksweep-v1` |
-| `22-hw-c-t2pair` | two A100 PCIe 40 GB with an NVLink bridge | `tools/hw_regen.py ... --config t2pair --out OUT` | `lm-hw-t2pair-moe-v1`, `lm-hw-t2pair-p2p-v1` |
+| `22-hw-c-t2pair` | two A100 PCIe 40 GB with an NVLink bridge | `tools/hw_regen.py ... --config t2pair --out OUT` | `lm-hw-t2pair-p2p-v1` (`lm-hw-t2pair-moe-v1` only with the optional `D2L_T2PAIR_MOE=1` run) |
 | `22-hw-c-t3` | one 8 x A100 40 GB node | `node_t3.sh OUT` | `lm-hw-node-storage-v1`, `lm-hw-node-p2p-v1` |
 | `22-hw-c-t4` | two such nodes with RDMA (Slurm) | `sbatch cluster_t4.sbatch OUT` (`hw_job.sh` per task, `pack_t4.py` packs) | `lm-hw-cluster-nccl-v1` |
 
-None of them has run: each needs the author's go. The files here:
+None of them has run: each needs the author's go. The drivers and launchers
+refuse other hardware: the GPU models, their number and (C-T2pair) NVLink
+between the two cards are checked (`d2l._HW_CAMPAIGN_GPUS`), and
+`pack_t4.py` refuses a run whose nccl-tests ranks are not A100 40 GB. The
+files here:
 
 - `node_t3.sh`: C-T3's pre-checks and its two regenerations.
 - `cluster_t4.sbatch`, `hw_job.sh`: C-T4's Slurm job and its per-node tasks
-  (ibstat, perftest per rail, nccl-tests on 16 ranks for every forced pair).
+  (ibstat, perftest per rail, nccl-tests on 16 ranks for every forced pair,
+  the hierarchical all-reduce on every rail and on one).
+- `hier_t4.py`: one rank of that hierarchical run (the page's
+  `hier_allreduce` against NCCL's default, NCCL inside and across the nodes).
 - `pack_t4.py`: C-T4's plan (`--plan`), pair verdicts and packer; it also
   packs the committed sample logs (`--make-sample`, `--sample`) and reads a
   tar back as the pages will (`--verify`).

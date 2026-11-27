@@ -1917,6 +1917,37 @@ class TestLiveLine(unittest.TestCase):
         self.assertEqual(line(broken),
                          'live check (latency) on RTX 4090: 1 point')
 
+    def test_another_card_multi(self):
+        """Fix pass F10 review: a regeneration that saw four cards stores
+        all four UUIDs, but its single-card benches ran on the first
+        (cuda:0). Only the same cards in the same positions read as the
+        committed card(s): the second card first is 'another'."""
+        gpu = 'NVIDIA GeForce RTX 4090'
+        four = ['7ef3c7d1', '7b266c81', '915651cf', '3312b7bc']
+
+        def line(committed, mine):
+            meta = {'env': {'gpu': gpu, 'uuids': committed}}
+            out = io.StringIO()
+            with mock.patch.object(torch.cuda, 'is_available', lambda: True), \
+                    mock.patch.object(torch.cuda, 'get_device_name',
+                                      lambda i=0: gpu), \
+                    mock.patch.object(d2l, '_hw_visible_uuids', lambda: [
+                        f'GPU-{u}-0000' for u in mine]), \
+                    contextlib.redirect_stdout(out):
+                d2l._hw_live(lambda r, same: '1 point', None, meta,
+                             'host link')
+            return out.getvalue().strip()
+        same = 'live check (host link) on RTX 4090: 1 point'
+        other = 'live check (host link) on another RTX 4090: 1 point'
+        self.assertEqual(line(four, four[1:2]), other)   # GPU 1 alone
+        self.assertEqual(line(four, four[2:]), other)    # GPUs 2,3 (smokes)
+        self.assertEqual(line(four, four[:1]), same)     # GPU 0 alone
+        self.assertEqual(line(four, four), same)         # all four
+        self.assertEqual(line(four, [four[0], four[2]]), other)
+        # a two-card regeneration (box-net: GPUs 0-1) on all four cards
+        self.assertEqual(line(four[:2], four), same)
+        self.assertEqual(line(four[:2], four[1:3]), other)
+
 
 class TestLiveConfigs(unittest.TestCase):
     """Fix pass F10: each live check measures a configuration of the
@@ -1931,6 +1962,13 @@ class TestLiveConfigs(unittest.TestCase):
             self.skipTest(f'{name} is not registered yet')
         return d2l._hw_load(name, entry)
 
+    @staticmethod
+    def no_device(*args, **kwargs):
+        """Hermetic: a live check under test must not open a CUDA context
+        (reviews run with CUDA_VISIBLE_DEVICES empty; a test that touched
+        a GPU would do so outside the lock protocol)."""
+        raise AssertionError('live-check test reached the real GPU')
+
     def run_page(self, meta, fn, *args, **kwargs):
         """The live line(s) fn prints, as on the committed run's GPU."""
         gpu = meta['env']['gpu']
@@ -1940,6 +1978,8 @@ class TestLiveConfigs(unittest.TestCase):
                                   lambda i=0: gpu), \
                 mock.patch.object(torch.cuda, 'device_count', lambda: 2), \
                 mock.patch.object(d2l, '_hw_visible_uuids', lambda: []), \
+                mock.patch.object(torch.cuda, 'get_device_properties',
+                                  self.no_device), \
                 contextlib.redirect_stdout(out):
             fn(*args, **kwargs)
         lines = [l for l in out.getvalue().splitlines() if 'live' in l]
@@ -2003,7 +2043,8 @@ class TestLiveConfigs(unittest.TestCase):
             calls.append((nbytes, kwargs))
             return dict(bytes=nbytes, ns_per_load=ns[nbytes], mad=0.0)
         with mock.patch.object(d2l, '_chase_ns', chase), \
-                mock.patch.object(d2l, '_hw_fits', lambda n: True):
+                mock.patch.object(d2l, '_hw_fits', lambda n: True), \
+                mock.patch.object(d2l, '_hw_frame', pd.DataFrame):
             self.run_page(meta, d2l.hw_latency_bench,
                           sizes=2**np.arange(12, 31))
         # the committed sweep, in its order, with the compute's settings

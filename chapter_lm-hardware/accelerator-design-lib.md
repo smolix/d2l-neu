@@ -535,11 +535,15 @@ def _hw_load(name, entry=None):
 
 #@save
 def _hw_on_committed_card(env):
-    """True when this process's first GPU is one of the cards the committed
-    run measured (env['uuids'], the short UUIDs _hw_env records), False
-    when it is another card, None when either is unknown. Two cards of one
-    model differ by several percent (the box's L2 latency: 98 ns on the
-    card of box-microbench, 108 ns on two others at the same clocks)."""
+    """True when this process's GPUs are the committed run's cards in the
+    same positions, False when they are other cards, None when either is
+    unknown. env['uuids'] (the short UUIDs _hw_env records) lists every
+    card the committed run saw, in bus order; a bench uses the first ones
+    (a single-card bench cuda:0), so the two lists are compared over their
+    common prefix: a single-card bench of a four-card regeneration ran on
+    its first card only. Two cards of one model differ by several percent
+    (the box's L2 latency: 98 ns on the card of box-microbench, 108 ns on
+    two others at the same clocks)."""
     committed = env.get('uuids')
     try:
         mine = [u[4:12] for u in _hw_visible_uuids()]
@@ -547,7 +551,8 @@ def _hw_on_committed_card(env):
         return None
     if not committed or not mine:
         return None
-    return mine[0] in committed
+    n = min(len(mine), len(committed))
+    return mine[:n] == list(committed[:n])
 
 #@save
 def _hw_live(live_check, result, meta, label=''):

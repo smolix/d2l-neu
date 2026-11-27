@@ -71,13 +71,13 @@ book:
       - icon: translate
         aria-label: Language
         menu:
-          # Each group sorted by the name it shows, as d2l-localization's
-          # `l10n menu` sorts languages.json: Latin-script names first, then
-          # the other scripts.
-          - text: "de · Deutsch"
-            href: https://de.d2l.ai
+          # English first, then each group sorted by the name it shows, as
+          # d2l-localization's `l10n menu` sorts languages.json: Latin-script
+          # names first, then the other scripts.
           - text: "en · English"
             href: /
+          - text: "de · Deutsch"
+            href: https://de.d2l.ai
           - text: "pt · Português"
             href: https://pt.d2l.ai
           - text: "vi · Tiếng Việt"

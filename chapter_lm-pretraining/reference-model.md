@@ -501,7 +501,7 @@ d2l.plot_run_log(log, ['loss', 'grad_norm', 'rms', 'max_logit', 'mfu'],
 
 <!-- Placeholder (prose): Adam's update in units of the learning rate has RMS sqrt((1 - beta_1)/(1 + beta_1)) = 0.229 when the gradient is noise; near 1 when it is signal. Stable phase (from a sixth of the run, step 1,000 of r2, past warmup's transient) against decay phase, per module type. One sentence on token_emb: its RMS averages over every row, including the rows of tokens absent from the step's batch (no gradient, an update from the moments alone), so its ratio to 0.229 is not the noise-floor reading the matrices give. -->
 
-<!-- Placeholder (prose): claim 5 as measured (F12, from the committed log): per unit learning rate every module but W_v sits near the floor in the stable phase (ratios 0.83-0.94; W_v 0.73, named); in the decay the per-unit-lr RMS rises slightly (decay ÷ stable 1.02-1.19, W_v the most) while the update itself falls with the learning rate (absolute decay ÷ stable 0.48-0.56, the decay's median lr being 0.47 of the peak). Never write that the per-lr value falls in the decay. Two units, two columns: say which one each sentence reads. -->
+<!-- Placeholder (prose): claim 5 as measured (F12, from the committed log): per unit learning rate every module but W_v sits near the floor in the stable phase (ratios 0.83-0.94; W_v 0.73, named: its per-lr RMS climbs toward the floor through the stable phase, from about 0.60 of it near step 1,000 to 0.79 near 5,000, so 0.73 is the median of a rising series and part of its decay ÷ stable 1.19 is that trend); in the decay the per-unit-lr RMS rises slightly (decay ÷ stable 1.02-1.19, W_v the most) while the update itself falls with the learning rate (absolute decay ÷ stable 0.48-0.56, the decay's median lr being 0.47 of the peak). Never write that the per-lr value falls in the decay. Two units, two columns: say which one each sentence reads. -->
 
 ```{.python .input #reference-model-update-size-by-module-1}
 %%tab pytorch
@@ -537,7 +537,7 @@ assert (absolute < 1).all(), 'an update grew in the decay'
 print(f'update RMS per unit learning rate ({run_cfg.preset} run); '
       'absolute: times the median lr')
 print(f'{"module":>9} {"stable":>7} {"decay":>7} '
-      f'{f"ratio to {noise_floor:.3f}":>15} '
+      f'{f"stable ÷ {noise_floor:.3f}":>15} '
       f'{"decay ÷ stable: per lr":>23} {"absolute":>9}')
 for m in MODULES:
     print(f'{m:>9} {rms.at[m, "stable"]:7.3f} {rms.at[m, "decay"]:7.3f} '
@@ -547,25 +547,29 @@ for m in MODULES:
 
 ### Who Moves First
 
-<!-- Placeholder (prose): a change point per series: the first step within 200 steps after an event where the 20-step rolling median leaves ± 3 MAD around the line fitted to the 200 steps before it (detrended, so that a curve that keeps falling at the same rate does not count as moving). Read at the end of warmup, at the start of the decay and at the opening's gradient event (labelled mild when it was); the last row is the null: how often each series "moves" at 20 random stable-phase steps where nothing happens. Resolution: the rolling window (about 10-20 steps); the largest logit is sampled every 10 steps in r2 (every 50 in the t1 stand-in). -->
+<!-- Placeholder (prose): a change point per series: each series goes on one grid of 10-step blocks (the block median; the largest logit is probed every 10 steps, so every series meets the same detector, and a dense series is not judged by a stricter test than a sparse one), a line is fitted to the 20 blocks of the 200 steps before the event, and the series has moved at the first 20-step mean of the residual, within 200 steps, that leaves 3 standard errors of that line's prediction (the residual scatter plus the line's own extrapolation error; on white noise this fires in about 6-9% of windows, dense or sparse). Detrended, so that a curve that keeps falling at the same rate does not count as moving; and the line needs a stationary reference: an event whose 200 steps before fall inside warmup's ramp (the end of warmup itself; the reference run's gradient event at step 223) is not read, because the line extrapolates a convex, flattening curve and fires on its own misfit. The last row is the null: how often each series moves at 20 evenly spaced stable-phase steps (every reference window from step 1,000, horizons nearly disjoint) where nothing happens. Resolution: 10 steps (50 in the t1 stand-in, whose largest logit is probed every 50). -->
 
 ```{.python .input #reference-model-lead-lag}
 %%tab pytorch
 #@save
-def moved(x, at, before=200, window=20, horizon=200, k=3):
-    """Steps after `at` until the rolling median of x over `window` steps
-    leaves k MAD around the line fitted to the `before` steps before `at`;
-    None if it stays inside for `horizon` steps."""
+def moved(x, at, before=200, window=20, horizon=200, k=3, grid=10):
+    """Steps after `at` until x moves (None within `horizon`): on blocks of
+    `grid` steps (medians), the mean residual over `window` steps from the
+    line fitted to the `before` steps before `at` leaves k standard errors
+    of that line's prediction (residual scatter plus extrapolation)."""
     x = x.dropna()
-    ref = x[(x.index >= at - before) & (x.index < at)]
-    resid = x - np.polyval(np.polyfit(ref.index, ref.to_numpy(), 1), x.index)
-    center = resid[ref.index].median()
-    mad = (resid[ref.index] - center).abs().median()
-    width = max(1, round(window / np.median(np.diff(x.index))))  # samples
-    after = resid[(resid.index >= at) & (resid.index < at + horizon)]
-    roll = after.rolling(width, min_periods=width).median()
-    out = roll[(roll - center).abs() > k * mad]
-    return int(out.index[0] - at) if len(out) else None
+    b = x.groupby((x.index - at) // grid).median()  # block j: at + grid * j
+    ref, after = b.loc[-(before // grid):-1], b.loc[0:horizon // grid - 1]
+    j, i = ref.index.to_numpy(float), after.index.to_numpy(float)
+    line = np.polyfit(j, ref.to_numpy(), 1)
+    s2 = ((ref - np.polyval(line, j)) ** 2).sum() / (len(j) - 2)
+    w = max(1, window // grid)
+    resid = (after - np.polyval(line, i)).rolling(w).mean()
+    mid = pd.Series(i, after.index).rolling(w).mean() - j.mean()
+    se = np.sqrt(s2 * (1 / w + 1 / len(j)
+                       + mid ** 2 / ((j - j.mean()) ** 2).sum()))
+    out = resid[resid.abs() > k * se]
+    return int(grid * (out.index[0] + 1)) if len(out) else None
 ```
 
 ```{.python .input #reference-model-lead-lag-table}
@@ -574,27 +578,32 @@ run = main.set_index('step')
 series = {'grad norm': run['grad_norm'],
           'largest logit': run.filter(like='max_logit_').max(axis=1),
           'loss': run['loss']}
+grid = max(int(np.median(np.diff(x.dropna().index)))  # the coarsest
+           for x in series.values())                  # sampling, for all
 decay_from = run_cfg.steps - run_cfg.decay
 events = {'end of warmup': run_cfg.warmup, 'start of decay': decay_from,
           'gradient event' + (' (mild)' if event.mild else ''): event.step}
-null = np.random.default_rng(0).integers(  # stable phase, full windows
-    run_cfg.warmup + 200, decay_from - 200, size=20)
+null = np.linspace(STABLE_FROM + 200, decay_from - 200, 20).round()
 print(f'steps until each series moves ({run_cfg.preset} run)')
 print(f'{"event":>23} ' + ' '.join(f'{k:>13}' for k in series))
 for name, at in events.items():
+    if at - 200 < STABLE_FROM:  # the line would extrapolate warmup's ramp
+        print(f'{name:>23} {"(reference in warmup: not read)":>41}')
+        continue
     lags = ['—' if m is None else f'+{m}'
-            for m in (moved(x, at) for x in series.values())]
+            for m in (moved(x, at, grid=grid) for x in series.values())]
     print(f'{name:>23} ' + ' '.join(f'{m:>13}' for m in lags))
 cells = []
 for x in series.values():  # how often, and how late, each fires at random
-    lags = [m for m in (moved(x, t) for t in null) if m is not None]
+    lags = [m for m in (moved(x, int(t), grid=grid) for t in null)
+            if m is not None]
     cells.append(f'{len(lags)}/{len(null)}'
                  + (f', +{np.median(lags):.0f}' if lags else ''))
-print(f'{"20 random steps (null)":>23} '
+print(f'{"20 stable steps (null)":>23} '
       + ' '.join(f'{c:>13}' for c in cells))
 ```
 
-<!-- Placeholder (prose): claim 6 as measured (F12, from the committed log): no monitor resolves a lead over the loss at this recipe. End of warmup: the loss moved first (+22) and the largest logit followed (+60); start of the decay: only the largest logit moved (+60), so no lead is resolved; the gradient event (mild): the loss first (+19), the logit at +127; the grad norm never moved. The null row reads the logit's moves: it fires at 11 of 20 random stable-phase steps (median +58; the loss at 3 of 20, median +48; the grad norm at none), so its moves at the events are not specific. Write per event "the loss moved first" or "no lead resolved". -->
+<!-- Placeholder (prose): claim 6 as measured (F12 review, from the committed log): no monitor resolves a lead over the loss at this recipe. Only the start of the decay has a stable reference, and there no series moves within 200 steps (the learning rate falls gradually); the end of warmup and the reference run's gradient event (step 223, mild, inside warmup) are not read, and the section's gradient-event story is the ten-times arm's. The null row checks the detector: each series fires at 1 of 20 stable-phase steps (grad norm +60, largest logit +60, loss +80), about the rate white noise gives, so no series is more specific than another. Never write that the loss "moved first" at warmup's end or at the event, or that a series "never moves". -->
 
 ## Reading Checkpoints and the Ladder
 

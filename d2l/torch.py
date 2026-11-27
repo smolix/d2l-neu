@@ -11824,22 +11824,26 @@ def update_rms_by_phase(log, cfg, stable_from):
         out[f'abs_{phase}'] = out[phase] * run.loc[rows.index, 'lr'].median()
     return pd.DataFrame(out).rename(lambda c: c.removeprefix('rms_'))
 
-def moved(x, at, before=200, window=20, horizon=200, k=3):
-    """Steps after `at` until the rolling median of x over `window` steps
-    leaves k MAD around the line fitted to the `before` steps before `at`;
-    None if it stays inside for `horizon` steps.
+def moved(x, at, before=200, window=20, horizon=200, k=3, grid=10):
+    """Steps after `at` until x moves (None within `horizon`): on blocks of
+    `grid` steps (medians), the mean residual over `window` steps from the
+    line fitted to the `before` steps before `at` leaves k standard errors
+    of that line's prediction (residual scatter plus extrapolation).
 
     Defined in :numref:`sec_lm_reference_model`"""
     x = x.dropna()
-    ref = x[(x.index >= at - before) & (x.index < at)]
-    resid = x - np.polyval(np.polyfit(ref.index, ref.to_numpy(), 1), x.index)
-    center = resid[ref.index].median()
-    mad = (resid[ref.index] - center).abs().median()
-    width = max(1, round(window / np.median(np.diff(x.index))))  # samples
-    after = resid[(resid.index >= at) & (resid.index < at + horizon)]
-    roll = after.rolling(width, min_periods=width).median()
-    out = roll[(roll - center).abs() > k * mad]
-    return int(out.index[0] - at) if len(out) else None
+    b = x.groupby((x.index - at) // grid).median()  # block j: at + grid * j
+    ref, after = b.loc[-(before // grid):-1], b.loc[0:horizon // grid - 1]
+    j, i = ref.index.to_numpy(float), after.index.to_numpy(float)
+    line = np.polyfit(j, ref.to_numpy(), 1)
+    s2 = ((ref - np.polyval(line, j)) ** 2).sum() / (len(j) - 2)
+    w = max(1, window // grid)
+    resid = (after - np.polyval(line, i)).rolling(w).mean()
+    mid = pd.Series(i, after.index).rolling(w).mean() - j.mean()
+    se = np.sqrt(s2 * (1 / w + 1 / len(j)
+                       + mid ** 2 / ((j - j.mean()) ** 2).sum()))
+    out = resid[resid.abs() > k * se]
+    return int(grid * (out.index[0] + 1)) if len(out) else None
 
 LogitStats = collections.namedtuple('LogitStats', ['max_logit', 'entropy'])
 

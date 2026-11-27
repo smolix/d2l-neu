@@ -33,10 +33,13 @@ grid: each variant's arm config (schedule, clip, warmup 305, softcap
 backend, QK-norm; unknown variants refused), the zero-layer model trains,
 `_arm_summary` (first step above 1,000, smallest and peak-phase entropy),
 `first_collapsed_rate`, `departure` and `collapse_crossings` on synthetic
-traces; `update_rms_by_phase` (phase medians; the absolute update = the
-per-lr median x the phase's median lr) and `moved` (no move on a noisy
-line at 20 seeded steps, reproducibly; a shift found within the window,
-also every 10 steps; spikes and moves past the horizon ignored) (a diverged arm's loss crossing is its first non-finite step), the
+traces (a diverged arm's loss crossing is its first non-finite step);
+`update_rms_by_phase` (phase medians; the absolute update = the per-lr
+median x the phase's median lr) and `moved` (white noise fires at the same
+rate, under 12%, dense and every 10 steps; at most 2 of 20 stable steps of
+a noisy convex a + b/sqrt(t) curve, which fires inside its ramp; a shift
+found within the window, also every 10 steps; spikes and moves past the
+horizon ignored), the
 softcap entropy from capped scores with the raw maximum, the seed sets the
 data order, a resumed job reads its finished arms, the merge
 keeps the zero-layer loss, the regeneration stores the recipe (with the
@@ -1025,31 +1028,45 @@ class MeasurementTest(unittest.TestCase):
 
     def test_moved(self):
         rng = np.random.default_rng(0)
-        step = np.arange(1, 3001)
-        noise = 0.05 * rng.standard_normal(3000)
-        trend = pd.Series(4 - 2e-4 * step + noise, index=step)
-        # the null fixture: a falling line plus noise moves nowhere at the
-        # page's 20 seeded steps, and the same seed gives the same steps
-        def draw():
-            return np.random.default_rng(0).integers(500, 2500, size=20)
-        np.testing.assert_array_equal(draw(), draw())
-        null = [d2l.moved(trend, int(t)) for t in draw()]
-        self.assertEqual(null, [d2l.moved(trend, int(t)) for t in draw()])
-        self.assertEqual(sum(m is not None for m in null), 0)
+        step = np.arange(1, 6001)
+        every10 = step % 10 == 0
+        # white noise: the same false-alarm rate dense and every 10 steps
+        # (the grid of 10-step blocks makes it one detector)
+        rate = {}
+        for name, keep in (('dense', step > 0), ('every 10', every10)):
+            fires = 0
+            for _ in range(20):
+                x = pd.Series(rng.standard_normal(6000), index=step)[keep]
+                fires += sum(d2l.moved(x, t) is not None
+                             for t in range(300, 5700, 270))
+            rate[name] = fires / 400
+        self.assertLess(max(rate.values()), 0.12)
+        self.assertLess(abs(rate['dense'] - rate['every 10']), 0.05)
+        # a convex, flattening curve with no change (the loss's shape):
+        # quiet at stable-phase steps, dense or sparse, reproducibly ...
+        curve = pd.Series(2.71 + 28 / np.sqrt(step)
+                          + 0.025 * rng.standard_normal(6000), index=step)
+        null = np.linspace(1200, 4900, 20).round().astype(int)
+        for x in (curve, curve[every10]):
+            lags = [d2l.moved(x, int(t)) for t in null]
+            self.assertEqual(lags, [d2l.moved(x, int(t)) for t in null])
+            self.assertLessEqual(sum(m is not None for m in lags), 2)
+        # ... but a line fitted inside its steep start misfits and fires:
+        # why the page reads no event whose reference lies in warmup
+        self.assertIsNotNone(d2l.moved(curve, 300))
         # a sustained shift 30 steps after the event: found within the
         # rolling window, on dense and on every-10-steps series
-        jump = trend + np.where(step >= 1530, 0.5, 0.0)
-        self.assertTrue(30 <= d2l.moved(jump, 1500) <= 50)
-        sparse = jump[step % 10 == 0]
-        self.assertTrue(30 <= d2l.moved(sparse, 1500) <= 60)
-        self.assertIsNone(d2l.moved(trend, 1500))
+        jump = curve + np.where(step >= 2030, 0.2, 0.0)
+        self.assertTrue(30 <= d2l.moved(jump, 2000) <= 60)
+        self.assertTrue(30 <= d2l.moved(jump[every10], 2000) <= 60)
+        self.assertIsNone(d2l.moved(curve, 2000))
         # a change beyond the horizon is not counted
-        late = trend + np.where(step >= 1800, 0.5, 0.0)
-        self.assertIsNone(d2l.moved(late, 1500, horizon=200))
-        # single spikes: the rolling median ignores them
-        spiky = trend.copy()
-        spiky[[1510, 1600]] = 50.0
-        self.assertIsNone(d2l.moved(spiky, 1500))
+        late = curve + np.where(step >= 2300, 0.2, 0.0)
+        self.assertIsNone(d2l.moved(late, 2000, horizon=200))
+        # single spikes: the block medians ignore them
+        spiky = curve.copy()
+        spiky[[2010, 2100]] = 50.0
+        self.assertIsNone(d2l.moved(spiky, 2000))
 
     def test_collapse_crossings(self):
         rng = np.random.default_rng(0)

@@ -22,7 +22,8 @@ forced-answer readout for exactly those replies, chat markers in the
 completion format, budgets and end tokens; the Transformers weight map
 inverted; the per-model cache of cpt-qwen-evals, refused under another
 setting or batch size); the page's T2 cells on a synthetic result (shapes,
-widths); `rewarm_bump` (from each arm's own step 0, transient or not);
+widths); `rewarm_bump` (from each arm's own step 0, transient or not, a flat
+top no transient);
 `early_gaps` (paired gaps and the seed yardstick over steps 1-40);
 `book_split`
 (deterministic, disjoint, every fifth section held out); `cpt_data('t2')`
@@ -31,7 +32,8 @@ evaluation grid; `_doc_nll` against a direct loss; a toy two-arm run of
 `cpt_arms` end to end (job folders, equal-token and suite files, the
 merge, the stored json-table read back, the step-0 row), a job folder of
 another arm refused, and a resumed arm equal to an uninterrupted one; the
-page's T2 cells on a pending result and the fallback's own label kept; the
+page's T2 cells on a pending result and the fallback's own label kept
+(and its configuration checked when given); the
 SmolLM3 merge (token counts, byte-weighted bits per byte) and
 `stage_deltas` with the page's cell; the regeneration jobs against the
 page's literals; the reasoning-trace corpus of
@@ -421,6 +423,25 @@ class BumpTest(unittest.TestCase):
                 arm=['A', 'C', 'branch'], peak_lr=[1e-4, 1e-5, 6e-4])))))
         self.assertIn('no transient', out.splitlines()[2])
 
+    def test_flat_top(self):
+        """A peak the loss leaves by no more than tol inside the window is
+        no transient (F24 review 1: a flat top, forgetting, not a bump);
+        a fall of more than tol is one, even if the end lies above it."""
+        steps = [0, 3, 6, 9, 12, 45]
+        L = {'flat': [3.0, 3.1, 3.2, 3.24, 3.239, 3.24],
+             'drop': [3.0, 3.1, 3.3, 3.25, 3.28, 3.35]}
+        logs = pd.DataFrame([dict(arm=a, step=t, general_loss=v)
+                             for a, vs in L.items()
+                             for t, v in zip(steps, vs)])
+        runs = d2l.CptRuns(None, logs, None, None, None, None, None, '')
+        b = d2l.rewarm_bump(runs).set_index('arm')
+        self.assertTrue(math.isnan(b.bump['flat']))
+        self.assertEqual(b.step['flat'], 9)
+        self.assertAlmostEqual(b.bump['drop'], 0.3)
+        self.assertAlmostEqual(b.healed['drop'], -0.05)  # ends above
+        self.assertAlmostEqual(d2l.rewarm_bump(runs, tol=1e-4).set_index(
+            'arm').bump['flat'], 0.24)
+
 
 class EarlyGapsTest(unittest.TestCase):
     def test_gaps(self):
@@ -562,6 +583,9 @@ class ScheduleTest(unittest.TestCase):
         self.assertIn(300, s)
         self.assertEqual(s[-1], 305)
         self.assertIn(35, d2l._cpt_eval_steps(183, 't1'))
+        # T1 measures the cold arms' first updates (F24 review 2)
+        self.assertEqual(d2l._cpt_eval_steps(183, 't1')[:4], [1, 2, 3, 5])
+        self.assertEqual(d2l._cpt_eval_steps(1, 't1'), [1])
 
 
 def toy_model(seed=0):
@@ -652,7 +676,8 @@ class ArmsEndToEndTest(Fixtures):
         self.assertEqual(sorted(logs.loc[logs.arm == 'A', 'step']),
                          list(range(0, 17)))
         graded = logs[(logs.arm == 'A') & logs.domain_loss.notna()]
-        self.assertEqual(list(graded.step), [0, 3, 5, 6, 9, 10, 12, 15, 16])
+        self.assertEqual(list(graded.step),
+                         [0, 1, 2, 3, 5, 6, 9, 10, 12, 15, 16])
         # step 0 is the arm's own model before its first update: the base
         start = logs[(logs.arm == 'A') & (logs.step == 0)].iloc[0]
         self.assertAlmostEqual(start.general_loss, logs[
@@ -851,6 +876,20 @@ class PendingPageTest(unittest.TestCase):
             res = d2l._pending_result('cpt-qwen-evals', 'cpt-t1')
         self.assertEqual(res.label, 'T2 run pending; showing the T1 '
                                     'configuration (t1 preset)')
+
+    def test_fallback_config_checked(self):
+        """A fallback given with its configuration must have been run with
+        it (F24 review 4)."""
+        config = dict(arms={'A': dict(peak_lr=3e-4)}, base='r2')
+        t1 = d2l.CptRuns(pd.DataFrame(), pd.DataFrame(), None, None, None,
+                         None, None, 't1 preset')
+        t1.table.attrs['config'] = config
+        with mock.patch.object(d2l, 'load_artifact', lambda name: t1):
+            res = d2l._pending_result('cpt-qwen-evals', ('cpt-t1', config))
+            self.assertIn('T1 configuration', res.label)
+            with self.assertRaisesRegex(ValueError, 'arms.A.peak_lr'):
+                d2l._pending_result('cpt-qwen-evals', ('cpt-t1', dict(
+                    config, arms={'A': dict(peak_lr=1e-4)})))
 
 
 class SmolLM3Test(unittest.TestCase):

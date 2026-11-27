@@ -1081,11 +1081,13 @@ def _arm_slug(arm):
     return {'A′': 'A2', 'A″': 'A3'}.get(arm, arm)
 
 def _cpt_eval_steps(steps, tier, early=30):
-    """Interim evaluation steps: every 3 up to `early`, then every 15 (T2)
-    or 5 (T1), and the last."""
-    every = 15 if tier == 't2' else 5
-    return sorted(set(range(3, min(early, steps) + 1, 3)) | set(range(
-        every, steps + 1, every)) | {steps})
+    """Interim evaluation steps: every 3 up to `early` (T1 also steps 1
+    and 2, where the cold arms' first updates act), then every 15 (T2) or
+    5 (T1), and the last."""
+    every, first = (15, set()) if tier == 't2' else (5, {1, 2})
+    return sorted({s for s in first if s <= steps} | set(range(
+        3, min(early, steps) + 1, 3)) | set(range(
+            every, steps + 1, every)) | {steps})
 
 def _cpt_configs(arms, base, tokens, seq_len, batch_tokens, warmup,
                  final_frac):
@@ -1319,8 +1321,7 @@ def _cpt_mix(shards, cfg):
     """The arm's MixStream: reasoning-trace and replay windows in the
     shares (1 - r, r), the data seed for streams and mixture (the book is
     never trained). An arm sees each window at most once: a stream that
-    the arm's cfg['steps'] would wrap is refused (the T1 traces hold 16
-    windows more than arm A's 183 steps take)."""
+    the arm's cfg['steps'] would wrap is refused."""
     T, B, seed, r = (cfg['seq_len'], cfg['global_batch'], cfg['data_seed'],
                      cfg['replay'])
     keys = ('traces', 'replay')
@@ -1459,6 +1460,14 @@ def _cpt_merge(parts, cfgs):
                    pd.DataFrame(equal, columns=C['equal']),
                    items[C['items']], gsm, label)
 
+def _cpt_config(arms, base, tokens, seq_len, batch_tokens, warmup=10,
+                final_frac=0.1):
+    """The configuration stored with a cpt_arms result (data included)."""
+    tier = 't2' if base.startswith('Qwen/') else 't1'
+    return dict(arms=arms, base=base, tokens=tokens, seq_len=seq_len,
+                batch_tokens=batch_tokens, warmup=warmup,
+                final_frac=final_frac, data=_cpt_data_id(tier))
+
 def cpt_arms(arms, base, tokens, seq_len, batch_tokens, warmup=10,
              final_frac=0.1):
     """Continue base on reasoning traces with a replay share of
@@ -1474,11 +1483,9 @@ def cpt_arms(arms, base, tokens, seq_len, batch_tokens, warmup=10,
     or 'r2' (T1: the regeneration cpt-t1). Otherwise the committed result,
     whose stored configuration, data included, must match; while the Qwen
     arms are pending, the T1 arms under a printed label."""
-    tier = 't2' if base.startswith('Qwen/') else 't1'
-    data = _cpt_data_id(tier)
-    config = dict(arms=arms, base=base, tokens=tokens, seq_len=seq_len,
-                  batch_tokens=batch_tokens, warmup=warmup,
-                  final_frac=final_frac, data=data)
+    config = _cpt_config(arms, base, tokens, seq_len, batch_tokens,
+                         warmup, final_frac)
+    data = config['data']
     cfgs = _cpt_configs(arms, base, tokens, seq_len, batch_tokens, warmup,
                         final_frac)
     if not base.startswith('Qwen/'):
@@ -1495,7 +1502,7 @@ def cpt_arms(arms, base, tokens, seq_len, batch_tokens, warmup=10,
         res = d2l._pretrain_merged(
             'cpt-qwen-evals', parts, lambda r: _cpt_merge(
                 {names[k]: v for k, v in r.items()}, cfgs), config,
-            fallback='cpt-t1')
+            fallback=('cpt-t1', _cpt_config(**_cpt_t1_call())))
     return d2l._show_label(d2l._as_tuple(CptRuns, res, _CPT_COLUMNS))
 
 def cpt_probe(micro_batches=(1, 2), steps=15, warmup=3):

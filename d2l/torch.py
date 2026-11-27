@@ -12255,12 +12255,14 @@ def forgetting_gain(base, docs, n_boot=2000, seed=0):
     fg.attrs['draws'] = draws
     return fg
 
-def rewarm_bump(runs, within=40):
+def rewarm_bump(runs, within=40, tol=0.01):
     """Per arm: the bump, the largest rise of the general loss over the
     arm's own loss at step 0 in the first `within` steps (nats per token);
     the step of that peak; and how much of it the end has healed (peak
-    minus final loss). A peak on the window's last evaluation is no
-    transient (the loss is still rising: forgetting) and has NaN bump.
+    minus final loss; negative if the loss ends above the peak). The peak
+    is a transient only if the loss falls more than `tol` below it inside
+    the window; otherwise (still rising, or a flat top: forgetting) the
+    bump is NaN.
 
     Defined in :numref:`sec_lm_continued_pretraining`"""
     rows = []
@@ -12271,7 +12273,7 @@ def rewarm_bump(runs, within=40):
         if 0 not in loss.index or len(early) < 2:
             continue
         peak = early.iloc[1:].idxmax()
-        rise = early.index[-1] > peak  # falls again inside the window
+        rise = loss[peak] - early.loc[peak:].min() > tol  # falls again
         rows.append(dict(arm=arm, step=peak,
                          bump=loss[peak] - loss[0] if rise else math.nan,
                          healed=loss[peak] - loss.iloc[-1] if rise
@@ -21700,15 +21702,21 @@ def load_artifact(name):
 def _pending_result(name, fallback=None):
     """What a pending result shows: the fallback result labelled as such
     (keeping its own label, such as 't1 preset'), or an empty table
-    labelled '<name> pending'.
+    labelled '<name> pending'. fallback is a result name or (name, config);
+    with a config, the fallback's stored configuration must equal it.
 
     Defined in :numref:`sec_lm_data_path`"""
     if fallback is not None:
+        fallback, config = (fallback if isinstance(fallback, tuple)
+                            else (fallback, None))
         try:
             result = load_artifact(fallback)
         except KeyError:
             result = None
         if result is not None:
+            if config is not None:
+                _check_config(result, config,
+                              d2l.PRETRAIN_ARTIFACTS[fallback][0])
             own = _label_of(result)
             label = 'T2 run pending; showing the T1 configuration'
             return _with_label(result, f'{label} ({own})' if own else label)
@@ -26839,13 +26847,15 @@ def _arm_slug(arm):
     return {'A′': 'A2', 'A″': 'A3'}.get(arm, arm)
 
 def _cpt_eval_steps(steps, tier, early=30):
-    """Interim evaluation steps: every 3 up to `early`, then every 15 (T2)
-    or 5 (T1), and the last.
+    """Interim evaluation steps: every 3 up to `early` (T1 also steps 1
+    and 2, where the cold arms' first updates act), then every 15 (T2) or
+    5 (T1), and the last.
 
     Defined in :numref:`sec_lm_continued_pretraining`"""
-    every = 15 if tier == 't2' else 5
-    return sorted(set(range(3, min(early, steps) + 1, 3)) | set(range(
-        every, steps + 1, every)) | {steps})
+    every, first = (15, set()) if tier == 't2' else (5, {1, 2})
+    return sorted({s for s in first if s <= steps} | set(range(
+        3, min(early, steps) + 1, 3)) | set(range(
+            every, steps + 1, every)) | {steps})
 
 def _cpt_configs(arms, base, tokens, seq_len, batch_tokens, warmup,
                  final_frac):
@@ -27079,8 +27089,7 @@ def _cpt_mix(shards, cfg):
     """The arm's MixStream: reasoning-trace and replay windows in the
     shares (1 - r, r), the data seed for streams and mixture (the book is
     never trained). An arm sees each window at most once: a stream that
-    the arm's cfg['steps'] would wrap is refused (the T1 traces hold 16
-    windows more than arm A's 183 steps take)."""
+    the arm's cfg['steps'] would wrap is refused."""
     T, B, seed, r = (cfg['seq_len'], cfg['global_batch'], cfg['data_seed'],
                      cfg['replay'])
     keys = ('traces', 'replay')
@@ -27219,6 +27228,14 @@ def _cpt_merge(parts, cfgs):
                    pd.DataFrame(equal, columns=C['equal']),
                    items[C['items']], gsm, label)
 
+def _cpt_config(arms, base, tokens, seq_len, batch_tokens, warmup=10,
+                final_frac=0.1):
+    """The configuration stored with a cpt_arms result (data included)."""
+    tier = 't2' if base.startswith('Qwen/') else 't1'
+    return dict(arms=arms, base=base, tokens=tokens, seq_len=seq_len,
+                batch_tokens=batch_tokens, warmup=warmup,
+                final_frac=final_frac, data=_cpt_data_id(tier))
+
 def cpt_arms(arms, base, tokens, seq_len, batch_tokens, warmup=10,
              final_frac=0.1):
     """Continue base on reasoning traces with a replay share of
@@ -27234,11 +27251,9 @@ def cpt_arms(arms, base, tokens, seq_len, batch_tokens, warmup=10,
     or 'r2' (T1: the regeneration cpt-t1). Otherwise the committed result,
     whose stored configuration, data included, must match; while the Qwen
     arms are pending, the T1 arms under a printed label."""
-    tier = 't2' if base.startswith('Qwen/') else 't1'
-    data = _cpt_data_id(tier)
-    config = dict(arms=arms, base=base, tokens=tokens, seq_len=seq_len,
-                  batch_tokens=batch_tokens, warmup=warmup,
-                  final_frac=final_frac, data=data)
+    config = _cpt_config(arms, base, tokens, seq_len, batch_tokens,
+                         warmup, final_frac)
+    data = config['data']
     cfgs = _cpt_configs(arms, base, tokens, seq_len, batch_tokens, warmup,
                         final_frac)
     if not base.startswith('Qwen/'):
@@ -27255,7 +27270,7 @@ def cpt_arms(arms, base, tokens, seq_len, batch_tokens, warmup=10,
         res = d2l._pretrain_merged(
             'cpt-qwen-evals', parts, lambda r: _cpt_merge(
                 {names[k]: v for k, v in r.items()}, cfgs), config,
-            fallback='cpt-t1')
+            fallback=('cpt-t1', _cpt_config(**_cpt_t1_call())))
     return d2l._show_label(d2l._as_tuple(CptRuns, res, _CPT_COLUMNS))
 
 def cpt_probe(micro_batches=(1, 2), steps=15, warmup=3):

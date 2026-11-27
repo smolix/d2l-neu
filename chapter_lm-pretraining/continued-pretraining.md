@@ -311,12 +311,14 @@ else:
 
 ```{.python .input #continued-pretraining-rewarm-bump}
 %%tab pytorch
-def rewarm_bump(runs, within=40):  #@save
+def rewarm_bump(runs, within=40, tol=0.01):  #@save
     """Per arm: the bump, the largest rise of the general loss over the
     arm's own loss at step 0 in the first `within` steps (nats per token);
     the step of that peak; and how much of it the end has healed (peak
-    minus final loss). A peak on the window's last evaluation is no
-    transient (the loss is still rising: forgetting) and has NaN bump."""
+    minus final loss; negative if the loss ends above the peak). The peak
+    is a transient only if the loss falls more than `tol` below it inside
+    the window; otherwise (still rising, or a flat top: forgetting) the
+    bump is NaN."""
     rows = []
     logs = runs.logs.dropna(subset=['general_loss'])
     for arm, g in logs[logs['arm'] != 'base'].groupby('arm', sort=False):
@@ -325,7 +327,7 @@ def rewarm_bump(runs, within=40):  #@save
         if 0 not in loss.index or len(early) < 2:
             continue
         peak = early.iloc[1:].idxmax()
-        rise = early.index[-1] > peak  # falls again inside the window
+        rise = loss[peak] - early.loc[peak:].min() > tol  # falls again
         rows.append(dict(arm=arm, step=peak,
                          bump=loss[peak] - loss[0] if rise else math.nan,
                          healed=loss[peak] - loss.iloc[-1] if rise
@@ -345,7 +347,7 @@ print(bump[list(cols)].rename(columns=cols).to_string(
     index=False, formatters={'peak lr': '{:.0e}'.format}))
 ```
 
-<!-- Placeholder (prose): claim 8, T2 half: each bump is measured from the arm's own loss at step 0 (the training model before its first update), so a start that differs from the base costs nothing here. The bump scales with the peak rate (A against C) and heals during the decay ("healed by the end" is the peak minus the final general loss); "no transient" marks an arm whose general loss is still rising at the window's end (forgetting, not a bump). Compare against the A/A′ spread; "no bump resolved" for arms inside it. -->
+<!-- Placeholder (prose): claim 8, T2 half: each bump is measured from the arm's own loss at step 0 (the training model before its first update), so a start that differs from the base costs nothing here. The bump scales with the peak rate (A against C) and heals during the decay ("healed by the end" is the peak minus the final general loss); "no transient" marks an arm whose general loss does not fall more than 0.01 nats below its peak inside the first 40 steps (still rising or flat: forgetting, not a bump); a negative "healed" means the loss ends above the peak. Compare against the A/A′ spread; "no bump resolved" for arms inside it. -->
 
 ### Replay on the Frontier
 
@@ -353,9 +355,10 @@ print(bump[list(cols)].rename(columns=cols).to_string(
 %%tab pytorch
 fg = d2l.forgetting_gain(runs.base_docs, runs.docs)
 ci = lambda r, k: f'{r[k]:.3f} [{r[k + "_lo"]:.3f}, {r[k + "_hi"]:.3f}]'
-print(f'{"arm":<4} {"gain [95% CI]":<23} forgetting [95% CI]')
+w = max([3, *map(len, fg['arm'])])  # the T1 stand-in has longer names
+print(f'{"arm":<{w}} {"gain [95% CI]":<23} forgetting [95% CI]')
 for r in fg.to_dict('records'):
-    print(f'{r["arm"]:<4} {ci(r, "gain"):<23} {ci(r, "forget")}')
+    print(f'{r["arm"]:<{w}} {ci(r, "gain"):<23} {ci(r, "forget")}')
 seed = fg.set_index('arm').reindex(['A', 'A′'])
 print(f'seed spread (A vs A′): gain {abs(seed.gain.diff().iloc[-1]):.3f}, '
       f'forgetting {abs(seed.forget.diff().iloc[-1]):.3f}')

@@ -383,13 +383,19 @@ def load_artifact(name):
 def _pending_result(name, fallback=None):
     """What a pending result shows: the fallback result labelled as such
     (keeping its own label, such as 't1 preset'), or an empty table
-    labelled '<name> pending'."""
+    labelled '<name> pending'. fallback is a result name or (name, config);
+    with a config, the fallback's stored configuration must equal it."""
     if fallback is not None:
+        fallback, config = (fallback if isinstance(fallback, tuple)
+                            else (fallback, None))
         try:
             result = load_artifact(fallback)
         except KeyError:
             result = None
         if result is not None:
+            if config is not None:
+                _check_config(result, config,
+                              d2l.PRETRAIN_ARTIFACTS[fallback][0])
             own = _label_of(result)
             label = 'T2 run pending; showing the T1 configuration'
             return _with_label(result, f'{label} ({own})' if own else label)

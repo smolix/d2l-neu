@@ -2495,8 +2495,9 @@ class TestCommittedClaims(unittest.TestCase):
         to 64 KiB (the sizes alpha is fitted from) within 25% of their
         median. box-net v2 ran before _TORCH_SWEEP settled the group (a gloo
         group's first barrier slows the next 50-100 small all-reduces about
-        twofold on four ranks), and the check finds exactly that: the first
-        sizes on 4 ranks, never on 2. Any later version must pass."""
+        twofold on four ranks; the check found exactly (4, 64 B), (4, 128 B)
+        and (4, 256 B) there). v3, the registered version, ran with the
+        settle and must show no outlier."""
         if not d2l.hw_registered('box-net'):
             self.skipTest('box-net is not registered yet')
         r, _ = d2l._hw_load('box-net', 'gloo')
@@ -2510,10 +2511,9 @@ class TestCommittedClaims(unittest.TestCase):
                 med = np.median(t[sel])
                 out |= {(int(g), int(s)) for s, ti in
                         zip(r['size'][sel], t[sel]) if abs(ti / med - 1) > 0.25}
-        if d2l.HW_ARTIFACTS['box-net'][0] == 'lm-hw-buildbox-net-v2':
-            self.assertEqual(out, {(4, 64), (4, 128), (4, 256)})
-        else:
-            self.assertEqual(out, set())
+        self.assertNotEqual(d2l.HW_ARTIFACTS['box-net'][0],
+                            'lm-hw-buildbox-net-v2')
+        self.assertEqual(out, set())
 
     def test_w1_w4(self):
         """W1: for Qwen3-8B (the plan's question) M3 within 15% on every

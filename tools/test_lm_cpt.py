@@ -26,9 +26,13 @@ tools/build_pretraining_data.py on a 30-document fixture (ids from the
 ChatML text, stable under the order of the files; decontamination and
 special strings; training selection in id order; held-out questions
 disjoint, one per question; the overlap rule; the check's invariants
-failing on a changed byte, file list or target), `chatml`, and
-`trace_windows` (one window per conversation; on the 500 built held-out
-conversations when they are on disk).
+failing on a changed byte, file list or target; the T1 epoch line), the
+endings (open, capped, complete; counted per split; a selection keeping
+complete traces only), the licence re-read on both build paths (a changed
+licence stops the build), `chatml`, `trace_conversations` (refuses
+conversations the committed manifest does not list) and `trace_windows`
+(one window per conversation, shorter ones whole; on the 500 built
+held-out conversations when they are on disk).
 """
 import contextlib
 import io
@@ -684,9 +688,17 @@ class JobsTest(unittest.TestCase):
                              'smollm3_trajectory')
 
 
-def conversation(question, answer):
+def conversation(question, answer, closed=True):
+    reply = f'<think> {answer} </think> done' if closed else \
+        f'<think> {answer}'
     return [dict(role='user', content=question),
-            dict(role='assistant', content=f'<think> {answer} </think> done')]
+            dict(role='assistant', content=reply)]
+
+
+def words_ending(near_cap):
+    """The fixture's ending(record, ids): the assistant turn's words."""
+    return lambda rec, ids: builder.trace_ending(
+        rec, len(rec['messages'][1]['content'].split()), near_cap)
 
 
 def words(rng, n):
@@ -717,13 +729,16 @@ class TracesCorpusTest(unittest.TestCase):
             question = words(rng, 30)
             if q == 2:
                 question += ' ' + self.GSM
-            for _ in range(1 + q % 3):
+            for a in range(1 + q % 3):
                 text = question + (' <|im_end|>' if q == 5 else '')
-                convs.append((q, conversation(text, words(rng, 60))))
+                convs.append((q, conversation(
+                    text, words(rng, 60 + 20 * (q % 4 == 3)),
+                    closed=(q + a) % 3 != 1)))
         while len(convs) < 29:
             k += 1
             convs.append((100 + k, conversation(words(rng, 30),
-                                                words(rng, 60))))
+                                                words(rng, 60),
+                                                closed=k % 2 == 0)))
         convs.append(convs[0])  # an exact duplicate
         grams = {'gsm8k': builder.word_ngrams(self.GSM, 13),
                  'math500': set()}
@@ -805,8 +820,15 @@ class TracesCorpusTest(unittest.TestCase):
         targets = dict(builder.TRACES, train=600, heldout=4, val=150,
                        seq_len=4, batch=2, steps=1, gram=8,
                        overlap_target=0.5)
-        split = builder.split_record(d2l, docs, sel, dups, targets)
+        split = builder.split_record(d2l, docs, sel, dups, targets,
+                                     words_ending(70))
         self.assertEqual(split['counts']['documents'], 29)
+        for part in ('train', 'heldout'):
+            e = split['counts'][part]['endings']
+            self.assertEqual(sum(v['documents'] for v in e.values()),
+                             split['counts'][part]['documents'])
+            self.assertEqual(sum(v['tokens'] for v in e.values()),
+                             split['counts'][part]['tokens'])
         self.assertEqual(split['counts']['contaminated'],
                          {'gsm8k': 3, 'math500': 0})
         with tempfile.TemporaryDirectory() as root:
@@ -829,6 +851,16 @@ class TracesCorpusTest(unittest.TestCase):
                              1)
             self.assertEqual(len(check(t=dict(targets, heldout=5))), 1)
             self.assertEqual(len(check(t=dict(targets, train=10 ** 6))), 1)
+            self.assertEqual(len(check(t=dict(targets,
+                                              endings=('complete',)))), 1)
+            t1 = dict(targets, t1_train=600, t1_val=150, t1_seq_len=4,
+                      t1_batch=2, t1_steps=1)
+            t1_check = lambda t: [text for good, text in
+                                  builder.check_trace_shards(
+                                      d2l, split, shards, t, 't1')
+                                  if not good]
+            self.assertEqual(t1_check(t1), [])
+            self.assertEqual(len(t1_check(dict(t1, t1_steps=10 ** 6))), 1)
             path = os.path.join(root, 'traces',
                                 s.shards[0]['file'] + '.bin')
             with open(path, 'r+b') as f:
@@ -837,6 +869,58 @@ class TracesCorpusTest(unittest.TestCase):
                 f.seek(8)
                 f.write(bytes([b[0] ^ 1]))
             self.assertTrue(any('SHA-256' in t for t in check()))
+
+
+    def test_endings(self):
+        docs, _ = builder.dedupe_sort(self.fixture())
+        ending = words_ending(70)
+        kinds = {ending(d, None) for d in docs}
+        self.assertEqual(kinds, set(builder.ENDINGS))
+        sel = self.select(docs, train_tokens=300, n_heldout=2,
+                          keep=lambda r, i: ending(r, i) == 'complete')
+        kept = [r for r, _ in sel['train'] + sel['heldout']]
+        self.assertTrue(kept and all(ending(r, None) == 'complete'
+                                     for r in kept))
+        usable = [d for d in docs if not d['contam'] and not d['special']
+                  and ending(d, None) == 'complete']
+        self.assertEqual([r['doc_id'] for r, _ in sel['train']],
+                         [d['doc_id'] for d in usable[:len(sel['train'])]])
+        count = builder.assistant_tokens(7)
+        self.assertEqual(count(np.array([7, 1, 1, 7, 1, 1, 1])), 3)
+        self.assertEqual(count(np.array([1, 1])), 2)
+        rec = dict(messages=conversation('q', 'a'))
+        self.assertEqual(builder.trace_ending(rec, 10, 11), 'complete')
+        self.assertEqual(builder.trace_ending(rec, 11, 11), 'capped')
+        self.assertEqual(builder.trace_ending(
+            dict(messages=conversation('q', 'a', closed=False)), 1, 11),
+            'open')
+
+    def test_licence_reread(self):
+        _, repo, rev, licence = d2l.PRETRAIN_SOURCES['openthoughts3']
+        card = lambda lic, sha=rev: mock.patch(
+            'huggingface_hub.HfApi', lambda: mock.Mock(dataset_info=lambda
+                *a, **k: mock.Mock(sha=sha, card_data={'license': lic})))
+        with card(licence):
+            self.assertEqual(builder.trace_licence(d2l), licence)
+        for bad in (card('cc-by-nc-4.0'), card(licence, sha='0' * 40)):
+            with bad, self.assertRaises(SystemExit):
+                builder.trace_licence(d2l)
+        targets = dict(near_cap=builder.TRACES['near_cap'],
+                       endings=list(builder.TRACES['endings']))
+        with tempfile.TemporaryDirectory() as root:
+            def write(**kw):
+                with open(os.path.join(root, 'split.json'), 'w') as f:
+                    json.dump(dict(dict(licence=licence, targets=targets),
+                                   **kw), f)
+            write()
+            with card(licence):  # the re-read path also reads the card
+                split, sel = builder.traces_split(d2l, None, root)
+            self.assertIsNone(sel)
+            with card('cc-by-nc-4.0'), self.assertRaises(SystemExit):
+                builder.traces_split(d2l, None, root)
+            write(targets=dict(targets, endings=['complete']))
+            with card(licence), self.assertRaises(SystemExit):
+                builder.traces_split(d2l, None, root)
 
 
 class FakeTokenizer:
@@ -872,6 +956,10 @@ class TraceWindowsTest(unittest.TestCase):
             conversation('r' * 10, 's' * 100)]))
         with mock.patch.object(d2l, 'trace_conversations', lambda: conv):
             w = d2l.trace_windows(FakeTokenizer(), T=64)
+            short = len(FakeTokenizer()([d2l.chatml(conv['messages'][1])])[
+                'input_ids'][0])
+            self.assertEqual(len(d2l.trace_windows(FakeTokenizer())[1]),
+                             short)
             self.assertEqual([len(x) for x in w], [64, 45, 64])
             self.assertEqual(int(w[0][0]), 1)
             self.assertEqual(len(d2l.trace_windows(FakeTokenizer(), n=2)), 2)
@@ -881,6 +969,26 @@ class TraceWindowsTest(unittest.TestCase):
         import inspect
         self.assertEqual(inspect.signature(d2l.trace_windows).parameters[
             'T'].default, 2048)
+
+    def test_conversations_identity(self):
+        rows = [dict(doc_id=i, question_id=i, domain='math', source='s',
+                     messages=conversation('q', 'a')) for i in ('a', 'b')]
+        with tempfile.TemporaryDirectory() as root:
+            import gzip
+            with gzip.open(os.path.join(root, 'heldout.jsonl.gz'),
+                           'wt') as f:
+                f.writelines(json.dumps(r) + '\n' for r in rows)
+            ok = __import__('hashlib').sha1(b'a b').hexdigest()
+            man = lambda h: mock.patch.object(
+                d2l, 'load_artifact', lambda name: mock.Mock(
+                    ids_sha1=dict(heldout=h)))
+            with mock.patch.dict(d2l._CPT_DIRS, t2=root), mock.patch.object(
+                    d2l, '_cpt_manifest_committed', lambda: True):
+                with man(ok):
+                    self.assertEqual(list(d2l.trace_conversations()[
+                        'doc_id']), ['a', 'b'])
+                with man('0' * 40), self.assertRaises(ValueError):
+                    d2l.trace_conversations()
 
     @unittest.skipUnless(os.path.exists(os.path.join(
         ROOT, 'data', 'lm', 'cpt-qwen-traces-v1', 'heldout.jsonl.gz')),

@@ -9,8 +9,16 @@ sec_lm_long_context (21.5).
     pinned subset is every 10th of its 120 parquet files
     (d2l.PRETRAIN_SOURCE_FILES['openthoughts3']: 12 files, 2.85 GB, 120,000
     conversations, the dataset's domain order spanned). One document = one
-    conversation (one user turn, one assistant turn with its <think>
-    block). Its id is the sha1 of its ChatML text (d2l.chatml); its
+    conversation (one user turn, one assistant turn that opens a <think>
+    block). Most assistant turns stop at the annotator's generation cap
+    (about 16K tokens): about two thirds of the selected documents never
+    close the <think> block, and some that close it are cut in the answer.
+    Every document gets an ending, recorded per split: 'open' (no
+    </think>), 'capped' (closed, but the assistant turn holds at least
+    TRACES['near_cap'] tokens, where answers start being cut) or
+    'complete'; TRACES['endings'] names the endings the training and
+    held-out selections keep (all three: the dataset as published). Its id is the sha1 of its
+    ChatML text (d2l.chatml); its
     question id the sha1 of the user turn after NFKC, lower case and one
     space per whitespace run. Exact duplicates keep one copy.
     Decontamination first: a document whose user turn shares a word
@@ -34,17 +42,20 @@ sec_lm_long_context (21.5).
 
 Stages:
   --stage cpt-qwen-traces  the Qwen3-tokenized (uint32) T2 shards, local only
-                   (about 0.4 GB): data/lm/cpt-qwen-traces-v1/{traces,
+                   (about 0.5 GB): data/lm/cpt-qwen-traces-v1/{traces,
                    val_domain,replay,val_general}/ (traces in ChatML, EOS
                    151,643 after each document), heldout.jsonl.gz (the 500
                    held-out conversations, the SmolLM3 cell's "traces
                    (seen)" windows), split.json (the selection: ids, file
                    and row of every training and held-out document, the
                    counts) and the committed summary
-                   data/lm/rerun/lm-cpt-qwen-manifest-v2.json.gz (json-table:
-                   the stream table, each stream's layout hash, sources and
-                   file list, licence, attribution, decontamination, overlap
-                   and per-domain counts). Replay and general validation
+                   data/lm/rerun/<PRETRAIN_ARTIFACTS['cpt-qwen-manifest']>
+                   .json.gz (json-table: the stream table, each stream's
+                   layout hash, sources and file list, licence, attribution,
+                   decontamination, overlap, per-domain and per-ending
+                   counts, the sha1 of the training and held-out id lists).
+                   The licence is re-read from the card on every build,
+                   also when split.json is reused. Replay and general validation
                    are rebuilt byte-equal to cpt-qwen-v1's (layout hashes
                    checked against lm-cpt-qwen-manifest-v1).
   --stage cpt-t1-traces  the R2-tokenized (uint16) T1 slices, hosted: the
@@ -58,8 +69,9 @@ Stages:
                    lm-fwedu-replay-12m-v1. Reads split.json (computes it
                    when missing).
   --check          verify every shard set of the stage (SHA-256 and EOS
-                   invariants), the token targets (T2: the arms' 305 x 128
-                   windows within one epoch), the file list against the pin,
+                   invariants), the token targets (the arms' windows within
+                   one epoch: T2 305 x 128 x 2,048, T1 183 x 64 x 1,024),
+                   the file list against the pin, the endings recounted,
                    ids and question ids recomputed from the parquet, the
                    tokens re-encoded, training and held-out questions and
                    texts disjoint, decontamination, the held-out overlap
@@ -93,15 +105,17 @@ Stages:
                    general validation texts, every host in its domain.
 
 Deterministic: the same inputs give the same bytes (no timestamps, files read
-in order, one shard per stream). Run from the repository root:
+in order, one shard per stream), except the gzip header of the json-table
+manifest, which d2l._write_result writes with the file's time and temporary
+name (its content is the same). Run from the repository root:
 
     HF_HOME=/home/smola/.cache/hf-lm .venv-lm/bin/python \\
-        tools/build_pretraining_data.py --stage cpt-t1 [--check]
+        tools/build_pretraining_data.py --stage cpt-qwen-traces [--check]
 
-Expected time: cpt-qwen-traces about 10 minutes on 6 cores after the 2.8 GB
-download (the scan of 120,000 conversations, tokenization of about 120M
-tokens), its --check about 5 minutes; cpt-t1-traces about 3 minutes;
-lc-long about 5 minutes, pg19-test under a minute; up to 16 GB of RAM.
+Expected time (measured 2026-11-27 on 6 workers): cpt-qwen-traces about
+4 minutes including its --check, after the 2.8 GB download;
+cpt-t1-traces under a minute; lc-long about 5 minutes, pg19-test under a
+minute; up to 10 GB of RAM.
 """
 import argparse
 import gzip
@@ -123,10 +137,14 @@ TRACES = dict(  # 21.4's reasoning-trace corpus (tokens include each EOS)
     train=84_000_000,  # Qwen tokens of the training selection
     seq_len=2048, steps=305, batch=128,  # the arms: 305 x 128 windows
     heldout=500,  # held-out conversations, one per question
+    near_cap=15_500,  # assistant tokens from which closed answers get cut
+    endings=('complete', 'capped', 'open'),  # the endings selected (a
+    # complete-only selection reads ids up to 3d0c...: prefetch '5')
     val=2_200_000,  # val_domain: whole held-out conversations, id order
     gram=50, max_overlap=0.20, overlap_target=0.02,  # held-out vs train
     contam=13,  # word n-grams shared with GSM8K test or MATH-500
     t1_train=12_000_000, t1_val=2_200_000,  # R2 tokens (T1)
+    t1_seq_len=1024, t1_steps=183, t1_batch=64,  # the T1 arms' windows
     replay_t1=12_000_000, replay_t2=24_000_000,
     prefetch='2',  # texts kept by the scan for ids below this (1/8)
     workers=6)
@@ -539,6 +557,41 @@ def trace_record(d2l, messages, grams, n, specials):
         messages=messages)
 
 
+ENDINGS = ('complete', 'capped', 'open')
+
+
+def trace_ending(record, n_assistant, near_cap):
+    """'open' when the assistant turn never closes its <think> block (the
+    generation stopped inside it), 'capped' when it closes it but holds at
+    least near_cap tokens (n_assistant; the answer may be cut at the same
+    cap), else 'complete'."""
+    reply = ''.join(m['content'] for m in record['messages']
+                    if m['role'] == 'assistant')
+    if '</think>' not in reply:
+        return 'open'
+    return 'capped' if n_assistant >= near_cap else 'complete'
+
+
+def assistant_tokens(im_start):
+    """ids -> the number of tokens after the last <|im_start|> (id
+    im_start): the assistant turn with its role line and end marker."""
+    def count(ids):
+        at = np.flatnonzero(np.asarray(ids) == im_start)
+        return len(ids) - int(at[-1]) - 1 if len(at) else len(ids)
+    return count
+
+
+def endings_count(pairs, ending):
+    """{ending: dict(documents, tokens)} of (record, ids) pairs (one EOS per
+    document counted); ending(record, ids) -> one of ENDINGS."""
+    out = {e: dict(documents=0, tokens=0) for e in ENDINGS}
+    for rec, ids in pairs:
+        c = out[ending(rec, ids)]
+        c['documents'] += 1
+        c['tokens'] += len(ids) + 1
+    return out
+
+
 def scan_traces_file(job):
     """The records of one parquet file in row order, with file (its index
     in the pin), row, domain, source and difficulty; messages are kept only
@@ -579,11 +632,12 @@ def ngram_hashes(d2l, ids, n):
 
 
 def select_traces(d2l, docs, token_ids, train_tokens, n_heldout, gram,
-                  max_overlap, batch=256):
+                  max_overlap, batch=256, keep=None):
     """The training selection and the held-out set from records sorted by
     doc_id. Usable records (no benchmark n-gram, no special-token string)
     are tokenized in id order, in batches, by token_ids(records) -> id
-    arrays. Training takes them until it holds train_tokens tokens (one EOS
+    arrays; with keep(record, ids) given, only those it accepts are used
+    (both selections). Training takes them until it holds train_tokens tokens (one EOS
     per document counted). Held-out takes the following ones whose question
     training does not ask, one try per question, and drops (records) a
     document more than max_overlap of whose gram-token windows occur in
@@ -597,7 +651,9 @@ def select_traces(d2l, docs, token_ids, train_tokens, n_heldout, gram,
             if any(r['messages'] is None for r in part):
                 raise RuntimeError('the scan kept too few texts; raise '
                                    "TRACES['prefetch']")
-            yield from zip(part, token_ids(part))
+            for rec, ids in zip(part, token_ids(part)):
+                if keep is None or keep(rec, ids):
+                    yield rec, ids
 
     it, train, n = stream(), [], 0
     for rec, ids in it:
@@ -649,11 +705,12 @@ def count_by(records, field='domain'):
     return dict(sorted(out.items()))
 
 
-def split_record(d2l, records, sel, duplicates, targets):
+def split_record(d2l, records, sel, duplicates, targets, ending):
     """The selection as stored in split.json: the pin, the targets, the
     entries [doc_id, question_id, domain, source, file, row] of training
     and held-out documents (held-out ones with their overlap hits and
-    windows), the dropped ids and the counts."""
+    windows), the dropped ids and the counts (with each split's endings:
+    ending(record, ids) -> 'complete', 'capped' or 'open')."""
     entry = lambda r: [r['doc_id'], r['question_id'], r['domain'],
                        r['source'], r['file'], r['row']]
     rtrain = [r for r, _ in sel['train']]
@@ -672,14 +729,18 @@ def split_record(d2l, records, sel, duplicates, targets):
         special=sum(r['special'] for r in records),
         train=dict(documents=len(rtrain), tokens=tokens(sel['train']),
                    questions=len({r['question_id'] for r in rtrain}),
-                   by_domain=count_by(rtrain)),
+                   by_domain=count_by(rtrain),
+                   endings=endings_count(sel['train'], ending)),
         heldout=dict(documents=len(rheld), tokens=tokens(sel['heldout']),
                      by_domain=count_by(rheld),
+                     endings=endings_count(sel['heldout'], ending),
                      overlap=hits / max(windows, 1),
                      max_overlap=max(h / max(w, 1)
                                      for h, w in sel['overlap']),
                      dropped=len(sel['dropped'])),
-        val_domain=dict(documents=len(val), tokens=tokens(val)))
+        val_domain=dict(documents=len(val), tokens=tokens(val),
+                        by_domain=count_by([r for r, _ in val]),
+                        endings=endings_count(val, ending)))
     return dict(files=list(d2l.PRETRAIN_SOURCE_FILES['openthoughts3']),
                 pin=list(d2l.PRETRAIN_SOURCES['openthoughts3'][1:3]),
                 targets=dict(targets),
@@ -689,17 +750,25 @@ def split_record(d2l, records, sel, duplicates, targets):
                 dropped=sel['dropped'], counts=counts)
 
 
-def trace_paths(d2l):
-    """The pinned subset's local parquet paths (downloaded once) and the
-    licence read from the dataset card at the pin; exits if the licence is
-    not the recorded one."""
-    from huggingface_hub import HfApi, hf_hub_download
+def trace_licence(d2l):
+    """The licence read from the dataset card at the pin; exits if it is
+    not the pinned one (or the pin does not resolve to itself)."""
+    from huggingface_hub import HfApi
     _, repo, rev, licence = d2l.PRETRAIN_SOURCES['openthoughts3']
     info = HfApi().dataset_info(repo, revision=rev)
     found = (info.card_data or {}).get('license')
     if info.sha != rev or found != licence:
         sys.exit(f'{repo}@{rev}: licence {found!r}, pinned {licence!r}: '
                  'stop and ask before building')
+    return found
+
+
+def trace_paths(d2l):
+    """The pinned subset's local parquet paths (downloaded once) and the
+    licence re-read from the card (trace_licence)."""
+    from huggingface_hub import hf_hub_download
+    found = trace_licence(d2l)
+    _, repo, rev, _ = d2l.PRETRAIN_SOURCES['openthoughts3']
     return [hf_hub_download(repo, f, repo_type='dataset', revision=rev)
             for f in d2l.PRETRAIN_SOURCE_FILES['openthoughts3']], found
 
@@ -735,14 +804,32 @@ def chatml_ids(d2l, tok):
     return ids
 
 
+def qwen_ending(tok, near_cap):
+    """ending(record, ids) for ChatML ids under a Qwen tokenizer."""
+    count = assistant_tokens(tok.convert_tokens_to_ids('<|im_start|>'))
+    return lambda rec, ids: trace_ending(rec, count(ids), near_cap)
+
+
 def traces_split(d2l, tok, root):
     """(split, selection): split.json's content, read when root holds it,
     else computed (scan, decontamination, selection) and written; the
-    selection's (record, ids) pairs when computed now, else None."""
+    selection's (record, ids) pairs when computed now, else None. Either
+    way the licence is re-read from the card first, and a split.json
+    written under another licence, near_cap or set of endings is
+    refused."""
     path = os.path.join(root, 'split.json')
     if os.path.exists(path):
+        licence = trace_licence(d2l)
         with open(path) as f:
-            return json.load(f), None
+            split = json.load(f)
+        got = {k: split['targets'].get(k) for k in ('near_cap', 'endings')}
+        want = dict(near_cap=TRACES['near_cap'],
+                    endings=list(TRACES['endings']))
+        if split.get('licence') != licence or got != want:
+            sys.exit(f'{path}: written for licence {split.get("licence")!r}'
+                     f' and {got}, now {licence!r} and {want}: remove it '
+                     'and rebuild')
+        return split, None
     import multiprocessing
     paths, licence = trace_paths(d2l)
     grams = benchmark_grams(d2l, TRACES['contam'])
@@ -752,10 +839,12 @@ def traces_split(d2l, tok, root):
         records = [r for part in pool.map(scan_traces_file, jobs)
                    for r in part]
     docs, duplicates = dedupe_sort(records)
+    ending = qwen_ending(tok, TRACES['near_cap'])
+    keep = lambda rec, ids: ending(rec, ids) in TRACES['endings']
     sel = select_traces(d2l, docs, chatml_ids(d2l, tok), TRACES['train'],
                         TRACES['heldout'], TRACES['gram'],
-                        TRACES['max_overlap'])
-    split = split_record(d2l, docs, sel, duplicates, TRACES)
+                        TRACES['max_overlap'], keep=keep)
+    split = split_record(d2l, docs, sel, duplicates, TRACES, ending)
     split.update(licence=licence, tokenizer=[
         'Qwen/Qwen3-0.6B-Base', d2l.HF_REVISIONS['Qwen/Qwen3-0.6B-Base']])
     os.makedirs(root, exist_ok=True)
@@ -882,12 +971,12 @@ def build_traces_qwen():
         ids_sha1=dict(train=ids_sha1('train'), heldout=ids_sha1('heldout')))
     rerun = os.path.abspath(d2l._rerun_dir())
     os.makedirs(rerun, exist_ok=True)
-    path = os.path.join(rerun, 'lm-cpt-qwen-manifest-v2.json.gz')
+    key = d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'][0]
+    path = os.path.join(rerun, key + '.json.gz')
     d2l._write_result(path, 'json-table', result,
                       dict(config=None, label=''))
     with open(path, 'rb') as f:
-        print(f"DATA_HUB['lm-cpt-qwen-manifest-v2'] = ("
-              f"'lm-cpt-qwen-manifest-v2.json.gz', "
+        print(f"DATA_HUB['{key}'] = ('{key}.json.gz', "
               f"'{hashlib.sha1(f.read()).hexdigest()}')  "
               f'# {os.path.getsize(path) / 2**10:.1f} KB')
     print(table.to_string(index=False))
@@ -962,7 +1051,18 @@ def check_trace_shards(d2l, split, shards, targets, tier):
                 'training and held-out questions and texts disjoint'))
     out.append((len(held) == targets['heldout'] == len(held_q),
                 f'{len(held)} held-out conversations, one per question'))
-    c = split['counts']['heldout']
+    counts = split['counts']
+    shown = []
+    for part in ('train', 'heldout', 'val_domain'):
+        e = counts[part]['endings']
+        shown.append(f'{part} ' + ' / '.join(
+            f'{e[k]["documents"]:,}' for k in ENDINGS))
+    out.append((all(counts[p]['endings'][k]['documents'] == 0
+                    for p in ('train', 'heldout', 'val_domain')
+                    for k in ENDINGS if k not in targets['endings']),
+                'endings complete / capped / open (selected: ' +
+                ', '.join(targets['endings']) + '): ' + '; '.join(shown)))
+    c = counts['heldout']
     out.append((c['overlap'] < targets['overlap_target'] and
                 c['max_overlap'] <= targets['max_overlap'],
                 f'held-out {targets["gram"]}-gram overlap {c["overlap"]:.2%} '
@@ -977,9 +1077,14 @@ def check_trace_shards(d2l, split, shards, targets, tier):
         out.append((shards['val_domain'].n_tokens >= targets['val'],
                     f'val_domain: >= {targets["val"]:,} tokens'))
     else:
+        T, B = targets['t1_seq_len'], targets['t1_batch']
+        steps = (shards['traces'].n_tokens - 1) // T // B
         out.append((shards['traces'].n_tokens >= targets['t1_train'] and
-                    shards['val_domain'].n_tokens >= targets['t1_val'],
-                    'T1 token targets met'))
+                    steps >= targets['t1_steps'],
+                    f'traces: {steps} steps of {B} x {T} per epoch '
+                    f'(the T1 arms take {targets["t1_steps"]}: no repeats)'))
+        out.append((shards['val_domain'].n_tokens >= targets['t1_val'],
+                    f'val_domain: >= {targets["t1_val"]:,} tokens'))
     return out
 
 
@@ -1015,14 +1120,25 @@ def check_traces(stage):
         q = {e[0]: e[1] for e in split['train'] + split['heldout']}
         lines.append((all(r['question_id'] == q[r['doc_id']] for r in recs),
                       'question ids recomputed from the texts'))
-        enc, same = chatml_ids(d2l, qwen), True
+        enc, same, pairs = chatml_ids(d2l, qwen), True, {}
         for k, part in (('traces', 'train'), ('val_domain', 'heldout')):
-            s, entries = shards[k], split[part][:shards[k].n_docs]
+            s, entries = shards[k], split[part]
+            pairs[part] = []
             for i in range(0, len(entries), 256):
                 batch = entry_records(entries[i:i + 256], msgs)
                 for j, want in enumerate(enc(batch)):
-                    same &= np.array_equal(s.doc(i + j)[:-1], want)
+                    pairs[part].append((batch[j], want))
+                    if i + j < s.n_docs:
+                        same &= np.array_equal(s.doc(i + j)[:-1], want)
+            same &= s.n_docs <= len(entries)
         lines.append((same, 'shard tokens equal the re-encoded ChatML'))
+        ending = qwen_ending(qwen, split['targets']['near_cap'])
+        n_val = shards['val_domain'].n_docs
+        got = {p: endings_count(x, ending) for p, x in (
+            ('train', pairs['train']), ('heldout', pairs['heldout']),
+            ('val_domain', pairs['heldout'][:n_val]))}
+        lines.append((all(got[p] == split['counts'][p]['endings']
+                          for p in got), 'endings recounted from the texts'))
         if 'lm-cpt-qwen-manifest-v1' in d2l.DATA_HUB:
             with d2l._quiet():
                 v1 = d2l._read_result(d2l.download_keyed(

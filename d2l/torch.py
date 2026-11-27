@@ -26052,18 +26052,18 @@ d2l.DATA_HUB['lm-cpt-runs-v1'] = (
 d2l.DATA_HUB['lm-cpt-t1-v1'] = (
     d2l.LM_DATA_URL + 'lm-cpt-t1-v1.json.gz',
     'ecc9890d0bac23b3548c8f2eaf5616f52b5d4e64')
-d2l.DATA_HUB['lm-cpt-qwen-manifest-v2'] = (
-    d2l.LM_DATA_URL + 'lm-cpt-qwen-manifest-v2.json.gz',
-    '46c77b3151b04b2bb0fb20c91e6c2a286757b4fa')
 d2l.DATA_HUB['lm-traces-12m-v1'] = (
     d2l.LM_DATA_URL + 'lm-traces-12m-v1.tar',
     '269d73e0166d62c5fcc428c0a1e080be4a87fcd9')
 d2l.DATA_HUB['lm-traces-val-v1'] = (
     d2l.LM_DATA_URL + 'lm-traces-val-v1.tar',
     'c14411336f10e91ca619ab71c37e5bb2d7d07540')
+d2l.DATA_HUB['lm-cpt-qwen-manifest-v3'] = (
+    d2l.LM_DATA_URL + 'lm-cpt-qwen-manifest-v3.json.gz',
+    '2c0d67094de0309473f81bfbae303105d210df4f')
 
 d2l.PRETRAIN_ARTIFACTS['cpt-qwen-manifest'] = (
-    'lm-cpt-qwen-manifest-v2', 'json-table')
+    'lm-cpt-qwen-manifest-v3', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['cpt-traces-12m'] = ('lm-traces-12m-v1', 'shards')
 d2l.PRETRAIN_ARTIFACTS['cpt-traces-val'] = ('lm-traces-val-v1', 'shards')
 d2l.PRETRAIN_ARTIFACTS['cpt-fwedu-replay-12m'] = (
@@ -26294,9 +26294,11 @@ def _cpt_qwen_shards():
     return dict(out, **_book_shards('t2'))
 
 def chatml(messages):
-    """A conversation (dicts with role and content) as ChatML text, the
-    format of Qwen3's and SmolLM3's chat templates: per message
-    <|im_start|>role, a newline, the content, <|im_end|> and a newline."""
+    """A conversation (dicts with role and content) as ChatML text: per
+    message <|im_start|>role, a newline, the content verbatim, <|im_end|>
+    and a newline. These are the ChatML markers of Qwen3 and SmolLM3, not
+    their full chat templates (Qwen3's adds a newline after <think> and an
+    empty think block to a reply without one)."""
     return ''.join(f'<|im_start|>{m["role"]}\n{m["content"]}<|im_end|>\n'
                    for m in messages)
 
@@ -26304,9 +26306,11 @@ def trace_conversations():
     """The 500 held-out reasoning-trace conversations of the section's
     corpus (OpenThoughts3-1.2M; no training document asks their
     questions), in id order: a DataFrame with doc_id, question_id, domain,
-    source and messages (role, content). Local only, written by
-    tools/build_pretraining_data.py --stage cpt-qwen-traces, which runs the
-    first time they are needed."""
+    source and messages (role, content). Most replies stop at the
+    dataset's generation cap, many inside the <think> block. Local only,
+    written by tools/build_pretraining_data.py --stage cpt-qwen-traces,
+    which runs the first time they are needed; when the manifest is
+    committed, the ids must be the ones it lists (ids_sha1)."""
     import gzip
     root = _CPT_DIRS['t2']
     path = os.path.join(root, 'heldout.jsonl.gz')
@@ -26314,12 +26318,20 @@ def trace_conversations():
         if not os.path.exists(path):
             _run_builder('cpt-qwen-traces')
     with gzip.open(path, 'rt', encoding='utf-8') as f:
-        return pd.DataFrame([json.loads(line) for line in f])
+        conv = pd.DataFrame([json.loads(line) for line in f])
+    if _cpt_manifest_committed():
+        want = d2l.load_artifact('cpt-qwen-manifest').ids_sha1['heldout']
+        got = hashlib.sha1(' '.join(conv['doc_id']).encode()).hexdigest()
+        if got != want:
+            raise ValueError(f'{path} holds other conversations than the '
+                             'committed manifest lists; rebuild it')
+    return conv
 
 def trace_windows(tokenizer, T=2048, n=None, render=chatml):
     """One window per held-out conversation (the first n; all 500 by
-    default): the first T token ids of render(messages) under tokenizer (a
-    Transformers tokenizer), as int64 arrays. With the default ChatML
+    default): the first min(T, length) token ids of render(messages) under
+    tokenizer (a Transformers tokenizer), as int64 arrays (a few
+    conversations are shorter than 2,048 tokens). With the default ChatML
     rendering the chat markers must be the tokenizer's own special tokens,
     so a window reads as the model's chat format does."""
     conv = trace_conversations()

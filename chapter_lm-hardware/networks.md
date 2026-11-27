@@ -212,6 +212,8 @@ tcp = d2l.loopback_sweep(backend='tcp', ranks=(2,), max_bytes=2**24)
 floor = d2l.loopback_sweep(backend='gloo', ranks=(2, 4), max_bytes=2**24)
 ```
 
+<!-- Placeholder (prose): fix pass F6 (N2 as measured, committed values kept): the gloo alpha is gloo's own per-message cost, not the sweep's settings: a gloo send/recv round trip takes 200-300 us against 41 us for the Python TCP round trip, and a 2-rank all-reduce is two such steps; OMP threads change nothing, pinning each rank to a core lowers it by at most 1.9x and only in some runs, the 4-rank alpha not at all. -->
+
 ```{.python .input #networks-nccl-socket}
 %%tab pytorch
 sock = d2l.loopback_sweep(

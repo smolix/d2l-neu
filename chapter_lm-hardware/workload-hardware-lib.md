@@ -1225,6 +1225,8 @@ interactivity point. While it is not committed, the reader returns a pending
 `Snapshot` (false) that still carries the shape, precision and interactivity
 point the predictions use.
 
+<!-- Placeholder (prose): say no snapshot is committed (fix F8); registry line and reader stay. -->
+
 ```{.python .input #workload-hardware-lib-inferencex}
 %%tab pytorch
 #@save
@@ -1260,10 +1262,11 @@ def _read_snapshot(path, shape, slack=0.9):
 
 #@save
 def inferencex_snapshot():
-    """The committed InferenceX snapshot (Apache-2.0, with LICENSE and
-    NOTICE), or a pending Snapshot with the default prediction setting
-    (dense 70B shape, FP8 weights and KV, 50 tokens/s per user, 2,048-token
-    context) while it is not committed."""
+    """The InferenceX snapshot (Apache-2.0, with LICENSE and NOTICE) once one
+    is registered, else a pending Snapshot with the default prediction
+    setting (dense 70B shape, FP8 weights and KV, 50 tokens/s per user,
+    2,048-token context). None is committed: no public InferenceX result
+    for a dense 70B-class or standard-GQA Qwen3 model is retained."""
     shape = d2l.HW_SHAPES['dense-70b']
     if not hw_registered('hw-inferencex-snapshot'):
         return Snapshot(pd.DataFrame(columns=['chip', 'tp', 'tps_per_gpu']),
@@ -1298,13 +1301,24 @@ def _kendall_tau(x, y):
     return s / (n * (n - 1) / 2) if n > 1 else math.nan
 
 #@save
+def _pairs_agree(x, y):
+    """(k, n): of the n pairs, the k that x and y order the same way (a tie
+    in either never agrees)."""
+    n, k = len(x), 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            k += np.sign(x[i] - x[j]) * np.sign(y[i] - y[j]) > 0
+    return int(k), n * (n - 1) // 2
+
+#@save
 def rank_against(snap, specs, chips=('H100 SXM', 'H200 SXM', 'B200', 'MI355X',
                                      'RTX 4090', 'Groq LPU'), default_tp=8):
     """Datasheet predictions of tokens/s per GPU at the snapshot's
     interactivity point for each chip (its tensor-parallel degree from the
     snapshot, else default_tp; the Groq row on the chips that hold the
-    weights) beside the InferenceX value and both ranks; Kendall's tau over
-    the chips in the snapshot."""
+    weights). With a snapshot, the InferenceX value beside them, both ranks
+    over the chips in the snapshot (ties share the best rank), Kendall's tau
+    and the pairs ordered alike; pending, predictions only, no rank."""
     W = d2l.ServingModel(snap.model_cfg, specs.loc[chips[0]],
                          dtype_bytes=snap.dtype_bytes).weight_bytes()
     measured = snap.table.set_index('chip') if len(snap.table) else None
@@ -1323,23 +1337,27 @@ def rank_against(snap, specs, chips=('H100 SXM', 'H200 SXM', 'B200', 'MI355X',
         predicted = _tps_at(sm, snap.user_tps, snap.context)
         rows[chip] = dict(tp=tp, predicted=predicted, inferencex=ix)
     t = pd.DataFrame(rows).T.astype(float)
-    ranked = t.index.isin(list(_HW_IX_CHIPS.values()))  # never the others
-    t['rank'] = t.predicted[ranked].rank(ascending=False)
-    t['ix_rank'] = t.inferencex.rank(ascending=False)
-    shown = t if snap else t.drop(columns=['inferencex', 'ix_rank'])
-    show_table(shown, digits=0, headers={
+    if snap:  # a rank only for the chips the snapshot measured
+        ranked = t.inferencex.notna()
+        t['rank'] = t.predicted[ranked].rank(ascending=False, method='min')
+        t['ix_rank'] = t.inferencex.rank(ascending=False, method='min')
+    else:
+        t = t.drop(columns=['inferencex'])
+    show_table(t, digits=0, headers={
         'tp': 'chips', 'predicted': 'predicted tok/s/GPU',
         'inferencex': 'InferenceX', 'rank': 'rank',
         'ix_rank': 'InferenceX rank'})
-    both = t.dropna(subset=['inferencex'])
+    both = t.dropna(subset=['inferencex']) if snap else t.iloc[:0]
     if not snap:
         fmt = 'FP8' if snap.dtype_bytes == 1 else 'bf16'
         print('InferenceX snapshot not committed yet: predictions only')
         print(f'(dense 70B, {fmt}, {snap.user_tps:.0f} tokens/s per user, '
               f'context {snap.context:,})')
     elif len(both) > 1:
-        tau = _kendall_tau(both.predicted.tolist(), both.inferencex.tolist())
-        print(f'Kendall tau over {len(both)} chips: {tau:.2f}')
+        x, y = both.predicted.tolist(), both.inferencex.tolist()
+        k, n = _pairs_agree(x, y)
+        print(f'Kendall tau over {len(both)} chips: {_kendall_tau(x, y):.2f}'
+              f' (ordered alike on {k} of {n} pairs)')
     absent = [c for c in t.index if c not in both.index]
     if snap and absent:
         print('predicted, not ranked (absent from the snapshot): '

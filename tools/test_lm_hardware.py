@@ -1741,9 +1741,8 @@ class TestInferenceX(unittest.TestCase):
         self.assertTrue(any('not committed yet' in l for l in lines))
         self.assertIn('hops between', lines[-2])
         self.assertNotIn('InferenceX', lines[0])  # no empty columns pending
-        self.assertTrue(math.isnan(t['rank']['Groq LPU']))
-        self.assertTrue(math.isnan(t['rank']['RTX 4090']))
-        self.assertTrue(t.inferencex.isna().all())
+        self.assertNotIn('rank', lines[0])  # no ranking without a snapshot
+        self.assertEqual(list(t.columns), ['tp', 'predicted'])
         self.assertGreater(t.predicted['B200'], t.predicted['H100 SXM'])
         self.assertEqual(int(t.tp['Groq LPU']), d2l.sram_chips_needed(
             70.55e9, 0.23e9))
@@ -1757,12 +1756,37 @@ class TestInferenceX(unittest.TestCase):
         self.assertTrue(snap)
         self.assertEqual((snap.dtype_bytes, snap.context), (1, 1536))
         lines, t = lines_of(self, d2l.rank_against, snap, committed_specs())
-        self.assertTrue(any(l.startswith('Kendall tau over 4 chips') for l in
-                            lines))
+        tau = [l for l in lines if l.startswith('Kendall tau over 4 chips')]
+        self.assertEqual(len(tau), 1)
+        both = t[t.inferencex.notna()]
+        k, n = d2l._pairs_agree(both.predicted.tolist(),
+                                both.inferencex.tolist())
+        self.assertEqual(n, 6)
+        self.assertIn(f'ordered alike on {k} of 6 pairs', tau[0])
         self.assertTrue(any(l.startswith('predicted, not ranked') and
                             'RTX 4090' in l for l in lines))
+        self.assertTrue(math.isnan(t['rank']['RTX 4090']))  # absent: no rank
+        self.assertTrue(math.isnan(t['rank']['Groq LPU']))
+        self.assertEqual(sorted(t.ix_rank.dropna()), [1, 2, 3, 4])
         self.assertEqual(d2l._kendall_tau([1, 2, 3], [1, 2, 3]), 1)
         self.assertEqual(d2l._kendall_tau([1, 2, 3], [3, 2, 1]), -1)
+
+    def test_pairs_and_ties(self):
+        """k of n pairs (ties never agree); tied chips share the best rank."""
+        self.assertEqual(d2l._pairs_agree([1, 2, 3], [1, 2, 3]), (3, 3))
+        self.assertEqual(d2l._pairs_agree([1, 2, 3], [3, 2, 1]), (0, 3))
+        self.assertEqual(d2l._pairs_agree([1, 1, 3], [1, 2, 3]), (2, 3))
+        self.assertEqual(d2l._pairs_agree([5], [5]), (0, 0))
+        tie = self.FIXTURE.replace('MI355X,vllm,fp8,1024,1024,64,8,3600',
+                                   'MI355X,vllm,fp8,1024,1024,64,8,4100')
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'snapshot.csv')
+            with open(path, 'w') as f:
+                f.write(tie)
+            snap = d2l._read_snapshot(path, d2l.HW_SHAPES['dense-70b'])
+        lines, t = lines_of(self, d2l.rank_against, snap, committed_specs())
+        self.assertEqual((t.ix_rank['B200'], t.ix_rank['MI355X']), (1, 1))
+        self.assertEqual(t.ix_rank['H200 SXM'], 3)
 
     def test_duplicate_rows(self):
         """Several rows per chip (TP degrees, interactivity points): the best

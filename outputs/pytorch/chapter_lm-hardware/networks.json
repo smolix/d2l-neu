@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:41080baee074131f2cc6cb8a2a67fc3a18e01c67ac5b0014ba88d468e67566aa",
+    "d2l_lib_fingerprint": "sha256:082b1be4b61c9ed2bcdee79c876f7f6803a60059a65f276d8d073ce6aa244ed5",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -67,17 +67,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "TCP ping-pong, 2 processes: round trip 41 us [34-48], beta 5.1 GB/s [4.9-5.3]\n"
+          "text": "TCP ping-pong, 2 processes: round trip 42 us [39-44], beta 5.2 GB/s [5.1-5.2]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "TCP live check (same CPU): 3 sizes on 2 ranks, largest difference 12%\ngloo over TCP, 2 ranks: alpha 340 us [330-350], beta 2.0 GB/s [2.0-2.1]\ngloo over TCP, 4 ranks: alpha 1,200 us [1,200-1,300], beta 1.5 GB/s [1.4-1.5]\n"
+          "text": "TCP live check (same CPU): 3 sizes on 2 ranks, largest difference 12%\ngloo over TCP, 2 ranks: alpha 340 us [330-350], beta 2.0 GB/s [2.0-2.1]\ngloo over TCP, 4 ranks: alpha 1,100 us [1,100-1,100], beta 1.4 GB/s [1.3-1.6]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gloo live check (same CPU): 3 sizes on 2 ranks, largest difference 3%\n"
+          "text": "gloo live check (same CPU): 3 sizes on 2 ranks, largest difference 6%\n"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check on RTX 4090: 3 sizes on 2 ranks, largest difference 13%\n"
+          "text": "live check on RTX 4090: 3 sizes on 2 ranks, largest difference 20%\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                     alpha (us) per msg (us) beta (GB/s)    alpha of    source\nTCP, 2 processes             41           21         5.1  round trip  measured\ngloo, 2 ranks               340          170         2.0  all-reduce  measured\ngloo, 4 ranks             1,200          200         1.5  all-reduce  measured\nNCCL sockets, 2 GPUs        120           59         1.6  all-reduce  measured\nNCCL shm, 4 GPUs             33          5.5         2.4  all-reduce  measured\nRDMA, one NDR port          5.0          2.5          50  round trip    quoted\nNVLink 3, one hop           1.5          1.5         300     one hop    quoted\n"
+          "text": "                     alpha (us) per msg (us) beta (GB/s)    alpha of    source\nTCP, 2 processes             42           21         5.2  round trip  measured\ngloo, 2 ranks               340          170         2.0  all-reduce  measured\ngloo, 4 ranks             1,100          190         1.4  all-reduce  measured\nNCCL sockets, 2 GPUs        120           58         1.6  all-reduce  measured\nNCCL shm, 4 GPUs             33          5.5         2.4  all-reduce  measured\nRDMA, one NDR port          5.0          2.5          50  round trip    quoted\nNVLink 3, one hop           1.5          1.5         300     one hop    quoted\n"
         }
       ]
     },
@@ -153,7 +153,7 @@
           "mime": "image/svg+xml",
           "asset": "networks/networks-layout-fit-1.svg",
           "bytes": 56900,
-          "sha256": "sha256:53a1b2b17af793e6ea3748aca2c8899db7144332040626418c0319e80589ed2e"
+          "sha256": "sha256:d8e1c64b77bc8fd3427ddae9f34aed0663a879e1d993b0d5b9fc9238ca7ba400"
         }
       ]
     },

@@ -454,6 +454,12 @@ HEAVY_GPU_NOTEBOOKS = {
     # in the extension runs) takes a whole card: run it on a card masked for
     # it alone.
     ("pytorch", "chapter_lm-data/tokenizers.ipynb"): 2,
+    # 21.4's live cell generates with SmolLM3-3B in bf16 (5.7 GiB of
+    # weights) at batch 25 with a 4,096-token chat budget: 25 x ~4,400
+    # positions x 72 KiB of KV cache, about 7.5 GiB, so ~13.5-14 GiB in all
+    # (estimate; 8.3 GiB measured at batch 8, F25 smoke). Its cell-8 forward
+    # of Qwen3-0.6B-Base is smaller.
+    ("pytorch", "chapter_lm-pretraining/continued-pretraining.ipynb"): 2,
     # 21.5 runs the reference model at 16K tokens (32 books, 50 recall items
     # through the cached scorer: about 8 GiB).
     ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): 2,
@@ -563,9 +569,11 @@ NOTEBOOK_ENV = {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
     # 21.4: the Hub's "unauthenticated requests" warning on the first
-    # load_qwen3 of a fresh environment (as 21.5 and 21.6).
+    # load_qwen3 of a fresh environment (as 21.5 and 21.6); the live cell's
+    # SmolLM3 generation grows its KV cache batch by batch (as 19.5).
     ("pytorch", "chapter_lm-pretraining/continued-pretraining.ipynb"): {
         "HF_HUB_VERBOSITY": "error",
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
     # 21.5: the Hub's X-HF-Warning (as 18.6; the regeneration's suite
     # reads). The 16K-token prompts use d2l.lc_tokenizer, whose raised

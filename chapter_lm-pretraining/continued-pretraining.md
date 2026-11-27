@@ -472,15 +472,20 @@ print(gaps.to_string(index=False, float_format='{:.3f}'.format))
 %%tab pytorch
 SMOLLM3_STAGES = ('stage1', 'stage2', 'stage3', 'lc32k', 'lc64k', 'mid')
 traj = d2l.smollm3_trajectory(SMOLLM3_STAGES)
-pct = lambda v: f'{100 * v:.1f}'
-cols = {**dict.fromkeys(['cloze', '8-shot', 'chat'], pct),
-        'cut': lambda v: f'{100 * v:.0f}%',
+pct = lambda v: f'{100 * v:.0f}'
+cols = {'cloze': lambda v: f'{100 * v:.1f}',
+        **dict.fromkeys(['8-shot', 'chat', 'cut'], pct),
         **dict.fromkeys(['web', 'science', 'book', 'traces'], '{:.3f}'.format)}
 print(traj.table.to_string(index=False, formatters=cols))
+math500 = d2l.answer_table(traj, 'math500')  # the gate's harder rung
+if len(math500):
+    head = f'MATH-500 (n = {math500["n"].max()})'
+    print(math500.drop(columns='n').rename(columns={'checkpoint': head})
+          .to_string(index=False, formatters=cols))
 d2l.plot_smollm3(traj)
 ```
 
-<!-- Placeholder (prose): read the table and the plot. Four instruments per checkpoint: the cloze suite (its mean over six tasks; per-task scores only as the plot's thin lines), GSM8K in two formats (8-shot completion, the base-model format, 256 new tokens; one ChatML user turn with thinking, the reasoning stage's own format, 4,096 new tokens, greedy, the answer after </think>; "cut" is the share of chat replies stopped at the budget, which count as no answer, as in chapter 18), and bits per byte on web, science and held-out book text and on reasoning traces. "traces" are 500 held-out OpenThoughts3 conversations, whose dataset SmolLM3's reasoning stage trained on four times: the column is "traces (seen)", an upper bound on the gain in fit; the capability reading rests on GSM8K, a test set. Bits per byte now put no token before a document (SmolLM3 trained with document masks and no BOS, so the first token, which has no context, goes unscored with its bytes); the previous version's <|begin_of_text|> inflated mid-training's book number by about 5% (investigation report §3). One prompt per format for all six checkpoints: the mid-training tokenizer's chat template is plain ChatML and the base checkpoints ship none; LC 64K already answers a ChatML user turn with a complete <think> block (pilot), so the chat format is not foreign to the base checkpoints. The token counts are reconstructions from the stage configurations (smollm3-configs: 2,359,296 tokens per step; the stage-end steps) and the SmolLM3 blog (stages end at 8T, 10T and 11.1T; two long-context stages of about 50B tokens each; mid-training 140B): cite both, and quote them as the blog rounds them. Accuracies to the nearest 5 points for GSM8K. If the gate ran the harder rung (MATH-500's numeric subset, stage 3, LC 64K and mid-training) or the GSM-Symbolic check, say so here (claims 10h and the contamination line). The next cell gives the changes between adjacent checkpoints with intervals. -->
+<!-- Placeholder (prose): read the table and the plot. Four instruments per checkpoint: the cloze suite (its mean over six tasks; per-task scores only as the plot's thin lines), GSM8K in two formats (8-shot completion, the base-model format, 256 new tokens; one ChatML user turn with thinking, the reasoning stage's own format, 4,096 new tokens, greedy, the answer after </think>; "cut" is the share of chat replies stopped at the budget, which count as no answer, as in chapter 18), and bits per byte on web, science and held-out book text and on reasoning traces. "traces" are 500 held-out OpenThoughts3 conversations, whose dataset SmolLM3's reasoning stage trained on four times: the column is "traces (seen)", an upper bound on the gain in fit; the capability reading rests on GSM8K, a test set. Bits per byte now put no token before a document (SmolLM3 trained with document masks and no BOS, so the first token, which has no context, goes unscored with its bytes); the previous version's <|begin_of_text|> inflated mid-training's book number by about 5% (investigation report §3). One prompt per format for all six checkpoints: the mid-training tokenizer's chat template is plain ChatML and the base checkpoints ship none; LC 64K already answers a ChatML user turn with a complete <think> block (pilot), so the chat format is not foreign to the base checkpoints. The token counts are reconstructions from the stage configurations (smollm3-configs: 2,359,296 tokens per step; the stage-end steps) and the SmolLM3 blog (stages end at 8T, 10T and 11.1T; two long-context stages of about 50B tokens each; mid-training 140B): cite both, and quote them as the blog rounds them. Units: cloze, 8-shot, chat and cut are percentages (cloze to 0.1, the others whole points: 500 items give a 95% half-width of about 4 points), bits per byte to 0.001. Accuracies to the nearest 5 points for GSM8K. If the gate ran the harder rung, the cell prints a second block, MATH-500's numeric subset (n = 376) for stage 3, LC 64K and mid-training in both formats with the chat cut share at the 8,192-token budget (the plot adds its two series as points); say so here and read it with claims 10h. Stage 3 is the rung's anchor before the long-context stages: S3 → LC64K says whether the long-context stages move the harder task (as 10b for the short-context scores), LC64K → mid what the reasoning stage does to it. Report the GSM-Symbolic check here if it ran (the contamination line; d2l.symbolic_check gives both chat gains with intervals). The next cell gives the changes between adjacent checkpoints with intervals. -->
 
 ```{.python .input #continued-pretraining-stage-deltas}
 %%tab pytorch
@@ -494,9 +499,11 @@ print(row('Δ points', ['cloze [95% CI]', 'GSM8K 8-shot', 'GSM8K chat'], 21))
 for r in deltas.to_dict('records'):
     print(row(r['transition'], [ci(r, k) for k in (
         'cloze', 'gsm8k_completion', 'gsm8k_chat')], 21))
-for r in deltas.dropna(subset=['math500_chat']).to_dict('records'):
-    print(row(r['transition'], ['MATH-500', ci(r, 'math500_completion'),
-                                ci(r, 'math500_chat')], 21))
+math500 = d2l.answer_deltas(traj, 'math500')  # S3 → LC64K, LC64K → mid
+if len(math500):
+    print(row('Δ points', ['', 'MATH-500 8-shot', 'MATH-500 chat'], 21))
+for r in math500.to_dict('records'):
+    print(row(r['transition'], ['', ci(r, 'completion'), ci(r, 'chat')], 21))
 domains = ('web', 'science', 'book', 'traces')
 print(row('Δ BPB, %', domains, 10))
 for r in deltas.to_dict('records'):
@@ -504,7 +511,7 @@ for r in deltas.to_dict('records'):
 print('* the 95% interval excludes 0 (documents paired; points: items)')
 ```
 
-<!-- Placeholder (prose): claims 10a-10f and 10h, what each stage moves. Quote only changes whose interval excludes 0 (points: items paired, every cloze task weighing the same; bits per byte: relative change, documents paired; the starred entries); the rest "unchanged within the interval". 10a: stage 3 (decay, 63% web) raises the cloze mean and lowers bits per byte on web, science and book. 10b: the long-context stages leave short-context scores unchanged within the interval (quote the exceptions as they are). 10c: the reasoning stage lowers the cloze mean (every task by 5-10 points in the artifact) and raises bits per byte by about 30% on web and science and about 75% on book text (quote "about"). 10d: the reasoning stage lowers bits per byte on traces (seen); if it does not, that is a scoring fault to find before writing. 10e, 10f: GSM8K chat and 8-shot, mid-training against LC 64K, two-sided and open; the readings of the 2 × 2 (proposal §5): chat up with completion unchanged or up = reasoning that survives a change of format, paid for in general-text fit; chat up with completion down = a gain tied to the format; no chat difference on GSM8K but a gain on the harder task = depth on hard problems only; no gain on either = state the two measured facts (the cost on general text, the better fit to traces) and cite the authors' own evaluation (extended thinking on AIME 2025, LiveCodeBench, GPQA for the released model), never "the stage improved reasoning". Earlier stages: stage 2 raises the math share from 3% to 10% and stage 3 to 13%; say whether 8-shot GSM8K registers it. 10h only if the MATH-500 line is printed. Contamination: if the GSM-Symbolic check ran and its chat gain is under half the GSM8K gain, report GSM-Symbolic and say why. -->
+<!-- Placeholder (prose): claims 10a-10f and 10h, what each stage moves. Quote only changes whose interval excludes 0 (points: items paired, every cloze task weighing the same; bits per byte: relative change, documents paired; the starred entries); the rest "unchanged within the interval". 10a: stage 3 (decay, 63% web) raises the cloze mean and lowers bits per byte on web, science and book. 10b: the long-context stages leave short-context scores unchanged within the interval (quote the exceptions as they are). 10c: the reasoning stage lowers the cloze mean (quote the mean with its interval; "every task falls" from the plot's thin lines, with the per-task paired changes of d2l.cloze_task_deltas, which the claims step reads from the artifact) and raises bits per byte by about 30% on web and science and about 75% on book text (quote "about"). 10d: the reasoning stage lowers bits per byte on traces (seen); if it does not, that is a scoring fault to find before writing. 10e, 10f: GSM8K chat and 8-shot, mid-training against LC 64K, two-sided and open; the readings of the 2 × 2 (proposal §5): chat up with completion unchanged or up = reasoning that survives a change of format, paid for in general-text fit; chat up with completion down = a gain tied to the format; no chat difference on GSM8K but a gain on the harder task = depth on hard problems only; no gain on either = state the two measured facts (the cost on general text, the better fit to traces) and cite the authors' own evaluation (extended thinking on AIME 2025, LiveCodeBench, GPQA for the released model), never "the stage improved reasoning". Earlier stages: stage 2 raises the math share from 3% to 10% and stage 3 to 13%; say whether 8-shot GSM8K registers it. 10h only if the MATH-500 block is printed (its own header line; S3 → LC64K and LC64K → mid, items paired). Contamination: if the GSM-Symbolic check ran and its chat gain is under half the GSM8K gain, report GSM-Symbolic and say why. -->
 
 <!-- Placeholder (prose): calibration as the mechanism. Restate temperature in one sentence (the logits divided by T before the softmax). A model is calibrated on a text when its entropy equals its loss and its best temperature is 1. The table: for LC 64K and mid-training on web, book and traces, the loss (nats per token), the mean entropy, the top-1 accuracy, the temperature on the grid {0.8, 1, 1.25, 1.5, 2} with the lowest loss, the loss there, and "recovered", the share of the loss's rise over the previous checkpoint that the best temperature takes back. -->
 
@@ -522,25 +529,27 @@ d2l.plot_smollm3_calibration(calib)
 
 <!-- Placeholder (prose): claim 10g. Base checkpoints are calibrated on general text: entropy about equal to loss, best temperature 1 (quote LC 64K's rows; the plot shows all five base checkpoints on the diagonal). After the reasoning stage the model is overconfident on general text: entropy well below the loss (0.7-1.4 nats in the investigation), best temperature 1.25-1.5, which recovers about a third of the rise; the rest is lost ranking (top-1 accuracy lower), which no temperature repairs. On the traces (seen) the prediction is a low loss with entropy matching it: the model learned the confidence that is right for the text it trained on, far more predictable than web text, and carries it to text where it is wrong. If mid-training is overconfident on the traces too, the cause stated is repetition (four epochs), not the domain. The traces are seen documents: "calibrated on its training text", not "on new traces". The diagnostic transfers to any fine-tuned model: entropy against loss and the best temperature tell a confidence problem that one scalar repairs from a loss of knowledge. -->
 
-<!-- Placeholder (prose): two checkpoints re-scored live: LC 64K and mid-training on the first 50 of the 500 GSM8K items in both formats (greedy, the same budgets, no forced answers), against the committed 500-item accuracies. With 50 items the live interval (Wilson, 95%) is wide, about ±14 points, so the cell checks that each committed value lies inside it and claims nothing more. If the normal run is over 15 minutes, the cell drops to 25 items or to mid-training only, and says so. -->
+<!-- Placeholder (prose): two checkpoints re-scored live: LC 64K and mid-training on the first 50 of the 500 GSM8K items in both formats (greedy, the same budgets, no forced answers), against the committed accuracies, on the same 50 items and on all 500. With 50 items the live interval (Wilson, 95%) is wide, about ±14 points, so the 500-item check almost cannot fail; the same-items column is the reproduction check (equal up to bf16 batch effects). If the normal run is over 15 minutes, the cell drops to 25 items or to mid-training only, and says so. -->
 
 ```{.python .input #continued-pretraining-smollm3-live}
 %%tab pytorch
 live = d2l.smollm3_gsm8k(['lc64k', 'mid'], n=50)
 gsm = traj.answers[traj.answers['task'] == 'gsm8k']
-committed = gsm.groupby(['checkpoint', 'format'])['score'].mean()
-n = live['item_id'].nunique()
-print(f'{"checkpoint":<14}{"format":<12}{f"live (n = {n}) [95% CI]":<26}'
-      f'committed (n = {gsm["item_id"].nunique()})')
+mean = lambda d: d.groupby(['checkpoint', 'format'])['score'].mean()
+same = mean(gsm[gsm['item_id'].isin(set(live['item_id']))])
+committed, n = mean(gsm), live['item_id'].nunique()
+print(f'{"checkpoint":<14}{"format":<8}{f"live (n = {n}) [95% CI]":<24}'
+      f'{"committed: same items":<23}all {gsm["item_id"].nunique()}')
 for (name, fmt), g in live.groupby(['checkpoint', 'format'], sort=False):
     lo, hi = d2l.wilson_ci(g['score'].sum(), len(g))
     now = f'{100 * g["score"].mean():.0f}% [{100 * lo:.0f}, {100 * hi:.0f}]'
-    then = 100 * committed.get((name, fmt), math.nan)
+    then = [f'{100 * c.get((name, fmt), math.nan):.0f}%'
+            for c in (same, committed)]
     label = {'completion': '8-shot'}.get(fmt, fmt)
-    print(f'{name:<14}{label:<12}{now:<26}{then:.0f}%')
+    print(f'{name:<14}{label:<8}{now:<24}{then[0]:<23}{then[1]}')
 ```
 
-<!-- Placeholder (prose): claim 11: each committed value lies inside its live interval (or report the difference and its cause: greedy decoding in bf16 is not batch-invariant, and the live run batches 25 replies where the committed one batched 32). Hand-off: the long-context stages are what sec_lm_long_context trains; SmolLM3's authors report that the reasoning stage cost long-context recall on RULER and merged the released model 0.9/0.1 with a mid-training checkpoint to recover it (one sentence, cited). -->
+<!-- Placeholder (prose): claim 11: the live score equals the committed score on the same 50 items up to a few items, and each 500-item value lies inside its live interval (or report the difference and its cause: greedy decoding in bf16 is not batch-invariant, and the live run batches 25 replies where the committed one batched 32). Hand-off: the long-context stages are what sec_lm_long_context trains; SmolLM3's authors report that the reasoning stage cost long-context recall on RULER and merged the released model 0.9/0.1 with a mid-training checkpoint to recover it (one sentence, cited). -->
 
 ## Summary
 

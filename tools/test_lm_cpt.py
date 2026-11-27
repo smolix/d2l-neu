@@ -957,6 +957,16 @@ def smollm3_points(n_items=300, n_docs=60, seed=0, gain=None, rise=None,
     return pts
 
 
+def with_math_rung(pts):
+    """pts with the MATH-500 rung's three parts (stage 3, LC 64K and
+    mid-training; their GSM8K answers relabelled)."""
+    pts = dict(pts)
+    for k in (2, 4, 5):
+        pts[f'smollm3-math-{k}'] = dict(answers=pts[f'smollm3-{k}'][
+            'answers'].assign(task='math500'))
+    return pts
+
+
 class ByteTokenizer:
     """UTF-8 bytes as token ids (no boundary token), with the two calls
     _scored_doc makes and the encode/decode bits_per_byte makes."""
@@ -1020,6 +1030,7 @@ class SmolLM3Test(unittest.TestCase):
 
         def merged(name, parts, merge, config, **kw):
             seen['parts'] = sorted(parts)
+            seen['config'], seen['part'] = config, parts['smollm3-0'][1]
             return d2l._pending_result('smollm3-trajectory')
         names = list(d2l._smollm3_call()['names'])
         with mock.patch.object(d2l, '_pretrain_merged', merged), \
@@ -1027,6 +1038,16 @@ class SmolLM3Test(unittest.TestCase):
             d2l.smollm3_trajectory(names)
             self.assertEqual(seen['parts'],
                              sorted(f'smollm3-{k}' for k in range(6)))
+            # the merged artifact records every setting it was made with
+            # (F25 review 5), each part its scoring rules (review 3)
+            cfg = seen['config']
+            self.assertEqual(sorted(cfg), ['cloze', 'ctx', 'gsm8k', 'names',
+                                           'rungs', 'scorer', 'temps'])
+            self.assertEqual((cfg['names'], cfg['rungs'], cfg['scorer']),
+                             (names, {}, d2l._BPB_SCORER))
+            self.assertEqual(cfg['gsm8k'], d2l._smollm3_settings('gsm8k'))
+            self.assertEqual(seen['part']['scorer'], d2l._BPB_SCORER)
+            self.assertEqual(seen['part']['cloze'], d2l._SMOLLM3_CLOZE)
             with mock.patch.object(d2l, 'PRETRAIN_RERUN_NAMES',
                                    d2l.PRETRAIN_RERUN_NAMES + (
                                        'smollm3-math-5', 'smollm3-symbolic')):
@@ -1034,6 +1055,10 @@ class SmolLM3Test(unittest.TestCase):
         self.assertEqual(seen['parts'], sorted(
             [f'smollm3-{k}' for k in range(6)] + ['smollm3-math-5',
                                                  'smollm3-symbolic']))
+        self.assertEqual(sorted(seen['config']['rungs']),
+                         ['smollm3-math-5', 'smollm3-symbolic'])
+        self.assertEqual(seen['config']['rungs']['smollm3-math-5'],
+                         d2l._smollm3_settings('math500'))
         self.assertEqual(list(traj.answers.columns),
                          d2l._smollm3_answer_columns())
         self.assertEqual(d2l._SMOLLM3_RUNGS['smollm3-math-2'],
@@ -1063,7 +1088,7 @@ class SmolLM3Test(unittest.TestCase):
                                places=6)
         self.assertGreater(deltas.gsm8k_chat_lo['LC64K → mid'], 0)
         self.assertEqual(deltas.gsm8k_completion['LC64K → mid'], 0)
-        self.assertTrue(deltas.math500_chat.isna().all())
+        self.assertNotIn('math500_chat', deltas.columns)
         out = run_cell('continued-pretraining-stage-deltas',
                        dict(page_ns(), traj=traj))
         lines = out.splitlines()
@@ -1074,19 +1099,83 @@ class SmolLM3Test(unittest.TestCase):
         self.assertEqual(lines[6].split(), ['Δ', 'BPB,', '%', 'web',
                                             'science', 'book', 'traces'])
         self.assertEqual(lines[9].split()[-2], '+20.0*')
-        # a MATH-500 rung adds one line for LC 64K → mid
-        rung = pts['smollm3-4']['answers'].assign(task='math500')
-        rung5 = pts['smollm3-5']['answers'].assign(task='math500')
-        pts.update({'smollm3-math-4': dict(answers=rung),
-                    'smollm3-math-5': dict(answers=rung5)})
-        traj = d2l._smollm3_merge(pts, list(d2l._smollm3_call()['names']))
-        deltas = d2l.stage_deltas(traj)
-        self.assertEqual(deltas['math500_chat'].notna().sum(), 1)
+        # the MATH-500 rung (all three checkpoints) adds its own header and
+        # S3 → LC64K, LC64K → mid
+        traj = d2l._smollm3_merge(with_math_rung(pts),
+                                  list(d2l._smollm3_call()['names']))
         lines = run_cell('continued-pretraining-stage-deltas',
                          dict(page_ns(), traj=traj)).splitlines()
-        self.assertEqual(len(lines), 14)
-        self.assertTrue(lines[6].startswith('LC64K → mid   MATH-500'))
+        self.assertEqual(len(lines), 16)
         self.assertLessEqual(max(map(len, lines)), 80)
+        self.assertEqual(lines[6].split(), ['Δ', 'points', 'MATH-500',
+                                            '8-shot', 'MATH-500', 'chat'])
+        self.assertTrue(lines[7].startswith('S3 → LC64K' + ' ' * 25))
+        self.assertTrue(lines[8].startswith('LC64K → mid' + ' ' * 24))
+        # the MATH columns sit under GSM8K's 8-shot and chat columns
+        self.assertEqual(lines[6].index('MATH-500 8-shot'),
+                         lines[0].index('GSM8K 8-shot'))
+        self.assertIn('+10.0 [+', lines[8])  # mid's planted chat gain
+        self.assertTrue(lines[9].startswith('Δ BPB, %'))
+
+    def test_answer_deltas_and_table(self):
+        """The MATH-500 rung on stage 3, LC 64K and mid-training: per
+        checkpoint n, both accuracies and the cut share; paired changes
+        between consecutive rung checkpoints; explicit pairs."""
+        pts = with_math_rung(smollm3_points(
+            n_items=4, n_docs=2, gsm=lambda i, fmt: 0.6 if fmt == 'chat'
+            and i == 5 else 0.5))
+        traj = d2l._smollm3_merge(pts, list(d2l._smollm3_call()['names']))
+        tab = d2l.answer_table(traj, 'math500')
+        self.assertEqual(list(tab['checkpoint']),
+                         ['stage 3 end', 'LC 64K', 'mid-training'])
+        self.assertEqual(list(tab.columns),
+                         ['checkpoint', 'n', '8-shot', 'chat', 'cut'])
+        self.assertEqual(list(tab['n']), [500] * 3)
+        self.assertAlmostEqual(tab['chat'].iloc[2], 0.6)
+        self.assertAlmostEqual(tab['cut'].iloc[0], 0.04)
+        d = d2l.answer_deltas(traj, 'math500').set_index('transition')
+        self.assertEqual(list(d.index), ['S3 → LC64K', 'LC64K → mid'])
+        self.assertAlmostEqual(d.chat['LC64K → mid'], 10, places=6)
+        self.assertEqual(d.completion['S3 → LC64K'], 0)
+        e = d2l.answer_deltas(traj, 'math500', [('stage 3 end',
+                                                 'mid-training'),
+                                                ('LC 32K', 'mid-training')])
+        self.assertEqual(list(e['transition']), ['S3 → mid', 'LC32K → mid'])
+        self.assertTrue(np.isnan(e['chat'].iloc[1]))  # no LC 32K rung
+        self.assertEqual(len(d2l.answer_table(traj, 'gsm-symbolic')), 0)
+        self.assertEqual(len(d2l.answer_deltas(traj, 'gsm-symbolic')), 0)
+
+    def test_symbolic_check(self):
+        """Both chat gains of mid-training over LC 64K and their ratio."""
+        pts = smollm3_points(n_items=4, n_docs=2, gsm=lambda i, fmt: 0.7
+                             if fmt == 'chat' and i == 5 else 0.5)
+        sym = {k: pts[f'smollm3-{k}']['answers'] for k in (4, 5)}
+        pts['smollm3-symbolic'] = dict(answers=pd.concat([
+            sym[4].assign(task='gsm-symbolic'),
+            sym[5].assign(task='gsm-symbolic', score=lambda d: np.where(
+                d['format'] == 'chat', (d['item_id'].astype(int) < 300)
+                .astype(float), d['score']))]))
+        traj = d2l._smollm3_merge(pts, list(d2l._smollm3_call()['names']))
+        chk = d2l.symbolic_check(traj).set_index('task')
+        self.assertAlmostEqual(chk.loc['gsm8k', 'gain'], 20, places=6)
+        self.assertAlmostEqual(chk.loc['gsm-symbolic', 'gain'], 10, places=6)
+        self.assertAlmostEqual(chk.loc['gsm-symbolic', 'ratio'], 0.5)
+        self.assertGreater(chk.loc['gsm8k', 'lo'], 0)
+        none = d2l.symbolic_check(d2l._smollm3_merge(
+            smollm3_points(n_items=4, n_docs=2),
+            list(d2l._smollm3_call()['names']))).set_index('task')
+        self.assertTrue(np.isnan(none.loc['gsm-symbolic', 'gain']))
+
+    def test_cloze_task_deltas(self):
+        """Per transition and task, a paired change with its interval."""
+        pts = smollm3_points(n_items=50, n_docs=2, gain=lambda i: i >= 2)
+        traj = d2l._smollm3_merge(pts, list(d2l._smollm3_call()['names']))
+        d = d2l.cloze_task_deltas(traj, n_boot=200)
+        self.assertEqual(len(d), 5 * len(d2l.SMOLLM3_TASKS))
+        s23 = d[d['transition'] == 'S2 → S3']
+        self.assertTrue((s23['delta'] > 0).all())
+        self.assertTrue((d[d['transition'] == 'S1 → S2']['delta'] == 0).all())
+        self.assertTrue((s23['lo'] <= s23['delta']).all())
 
     def test_page_table_and_plot(self):
         traj = d2l._smollm3_merge(smollm3_points(n_items=20, n_docs=4),
@@ -1102,7 +1191,26 @@ class SmolLM3Test(unittest.TestCase):
             'checkpoint', 'tokens', 'ctx', 'cloze', '8-shot', 'chat', 'cut',
             'web', 'science', 'book', 'traces'])
         self.assertRegex(lines[6], r'^mid-training +11\.4T +64K +\d+\.\d '
-                                   r'+50\.0 +50\.0 +4% +\d\.\d{3}')
+                                   r'+50 +50 +4 +\d\.\d{3}')
+        d2l.plt.close('all')
+        # with the MATH-500 rung: a second block of 4 lines, 11 in all, and
+        # the plot's two extra series
+        traj = d2l._smollm3_merge(with_math_rung(smollm3_points(
+            n_items=20, n_docs=4)), list(d2l._smollm3_call()['names']))
+        with mock.patch.object(d2l, 'smollm3_trajectory',
+                               lambda names: traj):
+            lines = run_cell('continued-pretraining-smollm3',
+                             ns).splitlines()
+        self.assertEqual(len(lines), 11)
+        self.assertLessEqual(max(map(len, lines)), 80)
+        self.assertEqual(lines[7].split(), ['MATH-500', '(n', '=', '500)',
+                                            '8-shot', 'chat', 'cut'])
+        self.assertEqual([r.split()[0] for r in lines[8:]],
+                         ['stage', 'LC', 'mid-training'])
+        self.assertEqual(lines[10].split()[-3:], ['50', '50', '4'])
+        ax = d2l.plt.gcf().axes[0]
+        self.assertEqual([t.get_text() for t in ax.get_legend().get_texts()][
+            -2:], ['MATH-500 8-shot', 'MATH-500 chat'])
         d2l.plt.close('all')
 
     def test_calibration(self):
@@ -1168,10 +1276,14 @@ class SmolLM3Test(unittest.TestCase):
         self.assertLessEqual(max(map(len, lines)), 80)
         self.assertEqual(lines[0].split()[:6], ['checkpoint', 'format',
                                                 'live', '(n', '=', '50)'])
-        self.assertTrue(lines[0].endswith('committed (n = 500)'))
-        self.assertEqual(lines[1].split()[-1], '50%')
+        self.assertTrue(lines[0].endswith('committed: same items  all 500'))
+        # committed: 100% on the first 50 items (j < 250), 50% on all 500
+        self.assertEqual(lines[1].split()[-2:], ['100%', '50%'])
         self.assertIn('8-shot', lines[1])
-        self.assertRegex(lines[2], r'^LC 64K +chat +40% \[\d\d, \d\d\] +50%$')
+        self.assertRegex(lines[2],
+                         r'^LC 64K +chat +40% \[\d\d, \d\d\] +100% +50%$')
+        self.assertEqual(lines[0].index('committed'),
+                         lines[2].index('100%'))
 
     def test_pending_cells(self):
         """The four SmolLM3 cells run on a pending result."""
@@ -1195,19 +1307,89 @@ class SmolLM3Test(unittest.TestCase):
                 run_cell(f'continued-pretraining-{cell}', ns)
         d2l.plt.close('all')
 
+    def test_texts_identity(self):
+        """The texts' identity: order, count, content and the NUL between
+        documents count; NFC forms are equal (F25 review 3)."""
+        tid = d2l._bpb_texts_id
+        a = tid(dict(web=['ab', 'c']))
+        self.assertEqual(a['web']['n'], 2)
+        for other in (['ab', 'd'], ['a', 'bc'], ['c', 'ab'], ['ab']):
+            self.assertNotEqual(tid(dict(web=other)), a, other)
+        self.assertEqual(tid(dict(t=['e\u0301'])), tid(dict(t=['\u00e9'])))
+
+    def test_merge_checks_texts(self):
+        """Parts that read other texts are refused at the merge."""
+        names = list(d2l._smollm3_call()['names'])
+        ids = d2l._bpb_texts_id(dict(web=['x']))
+        pts = smollm3_points(n_items=4, n_docs=2)
+        for p in pts.values():
+            p['texts'] = ids
+        d2l._smollm3_merge(pts, names, ids)  # the same texts: merged
+        with self.assertRaisesRegex(ValueError, 'read other texts'):
+            d2l._smollm3_merge(pts, names, d2l._bpb_texts_id(dict(web=['y'])))
+        pts['smollm3-3'] = dict(pts['smollm3-3'],
+                                texts=d2l._bpb_texts_id(dict(web=['y'])))
+        with self.assertRaisesRegex(ValueError, 'smollm3-3 read other'):
+            d2l._smollm3_merge(pts, names)
+
+    def test_point_cache_identity(self):
+        """The bits-per-byte cache of a checkpoint carries its pin, the
+        scoring version and the texts' identity, and the part returns the
+        identity for the merge's check."""
+        seen = {}
+
+        def cached(name, what, ident, compute):
+            seen[what] = ident
+            return pd.DataFrame(dict(domain=['web'], doc=[0]))
+        texts = dict(web=['some text'], traces=['<|im_start|>user'])
+        cfg = mock.Mock(max_position_embeddings=65536)
+        with mock.patch.object(d2l, '_smollm3_tokenizer', lambda n: n), \
+                mock.patch.object(d2l, '_smollm3_cloze',
+                                  lambda n: pd.DataFrame()), \
+                mock.patch.object(d2l, '_smollm3_cached', cached), \
+                mock.patch.object(d2l, '_smollm3_answers',
+                                  lambda *a: pd.DataFrame()), \
+                mock.patch('transformers.AutoConfig.from_pretrained',
+                           lambda *a, **k: cfg), \
+                mock.patch.object(d2l, 'lm_free', lambda: None):
+            part = d2l._smollm3_point('mid', texts)
+        ident = seen['docs']
+        self.assertEqual(ident['scorer'], d2l._BPB_SCORER)
+        self.assertEqual(ident['texts'], d2l._bpb_texts_id(texts))
+        self.assertEqual(ident['pin'], d2l.PRETRAIN_SOURCES['smollm3-mid'][2])
+        self.assertEqual(part['texts'], d2l._bpb_texts_id(texts))
+        self.assertEqual(part['ctx'], 65536)
+
     def test_cloze_copied_from_v1(self):
-        v1 = mock.Mock(items=pd.DataFrame([
-            dict(task=t, item_id=j, score=1.0, checkpoint=c)
-            for c in ('LC 64K', 'mid-training') for t in d2l.SMOLLM3_TASKS
-            for j in range(2)]))
-        with mock.patch.object(d2l, '_read_result', lambda p, k: v1), \
+        """v1's per-item cloze scores are copied only for the pins v1
+        scored and its suite (MMLU's 2,000-item subset; F25 review 6)."""
+        def v1(mmlu=2000, label='LC 64K'):
+            return mock.Mock(items=pd.DataFrame([
+                dict(task=t, item_id=j, score=1.0, checkpoint=c)
+                for c in (label, 'mid-training') for t in d2l.SMOLLM3_TASKS
+                for j in range(mmlu if t == 'mmlu' else 2)]))
+        n = 2 * (len(d2l.SMOLLM3_TASKS) - 1) + 2000
+        with mock.patch.object(d2l, '_read_result', lambda p, k: v1()), \
                 mock.patch.object(d2l, 'download_keyed', lambda k: k):
             got = d2l._smollm3_cloze('mid')
-            self.assertEqual(len(got), 2 * len(d2l.SMOLLM3_TASKS))
+            self.assertEqual(len(got), n)
             self.assertEqual(set(got['checkpoint']), {'mid-training'})
             self.assertIsNone(d2l._smollm3_cloze('stage1'))
+            # a re-pinned checkpoint is scored afresh
+            src = dict(d2l.PRETRAIN_SOURCES)
+            src['smollm3-mid'] = src['smollm3-mid'][:2] + ('f' * 40,) + \
+                src['smollm3-mid'][3:]
+            with mock.patch.dict(d2l.PRETRAIN_SOURCES, src):
+                self.assertIsNone(d2l._smollm3_cloze('mid'))
+        with mock.patch.object(d2l, '_read_result',
+                               lambda p, k: v1(mmlu=1000)), \
+                mock.patch.object(d2l, 'download_keyed', lambda k: k):
+            self.assertIsNone(d2l._smollm3_cloze('mid'))  # another subset
         with mock.patch.dict(d2l.DATA_HUB, {}, clear=True):
             self.assertIsNone(d2l._smollm3_cloze('mid'))
+        # today's pins are the ones v1 scored
+        for k, rev in d2l._SMOLLM3_V1_PINS.items():
+            self.assertEqual(d2l.PRETRAIN_SOURCES[f'smollm3-{k}'][2], rev)
 
     def test_live_call(self):
         """smollm3_gsm8k: the first n of the 500 committed items, both
@@ -1319,6 +1501,23 @@ class SmolLM3AnswersTest(unittest.TestCase):
                   'x=5', '\\text{Evelyn}', '52_8', '5/0', '6 - 5i', '1,00',
                   None, '(-2,1)'):
             self.assertIsNone(d2l.math_value(s), s)
+
+    def test_math_prediction_value(self):
+        """A prediction loses \\$, \\%, a degree sign and a trailing unit;
+        a reference stays strict (F25 review 11)."""
+        cases = {'\\$18.90': '189/10', '90^\\circ': '90', '90^{\\circ}': '90',
+                 '25\\%': '25', '5\\text{ cm}': '5', '12 \\mbox{inches}': '12',
+                 '\\frac{1}{2}\\text{ m}': '1/2', '7': '7'}
+        for s, want in cases.items():
+            self.assertEqual(d2l.math_prediction_value(s), want, s)
+        for s in ('\\text{Evelyn}', 'x=5', '3\\sqrt{13}', None, '\\text{5}'):
+            self.assertIsNone(d2l.math_prediction_value(s), s)
+        self.assertIsNone(d2l.math_value('90^\\circ'))  # references strict
+        self.assertEqual(d2l.math_chat_answer(
+            '<think> a </think> \\boxed{30^\\circ}', 'eos'), '30')
+        self.assertEqual(d2l.math_completion_answer(
+            'Final Answer: The final answer is $\\$5$. I hope it is correct.'),
+            '5')
 
     def test_math_answers(self):
         tail = ('\nFinal Answer: The final answer is $-\\frac{2}{3}$. I hope'

@@ -67,7 +67,8 @@ class TestAcceleratorDesignGPU(unittest.TestCase):
     def test_fp8_product(self):
         A = torch.randn(128, 256, device='cuda')
         B = torch.randn(64, 256, device='cuda')
-        (A8, sA), (B8, sB) = d2l.fp8_per_tensor(A), d2l.fp8_per_tensor(B)
+        (A8, sA), (B8, sB) = (d2l.fp8_quant(X, granularity='tensor')
+                              for X in (A, B))
         out = torch._scaled_mm(A8, B8.T, scale_a=sA, scale_b=sB,
                                out_dtype=torch.bfloat16).float()
         ref = (A8.float() * sA) @ (B8.float() * sB).T

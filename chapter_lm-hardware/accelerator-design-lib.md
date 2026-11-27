@@ -1394,7 +1394,7 @@ def _ladder_live(r, same):
 #@save
 def _dtype_live(r, same):
     n = int(r.attrs.get('n', 8192))
-    fp8 = torch.cuda.get_device_capability() >= (8, 9)  # FP8 tensor cores
+    fp8 = d2l.has_fp8_cores('cuda')  # fp8 tensor cores: sm_89 and newer
     pts = [(f, r.tflops.iloc[i],
             d2l.hw_matmul_bench(n, n, n, f, repeats=5)['tflops'],
             _hw_noise(r, i, 'tflops'))
@@ -1411,6 +1411,14 @@ _HW_DATASHEET = {'fp32': 'fp32_tflops', 'tf32': 'tf32_tflops',
 _HW_BOOST_MHZ = {  # the boost clock the vendor's peak figures assume
     'RTX 4090': 2520,  # NVIDIA RTX 4090 product page
     'A100 PCIe 40 GB': 1410}  # NVIDIA A100 datasheet
+
+#@save
+def _hw_unsupported(fmt, device='cuda'):
+    """Why device cannot run hw_matmul_bench in format fmt ('no fp8 tensor
+    cores' for fp8 before sm_89), or None when it can."""
+    if fmt == 'fp8' and not d2l.has_fp8_cores(device):
+        return 'no fp8 tensor cores'
+    return None
 
 #@save
 def _hw_chip_row(gpu, mem_bytes, specs):
@@ -1448,6 +1456,8 @@ def _show_dtypes(r):
         cols['SM GHz'] = [_hw_sig(x / 1000, 3) for x in r.sm_mhz]
         cols['W'] = [_hw_sig(x, 3) for x in r.power_w]
     show_table(pd.DataFrame(cols))
+    for f, why in r.attrs.get('unsupported', {}).items():
+        print(f'{f}: not measured, {why} on the {r.attrs.get("gpu")}')
     if chip in _HW_BOOST_MHZ:
         print(f'datasheet peaks assume the {_HW_BOOST_MHZ[chip] / 1000:.2f} '
               'GHz boost clock')
@@ -1726,12 +1736,18 @@ def datasheet_vs_measured(row, *measured):
         print(f'measured on {gpu} ({_hw_bytes(mem or 0)}), not the '
               f'{row.name}: no datasheet comparison')
         return
+    dtypes = entries.get('dtypes')
+    skipped = {} if dtypes is None else dtypes.attrs.get('unsupported', {})
     show_table(pd.DataFrame({
         'datasheet': table.datasheet,
-        'measured': [_hw_sig(x) for x in table.measured],
+        'measured': ['none' if e == 'dtypes' and key in skipped
+                     else _hw_sig(x) for (_, _, (e, key)), x in zip(
+                         _HW_SHEET_ROWS, table.measured)],
         'fraction': [f'{f:.0%}' if f == f else '' for f in table.fraction]
     }, index=table.index))
     smem = entries.get('smem') or {}
+    for f, why in skipped.items():
+        print(f'{f}: none measured, {why}')
     if smem.get('peak_tbs') is not None and np.isfinite(smem['peak_tbs']):
         print(f"* bound, not a datasheet figure: {smem['n_sm']} SMs x "
               f"{_HW_L1_BYTES_PER_CLK} B/clk x "
@@ -1827,13 +1843,16 @@ def hw_bandwidth_ladder(sizes, kinds=('read', 'copy')):
 def hw_dtype_ladder(n, formats):
     """Measured TFLOP/s of an n x n x n product in each format
     (hw_matmul_bench), each after a one-second warm-up, with the SM clock
-    and board power while it ran, against the datasheet of the GPU."""
+    and board power while it ran, against the datasheet of the GPU. A
+    format this GPU cannot run (fp8 without fp8 tensor cores) is not timed:
+    attrs['unsupported'] maps it to the reason."""
     formats = list(formats)
     def compute():
+        why = {f: _hw_unsupported(f) for f in formats}
         df = _hw_frame([dict(format=f, **_hw_steady(
             lambda: d2l.hw_matmul_bench(n, n, n, f), warm_s=1.0))
-            for f in formats])
-        df.attrs['n'] = n
+            for f in formats if why[f] is None])
+        df.attrs.update(n=n, unsupported={f: w for f, w in why.items() if w})
         return df
     return _hw_result('box-microbench', compute,
                       dict(n=n, formats=formats), entry='dtypes',
@@ -1890,9 +1909,8 @@ def regen_microbench(config='box'):
             json.dump(_hw_encode(log.env), f, indent=1)
         ladder = d2l.hw_bandwidth_ladder(sizes=2**np.arange(18, 33),
                                          kinds=('read', 'copy'))
-        fp8 = ('fp8',) if torch.cuda.get_device_capability() >= (8, 9) else ()
-        dtypes = d2l.hw_dtype_ladder(  # no FP8 matrix units before Ada/Hopper
-            n=8192, formats=('fp32', 'tf32', 'bf16', 'fp16') + fp8)
+        dtypes = d2l.hw_dtype_ladder(  # fp8 recorded unsupported before sm_89
+            n=8192, formats=('fp32', 'tf32', 'bf16', 'fp16', 'fp8'))
         smem = hw_smem_bench()
         lat = hw_latency_bench(sizes=2**np.arange(12, 31))
         kernels = _regen_kernels()  # sec_lm_kernels: kernels-lib.md

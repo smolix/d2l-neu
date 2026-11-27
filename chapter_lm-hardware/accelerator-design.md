@@ -296,29 +296,30 @@ are the FP32-accumulate rates, half the FP16-accumulate figure on the vendor
 page. FP8 needs a scale per tensor so that the largest entry lands near the
 largest E4M3 value, 448. -->
 
-```{.python .input #accelerator-design-fp8-scale}
-%%tab pytorch
-def fp8_per_tensor(x):  #@save
-    """x in float8 E4M3 with one float32 scale, x ~ scale * x8: the scale
-    maps the largest |x| to the largest E4M3 value (448)."""
-    scale = x.abs().max().float() / torch.finfo(torch.float8_e4m3fn).max
-    return (x / scale).to(torch.float8_e4m3fn), scale
-```
-
 <!-- Placeholder (prose): one product per format; FP8 takes both operands
-through fp8_per_tensor and multiplies with torch._scaled_mm, which applies
-the two scales. -->
+through chapter 21's d2l.fp8_quant with one scale per tensor (cite
+:numref:`sec_lm_low_precision`; fix F9 replaced this section's own
+fp8_per_tensor, which returned the same pair) and multiplies with
+torch._scaled_mm, which applies the two scales. Ruling D3: fp8 runs natively
+on every GPU with fp8 tensor cores (sm_89 and newer, d2l.has_fp8_cores); on
+one without them (the A100 of C-T2) the ladder records "no fp8 tensor cores"
+instead of failing. -->
 
 ```{.python .input #accelerator-design-matmul-bench}
 %%tab pytorch
 def hw_matmul_op(m, n, k, dtype, device='cuda'):  #@save
     """A zero-argument (m x k) @ (k x n) product in a format: 'fp32',
     'tf32' (both FP32 storage), 'bf16', 'fp16', or 'fp8' (E4M3 with
-    per-tensor scales through torch._scaled_mm, bf16 output)."""
+    per-tensor scales through torch._scaled_mm, bf16 output; only on a GPU
+    with fp8 tensor cores)."""
+    if dtype == 'fp8' and not d2l.has_fp8_cores(device):
+        raise ValueError(f'fp8 needs fp8 tensor cores (sm_89 or newer); '
+                         f'{d2l.device_name(device)} has none')
     A = torch.randn(m, k, device=device)
     B = torch.randn(n, k, device=device)  # B.T is (k, n), column-major
     if dtype == 'fp8':
-        (A8, s_A), (B8, s_B) = fp8_per_tensor(A), fp8_per_tensor(B)
+        (A8, s_A), (B8, s_B) = (d2l.fp8_quant(X, granularity='tensor')
+                                for X in (A, B))
         return lambda: torch._scaled_mm(A8, B8.T, scale_a=s_A, scale_b=s_B,
                                         out_dtype=torch.bfloat16)
     store = {'fp32': torch.float32, 'tf32': torch.float32,
@@ -346,6 +347,17 @@ SM clock column: the datasheet peaks assume the boost clock. -->
 dtypes = d2l.hw_dtype_ladder(n=8192,
                              formats=('fp32', 'tf32', 'bf16', 'fp16', 'fp8'))
 ```
+
+<!-- Placeholder (prose): C3's fp16 gap (fix F9, measured with torch.profiler
+and clock locks): cuBLAS picks a different kernel for fp16 than for bf16 at
+8192^3; at the same locked clock it draws 11-17% more power and does 1-2% less
+work per cycle, so under the 450 W limit it runs at a lower clock (2.49 vs
+2.58 GHz in the table). The reduced-precision-reduction setting does not
+change the kernel. Ruling D3, 4-bit: NVFP4 and MXFP4 are simulated on this
+Ada card and run natively on sm_100 / sm_120 through chapter 21's native path
+(cite :numref:`sec_lm_low_precision`); the 4-bit cell
+(accelerator-design-fp4) is added once chapter 21's native FP4 product lands
+(fix F9, held on chapter 21's F40). -->
 
 ### Shared Memory and Latency
 

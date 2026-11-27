@@ -69,6 +69,13 @@ rule.
 Fix pass F7 (TestInferenceX): the snapshot precision per row (weights and
 KV, each chip predicted at its own), an unmodelled format raising, the
 pending predictions equal to the committed cell.
+Fix pass F9 (TestFp8Gating): fp8 on chapter 21's has_fp8_cores with the
+capability mocked: (8, 9) and newer build and run the scaled-mm product on
+chapter 21's per-tensor fp8_quant (the call recorded); (8, 0) and (8, 6)
+refuse it and the ladder records 'no fp8 tensor cores' without calling
+torch._scaled_mm, with the page's configuration stored; the displays' lines
+<= 80 columns; the live check skips fp8 without the cores. The FP4 cell of
+ruling D3 waits for chapter 21's F40 (not merged): no FP4 tests yet.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -727,12 +734,22 @@ class TestBenchHelpers(unittest.TestCase):
             self.assertEqual(tuple(out.shape), (m, n))
 
     def test_fp8_scale(self):
+        # fix F9: chapter 21's per-tensor fp8_quant replaced this section's
+        # fp8_per_tensor (same pair: E4M3 values, one fp32 scale, max 448)
         x = torch.randn(64, 64) * 1000
-        x8, s = d2l.fp8_per_tensor(x)
+        x8, s = d2l.fp8_quant(x, granularity='tensor')
         self.assertEqual(x8.dtype, torch.float8_e4m3fn)
+        self.assertEqual(tuple(s.shape), ())
+        self.assertEqual(s.dtype, torch.float32)
         self.assertAlmostEqual(float(x8.float().abs().max()), 448.0, 0)
+        ref = x.abs().max() / torch.finfo(torch.float8_e4m3fn).max
+        self.assertTrue(torch.equal(s, ref))
+        self.assertTrue(torch.equal(x8.view(torch.uint8),
+                                    (x / ref).to(torch.float8_e4m3fn)
+                                    .view(torch.uint8)))
         err = (x8.float() * s - x).abs().max() / x.abs().max()
         self.assertLess(float(err), 0.07)  # E4M3: 3 mantissa bits
+        self.assertFalse(hasattr(d2l, 'fp8_per_tensor'))
 
     def test_stats_and_formatting(self):
         med, mad = d2l._hw_stats([1.0, 2.0, 3.0, 10.0])
@@ -758,6 +775,127 @@ class TestBenchHelpers(unittest.TestCase):
         self.assertNotIn('line', packed)
         self.assertEqual(d2l._hw_unpack_raw(packed), text)
         self.assertEqual(packed, d2l._hw_pack_raw(text))  # mtime fixed
+
+
+
+def capability(cap):
+    """torch.cuda.get_device_capability mocked to cap (chapter 21's
+    has_fp8_cores reads it)."""
+    return mock.patch.object(torch.cuda, 'get_device_capability',
+                             lambda device=None: cap)
+
+
+class TestFp8Gating(unittest.TestCase):
+    """Fix F9, ruling D3: fp8 runs natively on every GPU with fp8 tensor
+    cores (sm_89 and newer, chapter 21's has_fp8_cores); on one without them
+    (the A100 of C-T2, sm_80) the ladder records 'no fp8 tensor cores'
+    without calling torch._scaled_mm. The GPU is mocked: no CUDA here."""
+
+    def scaled_mm(self, calls):
+        def record(a, b, **kw):
+            calls.append((a, b, kw))
+            return torch.zeros(a.shape[0], b.shape[1], dtype=torch.bfloat16)
+        return mock.patch.object(torch, '_scaled_mm', record)
+
+    def test_op_native(self):
+        calls = []  # a 'cuda' device whose operands are made on the CPU
+        with capability((8, 9)), self.scaled_mm(calls), mock.patch.object(
+                torch, 'randn', lambda *s, device=None: torch.ones(*s)):
+            fn = d2l.hw_matmul_op(32, 48, 64, 'fp8', device='cuda')
+            out = fn()
+        self.assertEqual(len(calls), 1)
+        a, b, kw = calls[0]
+        self.assertEqual((a.dtype, b.dtype), (torch.float8_e4m3fn,) * 2)
+        self.assertEqual((tuple(a.shape), tuple(b.shape)), ((32, 64), (64, 48)))
+        self.assertEqual(kw['out_dtype'], torch.bfloat16)
+        q, s = d2l.fp8_quant(torch.ones(32, 64), granularity='tensor')
+        self.assertTrue(torch.equal(kw['scale_a'], s))
+        self.assertEqual(tuple(out.shape), (32, 48))
+
+    def test_op_refused(self):
+        calls = []
+        for cap in ((8, 0), (8, 6)):
+            with capability(cap), self.scaled_mm(calls), \
+                    mock.patch.object(torch.cuda, 'get_device_name',
+                                      lambda d=None: 'NVIDIA A100-PCIE-40GB'):
+                with self.assertRaisesRegex(ValueError, 'fp8 tensor cores'):
+                    d2l.hw_matmul_op(32, 48, 64, 'fp8', device='cuda')
+        with self.assertRaisesRegex(ValueError, 'fp8 tensor cores'):
+            d2l.hw_matmul_op(32, 48, 64, 'fp8', device='cpu')
+        self.assertEqual(calls, [])
+
+    def ladder(self, cap):
+        """hw_dtype_ladder's compute under capability cap, on mocks."""
+        seen, captured = [], {}
+        def result(name, compute, config, **kw):
+            captured.update(config=config, kw=kw)
+            return compute()
+        bench = lambda m, n, k, f, **kw: (seen.append(f) or dict(
+            tflops=1.0, ms=1.0, mad=0.0))
+        frame = lambda rows: pd.DataFrame(rows).pipe(
+            lambda df: (df.attrs.update(gpu='A100-PCIE-40GB',
+                                        mem_bytes=42505273344), df)[1])
+        with capability(cap), \
+                mock.patch.object(d2l, '_hw_result', result), \
+                mock.patch.object(d2l, 'hw_matmul_bench', bench), \
+                mock.patch.object(d2l, '_hw_frame', frame), \
+                mock.patch.object(d2l, '_hw_steady',
+                                  lambda b, warm_s: dict(b(), sm_mhz=1410.0,
+                                                         power_w=250.0)):
+            df = d2l.hw_dtype_ladder(
+                n=64, formats=('fp32', 'tf32', 'bf16', 'fp16', 'fp8'))
+        return df, seen, captured
+
+    def test_ladder_without_fp8(self):
+        df, seen, captured = self.ladder((8, 0))
+        self.assertEqual(seen, ['fp32', 'tf32', 'bf16', 'fp16'])  # no fp8
+        self.assertEqual(list(df.format), seen)
+        self.assertEqual(df.attrs['unsupported'], {'fp8': 'no fp8 tensor cores'})
+        # the stored configuration is the page's, fp8 included
+        self.assertEqual(captured['config']['formats'],
+                         ['fp32', 'tf32', 'bf16', 'fp16', 'fp8'])
+        df.attrs['spread'] = {}
+        with specs_patch(), quiet() as buf:
+            d2l._show_dtypes(df)
+        lines = buf.getvalue().splitlines()
+        self.assertIn('fp8: not measured, no fp8 tensor cores on the '
+                      'A100-PCIE-40GB', lines)
+        self.assertLessEqual(max(map(len, lines)), 80)
+        with specs_patch(), quiet() as buf:
+            d2l.datasheet_vs_measured(committed_specs().loc['A100 PCIe 40 GB'],
+                                      dict(dtypes=df))
+        lines = buf.getvalue().splitlines()
+        fp8 = [x for x in lines if x.startswith('FP8 (TFLOP/s)')]
+        self.assertEqual(fp8[0].split()[-1], 'none')
+        self.assertIn('fp8: none measured, no fp8 tensor cores', lines)
+        self.assertLessEqual(max(map(len, lines)), 80)
+
+    def test_ladder_with_fp8(self):
+        for cap in ((8, 9), (9, 0), (10, 0), (12, 0)):
+            df, seen, _ = self.ladder(cap)
+            self.assertEqual(seen, ['fp32', 'tf32', 'bf16', 'fp16', 'fp8'])
+            self.assertEqual(df.attrs['unsupported'], {})
+
+    def test_dtype_live_gated(self):
+        r = pd.DataFrame({'format': ['bf16', 'fp8'], 'tflops': [160.0, 330.0],
+                          'ms': [1.0, 1.0], 'mad': [0.01, 0.01]})
+        r.attrs.update(n=64, spread={})
+        for cap, want in (((8, 0), ['bf16']), ((8, 9), ['bf16', 'fp8'])):
+            seen = []
+            bench = lambda m, n, k, f, **kw: (seen.append(f) or dict(
+                tflops=1.0))
+            with capability(cap), \
+                    mock.patch.object(d2l, 'hw_matmul_bench', bench):
+                d2l._dtype_live(r, True)
+            self.assertEqual(seen, want)
+
+    def test_regen_driver_formats(self):
+        # the driver passes the page's five formats on every GPU; the ladder
+        # itself drops what the GPU cannot run
+        import inspect
+        src = inspect.getsource(d2l.regen_microbench)
+        self.assertIn("formats=('fp32', 'tf32', 'bf16', 'fp16', 'fp8')", src)
+        self.assertNotIn('get_device_capability', src)
 
 
 def synthetic_ladder():

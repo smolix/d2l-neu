@@ -733,9 +733,11 @@ class ArmsEndToEndTest(Fixtures):
             stored = d2l._read_result(os.path.join(
                 root, 'rerun', d2l._next_key(key) + '.json.gz'), 'json-table')
             ns = dict(page_ns(), runs=runs)
-            outs = {c: run_cell(f'continued-pretraining-{c}', ns) for c in (
-                'gsm8k', 'bump-table', 'frontier', 'frontier-chord',
-                'equal-tokens', 'suite-deltas')}
+            with mock.patch.object(d2l, 'cpt_qwen_runs', lambda: runs):
+                outs = {c: run_cell(f'continued-pretraining-{c}', ns)
+                        for c in ('opening', 'gsm8k', 'bump-table',
+                                  'frontier', 'frontier-chord',
+                                  'equal-tokens', 'suite-deltas')}
         self.assertEqual(list(runs.table['arm']), ['base', 'A', 'B', 'C',
                                                    'A′'])
         self.assertEqual(stored.table.attrs['config']['data'],
@@ -751,6 +753,11 @@ class ArmsEndToEndTest(Fixtures):
         self.assertEqual(set(runs.equal['step']), {15})
         self.assertEqual(sorted(runs.items.loc[runs.items.arm == 'A',
                                                'step'].unique()), [15, 20])
+        self.assertEqual(len(outs['opening'].splitlines()), 3)
+        self.assertRegex(outs['opening'].splitlines()[0],
+                         r'^after \d+\.\dM trace tokens \(arm A\): '
+                         r'held-out trace loss \d\.\d\d → \d\.\d\d '
+                         r'nats/token$')
         self.assertEqual(len(outs['gsm8k'].splitlines()), 12)
         self.assertEqual(len(outs['frontier'].splitlines()), 7)
         # the toy arms barely move: B forgets more than A, and A′ no more
@@ -994,7 +1001,8 @@ class GSM8KTest(unittest.TestCase):
             return replies[fmt]
         with mock.patch.object(d2l, 'generate', generate):
             res = d2l.score_gsm8k(None, FakeChatTokenizer(), items)
-        self.assertEqual(list(res.columns), d2l._CPT_COLUMNS['gsm8k'][1:])
+        self.assertEqual(list(res.columns), d2l._CPT_COLUMNS['gsm8k'][1:]
+                         + d2l._GSM8K_TEXT)
         comp, chat, forced = calls
         # forcing: only the cut reply (1) and the never-closed one (2)
         self.assertEqual(forced[1], [d2l.gsm8k_force_prompt(
@@ -1027,6 +1035,22 @@ class GSM8KTest(unittest.TestCase):
         self.assertEqual(list(r.loc['completion', 'chat_tokens']),
                          [False, True, False, False, True])
         self.assertEqual(int(r.loc[('chat', '1'), 'new_tokens']), 4096)
+        # the replies, answers and forced continuations are kept (F23
+        # review finding 2): enough to read and re-score every item
+        self.assertEqual(list(r.loc['chat', 'text']),
+                         [g.text for g in replies['chat']])
+        kept = lambda col: [None if pd.isna(v) else v for v in col]
+        self.assertEqual(kept(r.loc['chat', 'pred']),
+                         ['18', None, None, '18', '17'])
+        self.assertEqual(kept(r.loc['chat', 'forced_pred']),
+                         ['18', '18', '17', '18', '17'])
+        self.assertEqual(kept(r.loc['chat', 'forced_text']),
+                         [None, '18', '17', None, None])
+        self.assertEqual(kept(r.loc['completion', 'pred']),
+                         ['18', '18', '17', '3', None])
+        self.assertEqual(kept(r.loc['completion', 'pred']),
+                         kept(r.loc['completion', 'forced_pred']))
+        self.assertTrue(r.loc['completion', 'forced_text'].isna().all())
 
     def test_items(self):
         try:
@@ -1088,7 +1112,10 @@ class GSM8KTest(unittest.TestCase):
             return pd.DataFrame(dict(format=['chat'], item_id=['0'],
                                      score=[1.0], forced=[1.0], cut=[False],
                                      thinks=[True], closed=[True],
-                                     chat_tokens=[False], new_tokens=[9]))
+                                     chat_tokens=[False], new_tokens=[9],
+                                     text=['<think> x </think> 18'],
+                                     pred=['18'], forced_pred=['18'],
+                                     forced_text=[None]))
 
         def load(model, path):
             log.append(('load', path))
@@ -1111,6 +1138,11 @@ class GSM8KTest(unittest.TestCase):
                                                                'score'] * 4)
             self.assertTrue(log[1][1].endswith(os.path.join(
                 't2-A', 'ckpt', 's305.safetensors')))
+            # the model's own file keeps the replies; the merge does not
+            own = d2l._read_result(os.path.join(root, 'cpt', 't2-base',
+                                                'gsm8k.json.gz'), 'json-table')
+            self.assertEqual(list(own['text']), ['<think> x </think> 18'])
+            self.assertIsNone(own['forced_text'].iloc[0])
             log.clear()
             again = d2l._cpt_gsm8k_all(cfgs)  # read back: nothing scored
             self.assertEqual(log, [])
@@ -1121,6 +1153,12 @@ class GSM8KTest(unittest.TestCase):
             # another batch size is another setting (not batch-invariant)
             with mock.patch.dict(d2l._GSM8K_BATCH, chat=32), \
                     self.assertRaisesRegex(ValueError, 'settings.batch'):
+                d2l._cpt_gsm8k_all(cfgs)
+            # a file scored under other answer rules is refused (F23
+            # review finding 2)
+            with mock.patch.object(d2l, '_GSM8K_SCORER',
+                                   d2l._GSM8K_SCORER + 1), \
+                    self.assertRaisesRegex(ValueError, 'settings.scorer'):
                 d2l._cpt_gsm8k_all(cfgs)
 
     def test_models_side_by_side(self):
@@ -1297,6 +1335,28 @@ class PageCellsTest(unittest.TestCase):
         self.assertRegex(out[0], r"^B − no-replay reference \(C → A chord\):"
                                  r" \+0\.0\d\d \[")
         self.assertTrue(out[1].startswith('seed spread (A vs A′): gain '))
+        self.assertRegex(out[1], r'; B − C → A′ chord: [-+]0\.\d{3}$')
+        self.assertLessEqual(max(map(len, out)), 80)
+
+    def test_frontier_chord_below_c(self):
+        """F23 review finding 1: a B that forgets less than C is measured
+        against the base → C segment, and the second line names no A′
+        chord (the reference does not involve A′)."""
+        base, _ = synthetic_docs()
+        fg = d2l.forgetting_gain(base, pd.concat([
+            shifted(base, g, f, 0.0, sd).assign(arm=arm)
+            for arm, g, f, sd in (('C', 0.03, 0.01, 1), ('A', 0.06, 0.04, 2),
+                                  ('A′', 0.061, 0.041, 4),
+                                  ('B', 0.02, 0.0049, 3))]))
+        ns = dict(page_ns(), fg=fg,
+                  seed=fg.set_index('arm').reindex(['A', 'A′']))
+        out = run_cell('continued-pretraining-frontier-chord',
+                       ns).splitlines()
+        self.assertEqual(len(out), 2)
+        self.assertRegex(out[0], r'^B − no-replay reference \(base → C '
+                                 r'segment\): \+0\.\d{3} \[')
+        self.assertEqual(out[1], 'seed spread (A vs A′): gain 0.001; '
+                                 'C → A′ chord: none, B forgets less than C')
         self.assertLessEqual(max(map(len, out)), 80)
 
     def test_t1_cell(self):

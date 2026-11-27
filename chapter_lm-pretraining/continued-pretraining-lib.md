@@ -706,7 +706,13 @@ thinking length, not skill). Per item the table keeps the score, the
 forced score, whether the reply was cut at the budget, whether it opened
 and closed a think block, whether a completion reply wrote a ChatML or
 think marker (the text before the first marker is scored, since the reply
-has ended there), and the number of new tokens.
+has ended there), and the number of new tokens. The model's own file
+also keeps each reply's text, the extracted answer, the forced
+continuation and its answer, so the replies can be read and re-scored
+without generating them again; the merged artifact holds only the
+columns above. The settings of a cached file carry the scorer's version
+(`_GSM8K_SCORER`, raised whenever the answer rules change), so a file
+scored under older rules is refused, not reused.
 
 Generation runs on a Transformers Qwen3 model, which batches prompts of
 different lengths (left padding), with an arm's weights mapped back from
@@ -740,6 +746,12 @@ _GSM8K_CUE = 'The final answer is $\\boxed{'  # budget forcing (s1)
 
 #@save
 _CHAT_MARKS = ('<|im_start|>', '<|im_end|>', '<think>', '</think>')
+
+#@save
+_GSM8K_SCORER = 2  # raise when gsm8k_chat_answer, the box or marks change
+
+#@save
+_GSM8K_TEXT = ['text', 'pred', 'forced_pred', 'forced_text']  # local only
 
 #@save
 def gsm8k_items(n=500, seed=0):
@@ -792,9 +804,11 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
     answer of its own is continued from gsm8k_force_prompt for at most
     `force` tokens, default _CPT_GSM8K['force'], 0 = off; else the score),
     cut (stopped at the budget), thinks and closed (opened and closed a
-    think block), chat_tokens (wrote a ChatML or think marker) and
-    new_tokens. budget is {format: n}, batch_size {format or 'force':
-    n}."""
+    think block), chat_tokens (wrote a ChatML or think marker),
+    new_tokens, and the columns of _GSM8K_TEXT: the reply's text, its
+    answer (pred), the forced answer and the forced continuation's text
+    (None when not forced). budget is {format: n}, batch_size {format or
+    'force': n}."""
     budget = {**_CPT_GSM8K['budget'], **(budget or {})}
     batch = {**_GSM8K_BATCH, **(batch_size or {})}
     force = _CPT_GSM8K['force'] if force is None else force
@@ -820,7 +834,7 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
             todo = [i for i, g in enumerate(gens) if force and (
                 g.finish_reason == 'length'
                 or _think_state(g.text) == (True, False))]  # no answer
-            forced = list(preds)
+            forced, more_text = list(preds), [None] * len(gens)
             if todo:  # up to the closing brace of the box
                 more = d2l.generate(
                     model, tokenizer, [gsm8k_force_prompt(prompts[i],
@@ -829,22 +843,24 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
                     eos_token_ids=eos, stop=['}'], batch_size=batch['force'])
                 for i, m in zip(todo, more):
                     forced[i] = d2l.extract_answer(m.text, 'gsm8k')
+                    more_text[i] = m.text
         else:  # the reply has ended at its first chat marker
             preds = [d2l.extract_answer(g.text[:min(
                 [g.text.find(m) for m in _CHAT_MARKS if m in g.text],
                 default=None)], 'gsm8k') for g in gens]
-            forced = preds
+            forced, more_text = preds, [None] * len(gens)
         right = lambda p, it: float(p is not None and p == it['reference'])
-        for it, g, pred, fp in zip(items, gens, preds, forced):
+        for it, g, pred, fp, mt in zip(items, gens, preds, forced, more_text):
             opened, closed = _think_state(g.text)
             rows.append(dict(format=fmt, item_id=it['id'],
                              score=right(pred, it), forced=right(fp, it),
                              cut=g.finish_reason == 'length', thinks=opened,
                              closed=closed, chat_tokens=any(
                                  m in g.text for m in _CHAT_MARKS),
-                             new_tokens=len(g.token_ids)))
+                             new_tokens=len(g.token_ids), text=g.text,
+                             pred=pred, forced_pred=fp, forced_text=mt))
     return pd.DataFrame(rows, columns=[c for c in _CPT_COLUMNS['gsm8k']
-                                       if c != 'arm'])
+                                       if c != 'arm'] + _GSM8K_TEXT)
 
 def _qwen3_hf_state(state, cfg):
     """A Transformers Qwen3 state dict from a Qwen3GPT or PackedGPT state
@@ -922,15 +938,17 @@ def _cpt_gsm8k_all(cfgs, arms=None):
     arm in arms (default: all of cfgs; T2), one Transformers model whose
     weights are swapped per arm; the settings of every cached file include
     the batch sizes (batched greedy decoding in bf16 is not
-    batch-invariant). Processes on separate cards fill the same per-model
-    files with arms=() (the base only) and arms=[arm], which the merge then
-    reads back."""
+    batch-invariant) and the scorer's version. Processes on separate
+    cards fill the same per-model files with arms=() (the base only) and
+    arms=[arm], which the merge then reads back; the result keeps only the
+    columns of _CPT_COLUMNS['gsm8k'] (no reply text)."""
     cfg0 = next(iter(cfgs.values()))
     arms = list(cfgs) if arms is None else list(arms)
     if set(arms) - set(cfgs):
         raise ValueError(f'no configuration for arms {set(arms) - set(cfgs)}')
     items = gsm8k_items(_CPT_GSM8K['n'], _CPT_GSM8K['seed'])
-    settings = d2l._jsonable(dict(_CPT_GSM8K, batch=_GSM8K_BATCH))
+    settings = d2l._jsonable(dict(_CPT_GSM8K, batch=_GSM8K_BATCH,
+                                  scorer=_GSM8K_SCORER))
     hf = {}
 
     def model(path=None):  # loaded once, on first need

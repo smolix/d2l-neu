@@ -62,9 +62,8 @@ runs = d2l.cpt_qwen_runs()
 look = runs.logs.set_index(['arm', 'step']).reindex([('base', 0), ('A', 15)])
 suite = d2l.suite_mean(runs.items).reindex([('base', 0), ('A', 15)])
 trace, web = look['domain_loss'].to_numpy(), look['general_loss'].to_numpy()
-print(f'after {look["tokens"].iloc[1] / 1e6:.1f}M tokens of reasoning traces '
-      f'(arm A): held-out trace loss {trace[0]:.2f} → {trace[1]:.2f} '
-      'nats/token')
+print(f'after {look["tokens"].iloc[1] / 1e6:.1f}M trace tokens (arm A): '
+      f'held-out trace loss {trace[0]:.2f} → {trace[1]:.2f} nats/token')
 print(f'general web text: {web[0]:.2f} → {web[1]:.2f}')
 print(f'suite ({len(d2l.CPT_TASKS)} tasks, mean accuracy): '
       f'{100 * suite.iloc[0]:.1f}% → {100 * suite.iloc[1]:.1f}%')
@@ -369,7 +368,7 @@ d2l.plot_tradeoff(fg, chord=('C', 'A'))
 
 <!-- Placeholder (prose): claim 5: B's forgetting as a fraction of A's and B's gain as a fraction of A's, as printed with their intervals (paired: the same document resamples); "most" only if the forgetting fraction's interval lies under 50%, "small cost" only if the kept-gain interval lies over 75%; else the measured fractions. The plot: the dashed line from the base through C to A is the no-replay lower bound the next cell tests B against. Under the T1 fallback there is no arm C: the cell says so. -->
 
-<!-- Placeholder (prose): claim 6, the test (investigation of 2026-11-25: the line from the base through C, extended past C, lies above a concave frontier, so it tested nothing). Without replay the arms trace a frontier through the base that is concave (quadratic model: slope 1/sqrt(F) - 1), so the chord between two no-replay points lies on or under it: B, whose forgetting falls between C's and A's, is measured against the chord from C to A at its own forgetting. Pre-registered out-of-range cases: if B forgets less than C, the reference is the segment from the base to C (also a lower bound there); if B forgets more than A, nothing measured bounds the frontier and the cell says so, no verdict. If B does not forget at all (point estimate at or below 0), the segment's extension below 0 bounds the frontier from above, not below: no verdict either (F21 review finding 5). Wording (F21 review finding 4: the chord is a lower bound, so only "below" places B relative to the frontier itself): "above the measured no-replay frontier (the C → A chord)", or "beats every interpolation of the no-replay runs", only if the interval excludes 0 and the excess exceeds the A/A′ spread, never "above the no-replay frontier" plain; "on the chord within the seed spread" otherwise; "below the chord" if the interval lies under 0, and then the reading is "a no-replay run between C and A does at least as well" (not "C is the better trade-off": the run that beats B is the no-replay run at B's forgetting); never "above the line". The second line gives the seed spread and the excess against the chord to A′ instead. -->
+<!-- Placeholder (prose): claim 6, the test (investigation of 2026-11-25: the line from the base through C, extended past C, lies above a concave frontier, so it tested nothing). Without replay the arms trace a frontier through the base that is concave (quadratic model: slope 1/sqrt(F) - 1), so the chord between two no-replay points lies on or under it: B, whose forgetting falls between C's and A's, is measured against the chord from C to A at its own forgetting. Pre-registered out-of-range cases: if B forgets less than C, the reference is the segment from the base to C (also a lower bound there); if B forgets more than A, nothing measured bounds the frontier and the cell says so, no verdict. If B does not forget at all (point estimate at or below 0), the segment's extension below 0 bounds the frontier from above, not below: no verdict either (F21 review finding 5). Wording (F21 review finding 4: the chord is a lower bound, so only "below" places B relative to the frontier itself): "above the measured no-replay frontier (the C → A chord)", or "beats every interpolation of the no-replay runs", only if the interval excludes 0 and the excess exceeds the A/A′ spread, never "above the no-replay frontier" plain; "on the chord within the seed spread" otherwise; "below the chord" if the interval lies under 0, and then the reading is "a no-replay run between C and A does at least as well" (not "C is the better trade-off": the run that beats B is the no-replay run at B's forgetting); never "above the line". The second line gives the seed spread and the excess against the chord to A′ instead (when B forgets less than C, both references are the base → C segment, and the line says there is no A′ chord). -->
 
 ```{.python .input #continued-pretraining-frontier-chord}
 %%tab pytorch
@@ -377,8 +376,9 @@ ex = d2l.frontier_excess(fg, 'B', chord=('C', 'A'))
 print(ex.note or f'B − no-replay reference ({ex.ref}): {ex.value:+.3f} '
       f'[{ex.lo:+.3f}, {ex.hi:+.3f}] nats/token')
 alt = d2l.frontier_excess(fg, 'B', chord=('C', 'A′'))
-chord = f'B − C → A′ chord: {alt.value:+.3f}' if not alt.note else (
-    'C → A′ chord:')  # a note goes on its own line: it fills most of one
+chord = (f'B − {alt.ref}: {alt.value:+.3f}' if 'chord' in alt.ref else
+         'C → A′ chord:' if alt.note else
+         'C → A′ chord: none, B forgets less than C')
 print(f'seed spread (A vs A′): gain {abs(seed.gain.diff().iloc[-1]):.3f}; '
       + chord)
 if alt.note:

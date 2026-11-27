@@ -11806,6 +11806,41 @@ def pretrain(model, stream, cfg, val_fn=None, hooks=(), resume=None):
                 break
     return run.finish()
 
+def update_rms_by_phase(log, cfg, stable_from):
+    """Medians per module kind of the logged update RMS (columns rms_<kind>,
+    in units of the learning rate) over the stable phase (steps stable_from
+    to the decay's start) and the decay; abs_<phase> multiplies them by the
+    phase's median learning rate: the size of the update itself.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    run = log.set_index('step')
+    rms = run.filter(like='rms_').dropna(how='all')
+    decay_from = cfg.steps - cfg.decay
+    out = {}
+    for phase, rows in (('stable', rms.loc[stable_from:decay_from]),
+                        ('decay', rms.loc[decay_from + 1:])):
+        assert len(rows), f'the {phase} phase has no probe steps'
+        out[phase] = rows.median()
+        out[f'abs_{phase}'] = out[phase] * run.loc[rows.index, 'lr'].median()
+    return pd.DataFrame(out).rename(lambda c: c.removeprefix('rms_'))
+
+def moved(x, at, before=200, window=20, horizon=200, k=3):
+    """Steps after `at` until the rolling median of x over `window` steps
+    leaves k MAD around the line fitted to the `before` steps before `at`;
+    None if it stays inside for `horizon` steps.
+
+    Defined in :numref:`sec_lm_reference_model`"""
+    x = x.dropna()
+    ref = x[(x.index >= at - before) & (x.index < at)]
+    resid = x - np.polyval(np.polyfit(ref.index, ref.to_numpy(), 1), x.index)
+    center = resid[ref.index].median()
+    mad = (resid[ref.index] - center).abs().median()
+    width = max(1, round(window / np.median(np.diff(x.index))))  # samples
+    after = resid[(resid.index >= at) & (resid.index < at + horizon)]
+    roll = after.rolling(width, min_periods=width).median()
+    out = roll[(roll - center).abs() > k * mad]
+    return int(out.index[0] - at) if len(out) else None
+
 LogitStats = collections.namedtuple('LogitStats', ['max_logit', 'entropy'])
 
 @torch.no_grad()

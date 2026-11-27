@@ -33,7 +33,10 @@ grid: each variant's arm config (schedule, clip, warmup 305, softcap
 backend, QK-norm; unknown variants refused), the zero-layer model trains,
 `_arm_summary` (first step above 1,000, smallest and peak-phase entropy),
 `first_collapsed_rate`, `departure` and `collapse_crossings` on synthetic
-traces (a diverged arm's loss crossing is its first non-finite step), the
+traces; `update_rms_by_phase` (phase medians; the absolute update = the
+per-lr median x the phase's median lr) and `moved` (no move on a noisy
+line at 20 seeded steps, reproducibly; a shift found within the window,
+also every 10 steps; spikes and moves past the horizon ignored) (a diverged arm's loss crossing is its first non-finite step), the
 softcap entropy from capped scores with the raw maximum, the seed sets the
 data order, a resumed job reads its finished arms, the merge
 keeps the zero-layer loss, the regeneration stores the recipe (with the
@@ -987,6 +990,66 @@ class MeasurementTest(unittest.TestCase):
         # never inside the reference steps 76-275
         early = x.where(step < 200, x + 1.0)
         self.assertGreaterEqual(d2l.departure(early, 76) or 276, 276)
+
+    def test_update_rms_by_phase(self):
+        cfg = toy_config(steps=600, warmup=50, decay=100, peak_lr=1e-3)
+        step = np.arange(1, 601)
+        rng = np.random.default_rng(0)
+        lr = [d2l.wsd_lr(s - 1, cfg.steps, cfg.warmup, cfg.decay,
+                         cfg.peak_lr) for s in step]
+        probe = step % 10 == 0
+        log = pd.DataFrame(dict(step=step, lr=lr, loss=3.0))
+        for k, base in (('W_q', 0.2), ('W_v', 0.15)):
+            val = base + 0.01 * rng.random(600) + 0.02 * (step > 500)
+            log[f'rms_{k}'] = np.where(probe, val, np.nan)
+        got = d2l.update_rms_by_phase(log, cfg, 100)
+        self.assertEqual(sorted(got.index), ['W_q', 'W_v'])
+        run = log.set_index('step')
+        for k in ('W_q', 'W_v'):
+            for phase, rows in (('stable', range(100, 501, 10)),
+                                ('decay', range(510, 601, 10))):
+                rows = list(rows)
+                med = run.loc[rows, f'rms_{k}'].median()
+                self.assertAlmostEqual(got.at[k, phase], med)
+                # the absolute update = per-lr median x the median lr
+                self.assertAlmostEqual(
+                    got.at[k, f'abs_{phase}'],
+                    med * run.loc[rows, 'lr'].median())
+        self.assertAlmostEqual(got.at['W_q', 'abs_stable'],
+                               got.at['W_q', 'stable'] * 1e-3)
+        # per lr the decay rises here; the update itself falls
+        self.assertTrue((got['decay'] > got['stable']).all())
+        self.assertTrue((got['abs_decay'] < got['abs_stable']).all())
+        with self.assertRaises(AssertionError):  # no probe in the decay
+            d2l.update_rms_by_phase(log[log['step'] <= 500], cfg, 100)
+
+    def test_moved(self):
+        rng = np.random.default_rng(0)
+        step = np.arange(1, 3001)
+        noise = 0.05 * rng.standard_normal(3000)
+        trend = pd.Series(4 - 2e-4 * step + noise, index=step)
+        # the null fixture: a falling line plus noise moves nowhere at the
+        # page's 20 seeded steps, and the same seed gives the same steps
+        def draw():
+            return np.random.default_rng(0).integers(500, 2500, size=20)
+        np.testing.assert_array_equal(draw(), draw())
+        null = [d2l.moved(trend, int(t)) for t in draw()]
+        self.assertEqual(null, [d2l.moved(trend, int(t)) for t in draw()])
+        self.assertEqual(sum(m is not None for m in null), 0)
+        # a sustained shift 30 steps after the event: found within the
+        # rolling window, on dense and on every-10-steps series
+        jump = trend + np.where(step >= 1530, 0.5, 0.0)
+        self.assertTrue(30 <= d2l.moved(jump, 1500) <= 50)
+        sparse = jump[step % 10 == 0]
+        self.assertTrue(30 <= d2l.moved(sparse, 1500) <= 60)
+        self.assertIsNone(d2l.moved(trend, 1500))
+        # a change beyond the horizon is not counted
+        late = trend + np.where(step >= 1800, 0.5, 0.0)
+        self.assertIsNone(d2l.moved(late, 1500, horizon=200))
+        # single spikes: the rolling median ignores them
+        spiky = trend.copy()
+        spiky[[1510, 1600]] = 50.0
+        self.assertIsNone(d2l.moved(spiky, 1500))
 
     def test_collapse_crossings(self):
         rng = np.random.default_rng(0)

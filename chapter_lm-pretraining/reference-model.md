@@ -501,25 +501,48 @@ d2l.plot_run_log(log, ['loss', 'grad_norm', 'rms', 'max_logit', 'mfu'],
 
 <!-- Placeholder (prose): Adam's update in units of the learning rate has RMS sqrt((1 - beta_1)/(1 + beta_1)) = 0.229 when the gradient is noise; near 1 when it is signal. Stable phase (from a sixth of the run, step 1,000 of r2, past warmup's transient) against decay phase, per module type. One sentence on token_emb: its RMS averages over every row, including the rows of tokens absent from the step's batch (no gradient, an update from the moments alone), so its ratio to 0.229 is not the noise-floor reading the matrices give. -->
 
+<!-- Placeholder (prose): claim 5 as measured (F12, from the committed log): per unit learning rate every module but W_v sits near the floor in the stable phase (ratios 0.83-0.94; W_v 0.73, named); in the decay the per-unit-lr RMS rises slightly (decay ÷ stable 1.02-1.19, W_v the most) while the update itself falls with the learning rate (absolute decay ÷ stable 0.48-0.56, the decay's median lr being 0.47 of the peak). Never write that the per-lr value falls in the decay. Two units, two columns: say which one each sentence reads. -->
+
+```{.python .input #reference-model-update-size-by-module-1}
+%%tab pytorch
+#@save
+def update_rms_by_phase(log, cfg, stable_from):
+    """Medians per module kind of the logged update RMS (columns rms_<kind>,
+    in units of the learning rate) over the stable phase (steps stable_from
+    to the decay's start) and the decay; abs_<phase> multiplies them by the
+    phase's median learning rate: the size of the update itself."""
+    run = log.set_index('step')
+    rms = run.filter(like='rms_').dropna(how='all')
+    decay_from = cfg.steps - cfg.decay
+    out = {}
+    for phase, rows in (('stable', rms.loc[stable_from:decay_from]),
+                        ('decay', rms.loc[decay_from + 1:])):
+        assert len(rows), f'the {phase} phase has no probe steps'
+        out[phase] = rows.median()
+        out[f'abs_{phase}'] = out[phase] * run.loc[rows.index, 'lr'].median()
+    return pd.DataFrame(out).rename(lambda c: c.removeprefix('rms_'))
+```
+
 ```{.python .input #reference-model-update-rms}
 %%tab pytorch
 beta1 = run_cfg.betas[0]
 noise_floor = math.sqrt((1 - beta1) / (1 + beta1))
 STABLE_FROM = run_cfg.steps // 6  # r2: step 1,000, past warmup's transient
-MODULES = ('W_q', 'W_k', 'W_v', 'W_o', 'W_g', 'W_1', 'W_2', 'token_emb',
-           'norm')
-rms = main.set_index('step').filter(like='rms_').dropna(how='all')
-decay_from = run_cfg.steps - run_cfg.decay
-phases = {'stable': rms.loc[STABLE_FROM:decay_from],
-          'decay': rms.loc[decay_from + 1:]}
-assert all(len(p) for p in phases.values()), 'a phase has no probe steps'
-med = {k: v.median() for k, v in phases.items()}
-print(f'update RMS in units of the learning rate ({run_cfg.preset} run)')
+MODULES = ['W_q', 'W_k', 'W_v', 'W_o', 'W_g', 'W_1', 'W_2', 'token_emb',
+           'norm']
+rms = update_rms_by_phase(main, run_cfg, STABLE_FROM).loc[MODULES]
+per_lr = rms['decay'] / rms['stable']
+absolute = rms['abs_decay'] / rms['abs_stable']
+assert (absolute < 1).all(), 'an update grew in the decay'
+print(f'update RMS per unit learning rate ({run_cfg.preset} run); '
+      'absolute: times the median lr')
 print(f'{"module":>9} {"stable":>7} {"decay":>7} '
-      f'{f"ratio to {noise_floor:.3f}":>15}')
+      f'{f"ratio to {noise_floor:.3f}":>15} '
+      f'{"decay ÷ stable: per lr":>23} {"absolute":>9}')
 for m in MODULES:
-    stable, decay = med['stable'][f'rms_{m}'], med['decay'][f'rms_{m}']
-    print(f'{m:>9} {stable:7.3f} {decay:7.3f} {stable / noise_floor:15.2f}')
+    print(f'{m:>9} {rms.at[m, "stable"]:7.3f} {rms.at[m, "decay"]:7.3f} '
+          f'{rms.at[m, "stable"] / noise_floor:15.2f} {per_lr[m]:23.2f} '
+          f'{absolute[m]:9.2f}')
 ```
 
 ### Who Moves First
@@ -528,6 +551,7 @@ for m in MODULES:
 
 ```{.python .input #reference-model-lead-lag}
 %%tab pytorch
+#@save
 def moved(x, at, before=200, window=20, horizon=200, k=3):
     """Steps after `at` until the rolling median of x over `window` steps
     leaves k MAD around the line fitted to the `before` steps before `at`;
@@ -547,8 +571,10 @@ def moved(x, at, before=200, window=20, horizon=200, k=3):
 ```{.python .input #reference-model-lead-lag-table}
 %%tab pytorch
 run = main.set_index('step')
-series = {'grad norm': run['grad_norm'], 'loss': run['loss'],
-          'largest logit': run.filter(like='max_logit_').max(axis=1)}
+series = {'grad norm': run['grad_norm'],
+          'largest logit': run.filter(like='max_logit_').max(axis=1),
+          'loss': run['loss']}
+decay_from = run_cfg.steps - run_cfg.decay
 events = {'end of warmup': run_cfg.warmup, 'start of decay': decay_from,
           'gradient event' + (' (mild)' if event.mild else ''): event.step}
 null = np.random.default_rng(0).integers(  # stable phase, full windows
@@ -562,10 +588,13 @@ for name, at in events.items():
 cells = []
 for x in series.values():  # how often, and how late, each fires at random
     lags = [m for m in (moved(x, t) for t in null) if m is not None]
-    cells.append(f'{len(lags)}/20'
+    cells.append(f'{len(lags)}/{len(null)}'
                  + (f', +{np.median(lags):.0f}' if lags else ''))
-print(f'{"20 random steps (null)":>23} ' + ' '.join(f'{c:>13}' for c in cells))
+print(f'{"20 random steps (null)":>23} '
+      + ' '.join(f'{c:>13}' for c in cells))
 ```
+
+<!-- Placeholder (prose): claim 6 as measured (F12, from the committed log): no monitor resolves a lead over the loss at this recipe. End of warmup: the loss moved first (+22) and the largest logit followed (+60); start of the decay: only the largest logit moved (+60), so no lead is resolved; the gradient event (mild): the loss first (+19), the logit at +127; the grad norm never moved. The null row reads the logit's moves: it fires at 11 of 20 random stable-phase steps (median +58; the loss at 3 of 20, median +48; the grad norm at none), so its moves at the events are not specific. Write per event "the loss moved first" or "no lead resolved". -->
 
 ## Reading Checkpoints and the Ladder
 

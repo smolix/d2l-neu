@@ -156,6 +156,15 @@ assert not mat['peer'].any()  # S1: the driver refuses peer access
 assert np.nanmax(mat['gbs']) < host  # every copy crosses two host links
 ```
 
+<!-- Placeholder (prose): fix pass F11 (claim S1, as restated): peer access
+is refused, so every GPU-to-GPU copy is staged through host memory, at
+about the pinned host-link rate, not "a small fraction" of it: NODE pairs
+22 GB/s, PHB pairs 20, against pinned h2d 23 of sec_lm_memory_tiers, i.e.
+0.85-0.96 of the measured host link (the range from the unrounded medians;
+quote it from the printed line); a 4-byte copy takes 18-19 us on every
+pair. The assert compares with the 31.5 GB/s line rate; the text compares
+with the measured link. -->
+
 ### Collectives on the Box
 :label:`subsec_lm_hw_box_collectives`
 
@@ -234,7 +243,13 @@ alpha_beta.json, which 22.3, 22.6 and 22.7 read through box_alpha_beta. -->
 
 <!-- Placeholder (prose): fix pass F2 (S2): the sentence under the table
 compares the two-card all-reduce across the host bridges (NODE, 3.5 GB/s)
-and behind one bridge (PHB, 2.4 GB/s): 1.5x, 95% intervals disjoint. -->
+and behind one bridge (PHB, 2.4 GB/s): 1.5x, 95% intervals disjoint. Fix
+pass F11: S2 holds as its fallback (measured): NODE 3.52 GB/s [3.51-3.53],
+PHB 2.42 [2.40-2.44], four cards 2.36 [2.35-2.36]; the pair behind one host
+bridge is slower, the same order as sec_lm_memory_tiers' concurrent copies
+(two cards on one bridge at 77% of twice one card) and as the copy-engine
+arm below (PHB 11.5 against NODE 19.8 GB/s). The "smoke run" figures in the
+placeholder above (2.4 against 3.6) are superseded by the committed ones. -->
 
 ```{.python .input #server-paths-fits}
 %%tab pytorch

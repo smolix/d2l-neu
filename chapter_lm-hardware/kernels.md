@@ -450,9 +450,11 @@ and K2 (at least 10x the eager chunked version of the opening). A
 configuration that needs more shared memory than an SM offers (99 KiB per
 block on Ada) would not compile and a line under the table would name it;
 on the 4090 all twelve compile (num_stages 2), so no such line appears.
-Measured on the 4090: the best configuration runs at 103% of SDPA at the
-reference shape (64 x 64, 4 warps) and 92% at Qwen3-8B (128 x 128, 8 warps);
-the 64-row tiles at 8 warps run at about half speed at both shapes. -->
+Measured on the 4090 (committed run, fix pass F11): the best configuration
+runs at 102% of SDPA at the reference shape (128 x 64, 4 warps; the next two
+within 2%) and 92% at Qwen3-8B (128 x 128, 8 warps), so claim K1 holds; the
+64-row tiles at 8 warps run at about half speed at the reference shape
+(46-52% of the best) and at 48-74% at Qwen3-8B. -->
 
 ```{.python .input #kernels-flash-sweep}
 %%tab pytorch
@@ -464,15 +466,18 @@ flash = d2l.flash_sweep(shapes, seq, block_q=(64, 128), block_k=(32, 64, 128),
 configuration, the registers per thread (at most 255) and the 32-bit words
 spilled to local memory when a tile's accumulators and operands do not fit;
 claim K3, stated as measured (the fallback wording), not as predicted:
-- d_h = 64 (reference): block_q 128 does not raise throughput; the 64-row
-  tiles at 4 warps are best (149-151 TF/s), since K and V come from L2
-  anyway. 128 x 32 at 4 warps is spill-free (254 registers) at 147.
+(numbers from the committed table, run of 2026-11-26; fix pass F11
+replaced an earlier run's figures)
+- d_h = 64 (reference): block_q 128 does not raise throughput; 64- and
+  128-row tiles at 4 warps are within 2% (144-148 TF/s), since K and V come
+  from L2 anyway. 128 x 32 at 4 warps is spill-free (254 registers) at 146.
 - d_h = 128 (Qwen3-8B): block_q 128 gains (64 x 32 -> 128 x 32 at 4 warps:
-  116 -> 132 TF/s) even with 44 spilled words.
+  116 -> 132 TF/s) even with 44 spilled words; the fastest spill-free
+  block_q 128 tile is 128 x 32 at 8 warps (129).
 - Large spills cost: 128 x 128 at 4 warps spills 140 words (reference) and
-  248 (Qwen3-8B) and runs at 127 and 76 TF/s.
+  248 (Qwen3-8B) and runs at 125 and 75 TF/s.
 - The strongest effect is warps against tile height: 64-row tiles at 8
-  warps run at about half speed at both shapes (68-77 and 64-99 TF/s).
+  warps run at about half speed at both shapes (68-76 and 64-98 TF/s).
 Do not write "the largest spill-free block_q at 4 warps was 64": 128 x 32 at
 4 warps has no spills at the reference shape. -->
 

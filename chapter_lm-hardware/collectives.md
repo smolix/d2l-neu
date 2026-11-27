@@ -511,6 +511,15 @@ teaching point, stated, not hidden. -->
 regret = d2l.tuner_regret(pairs)
 ```
 
+<!-- Placeholder (prose): fix pass F11 (claim C3, its fallback, as
+measured): NCCL's choice is within 3 noise units of the best enabled forced
+pair at 24 of 26 sizes, not at every size. The largest miss: at 128 KiB
+forced Ring/Simple is 16% faster than NCCL's Ring/LL (9.6 noise units). The
+tuner's model is the reason, stated as the teaching point: it credits
+Ring/Simple with 24 GB/s busbw on this node against the measured 2.4, and
+its table switches from LL to Simple at 470 KiB while the forced pairs
+cross at 83 KiB. Quote size, pair and units from the printed lines. -->
+
 <!-- Placeholder (prose): the hierarchical all-reduce by hand, from three
 torch.distributed calls on two process groups (the device mesh is Chapter
 23's): reduce-scatter in the intra group, all-reduce of the shard in the
@@ -579,6 +588,16 @@ if not np.isnan(predicted):  # NaN without the two earlier sections' fits
 ```
 
 <!-- Placeholder (prose): fix pass F6: the gloo ranks are pinned to physical cores from box-net v2 and box-coll v2 on (sec_lm_networks), which raises gloo's beta and halves its alpha; C4's branch, the gain and the gate's bandwidth and latency ratios are quoted from the v2 pair only, and stated as properties of this box's gloo setup, not of gloo itself. -->
+
+<!-- Placeholder (prose): fix pass F11 (claim C4): on the committed v1 pair
+the gate failed (gloo's 4-rank beta 1.21 GB/s, 95% 1.18-1.23, is not below
+half of NCCL's 2.36), so C4 is its fallback: the closed form predicts the
+measured hierarchical/flat gain within 20% (at 256 MiB 1.6x measured, 1.6x
+predicted; intra/inter bandwidth 2.3x measured, 1.9x from the fits), and
+the box cannot emulate a slow network by bandwidth (gloo is slower by
+latency). These v1 numbers are an interim state: box-coll v2 (F12) decides
+the branch by the same rule, and the text quotes whichever branch and
+numbers v2 prints. -->
 
 <!-- Placeholder (prose): what the box cannot show. The ring/tree crossover
 of D1 needs a tree deeper than a chain (several nodes), the rail effect of

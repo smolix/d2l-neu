@@ -47,6 +47,15 @@ renting one. Idea in one sentence: a token's price is the chip-hour price
 divided by tokens per chip-hour and its energy is the chip's power divided
 by the same rate, so both are set by utilization first. -->
 
+<!-- Placeholder (prose): fix pass F11: the box measures a lower SM clock,
+not a power cap (ruling H1 covers clock locks; the -pl arm was not run), so
+the opening asks what a lower clock does to each workload and names a power
+cap only as the lever that lowers the clock on a compute-bound kernel. The
+answer (E5 on the committed sweep) is that batch-1 decode slows about as
+much as the training step, so do not promise "free" energy savings for
+decode here. The plan's numbers (P_s = 80 W, k = 80 W/GHz^3, f* = 0.79 GHz)
+appear only as the worked example of D3, never as the box's result. -->
+
 ```{.python .input #energy-cost-imports}
 %%tab pytorch
 import math

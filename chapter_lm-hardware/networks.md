@@ -246,6 +246,17 @@ rdma = quoted.set_index('transport').alpha_us['RDMA, one NDR port']
 assert (ladder[ladder.source == 'measured'].alpha_us > rdma).all()  # N2
 ```
 
+<!-- Placeholder (prose): fix pass F11 (claim N2, as measured): quote each
+transport's alpha at 1-2 significant digits from the printed lines, with its
+transport, against the quoted RDMA round trip (about 5 us, labelled quoted);
+never "tens of microseconds" for a transport that measures hundreds. The
+gloo rows come from box-net v2 (pinned ranks, regenerated in F12); until
+v2 is committed the page's numbers are v1 (TCP round trip 41 us, NCCL shm
+33, NCCL sockets 100, gloo 690 at 2 ranks and 2,200 at 4) and the gloo ones
+must not be quoted. The first placeholder of this subsection ("hundreds of
+microseconds per ring step") and its "about three times" for 4 against 2
+ranks are restated from v2. -->
+
 ## Which Axes Fit Where
 :label:`subsec_lm_hw_layout`
 
@@ -310,6 +321,14 @@ contrast is the section's idea for tp. The expert row: fine-grained
 experts (d_ff = 768) do little work per byte moved, so ep is chatty;
 dispatching in fp8 (b = 1) halves it. The ratios only shrink with the
 ignored terms (last line). -->
+
+<!-- Placeholder (prose): fix pass F11 (D1): tensor parallelism at t = 8 on
+NVLink 3 gives rho_tp = 0.16 for Qwen3-8B (beta per direction, 300 GB/s;
+P_eff = 0.4 x 312 TFLOP/s). The earlier "below one tenth" counted the
+bidirectional 600 GB/s; the cell is right, so the text quotes 0.16 and
+drops the "one tenth" framing. The other cells of the row as computed:
+t = 2 about 0.024, across the HDR NIC about 2.0, across the box's
+host-staged link about 21 (quote from the printed table). -->
 
 ```{.python .input #networks-axis-ratios}
 %%tab pytorch

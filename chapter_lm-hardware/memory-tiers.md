@@ -193,6 +193,17 @@ d2l.plot_h2d(h2d, links, pcie_gen=4, lanes=16)
 assert links.loc[('pageable', 'h2d'), 'beta'] < beta_pinned  # staging costs
 ```
 
+<!-- Placeholder (prose): fix pass F11 (claim M1, as measured): pinned h2d
+reaches 23 GB/s (range 21-24 over the copies of 256 MiB and more) = 72% of
+the 31.5 GB/s per-direction line rate, not "within 20%"; in 2 MiB pages 25
+(79%); NVIDIA's nvbandwidth, copy engines alone, 25 (79%); d2h 20 (65%);
+pageable h2d 15 (48%), markedly slower. The link ran at Gen 4 x16 during
+the sweep, so it is not link training. The 2 MiB-page gain is the GPU's
+translation of 4 KiB host pages; PCIe packet overhead (TLP and DLLP
+headers, about 26-27 GB/s attainable, quoted) explains most of the rest;
+about 1-2 GB/s stays unattributed: say so. Quote fractions at 2 digits from
+the printed lines. -->
+
 <!-- Placeholder (prose): the four cards at once, asked as a question with
 two outcomes (claim M2): the EPYC 7502 has 128 Gen 4 lanes and about 200
 GB/s of DRAM, so four links at about 25 GB/s each may scale, or a shared
@@ -219,6 +230,14 @@ plateau as "the median of the copies of 256 MiB and more, and their range"
 the four-card output gains a per-bridge line (M2: about 36 GB/s h2d per host
 bridge, two cards behind it; all four cards 98% of 2 x 36: the bridge
 binds, not DRAM). -->
+
+<!-- Placeholder (prose): fix pass F11 (claim M2, the question's answer):
+four cards do not reach four times one link: 71 GB/s h2d = 76% of 4 x one
+card (d2h 54). Two cards behind one host bridge reach 36 GB/s (77% of 2 x
+one card), two cards on two bridges 47 (100%), so each host bridge carries
+about 36 GB/s and four cards are 2 x 36; host DRAM (torch bench: triad 89,
+read 111 GB/s) is not the limit. The host bridge binds: state that as the
+measured outcome of the question the opening asks. -->
 
 <!-- Placeholder (prose): fix pass F5: host DRAM is measured by a torch
 bench (STREAM's operations as tensor operations, bytes counted as STREAM

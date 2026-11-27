@@ -358,11 +358,24 @@ about 4% less work per measured cycle. The clock and the locked-clock kernel
 difference explain about 5 of the 8 points; why the per-cycle gap widens at
 default clocks is not measured. Neither format sat at the 450 W limit (406 and
 411 W in the table). The reduced-precision-reduction setting does not change
-the kernel. Ruling D3, 4-bit: NVFP4 and MXFP4 are simulated on this Ada card
-and run natively on sm_100 / sm_120 through chapter 21's native path (cite
-:numref:`sec_lm_low_precision`); the 4-bit cell (accelerator-design-fp4) is
-added once chapter 21's native FP4 product lands (fix F9, held on chapter 21's
-F40). -->
+the kernel. -->
+
+<!-- Placeholder (prose): ruling D3 in one or two sentences (fix pass F9,
+F11): fp8 is native on Ada (the 330 TFLOP/s row above, about twice bf16) and
+on every newer GPU; NVFP4 and MXFP4 are simulated on this Ada card and run
+natively on Blackwell (sm_100, sm_103, sm_120, sm_121), both through chapter
+21's implementation (cite :numref:`sec_lm_low_precision`: its simulator and
+its native product with the capability check and probe GEMM); this section
+re-implements none of the packing or scales. The 4-bit cell
+(accelerator-design-fp4, d2l.hw_fp4_matmul) goes here once chapter 21's
+native FP4 product lands (its fix F40; held, not on the ch21 branch as of
+2026-11-27). On this box it prints two status lines and measures nothing
+(no FP4 tensor cores on sm_89; simulated here, timed natively on sm_100 /
+sm_120); on a Blackwell card it times the native product against the chip
+row's FP4 peak, a live rate never quoted in the text. Say that the native
+branch is written and unit-tested with the hardware detection mocked and
+cannot run here. The summary table gains an FP4 row only for chips with an
+FP4 datasheet figure (the 4090 has none). -->
 
 ### Shared Memory and Latency
 

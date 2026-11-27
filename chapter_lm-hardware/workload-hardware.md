@@ -748,6 +748,17 @@ for L, p in measured.groupby('L'):  # W2: along b, per GPU up, per user down
     assert p.user_tps.is_monotonic_decreasing, L
 ```
 
+<!-- Placeholder (prose): fix pass F11 (claim W2, as measured; never "on
+the line"): the monotonic part holds (asserted); the 10 held-out decode
+points lie -7% to +4% from the line in step time; the per-sequence slope
+(step time added per extra sequence) is larger than the model's at every
+context: 0.122 against 0.087 ms at L = 512 (+40%), 0.389 against 0.346 at
+2,048, 1.489 against 1.386 at 8,192 (quote from the printed lines). So
+each sequence costs something the KV-read term does not carry, largest
+relative to it at short context, where the measured series sits left of the
+line at large b. Say this as measured; the b = 1 to 2 kernel switch of the
+placeholder above is a separate, fixed cost. -->
+
 <!-- Placeholder (prose): cost along the line: GPU-seconds per million
 tokens at an interactive point, at the capacity limit and at a short
 context. Consequences, one sentence each: separate prefill and decode pools
@@ -783,6 +794,21 @@ and the model has no inter-chip hops, so its number stays out of the prose
 (the compute term alone would cut it many times). -->
 
 <!-- Placeholder (prose): each chip at its own precision and TP from the snapshot, shown in a precision column; ServingModel models bf16, fp16 and fp8 weights and KV only, so a 4-bit row raises (ruling D3's 4-bit path is built only once a snapshot has such a row; none is committed) (fix F7). -->
+
+<!-- Placeholder (prose): fix pass F11 (claim W6, F8's outcome): no
+InferenceX snapshot is committed. F8 found no redistributable result set
+that meets the plan's model rule (a dense 70B-class or a standard-GQA Qwen3
+model on at least three of H100, H200, B200, MI355X): InferenceX publishes
+end-to-end results only as workflow artifacts kept for 90 days, the Llama-70B
+era's are gone, and the retained ones are MLA, hybrid or sparse-attention
+models. So the cell prints datasheet predictions only (tok/s per GPU at one
+interactivity point, no rank column) and W6 stays pending until the author
+chooses: predictions only, a hand-built DeepSeek-R1 MLA shape, or another
+model's test-branch rows. Until then the text makes no ranking claim against
+InferenceX and does not describe a "committed snapshot with attribution and
+upstream commit" (the paragraph above and the author brief's notebook item 6
+presume one); it may name InferenceX as the public reference a reader can
+compare against by hand. -->
 
 ```{.python .input #workload-hardware-other-chips}
 %%tab pytorch

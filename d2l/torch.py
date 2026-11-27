@@ -32820,20 +32820,23 @@ class Snapshot(collections.namedtuple(
     """An InferenceX snapshot: per chip (chip_specs names), tensor-parallel
     degree, precision (bytes per weight and per KV entry) and measured
     tokens/s per GPU at user_tps tokens/s per user. dtype_bytes and
-    kv_bytes are the formats of the chips the snapshot did not measure.
+    kv_bytes are the formats of the chips the snapshot did not measure:
+    the (weights, KV) pair most of its chips ran.
 
     Defined in :numref:`sec_lm_workload_hardware`"""
     def __bool__(self):
         return not self.pending
 
-_HW_IX_FORMATS = {'bf16': 2, 'bfloat16': 2, 'fp16': 2, 'float16': 2,
-                  'fp8': 1, 'fp8_e4m3': 1, 'fp8_e4m3fn': 1, 'fp8_e5m2': 1}
+_HW_IX_FORMATS = {  # name: (bytes per value, the name the tables print)
+    'bf16': (2, 'bf16'), 'bfloat16': (2, 'bf16'), 'fp16': (2, 'fp16'),
+    'float16': (2, 'fp16'), 'fp8': (1, 'FP8'), 'fp8_e4m3': (1, 'FP8'),
+    'fp8_e4m3fn': (1, 'FP8'), 'fp8_e5m2': (1, 'FP8')}
 
-def _hw_ix_bytes(precision, where):
-    """Bytes per value of an InferenceX precision that ServingModel models
-    (bf16 and fp16: 2, fp8: 1). Any other format (fp4, nvfp4, mxfp4, int4,
-    'auto', ...) or a missing one raises a ValueError naming it and the row
-    (where), so no row is ever read as bf16.
+def _hw_ix_format(precision, where):
+    """(bytes per value, printed name) of an InferenceX precision that
+    ServingModel models (bf16 and fp16: 2, fp8: 1). Any other format (fp4,
+    nvfp4, mxfp4, int4, 'auto', ...) or a missing one raises a ValueError
+    naming it and the row (where), so no row is ever read as bf16.
 
     Defined in :numref:`sec_lm_workload_hardware`"""
     p = str(precision).strip().lower().replace('-', '_')
@@ -32843,7 +32846,7 @@ def _hw_ix_bytes(precision, where):
     return _HW_IX_FORMATS[p]
 
 def _hw_ix_label(dtype_bytes):
-    """The format name the tables print for a byte count.
+    """The format name printed for a byte count with no recorded name.
 
     Defined in :numref:`sec_lm_workload_hardware`"""
     return 'FP8' if dtype_bytes == 1 else 'bf16'
@@ -32855,25 +32858,28 @@ def _read_snapshot(path, shape, slack=0.9):
     tensor-parallel degree and precision). Every row's precision is read
     (an unmodelled one raises); the KV cache's format is the row's
     kv_precision where recorded, else its weights'. The chips the snapshot
-    did not measure get the weight and KV formats most of its chips have
-    (a tie: the wider one).
+    did not measure get the (weights, KV) pair most of its chips ran (a
+    tie: the wider pair).
 
     Defined in :numref:`sec_lm_workload_hardware`"""
     df = pd.read_csv(path)
     df['chip'] = df.hw.map(_HW_IX_CHIPS)
     where = [f'snapshot row {i + 2} ({hw})' for i, hw in enumerate(df.hw)]
-    df['dtype_bytes'] = [_hw_ix_bytes(p, w)
-                         for p, w in zip(df.precision, where)]
+    df['dtype_bytes'], df['weights_fmt'] = zip(*[
+        _hw_ix_format(p, w) for p, w in zip(df.precision, where)])
     kv = df.kv_precision if 'kv_precision' in df else [math.nan] * len(df)
-    df['kv_bytes'] = [d if pd.isna(k) else _hw_ix_bytes(k, w + ', KV')
-                      for k, d, w in zip(kv, df.dtype_bytes, where)]
+    df['kv_bytes'], df['kv_fmt'] = zip(*[
+        (d, n) if pd.isna(k) else _hw_ix_format(k, w + ', KV')
+        for k, d, n, w in zip(kv, df.dtype_bytes, df.weights_fmt, where)])
     u = float(df.tps_per_user.median())
     ok = df[df.chip.notna() & (df.tps_per_user >= slack * u)]
+    if ok.empty:
+        raise ValueError(f'no {", ".join(_HW_IX_CHIPS)} row within {slack} '
+                         f'of the median {u:.0f} tokens/s per user')
     best = ok.loc[ok.groupby('chip', sort=False).tps_per_gpu.idxmax()]
-    common = lambda col: int(max(best[col].value_counts().items(),
-                                 key=lambda kc: (kc[1], kc[0]))[0])
-    return Snapshot(best.reset_index(drop=True), shape,
-                    common('dtype_bytes'), common('kv_bytes'), u,
+    pairs = collections.Counter(zip(best.dtype_bytes, best.kv_bytes))
+    w, kv = max(pairs, key=lambda p: (pairs[p], sum(p), p))
+    return Snapshot(best.reset_index(drop=True), shape, int(w), int(kv), u,
                     int(df.isl.iloc[0] + df.osl.iloc[0] // 2), False)
 
 def inferencex_snapshot():
@@ -32945,14 +32951,23 @@ def rank_against(snap, specs, chips=('H100 SXM', 'H200 SXM', 'B200', 'MI355X',
     W = d2l.ServingModel(snap.model_cfg, specs.loc[chips[0]],
                          dtype_bytes=snap.dtype_bytes).weight_bytes()
     measured = snap.table.set_index('chip') if len(snap.table) else None
+    default = (snap.dtype_bytes, snap.kv_bytes, _hw_ix_label(snap.dtype_bytes)
+               + '/' + _hw_ix_label(snap.kv_bytes))
+    if measured is not None:  # the names of a chip that ran the default pair
+        m = measured[(measured.dtype_bytes == default[0])
+                     & (measured.kv_bytes == default[1])]
+        if len(m):
+            default = default[:2] + (f'{m.weights_fmt.iloc[0]}/'
+                                     f'{m.kv_fmt.iloc[0]}',)
     rows, formats = {}, {}
     for chip in chips:
         row = specs.loc[chip]
-        w, kv = snap.dtype_bytes, snap.kv_bytes
+        w, kv, formats[chip] = default
         if measured is not None and chip in measured.index:
             tp, ix = int(measured.tp[chip]), float(measured.tps_per_gpu[chip])
-            w, kv = int(measured.dtype_bytes[chip]), int(
-                measured.kv_bytes[chip])
+            r = measured.loc[chip]
+            w, kv = int(r.dtype_bytes), int(r.kv_bytes)
+            formats[chip] = f'{r.weights_fmt}/{r.kv_fmt}'
         elif row.mem_type == 'SRAM':
             tp, ix = d2l.sram_chips_needed(W, row.mem_gb * 1e9), math.nan
         else:
@@ -32961,7 +32976,6 @@ def rank_against(snap, specs, chips=('H100 SXM', 'H200 SXM', 'B200', 'MI355X',
                               dtype_bytes=w, kv_bytes=kv)
         predicted = _tps_at(sm, snap.user_tps, snap.context)
         rows[chip] = dict(tp=tp, predicted=predicted, inferencex=ix)
-        formats[chip] = f'{_hw_ix_label(w)}/{_hw_ix_label(kv)}'
     t = pd.DataFrame(rows).T.astype(float)
     if snap:  # a rank only for the chips the snapshot measured
         ranked = t.inferencex.notna()
@@ -32988,8 +33002,10 @@ def rank_against(snap, specs, chips=('H100 SXM', 'H200 SXM', 'B200', 'MI355X',
               f' (ordered alike on {k} of {n} pairs)')
     absent = [c for c in t.index if c not in both.index]
     if snap and absent:
-        print('predicted, not ranked (absent from the snapshot): '
-              + ', '.join(absent))
+        print(textwrap.fill(
+            'predicted at the snapshot\'s most common precision, '
+            f'{default[2]}, not ranked (absent from it): ' + ', '.join(absent),
+            79))
     for chip in t.index[specs.loc[t.index].mem_type == 'SRAM']:
         compute = ('' if np.isfinite(specs.loc[chip].p16_tflops) else
                    'its compute (no FLOP/s figure in the table) and ')

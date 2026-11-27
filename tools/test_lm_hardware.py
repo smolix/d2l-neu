@@ -1766,8 +1766,9 @@ class TestInferenceX(unittest.TestCase):
                                 both.inferencex.tolist())
         self.assertEqual(n, 6)
         self.assertIn(f'ordered alike on {k} of 6 pairs', tau[0])
-        self.assertTrue(any(l.startswith('predicted, not ranked') and
-                            'RTX 4090' in l for l in lines))
+        self.assertIn("predicted at the snapshot's most common precision, "
+                      'FP8/FP8, not ranked (absent from it): RTX 4090, '
+                      'Groq LPU', ' '.join(' '.join(lines).split()))
         self.assertTrue(math.isnan(t['rank']['RTX 4090']))  # absent: no rank
         self.assertTrue(math.isnan(t['rank']['Groq LPU']))
         self.assertEqual(sorted(t.ix_rank.dropna()), [1, 2, 3, 4])
@@ -1819,7 +1820,8 @@ class TestInferenceX(unittest.TestCase):
 
     def test_per_row_precision(self):
         """Fix F7: precision per row (weights and KV), each chip predicted
-        at its own; unmeasured chips at the most common formats."""
+        at its own; unmeasured chips at the most common (weights, KV)
+        pair."""
         mixed = (self.FIXTURE.replace('H100,vllm,fp8', 'H100,vllm,bf16')
                  .replace('B200,vllm,fp8', 'B200,vllm,FP8-E4M3')
                  .replace('2026-11-20\n', '2026-11-20,{}\n')
@@ -1831,16 +1833,17 @@ class TestInferenceX(unittest.TestCase):
             'H100 SXM': 2, 'H200 SXM': 1, 'B200': 1, 'MI355X': 1})
         self.assertEqual(t.kv_bytes.to_dict(), {  # empty KV: the weights'
             'H100 SXM': 2, 'H200 SXM': 2, 'B200': 1, 'MI355X': 1})
-        self.assertEqual((snap.dtype_bytes, snap.kv_bytes), (1, 2))  # tie: 2
+        self.assertEqual((snap.dtype_bytes, snap.kv_bytes), (1, 1))  # 2 of 4
         specs = committed_specs()
         lines, r = lines_of(self, d2l.rank_against, snap, specs)
         self.assertIn('weights/KV', lines[0])
         self.assertEqual(r.precision.to_dict(), {
             'H100 SXM': 'bf16/bf16', 'H200 SXM': 'FP8/bf16', 'B200': 'FP8/FP8',
-            'MI355X': 'FP8/FP8', 'RTX 4090': 'FP8/bf16',
-            'Groq LPU': 'FP8/bf16'})
+            'MI355X': 'FP8/FP8', 'RTX 4090': 'FP8/FP8', 'Groq LPU': 'FP8/FP8'})
+        self.assertTrue(any('most common precision, FP8/FP8' in l
+                            for l in lines))
         for chip, (w, kv) in {'H100 SXM': (2, 2), 'H200 SXM': (1, 2),
-                              'B200': (1, 1), 'RTX 4090': (1, 2)}.items():
+                              'B200': (1, 1), 'RTX 4090': (1, 1)}.items():
             sm = d2l.ServingModel(snap.model_cfg, specs.loc[chip], n_chips=8,
                                   dtype_bytes=w, kv_bytes=kv)
             want = d2l._tps_at(sm, snap.user_tps, snap.context)
@@ -1852,6 +1855,35 @@ class TestInferenceX(unittest.TestCase):
                         .predicted['H100 SXM'],
                         lines_of(self, d2l.rank_against, uniform, specs)[1]
                         .predicted['H100 SXM'])  # bf16 reads twice the bytes
+
+    def test_default_pair_and_names(self):
+        """Fix F7 review: the default is a (weights, KV) pair a measured chip
+        ran (a tie: the wider pair); fp16 prints as fp16, not bf16."""
+        kvcol = (self.FIXTURE.replace('retrieved\n', 'retrieved,kv_precision\n')
+                 .replace('2026-11-20\n', '2026-11-20,{}\n'))
+        crossed = (kvcol.replace('H200,vllm,fp8', 'H200,vllm,bf16')
+                   .replace('MI355X,vllm,fp8', 'MI355X,vllm,bf16')
+                   .format('bf16', 'fp8', 'bf16', 'fp8'))
+        snap = self._snap(crossed)  # FP8/bf16 twice, bf16/FP8 twice
+        self.assertEqual((snap.dtype_bytes, snap.kv_bytes), (2, 1))
+        lines, r = lines_of(self, d2l.rank_against, snap, committed_specs())
+        self.assertEqual(r.precision['RTX 4090'], 'bf16/FP8')
+        fp16 = self._snap(self.FIXTURE.replace('fp8', 'fp16'))
+        self.assertEqual((fp16.dtype_bytes, fp16.kv_bytes), (2, 2))
+        lines, r = lines_of(self, d2l.rank_against, fp16, committed_specs())
+        self.assertEqual(set(r.precision), {'fp16/fp16'})
+        self.assertTrue(any('most common precision, fp16/fp16' in l
+                            for l in lines))
+        self.assertEqual(d2l._hw_ix_format('float16', 'x'), (2, 'fp16'))
+
+    def test_empty_selection_raises(self):
+        """Fix F7 review: no mapped chip near the median interactivity
+        raises a ValueError that says so."""
+        slow = ''.join(f'llama70b,B300,vllm,fp8,1024,1024,64,8,5000,{u},abc,x\n'
+                       for u in (200, 210, 220, 230, 240))
+        with self.assertRaisesRegex(ValueError, r'no H100, .* row within 0\.9 '
+                                    'of the median 200 tokens/s per user'):
+            self._snap(self.FIXTURE + slow)
 
     def test_unmodelled_precision_raises(self):
         """Fix F7: a format ServingModel does not model raises, naming it
@@ -1871,8 +1903,8 @@ class TestInferenceX(unittest.TestCase):
               .replace('2026-11-20\n', '2026-11-20,auto\n'))
         with self.assertRaisesRegex(ValueError, "KV: precision 'auto'"):
             self._snap(kv)
-        self.assertEqual(d2l._hw_ix_bytes('bfloat16', 'x'), 2)
-        self.assertEqual(d2l._hw_ix_bytes(' FP8_e4m3fn ', 'x'), 1)
+        self.assertEqual(d2l._hw_ix_format('bfloat16', 'x'), (2, 'bf16'))
+        self.assertEqual(d2l._hw_ix_format(' FP8_e4m3fn ', 'x'), (1, 'FP8'))
 
     def test_pending_matches_committed(self):
         """Fix F7's gate: the pending predictions are the committed ones

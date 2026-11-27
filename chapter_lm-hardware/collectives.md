@@ -478,11 +478,13 @@ two nearly equal lines is not. The "(off)" rows are LL128, fitted but not
 a choice NCCL would make here. -->
 
 <!-- Placeholder (prose): fix pass F2 (C2): the last line under the table
-gives each fit against its measured times from 16 KiB to 1 MiB (Ring/LL +2%
-to +72%, Ring/Simple -1% to +48%) and the two fitted lines against each
-other (+19% at 16 KiB, -3% at 1 MiB): the fits miss by more than the lines
-differ, so they cannot place the crossover. C2 fails the 2x bar (83 KiB
-measured, 280 KiB predicted); say so, do not widen the bar. -->
+gives each fit against its measured times from 16 KiB to 1 MiB (box-coll
+v2: Ring/LL +2% to +78%, Ring/Simple -2% to +47%) and the two fitted lines
+against each other (+11% at 16 KiB, 0% at 1 MiB): the fits miss by more
+than the lines differ, so they cannot place the crossover. C2 fails the 2x
+bar (87 KiB measured, 600 KiB predicted; v1 gave 280: two nearly parallel
+lines put their intersection anywhere, which is the point); say so, do not
+widen the bar. -->
 
 ```{.python .input #collectives-fit-pairs}
 %%tab pytorch
@@ -514,11 +516,12 @@ regret = d2l.tuner_regret(pairs)
 <!-- Placeholder (prose): fix pass F11 (claim C3, its fallback, as
 measured): NCCL's choice is within 3 noise units of the best enabled forced
 pair at 24 of 26 sizes, not at every size. The largest miss: at 128 KiB
-forced Ring/Simple is 16% faster than NCCL's Ring/LL (9.6 noise units). The
+forced Ring/Simple is 15% faster than NCCL's Ring/LL (6.9 noise units;
+box-coll v2). The
 tuner's model is the reason, stated as the teaching point: it credits
 Ring/Simple with 24 GB/s busbw on this node against the measured 2.4, and
 its table switches from LL to Simple at 470 KiB while the forced pairs
-cross at 83 KiB. Quote size, pair and units from the printed lines. -->
+cross at 87 KiB. Quote size, pair and units from the printed lines. -->
 
 <!-- Placeholder (prose): the hierarchical all-reduce by hand, from three
 torch.distributed calls on two process groups (the device mesh is Chapter
@@ -589,18 +592,18 @@ if not np.isnan(predicted):  # NaN without the two earlier sections' fits
 
 <!-- Placeholder (prose): fix pass F6: the gloo ranks are pinned to physical cores from box-net v2 and box-coll v2 on (sec_lm_networks), which raises gloo's beta and halves its alpha; C4's branch, the gain and the gate's bandwidth and latency ratios are quoted from the v2 pair only, and stated as properties of this box's gloo setup, not of gloo itself. -->
 
-<!-- Placeholder (prose): fix pass F11 (claim C4): on the committed v1 pair
-the gate failed at its edge (gloo's 4-rank beta 1.21 GB/s, 95% 1.18-1.23:
-the lower bound equals half of NCCL's 2.36 at the printed precision, and the
-cell prints "2.0x the bandwidth"), so C4 is its fallback: the closed form
-predicts the measured hierarchical/flat gain within 20% (at 256 MiB 1.6x
-measured, 1.6x predicted). Separately, stated and not part of the 20% test:
-the intra/inter bandwidth ratio is 2.3x measured and 1.9x from the fits.
-By the gate's rule the box cannot emulate a slow network by bandwidth (gloo
-is slower by latency), but say that the verdict sits at the gate's edge, not
-a clean separation. These v1 numbers are an interim state: box-coll v2 (F12) decides
-the branch by the same rule, and the text quotes whichever branch and
-numbers v2 prints. -->
+<!-- Placeholder (prose): fix pass F12 (claim C4, from the v2 pair): the gate
+fails clearly now (gloo's pinned 4-rank beta 1.46 GB/s, 95% 1.45-1.47,
+against NCCL's shared memory 2.36: 1.6x the bandwidth, 1/37 the latency),
+so C4 is its fallback: the closed form predicts the measured
+hierarchical/flat gain within 20% (at 256 MiB 1.4x measured, 1.6x by the
+model; the v1 "at its edge" wording is gone). Separately, stated and not
+part of the 20% test: the intra/inter bandwidth ratio is 2.0x measured and
+1.2x from the fits, and the model's inter stage (66 ms at 256 MiB) is about
+half the measured 122 ms (candidate cause, not measured: the loopback fit
+leaves out the gloo stage's copies between GPU and host), so the measured
+gain falls short of the model's. By the gate's rule this box's gloo setup cannot emulate a slow
+network by bandwidth (it is slower by latency). -->
 
 <!-- Placeholder (prose): what the box cannot show. The ring/tree crossover
 of D1 needs a tree deeper than a chain (several nodes), the rail effect of

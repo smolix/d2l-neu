@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8b065fec9f4ab30c198be89972710465bc72a28dac68ecbcc77a40ad799ca943",
+    "d2l_lib_fingerprint": "sha256:c6873e1f117b7c08dd889cc1bbe096c4f5cfcbd7164ad31d0f06ed1385c2a7f4",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -34,56 +34,56 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (matrix product, 3 s) on RTX 4090: 2 points, largest difference 1%\n"
+          "text": "live check (matrix product, 3 s) on RTX 4090: 2 points, largest difference 3%\n"
         }
       ]
     },
     "energy-cost-dvfs-fit-def": {
-      "code_fingerprint": "sha256:417236fa04eec17c1699dd221fb1775a5fa5891e12a42cebd5a209ee99298ea9",
+      "code_fingerprint": "sha256:9c2ea86c75f6d166df5c0034071a0a4293f297cfa75432bbd4036b547961512f",
       "kind": "text",
       "outputs": []
     },
     "energy-cost-dvfs": {
-      "code_fingerprint": "sha256:a5cb1fc3e5442d2fd20d179bc54bf74ab59aba3b92460c1c41fb77ba1f520a5b",
+      "code_fingerprint": "sha256:35e594944b0f07d1ff20b4348cdc5df09d169f34a21208ffd57578ee4d0e3c5a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fit: P_s = 80 W, k = 80 W/GHz^3; f* = 0.79 GHz, P(f*) = 120 W\nat f*: 1.4x the work per joule and 0.57x the throughput of 1.40 GHz\nsynthetic numbers (P_s = 80 W, k = 80 W/GHz^3): no measured sweep yet\n"
+          "text": "fit to the clock as run: P_s = 167 W, k = 16.2 W/GHz^3; power within 1.4% across processes\nf* = 1.73 GHz, 1.2 steps below the least energy per FLOP at the 2.10 GHz lock (step 0.30 GHz)\npower steepens above 2.10 GHz (1.8x the slope below): the least energy sits at it\nleft out of the fit: the 0.60 GHz lock, which ran at about 0.74 GHz (its rate per GHz)\nbelow its lock (power cap), GHz: 2.70 -> 2.56, 3.00 -> 2.56\ncommitted sweep on the RTX 4090 (3 processes); a notebook never locks clocks\nA100 PCIe 40 GB: campaign C-T2 not run yet\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "energy-cost/energy-cost-dvfs-1.svg",
-          "bytes": 41529,
-          "sha256": "sha256:6b4ec3437edb20af58a128348f2de7ebec6bb6895383bb7557a0eb4737f59a56"
+          "bytes": 52493,
+          "sha256": "sha256:fabdeba09afdb792e8c1074a0ef8091bad27dd855a42239f31055f623e083fc8"
         }
       ]
     },
     "energy-cost-clock-sweep-def": {
-      "code_fingerprint": "sha256:787aa764237aefd922ab47a3b66b466110393334c2e3645a95300f97bcfe0933",
+      "code_fingerprint": "sha256:9ecd5f82bf089ec7cbfa0dd487040bfd25f30ad1efba0ecda286d3caa28766a1",
       "kind": "text",
       "outputs": []
     },
     "energy-cost-cap-effect": {
-      "code_fingerprint": "sha256:ca95b8b770c7be0591c5a6d05e5d37ed35d167f74abb669b91ca4e9fc0d2b22c",
+      "code_fingerprint": "sha256:7c29c38245c104d4162f0ed54a7503d6c2d960082ecb66b940bce90c26258b44",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "power-cap sweep not measured yet (setting a power limit needs root)\n"
+          "text": "clock MHz train MHz train W train ms train x train noise decode ms decode x decode noise\n    3,000     2,805     357    159.4   1.000       0.019      3.42    1.002        0.002\n    2,700     2,700     323    162.1   1.017       0.019      3.51    1.028        0.002\n    2,400     2,400     255    172.6   1.082       0.019      3.76    1.101        0.002\n    2,100     2,100     227    185.8   1.165       0.019      4.07    1.193        0.003\n    1,800     1,800     209    204.6   1.283       0.019      4.51    1.321        0.002\n    1,500     1,500     187    237.1   1.487       0.019      5.22    1.531        0.006\n    1,200     1,200     168    273.6   1.716       0.019      5.92    1.734        0.005\n      900       900     144    335.4   2.103       0.019      6.99    2.048        0.007\n      600       600     129    392.2   2.459       0.019      7.96    2.332        0.017\nx: step time over the default clocks' (training 159 ms at 2,805 MHz, decode 3.41 ms)\nnoise: the larger of 5 x the larger median absolute deviation and the spread across processes\nthe 600 MHz lock ran the SM at about 736 MHz (the product's rate), not as reported\ndecode at b = 1 slows beyond its noise at every lowered clock\n"
         }
       ]
     },
     "energy-cost-energy-per-token-def": {
-      "code_fingerprint": "sha256:3eb9439966c1fc471df062d8774fa39f6e208134a69194ea702f05bd385bdb09",
+      "code_fingerprint": "sha256:c693051a127ac0a97b531bf0d794c9fca1bc8ed24d67ef69f03bb016cefb3c5a",
       "kind": "text",
       "outputs": []
     },
     "energy-cost-decode-energy": {
-      "code_fingerprint": "sha256:57ec135f52811b9102aa32afe00a82408eb35a225513dda156d816aaf504bb1b",
+      "code_fingerprint": "sha256:62e99dde7868c2f7b64a37bdb28c892bcb1bd9ee2d2da1eef214df198b707c85",
       "kind": "mixed",
       "outputs": [
         {
@@ -94,19 +94,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (J/token at b = 1, 64) on RTX 4090: 2 points, largest difference 3%\nL = 512: knee at b = 20; d log(J/token) / d log b -0.84 below, -0.32 above\nL = 2,048: knee at b = 5; d log(J/token) / d log b -0.82 below, -0.22 above\n"
+          "text": "live check (J/token at b = 1, 64) on RTX 4090: 2 points, largest difference 10%\nL = 512: knee at b = 20; d log(J/token) / d log b -0.84 below, -0.32 above\nL = 2,048: knee at b = 5; d log(J/token) / d log b -0.82 below, -0.22 above\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "energy-cost/energy-cost-decode-energy-1.svg",
           "bytes": 42477,
-          "sha256": "sha256:d2a567ee632ad2efe13f816014c9e6cfaf1524c7917d54e49ba04ef47ce3297e"
+          "sha256": "sha256:e533990214fa060657dd789b9e165ca1ee5018b6a36eb7c6054687344da38f22"
         }
       ]
     },
     "energy-cost-train-energy": {
-      "code_fingerprint": "sha256:baa7838b33f6fff78758a1c545a568d198c08531947c8287b40345e01a215ea8",
+      "code_fingerprint": "sha256:6aa4947ec66f5ca976f978e6e3d1e1e86f20454ff0fbf97bfb24513f97497bf7",
       "kind": "text",
       "outputs": [
         {
@@ -117,28 +117,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (training steps, 3 s) on RTX 4090: 2 points, largest difference 5%\n"
+          "text": "live check (training steps, 3 s) on RTX 4090: 2 points, largest difference 9%\n"
         }
       ]
     },
     "energy-cost-prices": {
-      "code_fingerprint": "sha256:d559b1fa29e674fde3f6e621bab12fc7177bd35b07148a83260a7b23f713252c",
+      "code_fingerprint": "sha256:3585a82d708ac54dabe2111625d3c7bf570c192e5a526baf8b6b5224bb0dac85",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                       item  value      unit       kind age (d)\n   rent A100 PCIe 40 GB (2)   1.86 USD/GPU-h      quote       1\n    rent A100 SXM 80 GB (3)   2.48 USD/GPU-h      quote       1\n          rent H100 SXM (3)   4.89 USD/GPU-h      quote       1\n              rent B200 (3)   7.99 USD/GPU-h      quote       1\n          rent RTX 4090 (1)  0.340 USD/GPU-h      quote       1\nbuy 4-card server, RTX 4090 12,000       USD assumption       1\n          buy GPU, H100 SXM 25,000       USD      quote       1\n                electricity  0.143   USD/kWh      quote       1\n                        PUE   1.54     ratio assumption       1\n    ops owned box, RTX 4090 0.0500 USD/GPU-h assumption       1\n   ops datacenter, H100 SXM  0.300 USD/GPU-h assumption       1\n                       life 35,040         h assumption       1\n"
+          "text": "                       item  value      unit       kind age (d)\n   rent A100 PCIe 40 GB (2)   1.86 USD/GPU-h      quote       2\n    rent A100 SXM 80 GB (3)   2.48 USD/GPU-h      quote       2\n          rent H100 SXM (3)   4.89 USD/GPU-h      quote       2\n              rent B200 (3)   7.99 USD/GPU-h      quote       2\n          rent RTX 4090 (1)  0.340 USD/GPU-h      quote       2\nbuy 4-card server, RTX 4090 12,000       USD assumption       2\n          buy GPU, H100 SXM 25,000       USD      quote       2\n                electricity  0.143   USD/kWh      quote       2\n                        PUE   1.54     ratio assumption       2\n    ops owned box, RTX 4090 0.0500 USD/GPU-h assumption       2\n   ops datacenter, H100 SXM  0.300 USD/GPU-h assumption       2\n                       life 35,040         h assumption       2\n"
         }
       ]
     },
     "energy-cost-cost-defs": {
-      "code_fingerprint": "sha256:3f9be5f7967eb2a716f0b67d30ce57ee5080ee667178eb65fbbb44c328aff135",
+      "code_fingerprint": "sha256:58614da6a329caaf2be3c2d1fb653737c3a35de0beb863b2e357a7c2cf1f2223",
       "kind": "text",
       "outputs": []
     },
     "energy-cost-six-nd": {
-      "code_fingerprint": "sha256:9af87c8861ce145a4287c2753dd175d2782d331f2ca7f12b15e9d6ba7942bb28",
+      "code_fingerprint": "sha256:da9abf7d7137efb892135ed65b2f162602a09fe19429742d9f691a41c623c776",
       "kind": "text",
       "outputs": [
         {
@@ -149,7 +149,7 @@
       ]
     },
     "energy-cost-train-cost": {
-      "code_fingerprint": "sha256:029c350fa9b1062db5f0ba5aff0e1da4b78012335bf47ad61ceb56faadd80be0",
+      "code_fingerprint": "sha256:712b0c2a70c0f732230e25fafed82ee7080f7d126b27a120f25b801f17856d04",
       "kind": "text",
       "outputs": [
         {
@@ -160,7 +160,7 @@
       ]
     },
     "energy-cost-serve-cost": {
-      "code_fingerprint": "sha256:13fa33aa138b1043845e84d0a6fcb78139f2f69f691e5374349eaeed82303eda",
+      "code_fingerprint": "sha256:7c4af1eb08e0e8f57dec6770c895c0dd6fd2ee47a84570d13c468d55efab34ec",
       "kind": "text",
       "outputs": [
         {
@@ -171,12 +171,12 @@
       ]
     },
     "energy-cost-owned-def": {
-      "code_fingerprint": "sha256:2989089230c8ad0e6f0e2e6a255617e8053236c7739345fc15a948d771453f7b",
+      "code_fingerprint": "sha256:525ee2ad8c6708876078306d58a7d97b9e16a04e5feecb6e58e6007b2d3e9037",
       "kind": "text",
       "outputs": []
     },
     "energy-cost-owned-rented": {
-      "code_fingerprint": "sha256:7891b2111b5007f71569862531881c92ea04740468eb3ed6dacfe40b5c440aae",
+      "code_fingerprint": "sha256:702bc1a146bf0a43074c73761d50b4d1944bd0a0af0329d5d7584d7cd2c102a8",
       "kind": "mixed",
       "outputs": [
         {
@@ -189,12 +189,12 @@
           "mime": "image/svg+xml",
           "asset": "energy-cost/energy-cost-owned-rented-1.svg",
           "bytes": 46460,
-          "sha256": "sha256:7bfcf8eb88c7b204159442a27a4b09f0422e11f6209c144156de0859cba042ea"
+          "sha256": "sha256:e6f333bd06722dcc9842f601c74e7f66bb98b7394fa391295374a5e5651f14ec"
         }
       ]
     },
     "energy-cost-units": {
-      "code_fingerprint": "sha256:70f77ac24c206cee8780f8b66f07e3642b1c5657246cea415e52485eb26aa6ec",
+      "code_fingerprint": "sha256:aec69b49d79e8efc3bdcc9c95873aa21fc74465932f629d20cc2863b0231742f",
       "kind": "text",
       "outputs": [
         {

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6e49bbe6a80938776904675f7ce85497c13bf8c710457560453b3591a33e7b8d",
+    "d2l_lib_fingerprint": "sha256:f4838eaa9f37dec2d5d3f1a1d8ae5be37dabc622b751b9ac86106410531950ac",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (attention) on RTX 4090: 2 points, largest difference 0%\n"
+          "text": "live check (attention) on RTX 4090: 2 points, largest difference 1%\n"
         }
       ]
     },
@@ -71,12 +71,12 @@
       ]
     },
     "kernels-gemm-shapes-def": {
-      "code_fingerprint": "sha256:af9c6857eb54a9bb90fcefc8e3633891a89530eb333b4d970ac8feb6510c20a6",
+      "code_fingerprint": "sha256:05a7846a46aefe6f6ab5ee577b25c825a70090fb29f8885704edeeb991aa5bab",
       "kind": "text",
       "outputs": []
     },
     "kernels-gemm-shapes": {
-      "code_fingerprint": "sha256:328253dab0467b51b1c4f353039104c74fc56eed42bce087297086044cdcec02",
+      "code_fingerprint": "sha256:5f692aca6b351763ae68ce7583c6170f77e89476d9bc6f84cb51bec0f939536d",
       "kind": "text",
       "outputs": [
         {
@@ -87,25 +87,25 @@
       ]
     },
     "kernels-shape-sweep": {
-      "code_fingerprint": "sha256:6311bc50e1d37340ec355d82769c6d17d547c875cb6cdfc001a19db0adf0b42c",
+      "code_fingerprint": "sha256:6d34f47af293227a3ea7b0cac3e8b727cd8ed23d09272ca91623f5e4dcbdad58",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (matmul shapes) on RTX 4090: 4 points, largest difference 7%\nslowest point: head at M = 4,096, 109 TFLOP/s (median of the sweep 166)\ncuBLAS kernels of the head product on this GPU:\n  M = 4,096: ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_tn\n  M = 2,048: ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_32x1_tn\ndatasheet line: 2.52 GHz boost clock; SM clock in the sweep 2.49-2.79 GHz\nA100 PCIe 40 GB: campaign C-T2 not run yet\n"
+          "text": "live check (matmul shapes) on RTX 4090: 4 points, largest difference 8%\nslowest point: head at M = 4,096, 109 TFLOP/s (median of the sweep 166)\ncuBLAS kernels of the head product on this GPU:\n  M = 4,096: ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_tn\n  M = 2,048: ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_32x1_tn\ndatasheet line: 2.52 GHz boost clock; SM clock in the sweep 2.49-2.79 GHz\nA100 PCIe 40 GB: campaign C-T2 not run yet\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kernels/kernels-shape-sweep-1.svg",
           "bytes": 41665,
-          "sha256": "sha256:c3b28f1efe15e0896a60e7218d529f3e25ab284892148036f48343de7c08cc10"
+          "sha256": "sha256:05d63facc5530a9f409ce9038db0c388fb5dc6a9d6b854ff17fa6a6912653965"
         }
       ]
     },
     "kernels-sawtooth": {
-      "code_fingerprint": "sha256:054879763500b5387098e17fedb1debada21e08186047df7ebaa4382ed490a0e",
+      "code_fingerprint": "sha256:741e4cab05eecc479a4f099602544cbcadf94def5dd47a9b58263d9724bb4093",
       "kind": "mixed",
       "outputs": [
         {
@@ -118,22 +118,22 @@
           "mime": "image/svg+xml",
           "asset": "kernels/kernels-sawtooth-1.svg",
           "bytes": 34721,
-          "sha256": "sha256:06e6a39846d0bece2ecb3b928bf4bf8d623ab8f39a153c03fb80c961391f2016"
+          "sha256": "sha256:ec1f00188aa869aba4184bb6f8a097e594751fa15eff307740622aa5098a54b7"
         }
       ]
     },
     "kernels-rmsnorm-kernel": {
-      "code_fingerprint": "sha256:4db6fb7980cea082fc32fd74b24ea5142e6ecf6a71abaa6d160c084559e37306",
+      "code_fingerprint": "sha256:6dffa63defe8da70a2695ee6f607a19e0cc5514a5a8571faad469738399a1d2c",
       "kind": "text",
       "outputs": []
     },
     "kernels-rmsnorm-formula": {
-      "code_fingerprint": "sha256:de27100ca50297ce1441499109199e95972ad819735b824fd362b0b3fca0fe1f",
+      "code_fingerprint": "sha256:ab76a2c52b71c88df1fb493173f57f949b2200f45ca1d102b6c54165007df625",
       "kind": "text",
       "outputs": []
     },
     "kernels-rmsnorm-check": {
-      "code_fingerprint": "sha256:65b2e1fa946c07e1b4c177bcdf460ca1180407dc056500afc86caed08041f00b",
+      "code_fingerprint": "sha256:b9f9f2cff6614ddc27ea26b6d4b2717b103fee60d2fdf183fa33a001f80b9362",
       "kind": "text",
       "outputs": [
         {
@@ -149,28 +149,23 @@
       ]
     },
     "kernels-flash-kernel": {
-      "code_fingerprint": "sha256:c719551c13e1861e48a378553760b9eb719d6b028550f00aaa7a26aadf56d942",
+      "code_fingerprint": "sha256:d840c7dd8d4d9b430d13f642a70a1c432748592d0d09b563bdc2d47ecf058da8",
       "kind": "text",
       "outputs": []
     },
     "kernels-flash-check": {
-      "code_fingerprint": "sha256:829900a3e40376e2c74254a45fe8c9830ab595e8a66d787d97455194d3383e49",
+      "code_fingerprint": "sha256:02afba5b87a0ae6f8f19299a339202509034cb4245954612e20e6185c1dd3910",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "reference: max |error| / max |output| = 2.1e-03 (band 0.02)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen3-8B: max |error| / max |output| = 2.3e-03 (band 0.02)\n"
+          "text": "reference: max |error| / max |output| = 2.1e-03 (band 0.02)\nQwen3-8B: max |error| / max |output| = 2.3e-03 (band 0.02)\n"
         }
       ]
     },
     "kernels-flash-sweep": {
-      "code_fingerprint": "sha256:a8c74d59a45704369cebdc5b1b85fd99ec1ad3f84a8c340212eb8e258587019f",
+      "code_fingerprint": "sha256:7846622472f8eb82f10ece6d84e48214783428221b48402fe3446d88c56ab735",
       "kind": "text",
       "outputs": [
         {
@@ -181,23 +176,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (attention kernels) on RTX 4090: 4 points, largest difference 0%\n"
+          "text": "live check (attention kernels) on RTX 4090: 4 points, largest difference 1%\n"
         }
       ]
     },
     "kernels-spill": {
-      "code_fingerprint": "sha256:bb6ec515ab5102d49ba70dc3fdde9c8d43e08fa6bb54bdec5ec3396ec7720a1e",
+      "code_fingerprint": "sha256:df58768ee85be3224caf19f8707949d3933360fbc7eb476a32cc98af751fdb79",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "           TF/s ref regs ref spills ref TF/s 8B regs 8B spills 8B\n64x32 w4        146      148          0     116     203         0\n64x32 w8       76.3      128          0    63.8     174         0\n64x64 w4        144      192          0    93.0     244         0\n64x64 w8       67.6      176          0    87.2     167         0\n64x128 w4       147      255          8     102     255         4\n64x128 w8      70.3      246          0    98.3     180         0\n128x32 w4       146      254          0     132     255        44\n128x32 w8       124      144          0     129     255         0\n128x64 w4       148      255         10     107     255       108\n128x64 w8       129      185          0     131     255        20\n128x128 w4      125      255        140    75.4     255       248\n128x128 w8      145      255          8     133     255        22\nregs: registers per thread; spills: 32-bit words per thread in local memory\n"
+          "text": "           TF/s ref regs ref spills ref TF/s 8B regs 8B spills 8B\n64x32 w4        146      148          0     116     203         0\n64x32 w8       76.3      128          0    63.8     174         0\n64x64 w4        144      192          0    93.0     244         0\n64x64 w8       67.6      176          0    87.2     167         0\n64x128 w4       147      255          8     102     255         4\n64x128 w8      70.3      246          0    98.3     180         0\n128x32 w4       146      254          0     132     255        44\n128x32 w8       124      144          0     129     255         0\n128x64 w4       148      255         10     107     255       108\n128x64 w8       129      185          0     131     255        20\n128x128 w4      125      255        140    75.4     255       248\n128x128 w8      145      255          8     133     255        22\nregs: registers, spills: spilled 32-bit words per thread; %: of the shape's best\nref, block_q 128: fastest spill-free 128x32 w4 98%; spilling 1-99 words 98-100%, 100+ words 84%\n8B, block_q 128: fastest spill-free 128x32 w8 97%; spilling 1-99 words 99-100%, 100+ words 57-80%\n"
         }
       ]
     },
     "kernels-inductor-kernels": {
-      "code_fingerprint": "sha256:78bbad72c7249af419279ccce77a7b1e8353506678a64e22b0f9f2eed3db0bda",
+      "code_fingerprint": "sha256:b7ea299ef7f1d102ac4cb8a06dbcdfd813b2032334718a2998c015f5c1f85b8a",
       "kind": "text",
       "outputs": [
         {
@@ -208,7 +203,7 @@
       ]
     },
     "kernels-a100-twin": {
-      "code_fingerprint": "sha256:bd94075d8a8cf0dd05eaaacd2c6ef93cad637b4d4a746aa3ddda3f40e047d30b",
+      "code_fingerprint": "sha256:07c460f6e931616c7900940d36f2630ccd1752a24dc84a112f53133c70bafec6",
       "kind": "text",
       "outputs": [
         {

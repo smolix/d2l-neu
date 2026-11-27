@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:66098fc241b126e7e3641d8bceac85f34bd9ffca14e5f0647191d8e03ef7c039",
+    "d2l_lib_fingerprint": "sha256:cd7357637774a8db1d49ee9ee058f7a72f0354a5a3553e77fd617d22b7033aed",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -76,18 +76,18 @@
       "outputs": []
     },
     "collectives-simulator": {
-      "code_fingerprint": "sha256:9f9d31eda4afe0c538cafd35a4fc53a0f933d5efcc2968a62ce0be90e62d6ec4",
+      "code_fingerprint": "sha256:49ce430435f803dfb0e1cd3d0c1d6d9378f9a40d015aec03f118b2f28536a5ab",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " G algo 0.01 S_b (%) 1 S_b (%) 100 S_b (%)\n 4 ring          0.0       0.0         0.0\n 4 tree         -0.5     -24.9         0.0\n 8 ring          0.0       0.0         0.0\n 8 tree         -0.5      -8.2         0.0\n16 ring          0.0       0.0         0.0\n16 tree         -0.5     -12.3         0.3\n32 ring          0.0       0.0         0.0\n32 tree         -0.5      -4.7         0.3\n"
+          "text": " G algo 0.01 S_b (%) 1 S_b (%) 100 S_b (%)\n 4 ring          0.0       0.0         0.0\n 4 tree         -0.5     -24.9         0.0\n 8 ring          0.0       0.0         0.0\n 8 tree         -0.5      -8.2         0.0\n16 ring          0.0       0.0         0.0\n16 tree         -0.5     -12.3         0.3\n32 ring          0.0       0.0         0.0\n32 tree         -0.5      -4.7         0.3\nring: exact; tree: exceeds the closed form by at most 0.3%, within 0.5% of it\n  far from S_b, up to 24.9% below it at S_b (G = 4)\n"
         }
       ]
     },
     "collectives-debug-header": {
-      "code_fingerprint": "sha256:8beccabb52d1f37f38763a66eb6ef5b84ac621ca0a7e64e4c38bd03bc6d98d6a",
+      "code_fingerprint": "sha256:bd893cdbb87dfdbbded14b3680a031d69c6bf7166aae55c4f5c2b7e7605a43ba",
       "kind": "text",
       "outputs": [
         {
@@ -98,73 +98,73 @@
       ]
     },
     "collectives-forced-pairs": {
-      "code_fingerprint": "sha256:e7ec52c1c715b70a3fd7e7c7f23f172d5f57be5d9520b9598661250fda58b23b",
+      "code_fingerprint": "sha256:73d3f6c7e81e7cd0b382b84c7adb6e1147c4d8f8172a5b08cafc85bcaa8ddfc8",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (three pairs) on RTX 4090: 9 points, largest difference 5%\n"
+          "text": "live check (three pairs) on RTX 4090: 9 points, largest difference 39%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "8 B: Ring/LL 35 us, Ring/Simple 37 us: within noise (+2.5 noise units)\n256 MiB: Ring/Simple 169 ms, Ring/LL 179 ms: within noise (+2.8 noise units)\n"
+          "text": "8 B: Ring/LL 36 us, Ring/Simple 38 us: within noise (+0.4 noise units)\n256 MiB: Ring/Simple 169 ms, Ring/LL 174 ms: within noise (+1.2 noise units)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "collectives/collectives-forced-pairs-1.svg",
-          "bytes": 59390,
-          "sha256": "sha256:339b1ab03846086755596ac1556a69831882a63bc66bda55ba40f195bcb77ada"
+          "bytes": 59388,
+          "sha256": "sha256:769e728e65e996458cdb471fc81ed4209bada426d9f41c2cbede5b22c9e64665"
         }
       ]
     },
     "collectives-fit-pairs": {
-      "code_fingerprint": "sha256:7928f002a807402e3417ef013ecb57c3c37b52fd4071d04ae9aee5d9f594a25e",
+      "code_fingerprint": "sha256:9ccbd1eab14f61eba7df735aa27d53e1b26dbb2f2a8ef1493b1937e1e757c605",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   algo       proto alpha (us) beta (GB/s)  beta 95%\ndefault     default         32        2.35 2.35-2.36\n   Ring          LL         30        2.25 2.25-2.26\n   Ring LL128 (off)         33        2.34 2.32-2.35\n   Ring      Simple         38        2.35 2.34-2.36\n   Tree          LL         31        2.12 2.10-2.14\n   Tree LL128 (off)         32        2.46 2.46-2.46\n   Tree      Simple         39        2.14 2.12-2.16\nRing/Simple overtakes Ring/LL at 83 KiB measured, 280 KiB predicted by the fits\n"
+          "text": "   algo       proto alpha (us) beta (GB/s)  beta 95%\ndefault     default         24        2.35 2.34-2.36\n   Ring          LL         33        2.31 2.21-2.42\n   Ring LL128 (off)         34        2.34 2.32-2.37\n   Ring      Simple         38        2.34 2.32-2.36\n   Tree          LL         31        2.12 2.05-2.18\n   Tree LL128 (off)         32        2.45 2.41-2.50\n   Tree      Simple         39        2.15 2.14-2.17\nRing/Simple overtakes Ring/LL at 87 KiB measured, 600 KiB predicted by the fits\nfit against measured, 16 KiB to 1 MiB: Ring/LL +2% to +78%, Ring/Simple -2% to\n  +47%; Ring/Simple's fit against Ring/LL's: +11% at 16 KiB, -0% at 1 MiB\n"
         }
       ]
     },
     "collectives-tuner-verdict": {
-      "code_fingerprint": "sha256:f27da31d68dfb32e01b0b7e56daac240c8ed4cbe254eba54f08f82ec4367a8ba",
+      "code_fingerprint": "sha256:869ef326e429df11be4b555fa5b5de8244608a927f98fe16a61cd0234279726e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cost of forcing NCCL's own choice: median 1%, up to 29% at 2 KiB\nlargest gain over NCCL's choice, both forced: Ring/Simple 16% faster than\n  Ring/LL at 128 KiB (9.6 noise units)\nwithin 3 noise units at 24 of 26 sizes (unit: the largest of the MAD of 3 runs,\n  the cost of forcing and 2%); Ring/LL128, Tree/LL128 left out: off in NCCL's\n  tuner\nNCCL's table switches Ring/LL -> Ring/Simple at 470 KiB; forced, they cross at\n  83 KiB\n"
+          "text": "cost of forcing NCCL's own choice: median 7%, up to 49% at 64 B\nlargest gain over NCCL's choice, both forced: Ring/Simple 15% faster than\n  Ring/LL at 128 KiB (6.9 noise units)\nwithin 3 noise units at 24 of 26 sizes (unit: the largest of the MAD of 3 runs,\n  the cost of forcing and 2%); Ring/LL128, Tree/LL128 left out: off in NCCL's\n  tuner\nNCCL's table switches Ring/LL -> Ring/Simple at 470 KiB; forced, they cross at\n  87 KiB\n"
         }
       ]
     },
     "collectives-hier-code": {
-      "code_fingerprint": "sha256:14fbd94d4bfc6c006f053e1fb061cd08e572d23c40d2ac28a256e44e8fe4ca2a",
+      "code_fingerprint": "sha256:8c371c8e72d9617da02b9c3f15fbd7bb7708875da9f3120214a8fdea3f35829d",
       "kind": "text",
       "outputs": []
     },
     "collectives-hier-run": {
-      "code_fingerprint": "sha256:052b85e2dd122f1c01b901a6d80c6abdd2df154503f985f1fc0eb0c9548687ea",
+      "code_fingerprint": "sha256:9521ba098de2629b3ad0b3946976f6ce7613a4b6e04137e3222d755f99e53205",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             16 MiB       256 MiB       \n                 ms model      ms  model\nflat gloo      28.3  23.1   394.6  336.2\nflat NCCL      11.4  10.7   185.1  170.7\nhierarchical   16.5  14.1   254.5  214.7\nintra stage     6.3   7.0   119.8  111.0\ninter stage     8.9   7.1   137.0  103.7\nat 256 MiB: hierarchical 1.6x faster than flat gloo (1.6x by the model)\n2-rank stages: intra/inter bandwidth 2.3x measured, 1.9x from the fits\nC4 gate: NCCL's shared memory 2.36 GB/s busbw, gloo on 4 ranks 1.21 (95%\n  1.18-1.23): 2.0x the bandwidth, 1/67 the latency; gloo's interval is not\n  below half, so C4 takes its fallback (gloo is slower by latency only)\n"
+          "text": "             16 MiB       256 MiB       \n                 ms model      ms  model\nflat gloo      19.3  18.5   342.0  277.1\nflat NCCL      11.4  10.7   185.1  170.7\nhierarchical   14.4  11.4   248.3  177.4\nintra stage     7.2   7.0   119.0  111.0\ninter stage     7.5   4.5   121.5   66.4\nat 256 MiB: hierarchical 1.4x faster than flat gloo (1.6x by the model)\n2-rank stages: intra/inter bandwidth 2.0x measured, 1.2x from the fits\nC4 gate: NCCL's shared memory 2.36 GB/s busbw, gloo on 4 ranks 1.46 (95%\n  1.45-1.47): 1.6x the bandwidth, 1/37 the latency; gloo's interval is not\n  below half, so C4 takes its fallback (gloo is slower by latency only)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (64 MiB) on RTX 4090: 3 points, largest difference 17%\nlive, 4 GPUs: hier_allreduce = CPU sum (rtol 1e-5, max error 1e-07)\n"
+          "text": "live check (64 MiB) on RTX 4090: 3 points, largest difference 2%\nlive, 4 GPUs: hier_allreduce = CPU sum (rtol 1e-5, max error 1e-07)\n"
         }
       ]
     },
     "collectives-cluster-twin": {
-      "code_fingerprint": "sha256:e3d0675ee871ec63789d21adfd1fe73f8a5adbd0a7a24a00e6d384e3c8bea9d0",
+      "code_fingerprint": "sha256:579160e88b2b02e189d009c88269e9c4565efe728f55106fdfa4184944e366a4",
       "kind": "text",
       "outputs": [
         {

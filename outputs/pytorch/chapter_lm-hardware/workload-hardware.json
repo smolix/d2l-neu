@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:92cb3c2b688bec130d88fdf966af92cfeae4bf1c8feb9e1e1227babc8eb3e463",
+    "d2l_lib_fingerprint": "sha256:5c8f96547708114a0d112a4f4cbece6441393dcd77167598593173f1e05f6345",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -96,7 +96,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "from the datasheets (b* infinite: none)\n                          8B, RTX 4090 8B, A100 PCIe 0.6B, RTX 4090\nridge R (FLOP/byte)                164           201            164\nL_crit (tokens)                    626           512             63\nL_crit, embedding counted          678           554             63\nb* at L = 0                        164           201            164\nb* at L = 512                      898          none           none\nb_max at L = 512                    69           259            347\nb_max at L = 2,048                  17            64             86\nb_max at L = 8,192                   4            16             21\n"
+          "text": "from the datasheets (b* infinite: none)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                          8B, RTX 4090 8B, A100 PCIe 0.6B, RTX 4090\nridge R (FLOP/byte)                164           201            164\nL_crit (tokens)                    626           512             63\nL_crit, embedding counted          678           554             63\nb* at L = 0                        164           201            164\nb* at L = 512                      898          none           none\nb_max at L = 512                    69           259            347\nb_max at L = 2,048                  17            64             86\nb_max at L = 8,192                   4            16             21\n"
         }
       ]
     },
@@ -119,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "workload-hardware/workload-hardware-moe-1.svg",
           "bytes": 38927,
-          "sha256": "sha256:435ee4e8325fffde4493aa25425ba348472a5f17130e5c2aa739ff9e5d349af5"
+          "sha256": "sha256:fa3af3c3a518917c054992812828f7d0c3a2c789f29fb0fa26a98f787d9277d9"
         }
       ]
     },
@@ -146,7 +151,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "P_eff, the best bf16 product: 172 TFLOP/s (104% of the datasheet's 165)\nbeta_eff, a DRAM-sized copy: 921 GB/s (91% of the datasheet's 1,008)\nalpha_k, one kernel in a CUDA graph: 0.8 us\nall-reduce: alpha 33 us, beta 2.4 GB/s\nlive check on RTX 4090 (calibration): 3 points, largest difference 1%\n"
+          "text": "P_eff, the best bf16 product: 172 TFLOP/s (104% of the datasheet's 165)\nbeta_eff, a DRAM-sized copy: 921 GB/s (91% of the datasheet's 1,008)\nalpha_k, one kernel in a CUDA graph: 0.8 us\nall-reduce: alpha 33 us, beta 2.4 GB/s\nlive check on RTX 4090 (calibration): 3 points, largest difference 6%\n"
         }
       ]
     },
@@ -193,7 +198,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (weights) on RTX 4090: Qwen3-8B 3 points, largest difference 1%\n"
+          "text": "live check (weights) on RTX 4090: Qwen3-8B 3 points, largest difference 0%\n"
         }
       ]
     },
@@ -237,7 +242,7 @@
           "mime": "image/svg+xml",
           "asset": "workload-hardware/workload-hardware-frontier-1.svg",
           "bytes": 36771,
-          "sha256": "sha256:5dc2de7e99be48af049909f543d758e315f238974ec1b7f907b4ae58948d2a77"
+          "sha256": "sha256:e77d38e4c7db2b19a6b618904138e5e18335b4a392406f5737328d401051a847"
         }
       ]
     },
@@ -259,7 +264,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         chips predicted tok/s/GPU rank\nH100 SXM     8               8,689    4\nH200 SXM     8              13,010    3\nB200         8              22,547    2\nMI355X       8              22,547    2\nRTX 4090     8               1,708     \nGroq LPU   384              26,589     \nInferenceX snapshot not committed yet: predictions only\n(dense 70B, FP8, 50 tokens/s per user, context 2,048)\nGroq LPU: bandwidth bound only, from the SRAM bandwidth of 384 chips; its\ncompute (no FLOP/s figure in the table) and the hops between chips are not\nmodeled\n"
+          "text": "         chips predicted tok/s/GPU\nH100 SXM     8               8,689\nH200 SXM     8              13,010\nB200         8              22,547\nMI355X       8              22,547\nRTX 4090     8               1,708\nGroq LPU   384              26,589\nInferenceX snapshot not committed yet: predictions only\n(dense 70B, FP8, 50 tokens/s per user, context 2,048)\nGroq LPU: bandwidth bound only, from the SRAM bandwidth of 384 chips; its\ncompute (no FLOP/s figure in the table) and the hops between chips are not\nmodeled\n"
         }
       ]
     },

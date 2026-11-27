@@ -250,12 +250,14 @@ assert (ladder[ladder.source == 'measured'].alpha_us > rdma).all()  # N2
 transport's alpha at 1-2 significant digits from the printed lines, with its
 transport, against the quoted RDMA round trip (about 5 us, labelled quoted);
 never "tens of microseconds" for a transport that measures hundreds. The
-gloo rows come from box-net v2 (pinned ranks, regenerated in F12); until
-v2 is committed the page's numbers are v1 (TCP round trip 41 us, NCCL shm
-33, NCCL sockets 100, gloo 690 at 2 ranks and 2,200 at 4) and the gloo ones
-must not be quoted. The first placeholder of this subsection ("hundreds of
-microseconds per ring step") and its "about three times" for 4 against 2
-ranks are restated from v2. -->
+page now reads box-net v2 (pinned gloo ranks, regenerated in F12 on a quiet
+box): TCP round trip 41 us [34-48], NCCL shm 33, NCCL sockets 120 [110-120],
+gloo 340 [330-350] at 2 ranks and 1,200 [1,200-1,300] at 4; per message
+(the table's middle column) gloo 170 and 200 us, NCCL sockets 59, TCP 21.
+The first placeholder of this subsection ("hundreds of microseconds per ring
+step") becomes "about 200 us per message"; its "about three times" for 4
+against 2 ranks is 3.5x in alpha (1.2x per message). The gloo live check now
+compares (3%). -->
 
 ## Which Axes Fit Where
 :label:`subsec_lm_hw_layout`

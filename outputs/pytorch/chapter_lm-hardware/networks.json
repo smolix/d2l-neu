@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:44134fc0e5b7858b09d793eb9b3376e068272bf161a6b7c2033f411fa3e4c3eb",
+    "d2l_lib_fingerprint": "sha256:41080baee074131f2cc6cb8a2a67fc3a18e01c67ac5b0014ba88d468e67566aa",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -67,17 +67,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "TCP ping-pong, 2 processes: round trip 41 us [40-42], beta 5.2 GB/s [4.9-5.5]\n"
+          "text": "TCP ping-pong, 2 processes: round trip 41 us [34-48], beta 5.1 GB/s [4.9-5.3]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "TCP live check (same CPU): 3 sizes on 2 ranks, largest difference 29% (differs)\ngloo over TCP, 2 ranks: alpha 690 us [680-690], beta 1.3 GB/s [1.3-1.3]\ngloo over TCP, 4 ranks: alpha 2,200 us [2,100-2,400], beta 1.2 GB/s [1.2-1.2]\n"
+          "text": "TCP live check (same CPU): 3 sizes on 2 ranks, largest difference 12%\ngloo over TCP, 2 ranks: alpha 340 us [330-350], beta 2.0 GB/s [2.0-2.1]\ngloo over TCP, 4 ranks: alpha 1,200 us [1,200-1,300], beta 1.5 GB/s [1.4-1.5]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gloo live check (same CPU): 3 sizes on 2 ranks, largest difference 32%\n"
+          "text": "gloo live check (same CPU): 3 sizes on 2 ranks, largest difference 3%\n"
         }
       ]
     },
@@ -88,12 +88,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NCCL over sockets, 2 GPUs: alpha 100 us [78-130], beta 1.6 GB/s [1.6-1.6]\n"
+          "text": "NCCL over sockets, 2 GPUs: alpha 120 us [110-120], beta 1.6 GB/s [1.5-1.7]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check on RTX 4090: 3 sizes on 2 ranks, largest difference 88% (differs)\n"
+          "text": "live check on RTX 4090: 3 sizes on 2 ranks, largest difference 13%\n"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                     alpha (us) per msg (us) beta (GB/s)    alpha of    source\nTCP, 2 processes             41           21         5.2  round trip  measured\ngloo, 2 ranks               690          340         1.3  all-reduce  measured\ngloo, 4 ranks             2,200          370         1.2  all-reduce  measured\nNCCL sockets, 2 GPUs        100           52         1.6  all-reduce  measured\nNCCL shm, 4 GPUs             33          5.5         2.4  all-reduce  measured\nRDMA, one NDR port          5.0          2.5          50  round trip    quoted\nNVLink 3, one hop           1.5          1.5         300     one hop    quoted\n"
+          "text": "                     alpha (us) per msg (us) beta (GB/s)    alpha of    source\nTCP, 2 processes             41           21         5.1  round trip  measured\ngloo, 2 ranks               340          170         2.0  all-reduce  measured\ngloo, 4 ranks             1,200          200         1.5  all-reduce  measured\nNCCL sockets, 2 GPUs        120           59         1.6  all-reduce  measured\nNCCL shm, 4 GPUs             33          5.5         2.4  all-reduce  measured\nRDMA, one NDR port          5.0          2.5          50  round trip    quoted\nNVLink 3, one hop           1.5          1.5         300     one hop    quoted\n"
         }
       ]
     },
@@ -153,7 +153,7 @@
           "mime": "image/svg+xml",
           "asset": "networks/networks-layout-fit-1.svg",
           "bytes": 56900,
-          "sha256": "sha256:8c2c82d97a3324a11c39c626601207fbaf536d3f7b64539276c8364f1cdf1b0f"
+          "sha256": "sha256:53a1b2b17af793e6ea3748aca2c8899db7144332040626418c0319e80589ed2e"
         }
       ]
     },

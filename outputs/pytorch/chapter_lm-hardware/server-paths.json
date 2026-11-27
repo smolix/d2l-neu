@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6a8829a1206aad2ad782f30130d88bcb118f6d8f0a26c9d322456c6b963cac61",
+    "d2l_lib_fingerprint": "sha256:2517d1193ed84604b173e9c7b9d35f5e67a99141108ed19f49f1372867a36620",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "server-paths/server-paths-gpu-matrix-1.svg",
           "bytes": 30775,
-          "sha256": "sha256:732bb7002e74642d754f00caa485703a460cdc234d34b9737c53bb1b7e9d7f58"
+          "sha256": "sha256:e0d4a66ec9d14878a12ac2ffa1f0cfead2ce135094db07e092c1e8fd5600de40"
         }
       ]
     },
@@ -90,14 +90,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (all-reduce) on RTX 4090: 2 points, largest difference 1%\n"
+          "text": "live check (all-reduce) on RTX 4090: 2 points, largest difference 0%\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "server-paths/server-paths-nccl-sweeps-1.svg",
           "bytes": 67313,
-          "sha256": "sha256:fd52c664109e3dc1f3b43cea70ab190208b4d9602315c522eaf69742cd665a1c"
+          "sha256": "sha256:52bd3a1e55ca31d4226f9a1fcf4d186c04ceaa20b19ece319ec2946bdefb997f"
         }
       ]
     },
@@ -108,7 +108,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "            op g path alpha (us) beta (GB/s) 95% interval n_1/2 (KiB)\n    all-gather 4  all         33        2.25    2.24-2.25          96\n    all-reduce 2 NODE         22        3.52    3.51-3.53          77\n    all-reduce 2  PHB         13        2.42    2.40-2.44          30\n    all-reduce 4  all         33        2.36    2.35-2.36          51\n    all-to-all 2 NODE         13        3.07    3.01-3.13          78\n    all-to-all 2  PHB         24        2.27    2.24-2.31         106\n    all-to-all 4  all         37        2.24    2.23-2.25         108\nreduce-scatter 4  all         35        2.23    2.21-2.25         101\n"
+          "text": "            op g path alpha (us) beta (GB/s) 95% interval n_1/2 (KiB)\n    all-gather 4  all         33        2.25    2.24-2.25          96\n    all-reduce 2 NODE         22        3.52    3.51-3.53          77\n    all-reduce 2  PHB         13        2.42    2.40-2.44          30\n    all-reduce 4  all         33        2.36    2.35-2.36          51\n    all-to-all 2 NODE         13        3.07    3.01-3.13          78\n    all-to-all 2  PHB         24        2.27    2.24-2.31         106\n    all-to-all 4  all         37        2.24    2.23-2.25         108\nreduce-scatter 4  all         35        2.23    2.21-2.25         101\ntwo-card all-reduce: across the host bridges (NODE) 3.5 GB/s, behind one bridge\n  (PHB) 2.4 GB/s (1.5x; intervals disjoint)\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live check (both arms) on RTX 4090: 2 points, largest difference 2%\n"
+          "text": "live check (both arms) on RTX 4090: 2 points, largest difference 3%\n"
         }
       ]
     },

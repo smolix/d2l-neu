@@ -207,7 +207,8 @@ class MixTest(Fixtures):
         """An arm's mixture: reasoning traces and replay in the shares
         (1 - r, r), within three binomial SE over 10,000 steps; the book is
         not one of its streams."""
-        cfg = dict(seq_len=16, global_batch=128, data_seed=0, replay=0.25)
+        cfg = dict(seq_len=16, global_batch=128, data_seed=0, replay=0.25,
+                   steps=4)
         mix = d2l._cpt_mix(self.shards, cfg)
         self.assertEqual([st.layout_hash for st in mix.streams],
                          [d2l._layout_hash(self.shards[k])
@@ -222,6 +223,23 @@ class MixTest(Fixtures):
         with self.assertRaises(KeyError):  # no 'book' stream is read
             d2l._cpt_mix({k: v for k, v in self.shards.items()
                           if k != 'traces'}, cfg)
+
+    def test_cpt_mix_seen_once(self):
+        """An arm whose steps would wrap a stream is refused: the last step
+        that fits passes, one more step is refused; replay at 0 never
+        wraps the replay stream."""
+        cfg = dict(seq_len=16, global_batch=128, data_seed=0, replay=0.0)
+        n = d2l.PackedStream(self.shards['traces'], 16, 128).n_seq
+        d2l._cpt_mix(self.shards, dict(cfg, steps=n // 128))
+        with self.assertRaisesRegex(ValueError, 'traces: .* once'):
+            d2l._cpt_mix(self.shards, dict(cfg, steps=n // 128 + 1))
+        m = d2l.PackedStream(self.shards['replay'], 16, 128).n_seq
+        mix = d2l._cpt_mix(self.shards, dict(cfg, replay=1.0,
+                                             steps=m // 128))
+        self.assertEqual(int(mix.cursors(m // 128)[0]), 0)
+        with self.assertRaisesRegex(ValueError, 'replay: .* once'):
+            d2l._cpt_mix(self.shards, dict(cfg, replay=1.0,
+                                           steps=m // 128 + 1))
 
     def test_zero_weight_stream(self):
         mix = d2l.mix_streams(self.streams(), (1.0, 0.0), 8)

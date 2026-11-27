@@ -1318,12 +1318,20 @@ def _cpt_train(model, mix, sets, cfg, job, optim_state=None, peak=None,
 def _cpt_mix(shards, cfg):
     """The arm's MixStream: reasoning-trace and replay windows in the
     shares (1 - r, r), the data seed for streams and mixture (the book is
-    never trained)."""
+    never trained). An arm sees each window at most once: a stream that
+    the arm's cfg['steps'] would wrap is refused (the T1 traces hold 16
+    windows more than arm A's 183 steps take)."""
     T, B, seed, r = (cfg['seq_len'], cfg['global_batch'], cfg['data_seed'],
                      cfg['replay'])
-    streams = [d2l.PackedStream(shards[k], T, B, seed=seed)
-               for k in ('traces', 'replay')]
-    return d2l.mix_streams(streams, (1 - r, r), B, seed=seed)
+    keys = ('traces', 'replay')
+    streams = [d2l.PackedStream(shards[k], T, B, seed=seed) for k in keys]
+    mix = d2l.mix_streams(streams, (1 - r, r), B, seed=seed)
+    for key, s, n in zip(keys, streams, mix.cursors(cfg['steps'])):
+        if n > s.n_seq:
+            raise ValueError(f'{key}: {cfg["steps"]} steps take {n} windows '
+                             f'of {T} tokens, the stream has {s.n_seq}; an '
+                             'arm sees its data once')
+    return mix
 
 def _cpt_suite_n(tier):
     return None if tier == 't2' else 2000  # T1: 2,000 items per task

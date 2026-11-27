@@ -34,12 +34,10 @@ show (docs/code-guide.md 7.1):
   n-gram rule on the training windows (`repeated_ngram_flags`), and
   Adam's epsilon headroom (`adam_eps_headroom`: sqrt(v) per group from
   the two committed states, then one t1 run with eps at the t1 median,
-  paired with the grid's clip cell, its eps registered before it runs),
-  and the z-loss pilot (`zloss_pilot`: one t1 run with QK-norm and no
-  z-loss, paired with the grid's qk_norm cell at 8e-3; its regeneration
-  name and key exist only after its gate passed; the gate failed on
-  2026-11-27, so the page has no z-loss cell and the job stays for the
-  exercise and the fix-pass record).
+  paired with the grid's clip cell, its eps registered before it runs).
+  The z-loss pilot (claim 26) failed its gate on 2026-11-27; its code was
+  removed (git history; the record is in the fix pass's gates) and a
+  longer z-loss run is an exercise.
   While the reference run is pending, each shows the T1
   configuration under a printed label (the T1 run keeps checkpoints at the
   reference run's fractions of training for this).
@@ -2506,7 +2504,9 @@ def size_transfer(shapes, lrs, seeds=(0, 1), steps=300):
     before it ran the last shape and when (registered, UTC), and the
     pilot's gate ('go' or 'no-go'). Regenerations: size-xfer-pilot
     (XFER_PILOT's runs and the gate; nothing else runs, the fit is empty)
-    and, after a go, size-xfer (every run; the pilot's runs are reused)."""
+    and, after a go, size-xfer (every run; the pilot's runs are reused).
+    Once size-xfer is registered (the go), size-xfer-pilot alone is
+    refused: it would write a pilot-only result under the same load name."""
     if not (set(XFER_PILOT['shapes']) <= set(shapes[:-1])
             and set(XFER_PILOT['lrs']) <= set(lrs)):
         raise ValueError(f'the pilot {XFER_PILOT} needs its shapes among '
@@ -2520,6 +2520,11 @@ def size_transfer(shapes, lrs, seeds=(0, 1), steps=300):
                   steps=steps, runs=runs, recipe=_xfer_recipe())
     rerun = d2l._regenerating()
     full = 'size-xfer' in rerun
+    if ('size-xfer-pilot' in rerun and not full
+            and 'size-xfer' in d2l.PRETRAIN_RERUN_NAMES):
+        raise ValueError("the pilot's gate went go (size-xfer is "
+                         'registered): regenerate size-xfer, which runs '
+                         'the pilot first')
     res = _as_tuple(SizeTransfer, d2l._pretrain_result(
         'size-xfer' if full else 'size-xfer-pilot',
         lambda: _size_transfer(shapes, lrs, seeds, steps, full), config),
@@ -2537,7 +2542,8 @@ def _size_xfer_job():
     take the same arguments. The full job's name is conditional (spec
     5.3); the pilot's gate went 'go' on 2026-11-27, so 'size-xfer' is in
     PRETRAIN_RERUN_NAMES, _RERUN_ARTIFACT, PRETRAIN_JOBS and the tests'
-    list."""
+    list, and only size-xfer regenerates (size_transfer refuses the pilot
+    alone)."""
     return dict(shapes=('t1', 'ladder-54m', 'ladder-88m', 'r2'),
                 lrs=(2e-3, 4e-3, 8e-3, 1.6e-2), seeds=(0, 1), steps=300)
 
@@ -2809,140 +2815,4 @@ def adam_eps_headroom(lr):
                                config)
     return d2l._show_label(_as_tuple(EpsHeadroom, res, _EPS_TABLES, dict(
         eps=math.nan, matrix_median=math.nan)))
-```
-
-```{.python .input #reference-model-lib-zloss}
-%%tab pytorch
-#@save
-ZlossPilot = collections.namedtuple('ZlossPilot',
-                                    ['table', 'traces', 'gate', 'label'])
-
-#@save
-ZLOSS_LR = 8e-3  # the pilot's rate: the T1 grid's qk_norm cell at it
-ZLOSS_BASE = 1e-4  # the presets' z-loss coefficient: the grid cell's
-ZLOSS_TAIL = 50  # "at the end": the statistics steps of the last 50 steps
-ZLOSS_GATE = 5.0  # claim 26's rule: |difference of mean log Z| > 5 nats
-ZLOSS_STATS = 1  # version of the pilot's statistics
-
-#@save
-_ZLOSS_TABLES = dict(  # the columns of a ZlossPilot's tables
-    table=['z_loss', 'seed', 'log_z_end', 'val_loss', 'final_loss',
-           'first_nonfinite', 'max_logit', 'source'],
-    traces=['step', 'loss', 'log_z', 'max_logit', 'z_loss'])
-
-#@save
-def _zloss_end(trace, steps):
-    """An arm's mean log Z at the end: the mean of log_z (the mean
-    log-partition of the output softmax, logged at the statistics steps)
-    over the statistics steps after steps - ZLOSS_TAIL; NaN for an arm
-    with a non-finite loss (it stopped) or no such step."""
-    if not np.isfinite(trace['loss'].to_numpy(float)).all():
-        return math.nan
-    z = trace.loc[trace['step'] > steps - ZLOSS_TAIL, 'log_z'].dropna()
-    return float(z.mean()) if len(z) else math.nan
-
-#@save
-def _zloss_gate(table):
-    """Claim 26's rule on a pilot's table: 'go' if both arms ended finite
-    and their mean log Z at the end differs by more than ZLOSS_GATE nats,
-    else 'no-go'."""
-    end = table.set_index('z_loss')['log_z_end']
-    d = float(end[ZLOSS_BASE] - end[0.0])
-    go = math.isfinite(d) and math.fabs(d) > ZLOSS_GATE
-    return 'go' if go else 'no-go'
-
-#@save
-def _zloss_pilot(lr, device=None):
-    """The job behind zloss_pilot (device: tests only): one t1 run of the
-    grid's qk_norm recipe at lr, seed 0, without z-loss (kept under
-    _job_root()/zloss-pilot/, so that a restarted job or the later
-    regeneration reads it), paired with the grid's qk_norm cell at lr,
-    seed 0 (z-loss ZLOSS_BASE), whose configuration must differ from the
-    new run's in z_loss only. Also the gate script's call: the job runs
-    before its regeneration name exists (spec 5.3). Only training needs a
-    GPU; reading the kept run does not."""
-    cell, rows, cell_traces = _grid_cell(
-        d2l.load_artifact('instability-t1'), 'qk_norm', lr, (0,))
-    c, extra = _inst_arm(d2l.r2_config('t1', clip=None), 'qk_norm', lr, 0)
-    c = dataclasses.replace(c, z_loss=0.0)
-    _cfg_pair_check(cell, c, 'z_loss')
-    if cell.z_loss != ZLOSS_BASE:
-        raise ValueError(f'the grid cell ran z-loss {cell.z_loss:g}, not '
-                         f'{ZLOSS_BASE:g}')
-    held = os.path.join(_job_root(), 'zloss-pilot',
-                        f'qk_norm-{lr:g}-z0-s0.json.gz')
-    config = d2l._jsonable(dict(cfg=_cfg_json(c), variant='qk_norm',
-                                model=extra, recipe=_inst_recipe(),
-                                tau=None))
-
-    def compute():
-        if device is None and not torch.cuda.is_available():
-            raise RuntimeError('the z-loss run trains on a GPU')
-        shards = _train_shards(c)
-        val = _val_fn(dataclasses.replace(c, val_tokens=INST_VAL_TOKENS))
-        log = _inst_run(c, extra, 'qk_norm', None, shards, val,
-                        torch.device(device or 'cuda'))
-        return (_arm_summary(log, 'qk_norm', lr, 0,
-                             peak_end=c.steps - c.decay),
-                _arm_trace(log, 'qk_norm', lr, 0))
-    row, trace = _inst_kept(held, config, compute)
-    table, traces = [], []
-    for z, r, tr, source in ((ZLOSS_BASE, rows.iloc[0], cell_traces,
-                              'instability-t1'),
-                             (0.0, row, trace, 'zloss-pilot')):
-        table.append(dict(z_loss=z, seed=0, log_z_end=_zloss_end(tr, c.steps),
-                          val_loss=r['val_loss'], final_loss=r['final_loss'],
-                          first_nonfinite=r['first_nonfinite'],
-                          max_logit=r['max_logit'], source=source))
-        traces.append(tr[['step', 'loss', 'log_z', 'max_logit']].assign(
-            z_loss=z))
-    table = pd.DataFrame(table)
-    return ZlossPilot(table, pd.concat(traces, ignore_index=True),
-                      _zloss_gate(table), '')
-
-#@save
-def _zloss_recipe():
-    """The library constants a stored z-loss pilot was computed with."""
-    return dict(base=ZLOSS_BASE, tail=ZLOSS_TAIL, gate=ZLOSS_GATE,
-                inst=_inst_recipe(), stats=ZLOSS_STATS)
-
-#@save
-def zloss_pilot(lr):
-    """Does the output softmax's log-partition drift without z-loss? Two
-    t1 runs with QK-norm at peak rate lr on the T1 grid's recipe (full
-    schedule, clipping off), seed 0: z-loss ZLOSS_BASE is the grid's
-    qk_norm cell (read from 'instability-t1', not re-run), the other trains
-    once without z-loss; the two configurations differ in z_loss only
-    (checked). ZlossPilot(table, traces, gate, label): a row per arm with
-    the mean log Z at the end (_zloss_end), the final losses, the largest
-    logit; traces per step of loss, log_z and the largest logit (the
-    last two at the statistics steps; equal early values show that the
-    pair started alike); gate = claim 26's rule
-    (_zloss_gate). Regeneration: zloss-pilot (after inst-t1-qknorm), a
-    conditional name (spec 5.3): the gate script runs _zloss_pilot first;
-    after a go, add 'zloss-pilot' to PRETRAIN_RERUN_NAMES and
-    _RERUN_ARTIFACT (load name 'zloss-pilot', data-path-lib.md),
-    PRETRAIN_ARTIFACTS['zloss-pilot'] = ('lm-r2-zloss-pilot-v1',
-    'json-table'), PRETRAIN_JOBS['zloss-pilot'] = ('zloss_pilot', lambda:
-    dict(lr=ZLOSS_LR)) and the tests' list, then run it (it reads the kept
-    run). Until then a normal run raises KeyError and a regeneration run
-    shows it pending. The pilot of 2026-11-27 did not meet the rule
-    (|difference| 1.36 nats), so no page calls this; it stays for the
-    exercise of a longer run."""
-    run, _ = _inst_arm(d2l.r2_config('t1', clip=None), 'qk_norm', lr, 0)
-    run = _cfg_json(run)
-    del run['z_loss']  # the arms' one difference
-    config = dict(lr=lr, run=run, recipe=_zloss_recipe(), cell=dict(
-        key=d2l.PRETRAIN_ARTIFACTS['instability-t1'][0], variant='qk_norm',
-        seed=0))
-    if 'zloss-pilot' in d2l.PRETRAIN_RERUN_NAMES:
-        res = d2l._pretrain_result('zloss-pilot', lambda: _zloss_pilot(lr),
-                                   config)
-    elif d2l._regenerating():
-        res = d2l._pending_result('zloss-pilot')
-    else:
-        raise KeyError('zloss-pilot is not committed yet (its gate has not '
-                       'passed)')
-    return d2l._show_label(_as_tuple(ZlossPilot, res, _ZLOSS_TABLES,
-                                     dict(gate=None)))
 ```

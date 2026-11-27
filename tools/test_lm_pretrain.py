@@ -73,13 +73,8 @@ check (any field but eps refused), the driver on mocked runs (eps
 registered before the run, the grid cell read not re-run, kept and
 resumed; a changed readout, an unregistered kept run, a grid without the
 cell or of another recipe refused), the regeneration, the page's table;
-the z-loss pilot: the mean log Z over the last 50 steps' statistics (NaN
-for a diverged arm) and claim 26's gate (|difference| > 5 nats), the pair
-check (any field but z_loss refused), the driver on a mocked run (the
-grid's qk_norm cell read, not re-run; kept and resumed; a grid without the
-cell, of another recipe or another z-loss refused), the conditional name
-(a normal run raises KeyError, a regeneration run shows it pending), the
-regeneration with the name added, the page's one line and its assert.
+the z-loss pilot's no-go (claim 26): no z-loss cell or call on the page,
+no pilot in the library, the name unregistered.
 """
 import collections
 import contextlib
@@ -1572,9 +1567,15 @@ class ResultTest(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):
                 return d2l.size_transfer(**dict(kw, **over))
         path = '../data/lm/rerun/lm-r2-size-xfer-v1.json.gz'
+        before_go = tuple(n for n in d2l.PRETRAIN_RERUN_NAMES
+                          if n != 'size-xfer')  # the names before the go
         with mock.patch.object(d2l, '_size_transfer', fake):
             os.environ['D2L_RERUN'] = 'size-xfer-pilot'
-            res = call()
+            with self.assertRaisesRegex(ValueError, 'regenerate size-xfer'):
+                call()  # after the go the pilot alone is refused
+            self.assertEqual(calls, [])
+            with mock.patch.object(d2l, 'PRETRAIN_RERUN_NAMES', before_go):
+                res = call()
             self.assertEqual((calls, res.gate, len(res.table)),
                              ([False], 'no-go', 1))
             self.assertTrue(os.path.exists(path))
@@ -1887,11 +1888,24 @@ class SizeTransferTest(unittest.TestCase):
                 mock.patch.object(d2l, '_regenerating', lambda: ()), \
                 self.assertRaisesRegex(ValueError, 'pilot only'):
             d2l.size_transfer(self.SHAPES, self.LRS)
+        before_go = tuple(n for n in d2l.PRETRAIN_RERUN_NAMES
+                          if n != 'size-xfer')
         with mock.patch.object(d2l, '_pretrain_result', lambda *a: res), \
                 mock.patch.object(d2l, '_regenerating',
-                                  lambda: ('size-xfer-pilot',)):
+                                  lambda: ('size-xfer-pilot',)), \
+                mock.patch.object(d2l, 'PRETRAIN_RERUN_NAMES', before_go):
             self.assertEqual(d2l.size_transfer(self.SHAPES, self.LRS).gate,
                              'go')
+        with mock.patch.object(d2l, '_pretrain_result', lambda *a: res), \
+                mock.patch.object(d2l, '_regenerating',
+                                  lambda: ('size-xfer-pilot',)), \
+                self.assertRaisesRegex(ValueError, 'regenerate size-xfer'):
+            d2l.size_transfer(self.SHAPES, self.LRS)  # the pilot alone
+        with mock.patch.object(d2l, '_pretrain_result', lambda *a: res), \
+                mock.patch.object(d2l, '_regenerating',
+                                  lambda: ('size-xfer-pilot', 'size-xfer')):
+            self.assertEqual(d2l.size_transfer(self.SHAPES, self.LRS).gate,
+                             'go')  # both names: the full job
         full = self.driver(True, self.fake_runs([]))
         with mock.patch.object(d2l, '_pretrain_result', lambda *a: full), \
                 mock.patch.object(d2l, '_regenerating', lambda: ()):
@@ -2692,165 +2706,13 @@ class EpsHeadroomTest(unittest.TestCase):
             self.page_output(bad)
 
 
-class ZlossPilotTest(unittest.TestCase):
-    """The z-loss pilot (cell 27c, conditional) on CPU: the end statistic
-    and the gate, the pair check, the driver with a mocked run, the
-    conditional name, the regeneration and the page."""
-    LR = 8e-3
-    NAMES = dict(PRETRAIN_RERUN_NAMES=d2l.PRETRAIN_RERUN_NAMES
-                 + ('zloss-pilot',))
+class ZlossNoGoTest(unittest.TestCase):
+    """The z-loss pilot did not meet claim 26's rule (S/fix/gates/zloss.md,
+    2026-11-27: |1e-4 minus none| = 1.36 nats, rule > 5), so the page has
+    no z-loss subsection or cell (spec 21.2 cell 27c, removed), the library
+    no pilot and the name no registration (the exercise takes its place)."""
 
-    @staticmethod
-    def trace(log_z, steps=1526, loss=4.0):
-        t = EpsHeadroomTest.trace(0.2, steps=steps, loss=loss)
-        t['log_z'] = np.where(t['step'] % 10 == 0, log_z, np.nan)
-        t['max_logit'] = t['max_logit_0']  # as _arm_trace keeps it
-        return t
-
-    def test_end_and_gate(self):
-        t = self.trace(10.0)
-        t.loc[t['step'] == 1520, 'log_z'] = 15.0  # in the last 50 steps
-        t.loc[t['step'] == 1470, 'log_z'] = 99.0  # before them: not read
-        self.assertAlmostEqual(d2l._zloss_end(t, 1526), (4 * 10 + 15) / 5)
-        t.loc[t['step'] == 800, 'loss'] = np.nan  # a diverged arm
-        self.assertTrue(math.isnan(d2l._zloss_end(t, 1526)))
-        self.assertTrue(math.isnan(d2l._zloss_end(self.trace(np.nan),
-                                                  1526)))
-
-        def table(base, none):
-            return pd.DataFrame(dict(z_loss=[1e-4, 0.0],
-                                     log_z_end=[base, none]))
-        self.assertEqual(d2l._zloss_gate(table(10.7, 16.0)), 'go')
-        self.assertEqual(d2l._zloss_gate(table(10.7, 4.0)), 'go')
-        self.assertEqual(d2l._zloss_gate(table(10.7, 15.6)), 'no-go')
-        self.assertEqual(d2l._zloss_gate(table(10.7, 10.9)), 'no-go')
-        self.assertEqual(d2l._zloss_gate(table(10.7, math.nan)), 'no-go')
-
-    def test_pair_check(self):
-        cell, _ = d2l._inst_arm(d2l.r2_config('t1', clip=None), 'qk_norm',
-                                self.LR, 0)
-        new = dataclasses.replace(cell, z_loss=0.0)
-        d2l._cfg_pair_check(cell, new, 'z_loss')  # z-loss only: accepted
-        for field, value in dict(
-                seed=1, peak_lr=4e-3, clip=1.0, eps=5e-5, wd=0.0,
-                stats_every=50, steps=1000,
-                arch=cell.arch._replace(qk_norm=False)).items():
-            with self.assertRaisesRegex(ValueError, f"'{field}'"):
-                d2l._cfg_pair_check(cell, dataclasses.replace(
-                    new, **{field: value}), 'z_loss')
-        with self.assertRaisesRegex(ValueError, 'z_loss pair .* nothing'):
-            d2l._cfg_pair_check(cell, cell, 'z_loss')
-        with self.assertRaisesRegex(ValueError, 'the eps pair must differ '
-                                    "in eps only; it differs in .'z_loss'"):
-            d2l._eps_pair_check(cell, new)
-
-    def grid(self, lrs=(4e-3, 8e-3), steps=None, z_loss=1e-4):
-        rows, traces = [], []
-        for v in ('none', 'qk_norm'):
-            for lr in lrs:
-                for s in (0, 1):
-                    rows.append(dict(variant=v, lr=lr, seed=s,
-                                     final_loss=4.0, val_loss=3.9 + s / 100,
-                                     first_nonfinite=None, max_logit=20.0))
-                    traces.append(self.trace(10.7 + s).assign(
-                        variant=v, lr=lr, seed=s))
-        table = pd.DataFrame(rows)
-        table.attrs['config'] = d2l._jsonable(dict(
-            cfg=d2l._cfg_json(d2l.r2_config('t1', clip=None,
-                                            z_loss=z_loss)),
-            lrs=list(lrs), variants=['none', 'qk_norm'], seeds=[0, 1],
-            steps=steps, tau=30, recipe=d2l._inst_recipe()))
-        return d2l.InstabilityRuns(table, pd.concat(traces,
-                                                    ignore_index=True), 30,
-                                   '', 7.0)
-
-    def test_driver(self):
-        calls = []
-
-        def run(c, extra, variant, tau, shards, val, device):
-            calls.append((c, extra, variant, tau))
-            log = self.trace(17.0, loss=4.1)
-            log['val_loss'] = np.where(log['step'] == 1526, 3.97, np.nan)
-            return log
-        grid = self.grid()
-        with tempfile.TemporaryDirectory() as tmp:
-            patches = [
-                mock.patch.object(d2l, '_job_root', lambda: tmp),
-                mock.patch.object(d2l, '_inst_run', run),
-                mock.patch.object(d2l, '_train_shards', lambda c: None),
-                mock.patch.object(d2l, '_val_fn', lambda c: None),
-                mock.patch.object(d2l, 'load_artifact', lambda n: grid)]
-            for p in patches:
-                p.start()
-            try:
-                with mock.patch('torch.cuda.is_available', lambda: False):
-                    with self.assertRaisesRegex(RuntimeError, 'trains on '
-                                                'a GPU'):
-                        d2l._zloss_pilot(self.LR)  # nothing kept yet
-                    self.assertEqual(calls, [])
-                    res = d2l._zloss_pilot(self.LR, device='cpu')
-                    again = d2l._zloss_pilot(self.LR)  # no GPU to read it
-                self.assertEqual(len(calls), 1)  # the kept run is read
-                pd.testing.assert_frame_equal(res.table, again.table)
-                self.assertTrue(os.path.exists(os.path.join(
-                    tmp, 'zloss-pilot', 'qk_norm-0.008-z0-s0.json.gz')))
-                grid = self.grid(lrs=(4e-3,))
-                with self.assertRaisesRegex(ValueError, 'no full-schedule '
-                                            'qk_norm cell at lr 0.008'):
-                    d2l._zloss_pilot(self.LR, device='cpu')
-                grid = self.grid(steps=400)
-                with self.assertRaisesRegex(ValueError, 'no full-schedule'):
-                    d2l._zloss_pilot(self.LR, device='cpu')
-                grid = self.grid(z_loss=2e-4)  # pairs, but not the base
-                with self.assertRaisesRegex(ValueError, 'ran z-loss 0.0002'):
-                    d2l._zloss_pilot(self.LR, device='cpu')
-                grid = self.grid(z_loss=0.0)  # no difference at all
-                with self.assertRaisesRegex(ValueError, 'nothing'):
-                    d2l._zloss_pilot(self.LR, device='cpu')
-                grid = self.grid()
-                with mock.patch.object(d2l, 'INST_STATS_EVERY', 50), \
-                        self.assertRaisesRegex(ValueError,
-                                               'recipe.stats_every'):
-                    d2l._zloss_pilot(self.LR, device='cpu')
-            finally:
-                for p in reversed(patches):
-                    p.stop()
-        c, extra, variant, tau = calls[0]
-        self.assertEqual((c.z_loss, extra, variant, tau),
-                         (0.0, {}, 'qk_norm', None))
-        cell, _ = d2l._inst_arm(d2l.r2_config('t1', clip=None), 'qk_norm',
-                                self.LR, 0)
-        self.assertEqual(dataclasses.replace(c, z_loss=1e-4), cell)
-        self.assertEqual((c.clip, c.steps, c.decay, c.stats_every,
-                          c.arch.qk_norm, c.peak_lr),
-                         (None, 1526, 229, 10, True, 8e-3))
-        t = res.table
-        self.assertEqual(list(t.columns), d2l._ZLOSS_TABLES['table'])
-        self.assertEqual(t[['z_loss', 'seed', 'source']].values.tolist(), [
-            [1e-4, 0, 'instability-t1'], [0.0, 0, 'zloss-pilot']])
-        np.testing.assert_allclose(t['log_z_end'], [10.7, 17.0])
-        np.testing.assert_allclose(t['val_loss'], [3.9, 3.97])
-        self.assertEqual(res.gate, 'go')  # 6.3 nats apart
-        self.assertEqual(list(res.traces.columns),
-                         d2l._ZLOSS_TABLES['traces'])
-        self.assertEqual(len(res.traces), 2 * 1526)
-        self.assertEqual(res.traces['log_z'].notna().sum(), 2 * 152)
-        self.assertEqual(res.traces.loc[res.traces['step'] == 10,
-                                        'max_logit'].tolist(), [20.0, 20.0])
-
-    def fake_result(self, base=10.71, none=16.04):
-        table = pd.DataFrame(dict(
-            z_loss=[1e-4, 0.0], seed=0, log_z_end=[base, none],
-            val_loss=[3.9, 3.97], final_loss=4.0, first_nonfinite=None,
-            max_logit=20.0, source=['instability-t1', 'zloss-pilot']))
-        traces = pd.DataFrame(dict(step=[10, 20], loss=4.0, log_z=10.0,
-                                   max_logit=6.5, z_loss=1e-4))
-        return d2l.ZlossPilot(table, traces, d2l._zloss_gate(table), '')
-
-    def test_no_go_page(self):
-        """The pilot did not meet claim 26's rule (S/fix/gates/zloss.md,
-        2026-11-27: |1e-4 minus none| = 1.36 nats, rule > 5), so the page
-        has no z-loss subsection and no call (spec 21.2 cell 27c)."""
+    def test_no_go(self):
         path = os.path.join(os.path.dirname(os.path.dirname(
             os.path.abspath(__file__))), 'chapter_lm-pretraining',
             'reference-model.md')
@@ -2859,75 +2721,10 @@ class ZlossPilotTest(unittest.TestCase):
         for gone in ('#reference-model-a-z-loss-pilot', 'zloss_pilot(',
                      '### A z-Loss Pilot'):
             self.assertNotIn(gone, src)
-
-    def test_conditional_name(self):
-        self.assertNotIn('zloss-pilot', d2l.PRETRAIN_RERUN_NAMES)
-        self.assertNotIn('zloss-pilot', d2l.PRETRAIN_JOBS)
-        self.assertNotIn('zloss-pilot', d2l.PRETRAIN_ARTIFACTS)
-        with mock.patch.dict(os.environ, {'D2L_RERUN': ''}), \
-                self.assertRaisesRegex(KeyError, 'not committed yet'):
-            d2l.zloss_pilot(self.LR)
-        with mock.patch.dict(os.environ, {'D2L_RERUN': 't1-runs'}), \
-                contextlib.redirect_stdout(io.StringIO()) as out:
-            pending = d2l.zloss_pilot(self.LR)
-        self.assertEqual(out.getvalue(), '[zloss-pilot pending]\n')
-        self.assertEqual(list(pending.table.columns),
-                         d2l._ZLOSS_TABLES['table'])
-        self.assertIsNone(pending.gate)
-
-    def test_regeneration(self):
-        self.assertEqual(d2l.ZLOSS_LR, self.LR)
-        res = self.fake_result()
-        calls = []
-        names = d2l.PRETRAIN_RERUN_NAMES + ('zloss-pilot',)
-        with tempfile.TemporaryDirectory() as tmp, uncommitted(), \
-                mock.patch.object(d2l, 'PRETRAIN_RERUN_NAMES', names), \
-                mock.patch.dict(d2l._RERUN_ARTIFACT,
-                                {'zloss-pilot': 'zloss-pilot'}), \
-                mock.patch.dict(d2l.PRETRAIN_ARTIFACTS, {'zloss-pilot': (
-                    'lm-r2-zloss-pilot-v1', 'json-table')}), \
-                mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset()), \
-                mock.patch.dict(os.environ, {'D2L_RERUN': 'zloss-pilot'}):
-            cwd = os.getcwd()
-            os.makedirs(os.path.join(tmp, 'chapter'))
-            os.chdir(os.path.join(tmp, 'chapter'))
-            try:
-                with mock.patch.object(d2l, '_zloss_pilot', lambda lr:
-                                       calls.append(lr) or res), \
-                        contextlib.redirect_stdout(io.StringIO()):
-                    got = d2l.zloss_pilot(self.LR)
-                    path = '../data/lm/rerun/lm-r2-zloss-pilot-v1.json.gz'
-                    config = d2l._stored_config(d2l._read_result(
-                        path, 'json-table'))
-                    os.environ['D2L_RERUN'] = ''
-                    d2l.DATA_HUB['lm-r2-zloss-pilot-v1'] = ('url', 'sha1')
-                    with mock.patch.object(d2l, 'download_keyed',
-                                           lambda key: path):
-                        loaded = d2l.zloss_pilot(self.LR)
-                        with self.assertRaisesRegex(ValueError, 'lr'):
-                            d2l.zloss_pilot(4e-3)
-                        with mock.patch.object(d2l, 'ZLOSS_TAIL', 100), \
-                                self.assertRaisesRegex(ValueError,
-                                                       'recipe.tail'):
-                            d2l.zloss_pilot(self.LR)
-                        with mock.patch.dict(d2l.PRETRAIN_ARTIFACTS, {
-                                'instability-t1': ('lm-r2-inst-t1-v3',
-                                                   'json-table')}), \
-                                self.assertRaisesRegex(ValueError, 'cell'):
-                            d2l.zloss_pilot(self.LR)
-            finally:
-                os.chdir(cwd)
-        self.assertEqual(calls, [self.LR])
-        self.assertEqual((config['lr'], config['cell']['key'],
-                          config['recipe']['base'], config['recipe']['gate']),
-                         (8e-3, 'lm-r2-inst-t1-v2', 1e-4, 5.0))
-        self.assertNotIn('z_loss', config['run'])  # the arms' difference
-        self.assertEqual((config['run']['clip'], config['run']['arch'][
-            'qk_norm']), (None, True))
-        self.assertEqual((got.gate, loaded.label, loaded.gate),
-                         ('go', '', 'go'))
-        pd.testing.assert_frame_equal(loaded.table, got.table,
-                                      check_dtype=False)
+        for table in (d2l.PRETRAIN_RERUN_NAMES, d2l.PRETRAIN_JOBS,
+                      d2l.PRETRAIN_ARTIFACTS, d2l._RERUN_ARTIFACT):
+            self.assertNotIn('zloss-pilot', table)
+        self.assertFalse(hasattr(d2l, 'zloss_pilot'))
 
 
 class LibraryStructureTest(unittest.TestCase):

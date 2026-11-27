@@ -1971,11 +1971,12 @@ SizeTransfer = collections.namedtuple(
 #@save
 XFER_PILOT = dict(shapes=('t1', 'ladder-88m'), lrs=(4e-3, 8e-3))  # the gate
 XFER_LEVEL = 0.95  # the prediction interval and the slope's interval
-XFER_STATS = 1  # version of the run statistics: bump when they change
+XFER_STATS = 2  # version of the run statistics: bump when they change
 
 #@save
 _XFER_TABLES = dict(  # the columns of a SizeTransfer's tables
-    table=['shape', 'N', 'lr', 'seed', 'logit', 'loss', 'first_nonfinite'],
+    table=['shape', 'N', 'lr', 'seed', 'logit', 'loss', 'first_nonfinite',
+           'finished'],
     traces=['step', 'loss', 'max_logit', 'shape', 'lr', 'seed'],
     fit=['lr', 'slope', 'slope_hw', 'intercept', 'predicted', 'lo', 'hi'])
 
@@ -2028,8 +2029,9 @@ def _xfer_run(shape, lr, seed, steps, shards, device):
     """One run's (row, trace), kept at _xfer_path: the largest attention
     logit at the last step (over layers; NaN if the loss went non-finite),
     the final loss (mean of the last 20 steps; inf after a non-finite
-    loss), the first non-finite step, and the trace at the statistics
-    steps."""
+    loss), the first non-finite step, when the run finished (UTC; the
+    stored order of prediction and held-out runs), and the trace at the
+    statistics steps."""
     c = _xfer_config(shape, lr, seed, steps)
     config = d2l._jsonable(dict(cfg=_cfg_json(c), recipe=_xfer_recipe()))
 
@@ -2041,7 +2043,8 @@ def _xfer_run(shape, lr, seed, steps, shards, device):
                  and s['first_nonfinite'] is None else math.nan)
         row = dict(shape=shape, N=_non_embedding(c.arch), lr=lr, seed=seed,
                    logit=logit, loss=s['final_loss'],
-                   first_nonfinite=s['first_nonfinite'])
+                   first_nonfinite=s['first_nonfinite'],
+                   finished=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
         tr = _arm_trace(log, 'none', lr, seed)
         tr = tr.loc[tr['max_logit'].notna(), ['step', 'loss', 'max_logit']]
         return row, tr.assign(shape=shape, lr=lr, seed=seed).reset_index(
@@ -2049,16 +2052,41 @@ def _xfer_run(shape, lr, seed, steps, shards, device):
     return _inst_kept(_xfer_path(shape, lr, seed), config, compute)
 
 #@save
+def _xfer_above(table, lr, seed):
+    """Whether the larger pilot shape is above the smaller one at lr and
+    seed: its largest logit is higher, or it diverged (a non-finite loss)
+    while the smaller shape did not, the trend in its strongest form. A
+    missing run, a diverged smaller shape or a non-finite logit of a run
+    that did not diverge counts against."""
+    small, large = XFER_PILOT['shapes']
+    t = table.set_index(['shape', 'lr', 'seed'])
+    if (small, lr, seed) not in t.index or (large, lr, seed) not in t.index:
+        return False
+    a, b = t.loc[(small, lr, seed)], t.loc[(large, lr, seed)]
+    if pd.notna(a['first_nonfinite']):
+        return False
+    if pd.notna(b['first_nonfinite']):
+        return True
+    return bool(b['logit'] > a['logit'])  # NaN counts against
+
+#@save
 def _xfer_gate(table, seeds):
     """The pilot's pre-registered rule: 'go' if at each of XFER_PILOT's
-    rates and for every seed the larger pilot shape's largest logit is
-    above the smaller one's (the seeds agree on the order); else 'no-go'
-    (a missing or non-finite logit counts against the order)."""
-    small, large = XFER_PILOT['shapes']
-    t = table.set_index(['shape', 'lr', 'seed'])['logit']
-    above = [t.get((large, lr, s), math.nan) > t.get((small, lr, s), math.nan)
-             for lr in XFER_PILOT['lrs'] for s in seeds]
-    return 'go' if all(above) else 'no-go'
+    rates and for every seed the larger pilot shape is above the smaller
+    one (_xfer_above; the seeds agree on the order); else 'no-go'."""
+    return 'go' if all(_xfer_above(table, lr, s) for lr in XFER_PILOT['lrs']
+                       for s in seeds) else 'no-go'
+
+#@save
+def diverged_note(runs):
+    """'k of n runs diverged (first: shape seed s, step j)' for the runs
+    (rows of a size transfer's table) with a non-finite loss, '' if none."""
+    d = runs[runs['first_nonfinite'].notna()].sort_values('first_nonfinite')
+    if not len(d):
+        return ''
+    r = d.iloc[0]
+    return (f'{len(d)} of {len(runs)} runs diverged (first: {r["shape"]} '
+            f'seed {r["seed"]}, step {int(r["first_nonfinite"])})')
 
 #@save
 def _xfer_register(fit, held):
@@ -2131,6 +2159,10 @@ def _size_transfer(shapes, lrs, seeds, steps, full, device=None):
     registered = _xfer_register(fit, [_xfer_path(held, lr, s) for lr in lrs
                                       for s in seeds])
     run([held], lrs)
+    if any(done[held, lr, s][0]['finished'] < registered for lr in lrs
+           for s in seeds):
+        raise RuntimeError('a held-out run finished before the prediction '
+                           'was registered')
     return result(fit, gate, registered)
 
 #@save
@@ -2159,12 +2191,17 @@ def size_transfer(shapes, lrs, seeds=(0, 1), steps=300):
             del runs[s][k]
     config = dict(shapes=list(shapes), lrs=list(lrs), seeds=list(seeds),
                   steps=steps, runs=runs, recipe=_xfer_recipe())
-    full = 'size-xfer' in d2l._regenerating()
-    res = d2l._pretrain_result(
+    rerun = d2l._regenerating()
+    full = 'size-xfer' in rerun
+    res = _as_tuple(SizeTransfer, d2l._pretrain_result(
         'size-xfer' if full else 'size-xfer-pilot',
-        lambda: _size_transfer(shapes, lrs, seeds, steps, full), config)
-    return d2l._show_label(_as_tuple(SizeTransfer, res, _XFER_TABLES, dict(
-        gate=None, registered=None)))
+        lambda: _size_transfer(shapes, lrs, seeds, steps, full), config),
+        _XFER_TABLES, dict(gate=None, registered=None))
+    if (res.gate == 'go' and 'size-xfer-pilot' not in rerun
+            and not (res.table['shape'] == shapes[-1]).any()):
+        raise ValueError(f'{d2l.PRETRAIN_ARTIFACTS["size-transfer"][0]} '
+                         'holds the pilot only (gate go): run size-xfer')
+    return d2l._show_label(res)
 
 #@save
 def _size_xfer_job():
@@ -2182,7 +2219,10 @@ def plot_size_transfer(xfer, fit, held, figsize=(5.5, 3)):
     """The largest logit at the last step against non-embedding parameters
     (log-log): per rate the fitted line (fit: logit_fit's table) extended
     to the held-out shape, the fitted runs as points, the held-out shape's
-    runs as open markers."""
+    runs as open markers; x ticks at the shapes' N in millions. Nothing
+    is drawn if fit is empty (every rate had a diverged run)."""
+    if not len(fit):
+        return
     d2l.use_svg_display()
     fig, ax = d2l.plt.subplots(figsize=figsize)
     runs = xfer.table
@@ -2202,5 +2242,8 @@ def plot_size_transfer(xfer, fit, held, figsize=(5.5, 3)):
     for i, r in enumerate(fit.itertuples()):
         g = runs[(runs['lr'] == r.lr) & (runs['shape'] == held)]
         ax.plot(g['N'], g['logit'], 'o', color=f'C{i}', mfc='none')
+    Ns = sorted(runs['N'].unique())
+    ax.set_xticks(Ns, [f'{n / 1e6:.1f}M' for n in Ns])
+    ax.xaxis.set_minor_locator(d2l.plt.NullLocator())
     fig.tight_layout()
 ```

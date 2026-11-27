@@ -67,6 +67,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 import unittest
 import warnings
 from unittest import mock
@@ -1671,12 +1672,19 @@ class SizeTransferTest(unittest.TestCase):
         self.assertGreater(two.hi / two.lo, 1)
 
     def test_logit_fit_non_finite(self):
-        pts = self.points((1e7, 3e7, 6e7), lrs=(2e-3, 4e-3))
-        pts.loc[0, 'logit'] = math.nan  # one point at 2e-3 left out
-        pts.loc[(pts['lr'] == 4e-3) & (pts['N'] > 1e7), 'logit'] = math.inf
+        """A rate with a non-finite logit gets no line (the point is not
+        dropped: that would censor the largest logits); so does a rate
+        with fewer than three points."""
+        pts = self.points((1e7, 3e7, 6e7), lrs=(2e-3, 4e-3, 8e-3))
+        pts.loc[0, 'logit'] = math.nan
+        pts.loc[(pts['lr'] == 4e-3) & (pts['N'] == 6e7), 'logit'] = math.inf
         fit = d2l.logit_fit(pts, at=1e8)
-        self.assertEqual(fit['lr'].tolist(), [2e-3])  # 4e-3: two points
+        self.assertEqual(fit['lr'].tolist(), [8e-3])
         self.assertAlmostEqual(fit['slope'].iloc[0], 0.7, places=9)
+        two = self.points((1e7, 3e7), seeds=(0,))
+        fit = d2l.logit_fit(two, at=1e8)
+        self.assertEqual((len(fit), list(fit.columns)),
+                         (0, d2l._XFER_TABLES['fit']))
 
     def test_xfer_config(self):
         N = {s: d2l._non_embedding(d2l._xfer_config(s, 4e-3, 1, 300).arch)
@@ -1712,11 +1720,20 @@ class SizeTransferTest(unittest.TestCase):
         rows, i = [], 0
         for lr in (4e-3, 8e-3):
             for s in (0, 1):
-                rows.append(dict(shape='t1', lr=lr, seed=s, logit=100.0))
+                rows.append(dict(shape='t1', lr=lr, seed=s, logit=100.0,
+                                 first_nonfinite=None))
                 rows.append(dict(shape='ladder-88m', lr=lr, seed=s,
-                                 logit=150.0 if larger[i] else 90.0))
+                                 logit=150.0 if larger[i] else 90.0,
+                                 first_nonfinite=None))
                 i += 1
         return pd.DataFrame(rows)
+
+    @staticmethod
+    def diverge(t, shape, lr, seed, step=123):
+        i = t.index[(t['shape'] == shape) & (t['lr'] == lr)
+                    & (t['seed'] == seed)]
+        t.loc[i, 'logit'], t.loc[i, 'first_nonfinite'] = math.nan, step
+        return t
 
     def test_gate(self):
         self.assertEqual(d2l._xfer_gate(self.table(), (0, 1)), 'go')
@@ -1732,11 +1749,34 @@ class SizeTransferTest(unittest.TestCase):
         self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'no-go')
         self.assertEqual(d2l._xfer_gate(self.table().iloc[1:], (0, 1)),
                          'no-go')  # a missing run
+        # divergence: only the larger shape diverged = above (the trend in
+        # its strongest form); the smaller one or both = against
+        t = self.diverge(self.table((1, 1, 0, 1)), 'ladder-88m', 8e-3, 0)
+        self.assertTrue(d2l._xfer_above(t, 8e-3, 0))
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'go')
+        t = self.diverge(self.table(), 't1', 8e-3, 0)
+        self.assertFalse(d2l._xfer_above(t, 8e-3, 0))
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'no-go')
+        t = self.diverge(t, 'ladder-88m', 8e-3, 0)
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'no-go')
+        # the stored JSON's NaN for "did not diverge" reads the same
+        t = self.table().astype({'first_nonfinite': float})
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'go')
 
-    def fake_runs(self, order, pilot_up=True):
+    def test_diverged_note(self):
+        t = self.table()
+        self.assertEqual(d2l.diverged_note(t), '')
+        t = self.diverge(self.diverge(t, 't1', 4e-3, 1, 250), 'ladder-88m',
+                         8e-3, 0, 212)
+        self.assertEqual(d2l.diverged_note(t), '2 of 8 runs diverged '
+                         '(first: ladder-88m seed 0, step 212)')
+
+    def fake_runs(self, order, pilot_up=True, diverge=(), finished=None):
         """A _xfer_run that trains nothing: log logit linear in log N (two
-        seeds apart by 0.1), ladder-88m below t1 at 8e-3 unless pilot_up;
-        records the call order and whether the prediction existed."""
+        seeds apart by 0.1), ladder-88m below t1 at 8e-3 unless pilot_up,
+        the (shape, lr, seed) in diverge diverged at step 123; finished =
+        now unless given; records the call order and whether the
+        prediction existed."""
         pred = os.path.join(self.root, 'size-xfer', 'prediction.json')
 
         def run(shape, lr, seed, steps, shards, device):
@@ -1746,8 +1786,13 @@ class SizeTransferTest(unittest.TestCase):
             if not pilot_up and shape == 'ladder-88m' and lr == 8e-3:
                 y = 0.0
             order.append((shape, lr, seed, os.path.exists(pred)))
+            bad = (shape, lr, seed) in diverge
             row = dict(shape=shape, N=N, lr=lr, seed=seed,
-                       logit=math.exp(y), loss=4.0, first_nonfinite=None)
+                       logit=math.nan if bad else math.exp(y),
+                       loss=math.inf if bad else 4.0,
+                       first_nonfinite=123 if bad else None,
+                       finished=finished or time.strftime(
+                           '%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
             tr = pd.DataFrame(dict(step=[10, steps], loss=[5.0, 4.0],
                                    max_logit=[1.0, math.exp(y)]))
             return row, tr.assign(shape=shape, lr=lr, seed=seed)
@@ -1822,6 +1867,76 @@ class SizeTransferTest(unittest.TestCase):
             d2l.size_transfer(('t1', 'ladder-54m', 'r2'), self.LRS)
         with self.assertRaisesRegex(ValueError, 'pilot'):
             d2l.size_transfer(self.SHAPES, (2e-3, 8e-3))
+        # a held-out run that finished before the registration time
+        os.remove(held)
+        with self.assertRaisesRegex(RuntimeError, 'finished before'):
+            self.driver(True, self.fake_runs(
+                [], finished='2000-01-01T00:00:00Z'))
+
+    def test_pilot_only_go_refused(self):
+        """A stored pilot result whose gate is go must never pass for the
+        full transfer (the page would print nothing): refused outside the
+        pilot's own regeneration."""
+        res = self.driver(False, self.fake_runs([]))
+        self.assertEqual(res.gate, 'go')
+        with mock.patch.object(d2l, '_pretrain_result', lambda *a: res), \
+                mock.patch.object(d2l, '_regenerating', lambda: ()), \
+                self.assertRaisesRegex(ValueError, 'pilot only'):
+            d2l.size_transfer(self.SHAPES, self.LRS)
+        with mock.patch.object(d2l, '_pretrain_result', lambda *a: res), \
+                mock.patch.object(d2l, '_regenerating',
+                                  lambda: ('size-xfer-pilot',)):
+            self.assertEqual(d2l.size_transfer(self.SHAPES, self.LRS).gate,
+                             'go')
+        full = self.driver(True, self.fake_runs([]))
+        with mock.patch.object(d2l, '_pretrain_result', lambda *a: full), \
+                mock.patch.object(d2l, '_regenerating', lambda: ()):
+            self.assertEqual(len(d2l.size_transfer(self.SHAPES,
+                                                   self.LRS).table), 32)
+
+    def page(self, res):
+        """Cell 25c's printed output on res (d2l.size_transfer mocked)."""
+        path = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'chapter_lm-pretraining',
+            'reference-model.md')
+        with open(path) as f:
+            src = f.read().split(
+                '#reference-model-the-largest-logit-and-model-size-2}\n')[1]
+        src = src.split('```')[0].replace('%%tab pytorch\n', '')
+        out, plots = io.StringIO(), []
+        with mock.patch.object(d2l, 'size_transfer', lambda *a, **k: res), \
+                mock.patch.object(d2l, 'plot_size_transfer',
+                                  lambda *a, **k: plots.append(a)), \
+                contextlib.redirect_stdout(out):
+            exec(src, dict(d2l=d2l, np=np, math=math, pd=pd,
+                           logit_fit=d2l.logit_fit))
+        return out.getvalue().splitlines(), plots
+
+    def test_page_cell(self):
+        """Cell 25c: the no-go line names the range the pilot tested; a
+        diverged run gives 'no fit' at its rate (smaller shapes) or
+        'diverged (step k)' in the measured column (the held-out shape);
+        warnings-free."""
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            lines, plots = self.page(self.driver(
+                False, self.fake_runs([], pilot_up=False)))
+            self.assertEqual(lines, ['pilot: no size trend from 12.6M to '
+                                     '62.9M parameters at 300 steps '
+                                     '(gate failed)'])
+            self.assertEqual(plots, [])
+            bad = {('ladder-54m', 1.6e-2, 1), ('r2', 8e-3, 0)}
+            res = self.driver(True, self.fake_runs([], diverge=bad))
+            self.assertEqual(res.fit['lr'].tolist(), [2e-3, 4e-3, 8e-3])
+            lines, plots = self.page(res)
+        self.assertEqual(len(lines), 5)
+        self.assertIn('logit at 113.3M, predicted [95%]', lines[0])
+        self.assertTrue(lines[1].endswith('inside'))
+        self.assertTrue(lines[3].endswith('diverged (step 123)'), lines[3])
+        self.assertEqual(lines[4], ' 0.016 no fit: 1 of 6 runs diverged '
+                         '(first: ladder-54m seed 1, step 123)')
+        self.assertEqual(len(plots), 1)
+        self.assertLessEqual(max(map(len, lines)), 79)
 
     def test_xfer_run_trains_and_keeps(self):
         shards = dp.fixture_shards(os.path.join(self.tmp.name, 'set'),
@@ -1865,7 +1980,11 @@ class SizeTransferTest(unittest.TestCase):
         labels = [t.get_text() for t in ax.get_legend().get_texts()]
         self.assertEqual(labels, ['lr 0.002', 'lr 0.004', 'lr 0.008',
                                   'lr 0.016'])
+        self.assertEqual([t.get_text() for t in ax.get_xticklabels()],
+                         ['12.6M', '35.4M', '62.9M', '113.3M'])
         d2l.plt.close('all')
+        d2l.plot_size_transfer(res, fit.iloc[:0], held='r2')  # nothing drawn
+        self.assertEqual(d2l.plt.get_fignums(), [])
 
 
 class LibraryStructureTest(unittest.TestCase):

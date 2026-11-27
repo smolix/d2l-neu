@@ -2847,21 +2847,18 @@ class ZlossPilotTest(unittest.TestCase):
                                    max_logit=6.5, z_loss=1e-4))
         return d2l.ZlossPilot(table, traces, d2l._zloss_gate(table), '')
 
-    def page_cell(self):
+    def test_no_go_page(self):
+        """The pilot did not meet claim 26's rule (S/fix/gates/zloss.md,
+        2026-11-27: |1e-4 minus none| = 1.36 nats, rule > 5), so the page
+        has no z-loss subsection and no call (spec 21.2 cell 27c)."""
         path = os.path.join(os.path.dirname(os.path.dirname(
             os.path.abspath(__file__))), 'chapter_lm-pretraining',
             'reference-model.md')
         with open(path) as f:
             src = f.read()
-        return src.split('#reference-model-a-z-loss-pilot}\n')[1].split(
-            '```')[0].replace('%%tab pytorch\n', '')
-
-    def page_output(self, res):
-        out = io.StringIO()
-        with mock.patch.object(d2l, 'zloss_pilot', lambda lr: res), \
-                contextlib.redirect_stdout(out):
-            exec(self.page_cell(), dict(d2l=d2l, pd=pd))
-        return out.getvalue().splitlines()
+        for gone in ('#reference-model-a-z-loss-pilot', 'zloss_pilot(',
+                     '### A z-Loss Pilot'):
+            self.assertNotIn(gone, src)
 
     def test_conditional_name(self):
         self.assertNotIn('zloss-pilot', d2l.PRETRAIN_RERUN_NAMES)
@@ -2877,13 +2874,9 @@ class ZlossPilotTest(unittest.TestCase):
         self.assertEqual(list(pending.table.columns),
                          d2l._ZLOSS_TABLES['table'])
         self.assertIsNone(pending.gate)
-        self.assertEqual(self.page_output(pending), [])
 
-    def test_regeneration_and_page(self):
-        page = self.page_cell()
-        self.assertIn(f'Z_LR = {self.LR:.0e}'.replace('e-0', 'e-'), page)
+    def test_regeneration(self):
         self.assertEqual(d2l.ZLOSS_LR, self.LR)
-        self.assertNotIn("'source'", page)  # rows by z-loss
         res = self.fake_result()
         calls = []
         names = d2l.PRETRAIN_RERUN_NAMES + ('zloss-pilot',)
@@ -2935,11 +2928,6 @@ class ZlossPilotTest(unittest.TestCase):
                          ('go', '', 'go'))
         pd.testing.assert_frame_equal(loaded.table, got.table,
                                       check_dtype=False)
-        self.assertEqual(self.page_output(loaded), [
-            'mean log Z at the end (t1, QK-norm, lr 8e-3): z-loss 1e-4 10.7, '
-            'none 16.0'])
-        with self.assertRaises(AssertionError):  # the rule not met
-            self.page_output(self.fake_result(none=12.0))
 
 
 class LibraryStructureTest(unittest.TestCase):

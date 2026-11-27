@@ -807,7 +807,7 @@ print(f'relative drift of W_Qᵀ W_Q − W_Kᵀ W_K: {drift:.1e} (W_Qᵀ W_Q '
 
 ### Monitors and Cures
 
-<!-- Placeholder (prose): the cures, each with its one difference: QK-norm bounds the logit by construction, QK-clip rescales the product after the fact (restate sec_muon), softcapping bounds it by a tanh and stops the gradient that would shrink it, z-loss pulls log Z to zero (restate subsec_practice-nan), rewind-and-skip removes a bad batch. The monitor reads explicit scores (the fused kernel returns none) on a one-sequence probe per rank; Kimi K2 uses the batch maximum. -->
+<!-- Placeholder (prose): the cures, each with its one difference: QK-norm bounds the logit by construction, QK-clip rescales the product after the fact (restate sec_muon), softcapping bounds it by a tanh and stops the gradient that would shrink it, z-loss penalizes (log Z)^2 (restate subsec_practice-nan in one sentence with its citation; claim 26 takes its fallback: the fix-pass z-loss pilot did not meet its pre-registered rule, so the page has no z-loss measurement and states no size of the pull on log Z at this scale), rewind-and-skip removes a bad batch. The monitor reads explicit scores (the fused kernel returns none) on a one-sequence probe per rank; Kimi K2 uses the batch maximum. -->
 
 ```{.python .input #reference-model-instability}
 %%tab pytorch
@@ -1279,25 +1279,6 @@ if k:
           f'{r["repeats"]} times: {r["text"]}')
 ```
 
-### A z-Loss Pilot
-
-<!-- Placeholder (prose): conditional subsection (claim 26; it stays only if the pilot met its pre-registered rule, |difference of mean log Z at the end| > 5 nats; otherwise the gate step removes it, z-loss stays a one-sentence restatement of subsec_practice-nan with its citation, and a 10× longer t1 run at 8e-3 becomes an exercise). z-loss adds 1e-4 · (log Z)² per token, a penalty on the log-partition of the output softmax; state the measured values and do not claim a pull toward 0 at this scale: in the grid's z-loss 1e-4 cell log Z ends near 10.7 (above ln V ≈ 10.4), where the penalty is about 0.01 nats per token. The pilot: t1 with QK-norm at 8e-3 on the T1 grid's recipe (full schedule, clipping off), seed 0; the z-loss 1e-4 arm is the grid's QK-norm cell at that rate (the same run, not re-run), the other arm trains once without z-loss, and the two differ in z-loss only. "Mean log Z at the end" is the mean over the statistics steps of the last 50 steps of the mean log-partition over the step's targets; for scale, log V = ln 32,768 ≈ 10.4 is the value of a uniform softmax at zero logits. -->
-
-```{.python .input #reference-model-a-z-loss-pilot}
-%%tab pytorch
-Z_LR = 8e-3  # the T1 grid's QK-norm cell at this rate has z-loss 1e-4
-z = d2l.zloss_pilot(Z_LR)
-if len(z.table):
-    end = z.table.set_index('z_loss')['log_z_end']
-    assert abs(end[d2l.ZLOSS_BASE] - end[0.0]) > d2l.ZLOSS_GATE  # claim 26
-    sci = lambda x: f'{x:.0e}'.replace('e-0', 'e-')
-    print(f'mean log Z at the end (t1, QK-norm, lr {sci(Z_LR)}): z-loss '
-          f'{sci(d2l.ZLOSS_BASE)} {end[d2l.ZLOSS_BASE]:.1f}, '
-          f'none {end[0.0]:.1f}')
-```
-
-<!-- Placeholder (prose): claim 26 as measured: the two values and their difference (the cell asserts the rule, so the difference exceeds 5 nats); what a drifting log Z does to bf16 logits; a t1 pair of 1,526 steps is not a measurement at scale. -->
-
 ## Optimizers as a Stated Fact
 
 <!-- Placeholder (prose): no optimizer race here. Against a tuned AdamW, matrix optimizers (Muon, Soap, Kron) gain at most about 1.4x at small scale and about 1.1x at larger scale, and the gain shrinks with scale under standard weight decay (Fantastic Pretraining Optimizers I and II); the production Muon recipe (Muon is Scalable). The Muon variant of the t1 preset is an exercise. -->
@@ -1308,4 +1289,4 @@ if len(z.table):
 
 ## Exercises
 
-<!-- Placeholder (prose): 6-8 exercises per the spec (derive the bound under QK-clip and the Gram change one clip makes; Vd once vs 6Vd; the WSD integral fraction delta/(2 - delta); update ratios on the t1 run; a t1 learning-rate sweep; four ways to finish the t1 run from its step-1,297 state; the Muon variant against the stated bound). -->
+<!-- Placeholder (prose): 6-8 exercises per the spec (derive the bound under QK-clip and the Gram change one clip makes; Vd once vs 6Vd; the WSD integral fraction delta/(2 - delta); update ratios on the t1 run; a t1 learning-rate sweep; four ways to finish the t1 run from its step-1,297 state; the Muon variant against the stated bound; and, as claim 26's fallback, z-loss over a 10× longer t1 run at 8e-3 with QK-norm, 1e-4 against none: does mean log Z drift apart, about 2 h on one card). -->

@@ -37,7 +37,9 @@ show (docs/code-guide.md 7.1):
   paired with the grid's clip cell, its eps registered before it runs),
   and the z-loss pilot (`zloss_pilot`: one t1 run with QK-norm and no
   z-loss, paired with the grid's qk_norm cell at 8e-3; its regeneration
-  name and key exist only after its gate passed).
+  name and key exist only after its gate passed; the gate failed on
+  2026-11-27, so the page has no z-loss cell and the job stays for the
+  exercise and the fix-pass record).
   While the reference run is pending, each shows the T1
   configuration under a printed label (the T1 run keeps checkpoints at the
   reference run's fractions of training for this).
@@ -173,6 +175,12 @@ d2l.DATA_HUB['lm-ladder-evals-v1'] = (
 d2l.DATA_HUB['lm-r2-inst-t1-v2'] = (
     d2l.LM_DATA_URL + 'lm-r2-inst-t1-v2.json.gz',
     'f5b3f6ad50deb99c8b26e9032c380e8da8ee2d61')
+d2l.DATA_HUB['lm-r2-spike-v2'] = (
+    d2l.LM_DATA_URL + 'lm-r2-spike-v2.json.gz',
+    'b4ff5e574951b448cbf5b56de3070efe37e3b233')
+d2l.DATA_HUB['lm-r2-eps-v1'] = (
+    d2l.LM_DATA_URL + 'lm-r2-eps-v1.json.gz',
+    'cee84660c4ed37114fd5b2d338204c19c0289e3e')
 ```
 
 ```{.python .input #reference-model-lib-artifacts}
@@ -2915,7 +2923,9 @@ def zloss_pilot(lr):
     'json-table'), PRETRAIN_JOBS['zloss-pilot'] = ('zloss_pilot', lambda:
     dict(lr=ZLOSS_LR)) and the tests' list, then run it (it reads the kept
     run). Until then a normal run raises KeyError and a regeneration run
-    shows it pending."""
+    shows it pending. The pilot of 2026-11-27 did not meet the rule
+    (|difference| 1.36 nats), so no page calls this; it stays for the
+    exercise of a longer run."""
     run, _ = _inst_arm(d2l.r2_config('t1', clip=None), 'qk_norm', lr, 0)
     run = _cfg_json(run)
     del run['z_loss']  # the arms' one difference

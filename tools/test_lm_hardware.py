@@ -2119,6 +2119,23 @@ class TestMemoryTiers(unittest.TestCase):
         self.assertAlmostEqual(
             t.set_index('tier').measured_bw_gbs['host_dram'], 110.0)
 
+    def test_parse_stream(self):
+        text = read(os.path.join(SAMPLES, 'box_stream_16t.txt'))
+        r = d2l.parse_stream(text)
+        self.assertAlmostEqual(r['copy'], 122.8656)
+        self.assertAlmostEqual(r['scale'], 83.3732)
+        self.assertAlmostEqual(r['add'], 86.9108)
+        self.assertAlmostEqual(r['triad'], 87.5784)
+        self.assertEqual((r['elements'], r['threads']), (76_000_000, 16))
+        self.assertTrue(r['validates'])
+        # F5's gate: the binary's Triad against the committed torch triad
+        # (89 GB/s): the bench under-measures only above 1.2 x 89 = 107.
+        self.assertLess(r['triad'], 1.2 * 88.5)
+        failed = text.replace('Solution Validates', 'Failed Validation')
+        self.assertFalse(d2l.parse_stream(failed)['validates'])
+        with self.assertRaises(ValueError):
+            d2l.parse_stream(text.split('Function')[0])  # no kernel table
+
     def test_parse_fio(self):
         r = d2l.parse_fio(read(os.path.join(SAMPLES, 'box_fio_seqread.json')))
         self.assertAlmostEqual(r['bw_gbs'], 6.766, places=2)
@@ -2278,8 +2295,12 @@ class TestMemoryTiers(unittest.TestCase):
         self.assertIn('beta 25 GB/s (range 24.8-25.3)', lines[1])
         lines, _ = lines_of(self, d2l._show_dram, dram)
         self.assertEqual(len(lines), 2)
-        self.assertIn('triad 90 GB/s (16 threads)', lines[0])
-        self.assertIn('reaches 44%', lines[1])
+        self.assertTrue(lines[0].startswith('host DRAM, torch bench: '))
+        self.assertIn('triad 90 GB/s (triad at 16 threads)', lines[0])
+        self.assertNotIn('STREAM', ' '.join(lines))  # the binary's name only
+        self.assertTrue(lines[1].startswith('8 x DDR4-3200, assumed: 204.8'))
+        self.assertIn('triad 44%, write-allocate 120 GB/s (59%)', lines[1])
+        self.assertTrue(all(len(x) <= 80 for x in lines))
         lines, _ = lines_of(self, d2l._show_fio, fio)
         self.assertEqual(len(lines), 3)
         self.assertIn('73% of 2 x 4.12', lines[0])
@@ -2310,14 +2331,47 @@ class TestMemoryTiers(unittest.TestCase):
         self.assertEqual(m.measured_latency_ns['l2'], 98.0)
         self.assertEqual(m.measured_latency_ns['smem'], 16.0)
         compare = d2l.plot_tiers(committed_tiers(), m)
-        self.assertEqual(len(compare), 3)  # host link, GDDR, the drives
-        self.assertNotIn('host DRAM', compare.index)
+        self.assertEqual(len(compare), 4)  # GDDR, DRAM, host link, drives
+        self.assertEqual(list(compare.columns),
+                         ['datasheet', 'measured', 'fraction', 'note'])
         self.assertAlmostEqual(compare.fraction['host link (PCIe)'], 25 / 31.5,
                                delta=0.02)
+        dram_row = compare.loc['host DRAM, read (torch bench)']  # F5, M8
+        self.assertEqual(dram_row.measured, 110.0)  # the read, not the triad
+        self.assertAlmostEqual(dram_row.datasheet, 204.8)
+        self.assertAlmostEqual(dram_row.fraction, 110 / 204.8)
+        self.assertEqual(dram_row.note, 'DDR4-3200, assumed')
+        self.assertEqual(set(compare.note) - {''}, {dram_row.note})
+        self.assertFalse(any('STREAM' in t for t in compare.index))
         nvme = [t for t in compare.index if 'RAID 1' in t]
         self.assertEqual(len(nvme), 1)
         self.assertAlmostEqual(compare.datasheet[nvme[0]], 2 * 4.125)
-        lines, _ = lines_of(self, d2l.show_table, compare)
+        lines, _ = lines_of(self, d2l.show_table, compare, digits={
+            'datasheet': 1, 'measured': 1, 'fraction': 2})
+        self.assertEqual(len(lines), 5)
+        dram_line = [x for x in lines if x.startswith('host DRAM')][0]
+        self.assertIn('204.8', dram_line)
+        self.assertIn('0.54', dram_line)
+        self.assertTrue(dram_line.endswith('DDR4-3200, assumed'))
+        self.assertTrue(all(len(x) <= 80 for x in lines))
+        # The page's M8 assert on these fractions: GDDR 0.94 and the drives
+        # 0.73 here, so the synthetic frame fails it where the box passes.
+        within = (compare.fraction >= 0.8).tolist()
+        self.assertEqual(within, [True, False, False, False])
+        # Once the configured DIMM speed is read, it sets the denominator.
+        with mock.patch.dict(d2l._HW_DIMMS, box=dict(
+                channels=8, kind='DDR4', mt_s=2933, read=True)):
+            gbs, channels, note = d2l._dram_sheet()
+            again = d2l.plot_tiers(committed_tiers(), m)
+        self.assertAlmostEqual(gbs, 8 * 2933 * 8 / 1e3)
+        self.assertEqual((channels, note), (8, 'DDR4-2933, configured'))
+        self.assertAlmostEqual(
+            again.datasheet['host DRAM, read (torch bench)'], 187.712)
+        # An assumed speed must be the tier table's figure.
+        with mock.patch.dict(d2l._HW_DIMMS, box=dict(
+                channels=8, kind='DDR4', mt_s=2933, read=False)):
+            with self.assertRaises(ValueError):
+                d2l._dram_sheet()
         lines, rule = lines_of(self, d2l.shard_rule, links, fio, obj)
         self.assertEqual(len(lines), 4)
         self.assertAlmostEqual(rule.s_90.iloc[-1], 9 * 0.07 * 60e6,

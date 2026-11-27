@@ -33021,6 +33021,8 @@ _HW_SCRATCH = os.path.join('..', 'data', 'hw-scratch')  # fio's files
 
 _PCIE_GTS = {3: 8, 4: 16, 5: 32}  # GT/s per lane; 128b/130b encoding
 
+_HW_DIMMS = {'box': dict(channels=8, kind='DDR4', mt_s=3200, read=False)}
+
 def host_memory_bytes():
     """Physical memory of this host in bytes.
 
@@ -33608,11 +33610,11 @@ def _cpu_threads(n):
         torch.set_num_threads(old)
 
 def _stream_kernels(threads, nbytes, repeats=5):
-    """GB/s of STREAM's kernels on host memory with `threads` intra-op
-    threads, three fp32 arrays a, b, c of nbytes each, counted as STREAM
-    counts (bytes read plus bytes written, no write-allocate traffic): a
-    summing read of b, the copy a = b and the triad a = b + 3 c; with the
-    relative MAD of each.
+    """GB/s of the torch bench's kernels on host memory with `threads`
+    intra-op threads, three fp32 arrays a, b, c of nbytes each, bytes
+    counted as STREAM counts them (read plus written, no write-allocate
+    traffic): a summing read of b, the copy a = b and the triad
+    a = b + 3 c; with the relative MAD of each.
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     n = nbytes // 4
@@ -33634,7 +33636,7 @@ def _stream_kernels(threads, nbytes, repeats=5):
     return out
 
 def _stream_best(thread_counts, nbytes):
-    """Each STREAM kernel's best rate over the thread counts (the
+    """Each torch-bench kernel's best rate over the thread counts (the
     achievable rate: memory-bound kernels peak below all cores), with the
     thread count that reached it.
 
@@ -33655,19 +33657,53 @@ def _tier_spec(tier, column='bw_gbs'):
     t = d2l._hw_static('hw-tiers').set_index('tier')
     return float(t.loc[tier, column])
 
+def _dram_sheet(machine='box'):
+    """Host DRAM's datasheet bandwidth (GB/s: channels x MT/s x 8 bytes),
+    the channel count and the DIMM speed with how it is known, as the
+    table prints it ('DDR4-3200, assumed' while the configured speed is
+    unread). An assumed speed must give the tier table's figure.
+
+    Defined in :numref:`sec_lm_memory_tiers`"""
+    d = _HW_DIMMS[machine]
+    gbs = d['channels'] * d['mt_s'] * 8 / 1e3
+    if not d['read'] and not math.isclose(gbs, _tier_spec('host_dram'),
+                                          rel_tol=1e-3):
+        raise ValueError(f"{gbs} GB/s is not the tier table's host DRAM")
+    how = 'configured' if d['read'] else 'assumed'
+    return gbs, d['channels'], f"{d['kind']}-{d['mt_s']}, {how}"
+
 def _show_dram(r):
-    spec = _tier_spec('host_dram')
-    print(f"host DRAM, STREAM counting: read {r['read']:.0f}, copy "
+    spec, channels, speed = _dram_sheet()
+    moved = r['triad'] * 4 / 3  # with the read that allocates a's line
+    print(f"host DRAM, torch bench: read {r['read']:.0f}, copy "
           f"{r['copy']:.0f}, triad {r['triad']:.0f} GB/s "
-          f"({int(r['triad_threads'])} threads)")
-    print(f"datasheet peak {spec:.1f} GB/s (8 channels x 25.6): the triad "
-          f"reaches {r['triad'] / spec:.0%}")
+          f"(triad at {int(r['triad_threads'])} threads)")
+    print(f"{channels} x {speed}: {spec:.1f} GB/s; triad "
+          f"{r['triad'] / spec:.0%}, write-allocate {moved:.0f} GB/s "
+          f"({moved / spec:.0%})")
+
+def parse_stream(text):
+    """The kernel table of a STREAM run (stream.c 5.10): each kernel's best
+    rate (copy, scale, add, triad; GB/s, bytes counted as STREAM counts
+    them), the array size (elements), the thread count and whether the
+    run validated.
+
+    Defined in :numref:`sec_lm_memory_tiers`"""
+    rates = {m[0].lower(): float(m[1]) / 1e3 for m in re.findall(
+        r'^(Copy|Scale|Add|Triad):\s+([\d.]+)', text, re.M)}
+    if len(rates) != 4:
+        raise ValueError('not a STREAM kernel table')
+    size = re.search(r'Array size = (\d+)', text)
+    threads = re.search(r'Number of Threads counted = (\d+)', text)
+    return dict(rates, elements=int(size[1]) if size else None,
+                threads=int(threads[1]) if threads else 1,
+                validates='Solution Validates' in text)
 
 def hw_host_mem_bench(threads=(8, 16, 32), nbytes=2**31):
-    """STREAM's read, copy and triad on host memory (GB/s, counted as
-    STREAM counts), arrays of nbytes (2 GiB, 16 times the L3 cache), the
-    best of the thread counts for each kernel; the live check repeats the
-    triad at its best thread count on 1 GiB arrays.
+    """The torch bench on host memory: read, copy and triad (GB/s, bytes
+    counted as STREAM counts them), arrays of nbytes (2 GiB, 16 times the
+    L3 cache), the best of the thread counts for each kernel; the live
+    check repeats the triad at its best thread count on 1 GiB arrays.
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     threads = [int(k) for k in threads]
@@ -33969,11 +34005,11 @@ def tier_measurements(links, agg, dram, fio, obj, gpu_tiers=True):
     tier table this machine has: the GPU's shared memory, L2 and GDDR
     (sec_lm_accelerator_design's committed result, when it exists), the
     pinned host link (plateau beta and fitted alpha; all cards at once as
-    pcie_host_all), host DRAM (STREAM's read), the drives (best sequential
-    read at depth; one 4 KiB random read at a time) and the object store
-    (one stream; time to the first byte). attrs: the number of cards and
-    of drives. gpu_tiers=False leaves out the GPU rows (the regeneration
-    stores this machine's storage measurements only).
+    pcie_host_all), host DRAM (the torch bench's read), the drives (best
+    sequential read at depth; one 4 KiB random read at a time) and the
+    object store (one stream; time to the first byte). attrs: the number
+    of cards and of drives. gpu_tiers=False leaves out the GPU rows (the
+    regeneration stores this machine's storage measurements only).
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     rows = []
@@ -34001,19 +34037,23 @@ def plot_tiers(tiers, measured):
     """Datasheet bandwidth and latency of each tier (bars on log axes, as
     in fig_bandwidth_ladder and fig_latency_ladder) with this machine's
     measurements (dots); returns the rows where a datasheet figure states
-    what was measured: datasheet, measured, their ratio (the host links of
-    all cards are drawn against n x the ceiling, not compared; RAID 1's
-    pair against n x one drive; host DRAM's peak no kernel reaches is
-    drawn, not compared).
+    what was measured: datasheet, measured, their ratio and a note (the
+    host links of all cards are drawn against n x the ceiling, not
+    compared; RAID 1's pair against n x one drive; host DRAM's read
+    against the channels' peak, whose DIMM speed the note says is
+    assumed or configured).
 
     Defined in :numref:`sec_lm_memory_tiers`"""
     t = tiers.set_index('tier')
     k, n = measured.attrs.get('n_cards', 1), measured.attrs.get('n_drives', 1)
+    dram, _, dram_note = _dram_sheet()
     spec = dict(t.bw_gbs, pcie_host_all=k * t.bw_gbs['pcie_host'],
-                nvme=n * t.bw_gbs['nvme'])  # the drives this machine reads
+                nvme=n * t.bw_gbs['nvme'],  # the drives this machine reads
+                host_dram=dram)
     names = dict(t.name, pcie_host_all=f'host links, {k} cards')
     if n > 1:
         names['nvme'] = f"{t.name['nvme']}, {n} in RAID 1"
+    rows = dict(names, host_dram=f"{names['host_dram']}, read (torch bench)")
     lat = dict(t.latency_ns, pcie_host_all=math.nan)
     at = list(t.index).index('pcie_host') + 1
     order = list(t.index[:at]) + ['pcie_host_all'] + list(t.index[at:])
@@ -34030,11 +34070,12 @@ def plot_tiers(tiers, measured):
         ax.set_xlabel(label)
     axes[0].set_yticks(y, [names[r] for r in order], fontsize=8)
     axes[1].legend(fontsize=8, loc='upper left', bbox_to_anchor=(1.02, 1))
-    df = pd.DataFrame([(names[r], spec[r], measured.measured_bw_gbs[r])
-                       for r in ('pcie_host', 'gddr', 'nvme')
+    df = pd.DataFrame([(rows[r], spec[r], measured.measured_bw_gbs[r],
+                        dram_note if r == 'host_dram' else '')
+                       for r in ('gddr', 'host_dram', 'pcie_host', 'nvme')
                        if r in measured.index and np.isfinite(spec[r])],
-                      columns=['tier', 'datasheet', 'measured'])
-    df['fraction'] = df.measured / df.datasheet
+                      columns=['tier', 'datasheet', 'measured', 'note'])
+    df.insert(3, 'fraction', df.measured / df.datasheet)
     return df.set_index('tier')
 
 def _seconds(t):

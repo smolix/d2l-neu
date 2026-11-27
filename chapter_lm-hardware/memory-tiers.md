@@ -218,6 +218,17 @@ the four-card output gains a per-bridge line (M2: about 36 GB/s h2d per host
 bridge, two cards behind it; all four cards 98% of 2 x 36: the bridge
 binds, not DRAM). -->
 
+<!-- Placeholder (prose): fix pass F5: host DRAM is measured by a torch
+bench (STREAM's operations as tensor operations, bytes counted as STREAM
+counts them) and labelled "torch bench"; STREAM's kernel names belong to
+the compiled binary only. The binary (STREAM 5.10, OpenMP, 8 to 32
+threads, arrays 4x the caches) checked it: its Triad, about 90 GB/s,
+matches the bench's 89, so the committed numbers stand; its Copy, about
+120 GB/s, is higher because the copy loop becomes memcpy, whose
+non-temporal stores skip the write-allocate read. Both say the DIMMs move
+about 120 GB/s, near 60% of 8 x DDR4-3200 (204.8 GB/s), a speed assumed,
+not read. The datasheet line now prints "8 x DDR4-3200, assumed". -->
+
 ```{.python .input #memory-tiers-four-cards}
 %%tab pytorch
 agg = d2l.hw_h2d_concurrent('box')
@@ -276,12 +287,21 @@ the RAID 1 pair against two drives. Not compared: the four host links
 printed above). The node's DRAM, CXL, LPDDR5X and the hard disk have no
 point here. -->
 
+<!-- Placeholder (prose): fix pass F5 (claim M8): the comparison gains the
+host-DRAM row, the torch bench's read against 8 x 25.6 = 204.8 GB/s (0.54),
+labelled "read (torch bench)"; its note says the DIMM speed is assumed
+(EDAC shows 8 channels x 2 ranks, not the speed; dmidecode needs root). M8
+partly holds: GDDR and the RAID 1 pair within 20%, the host link (M1) and
+host DRAM below; the "not compared" sentence above goes. -->
+
 ```{.python .input #memory-tiers-tiers-measured}
 %%tab pytorch
 measured = d2l.tier_measurements(links, agg, dram, fio, obj)
 compare = d2l.plot_tiers(tiers, measured)  # datasheet bars, measured dots
 d2l.show_table(compare, digits={'datasheet': 1, 'measured': 1,
                                 'fraction': 2})
+within = compare.fraction >= 0.8  # M8: within 20% of the datasheet
+assert within.tolist() == [True, False, False, True]  # GDDR, DRAM, link, NVMe
 ```
 
 <!-- Placeholder (prose): D3, the shard rule (claim M6). A read of s bytes

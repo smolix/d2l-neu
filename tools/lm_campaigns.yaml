@@ -51,8 +51,8 @@ campaigns:
   # campaign package (config, launcher, expected time, memory and FLOP, and the artifact names
   # its logs will get) waits for the A100 campaigns"). The single-node launcher is
   # tools/hw_regen.py <name> --config <c> --out <dir>: it writes the campaign log that
-  # d2l.HW_CONFIG_LOGS[(name, c)] names, tags the tier and refuses any GPU that is not the
-  # campaign's chip-table row. `regenerations` lists its (name, config) pairs for
+  # d2l.HW_CONFIG_LOGS[(name, c)] names, tags the tier and refuses hardware that is not the
+  # campaign's (d2l._HW_CAMPAIGN_GPUS: GPU model, count, NVLink). `regenerations` lists its (name, config) pairs for
   # tools/hw_campaign/dry_run.sh and the tests. Every number under flop, bytes,
   # predicted_hours and memory_gib is printed by tools/hw_campaign/estimate.py (run
   # 2026-11-27): the pages' own arithmetic (ServingModel, TrainStepModel, flops_per_token,

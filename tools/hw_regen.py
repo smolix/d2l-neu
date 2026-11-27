@@ -40,8 +40,8 @@ writes under DIR instead of ../data/lm/rerun/ch22 (the campaign launcher).
 `--config C` runs the driver with config=C for a campaign elsewhere: the
 output is the campaign log that `d2l.HW_CONFIG_LOGS[(name, C)]` names (for
 example `box-microbench --config t2` writes `lm-hw-a100-microbench-v1`), its
-records carry that configuration's tier, and the driver refuses a GPU that
-is not the campaign's chip-table row. `--config box` is the default (no
+records carry that configuration's tier, and the driver refuses hardware
+that is not the campaign's (`_HW_CAMPAIGN_GPUS`: GPU model, count, NVLink). `--config box` is the default (no
 configuration). `--dry-run` checks the name, its driver and the
 configuration and prints what the run would write (driver, tier, processes,
 folder, artifact file and key), then exits without touching a GPU or

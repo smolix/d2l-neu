@@ -1729,6 +1729,8 @@ say('T2 campaign:', f'python tools/run_mix_campaign.py --config t2 '
     '--gpus 0,1,2,3 --out ../data/lm/rerun/mix-t2 (a faster node)')
 CAMPAIGNS = yaml.safe_load((ROOT / 'tools' / 'lm_campaigns.yaml').read_text())
 for e in CAMPAIGNS['campaigns']:  # tools/lm_campaigns.yaml
+    if not e['id'].startswith('20.'):  # other chapters' packages
+        continue
     say(f"{e['id']}:")
     for k in ('status', 'config', 'command', 'runs', 'flop',
               'predicted_a100_hours', 'memory_gib_per_run', 'measured'):

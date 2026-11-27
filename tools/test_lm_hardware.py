@@ -5803,6 +5803,36 @@ class TestCampaignPackage(unittest.TestCase):
     scrubbed node names) and on the committed samples; the launchers'
     syntax and dry runs; chapter 20's reader of the same file."""
 
+    def test_data_mixtures_page_prints_only_its_packages(self):
+        """Chapter 20's cell data-mixtures-t2-package loops over the shared
+        manifest; it must print only chapter 20's entries (20.*), never
+        chapter 22's packages (their commands carry paths and sudo calls).
+        The audit cannot see this: the manifest is not a dependency of the
+        page. The loop is run as written on the page, on the real file."""
+        import yaml
+        text = open(os.path.join(REPO, 'chapter_lm-data',
+                                 'data-mixtures.md')).read()
+        cell = re.search(r'```\{\.python \.input #data-mixtures-t2-package\}'
+                         r'\n(.*?)```', text, re.S).group(1)
+        lines = cell.splitlines()
+        start = next(i for i, l in enumerate(lines)
+                     if l.startswith("for e in CAMPAIGNS['campaigns']"))
+        end = next(i for i in range(start + 1, len(lines))
+                   if lines[i] and not lines[i].startswith(' '))
+        loop = '\n'.join(lines[start:end])
+        printed = []
+        with open(os.path.join(REPO, 'tools', 'lm_campaigns.yaml')) as f:
+            camps = yaml.safe_load(f)
+        exec(loop, {'CAMPAIGNS': camps,
+                    'say': lambda *a, sep=' ': printed.append(
+                        sep.join(map(str, a)))})
+        ids = [l[:-1] for l in printed if not l.startswith(' ')]
+        self.assertEqual(ids, [c['id'] for c in camps['campaigns']
+                               if c['id'].startswith('20.')])
+        self.assertTrue(any(c['id'].startswith('22-hw-')
+                            for c in camps['campaigns']))
+        self.assertFalse(any('hw_regen' in l or 'sudo' in l for l in printed))
+
     def test_outputs_cover_campaign_logs(self):
         """Every C-* campaign log is the output of exactly one package and
         every package output is such a log (chapter 23's logs excluded);

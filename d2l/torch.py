@@ -26720,12 +26720,18 @@ def _cpt_gsm8k_one(folder, ident, model_fn, items):
     d2l._write_result(path, 'json-table', res, dict(config=ident, label=''))
     return res
 
-def _cpt_gsm8k_all(cfgs):
-    """GSM8K in both formats for the base and every arm's final weights
-    (T2), one Transformers model whose weights are swapped per arm; the
-    settings of every cached file include the batch sizes (batched greedy
-    decoding in bf16 is not batch-invariant)."""
+def _cpt_gsm8k_all(cfgs, arms=None):
+    """GSM8K in both formats for the base and the final weights of every
+    arm in arms (default: all of cfgs; T2), one Transformers model whose
+    weights are swapped per arm; the settings of every cached file include
+    the batch sizes (batched greedy decoding in bf16 is not
+    batch-invariant). Processes on separate cards fill the same per-model
+    files with arms=() (the base only) and arms=[arm], which the merge then
+    reads back."""
     cfg0 = next(iter(cfgs.values()))
+    arms = list(cfgs) if arms is None else list(arms)
+    if set(arms) - set(cfgs):
+        raise ValueError(f'no configuration for arms {set(arms) - set(cfgs)}')
     items = gsm8k_items(_CPT_GSM8K['n'], _CPT_GSM8K['seed'])
     settings = d2l._jsonable(dict(_CPT_GSM8K, batch=_GSM8K_BATCH))
     hf = {}
@@ -26744,7 +26750,8 @@ def _cpt_gsm8k_all(cfgs):
         os.path.join(d2l._job_root(), 'cpt', 't2-base'), dict(
             settings=settings, base=_cpt_base_id(cfg0)), model,
         items).assign(arm='base')]
-    for arm, cfg in cfgs.items():
+    for arm in arms:
+        cfg = cfgs[arm]
         path = os.path.join(_cpt_job(cfg), 'ckpt',
                             f's{cfg["steps"]}.safetensors')
         out.append(_cpt_gsm8k_one(_cpt_job(cfg), dict(

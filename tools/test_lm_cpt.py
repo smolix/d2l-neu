@@ -683,6 +683,88 @@ class ArmsEndToEndTest(Fixtures):
                     self.assertRaisesRegex(ValueError, 'data.traces'):
                 d2l._cpt_arm_run(cfg)  # arm.json of another corpus
 
+    def test_t2_parts_then_evals(self):
+        """F23's sequence on toy arms: the four part jobs (cpt-qwen-A, -B,
+        -C, -A2) one at a time, each pending until the merge; then
+        cpt-qwen-evals, which reads the parts and GSM8K files scored side
+        by side (arms=()), merges, and stores the configuration with the
+        data; the page's T2 cells run on the merged result."""
+        arms = d2l._cpt_qwen_call()['arms']
+        call = dict(base='Qwen/Qwen3-0.6B-Base', tokens=20 * 256,
+                    seq_len=32, batch_tokens=256)
+
+        def score(model, tok, items, **kw):
+            rng = np.random.default_rng(len(str(model['w'])))
+            ids = [str(i) for i in range(20)]
+            return pd.concat([pd.DataFrame(dict(
+                format=fmt, item_id=ids, score=rng.integers(0, 2, 20) * 1.0,
+                forced=1.0, cut=fmt == 'chat', thinks=fmt == 'chat',
+                closed=False, chat_tokens=False, new_tokens=9))
+                for fmt in ('completion', 'chat')], ignore_index=True)
+
+        def load(model, path):
+            model['w'] = path
+        extra = [mock.patch.dict(d2l._CPT_MICRO, {'t2': 4}),
+                 mock.patch.dict(d2l._CPT_MIN_FREE_GB, {'t2': 0}),
+                 mock.patch.object(d2l, '_cpt_hf_qwen',
+                                   lambda name: (dict(w='base'), 'tok')),
+                 mock.patch.object(d2l, '_load_into_hf', load),
+                 mock.patch.object(d2l, 'score_gsm8k', score),
+                 mock.patch.object(d2l, 'gsm8k_items', lambda n, seed: [])]
+        with tempfile.TemporaryDirectory() as root, contextlib.ExitStack() \
+                as stack, contextlib.redirect_stdout(io.StringIO()):
+            for p in self.patches(root) + extra:
+                stack.enter_context(p)
+            for part in ('cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C',
+                         'cpt-qwen-A2'):
+                with mock.patch.dict(os.environ, {'D2L_RERUN': part}):
+                    res = d2l.cpt_arms(arms, **call)
+                self.assertIn('pending', res.label)
+                key = d2l.PRETRAIN_ARTIFACTS['cpt-runs'][0]
+                self.assertTrue(os.path.exists(os.path.join(
+                    root, 'rerun', f'{d2l._next_key(key)}.{part}.json.gz')))
+            t2 = d2l._cpt_configs(arms, warmup=10, final_frac=0.1, **call)
+            d2l._cpt_gsm8k_all(t2, arms=())  # the base on its own card
+            for arm in ('A', 'C'):  # two arms scored before the merge
+                d2l._cpt_gsm8k_all(t2, arms=[arm])
+            with mock.patch.dict(os.environ,
+                                 {'D2L_RERUN': 'cpt-qwen-evals'}):
+                runs = d2l.cpt_arms(arms, **call)
+            stored = d2l._read_result(os.path.join(
+                root, 'rerun', d2l._next_key(key) + '.json.gz'), 'json-table')
+            ns = dict(page_ns(), runs=runs)
+            outs = {c: run_cell(f'continued-pretraining-{c}', ns) for c in (
+                'gsm8k', 'bump-table', 'frontier', 'frontier-chord',
+                'equal-tokens', 'suite-deltas')}
+        self.assertEqual(list(runs.table['arm']), ['base', 'A', 'B', 'C',
+                                                   'A′'])
+        self.assertEqual(stored.table.attrs['config']['data'],
+                         {'traces': 'data-0'})
+        self.assertEqual(sorted(runs.gsm8k['arm'].unique()),
+                         sorted(['base', 'A', 'B', 'C', 'A′']))
+        self.assertEqual(len(runs.gsm8k), 5 * 40)
+        t = runs.table.set_index('arm')
+        self.assertTrue(t.gsm8k_chat.notna().all())
+        self.assertEqual(t.gsm8k_forced['A'], 1.0)
+        # A and A′ at B's domain-token count (equal-token accounting)
+        self.assertEqual(sorted(runs.equal['arm']), sorted(['A', 'A′']))
+        self.assertEqual(set(runs.equal['step']), {15})
+        self.assertEqual(sorted(runs.items.loc[runs.items.arm == 'A',
+                                               'step'].unique()), [15, 20])
+        self.assertEqual(len(outs['gsm8k'].splitlines()), 12)
+        self.assertEqual(len(outs['frontier'].splitlines()), 7)
+        # the toy arms barely move: B forgets more than A, and A′ no more
+        # than C, so both chords print their notes (the second on a line
+        # of its own)
+        self.assertEqual(outs['frontier-chord'].splitlines(), [
+            "B's forgetting is outside the measured no-replay range (above "
+            "A's): no verdict", 'seed spread (A vs A′): gain 0.000; C → A′ '
+            'chord:', '  A′ forgets no more than C: no chord'])
+        self.assertEqual(len(outs['equal-tokens'].splitlines()), 3)
+        self.assertEqual(len(outs['suite-deltas'].splitlines()), 4)
+        for c, out in outs.items():
+            self.assertLessEqual(max(map(len, out.splitlines())), 80, c)
+
     def test_resume_equal(self):
         cfg = dict(d2l._cpt_configs(
             {'A': dict(peak_lr=1e-3, replay=0.25, data_seed=0)}, 'r2',
@@ -1040,6 +1122,55 @@ class GSM8KTest(unittest.TestCase):
             with mock.patch.dict(d2l._GSM8K_BATCH, chat=32), \
                     self.assertRaisesRegex(ValueError, 'settings.batch'):
                 d2l._cpt_gsm8k_all(cfgs)
+
+    def test_models_side_by_side(self):
+        """F23: the base alone (arms=()), then one arm per process; the
+        merge's call reads every file back and scores nothing."""
+        t2 = d2l._cpt_qwen_call()
+        cfgs = d2l._cpt_configs(t2['arms'], t2['base'], t2['tokens'],
+                                t2['seq_len'], t2['batch_tokens'], 10, 0.1)
+        log, n = [], [0]
+
+        def score(model, tok, items):
+            log.append(('score', model['w']))
+            n[0] += 1  # the order in which the models were scored
+            return pd.DataFrame(dict(format=['chat'], item_id=['0'],
+                                     score=[float(n[0])],
+                                     forced=[1.0], cut=[False],
+                                     thinks=[True], closed=[True],
+                                     chat_tokens=[False], new_tokens=[9]))
+
+        def load(model, path):
+            log.append(('load', path))
+            model['w'] = path
+        with tempfile.TemporaryDirectory() as root, \
+                mock.patch.object(d2l, '_job_root', lambda: root), \
+                mock.patch.object(d2l, '_cpt_hf_qwen',
+                                  lambda name: (dict(w='base'), 'tok')), \
+                mock.patch.object(d2l, '_load_into_hf', load), \
+                mock.patch.object(d2l, 'score_gsm8k', score), \
+                mock.patch.object(d2l, 'gsm8k_items', lambda n, seed: []), \
+                mock.patch.object(d2l, '_file_id', lambda p: p), \
+                mock.patch.object(d2l, '_cpt_base_id',
+                                  lambda cfg: ['qwen', 'rev']):
+            base = d2l._cpt_gsm8k_all(cfgs, arms=())
+            self.assertEqual(list(base['arm']), ['base'])
+            self.assertEqual(log, [('score', 'base')])
+            for arm in ('C', 'A′', 'A', 'B'):  # any order, one per process
+                log.clear()
+                one = d2l._cpt_gsm8k_all(cfgs, arms=[arm])
+                self.assertEqual(list(one['arm']), ['base', arm])
+                self.assertEqual([k for k, _ in log], ['load', 'score'])
+                self.assertIn(f't2-{d2l._arm_slug(arm)}', log[0][1])
+            log.clear()
+            merged = d2l._cpt_gsm8k_all(cfgs)  # what cpt-qwen-evals calls
+            self.assertEqual(log, [])
+            self.assertEqual(list(merged['arm']), ['base', 'A', 'B', 'C',
+                                                   'A′'])
+            self.assertEqual(list(merged['score']), [1.0, 4.0, 5.0, 2.0,
+                                                     3.0])
+            with self.assertRaisesRegex(ValueError, 'no configuration'):
+                d2l._cpt_gsm8k_all(cfgs, arms=['D'])
 
 
 class IdentityTest(Fixtures):

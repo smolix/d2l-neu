@@ -377,8 +377,12 @@ ex = d2l.frontier_excess(fg, 'B', chord=('C', 'A'))
 print(ex.note or f'B − no-replay reference ({ex.ref}): {ex.value:+.3f} '
       f'[{ex.lo:+.3f}, {ex.hi:+.3f}] nats/token')
 alt = d2l.frontier_excess(fg, 'B', chord=('C', 'A′'))
+chord = f'B − C → A′ chord: {alt.value:+.3f}' if not alt.note else (
+    'C → A′ chord:')  # a note goes on its own line: it fills most of one
 print(f'seed spread (A vs A′): gain {abs(seed.gain.diff().iloc[-1]):.3f}; '
-      'against the C → A′ chord: ' + (alt.note or f'{alt.value:+.3f}'))
+      + chord)
+if alt.note:
+    print(f'  {alt.note}')
 ```
 
 ### Equal-Token Accounting

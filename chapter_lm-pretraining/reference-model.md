@@ -68,7 +68,7 @@ from torch.utils.flop_counter import FlopCounterMode
 
 ```{.python .input #reference-model-opening}
 %%tab pytorch
-MILD, DELTA = 3, 0.3  # a mild event; the stability margin (see below)
+MILD, DELTA = 3, 0.3  # a mild event; a loss failure: DELTA above baseline
 log = d2l.reference_run_log()
 event = d2l.gradient_event(log, mild=MILD, delta=DELTA)
 print(f'largest gradient event: step {event.step} (hour {event.hour:.1f}), '
@@ -110,12 +110,13 @@ class PretrainConfig:
     eps: float = 1e-8
     wd: float = 0.1
     clip: float = 1.0           # None: log the gradient norm, never clip
+    clip_from: int = None       # clip after this many updates (None: all)
     z_loss: float = 1e-4
     dtype: str = 'bf16'
     compile: bool = True
     ddp: bool = False
     probe_every: int = 50       # update RMS per module
-    stats_every: int = 50       # largest attention logit per layer
+    stats_every: int = 50       # attention logit and entropy, log Z
     val_every: int = 250
     val_tokens: int = 2 ** 21
     ckpt_steps: tuple = ()      # bf16 weights after these steps
@@ -316,37 +317,42 @@ print(f'lr at steps {", ".join(map(str, steps))}: '
 
 ### One Step
 
-<!-- Placeholder (prose): token-weighted accumulation (each micro-batch's summed loss over the step's global count n_valid), z-loss (restate subsec_practice-nan in one sentence), the pre-clip norm logged because clipping hides the growth that precedes a spike. -->
+<!-- Placeholder (prose): token-weighted accumulation (each micro-batch's summed loss over the step's global count n_valid), z-loss (restate subsec_practice-nan in one sentence), the pre-clip norm logged because clipping hides the growth that precedes a spike; clip_from turns clipping on mid-run, counted like state_steps (clip_from=250: log steps 251 on are clipped, so a bad batch at log step 300 is; the spike arms switch it on at their branch step); log_z, the mean log-partition of the output softmax over the step's targets, comes from the logits the loss already has (what z-loss pulls to zero). -->
 
 ```{.python .input #reference-model-step}
 %%tab pytorch
 #@save
-def pretrain_step(model, optimizer, micro_batches, cfg, n_valid):
+def pretrain_step(model, optimizer, micro_batches, cfg, n_valid, step=None):
     """One step on this rank's micro-batches; n_valid is the step's global
     count of valid targets, so the gradient is the token-weighted mean over
-    every rank and micro-batch. Returns loss, pre-clip norm and clipped."""
-    world, nll = d2l._rank_world()[1], 0.0
+    every rank and micro-batch. step counts the updates before this one,
+    as state_steps does, so clipping at cfg.clip starts at log step
+    cfg.clip_from + 1. Returns loss, pre-clip norm, clipped and the mean
+    log-partition log_z of the output softmax."""
+    world, nll, lse = d2l._rank_world()[1], 0.0, 0.0
     for k, mb in enumerate(micro_batches):
         ctx = d2l.PackCtx(mb['doc_ids'], mb['pos_ids'])
         with d2l._no_sync(model, k < len(micro_batches) - 1):  # sync last
             with torch.autocast(mb['input_ids'].device.type, torch.bfloat16,
                                 enabled=cfg.dtype == 'bf16'):
                 H, W = model(mb['input_ids'], ctx, return_hidden=True)
-                loss, _, part = d2l.chunked_lm_loss_and_nll(
-                    H, W, mb['labels'], z_loss=cfg.z_loss)
+                loss, _, part, part_lse = d2l.chunked_lm_loss_and_nll(
+                    H, W, mb['labels'], z_loss=cfg.z_loss, return_lse=True)
             (loss * world / n_valid).backward()  # DDP averages the ranks
-        nll = nll + part.detach()
+        nll, lse = nll + part.detach(), lse + part_lse.detach()
+    on = step is None or cfg.clip_from is None or step >= cfg.clip_from
+    clip = (cfg.clip if on else None) or math.inf
     params = [p for g in optimizer.param_groups for p in g['params']]
-    norm = torch.nn.utils.clip_grad_norm_(params, cfg.clip or math.inf)
+    norm = torch.nn.utils.clip_grad_norm_(params, clip)
     optimizer.step()
     optimizer.zero_grad(set_to_none=True)
-    return dict(loss=d2l._all_reduce_sum(nll) / n_valid, grad_norm=norm,
-                clipped=norm > (cfg.clip or math.inf))
+    loss, log_z = d2l._all_reduce_sum(torch.stack([nll, lse])) / n_valid
+    return dict(loss=loss, grad_norm=norm, clipped=norm > clip, log_z=log_z)
 ```
 
 ### The Loop
 
-<!-- Placeholder (prose): what the loop logs and when (every step: loss, pre-clip norm, clipped, tokens/s, MFU; every probe_every steps: update RMS per module; every stats_every steps: largest attention logit per layer from an explicit-score probe, since the fused kernel returns no scores; every val_every steps: validation), checkpoints, full states, branches; the DDP and state plumbing lives in the library. -->
+<!-- Placeholder (prose): what the loop logs and when (every step: loss, pre-clip norm, clipped, tokens/s, MFU; every probe_every steps: update RMS per module; every stats_every steps: the largest attention logit and the mean attention entropy per layer from an explicit-score probe, since the fused kernel returns no scores (the entropy is the mean over the queries and heads of one packed training sequence, rank 0's first row, so it carries some packing noise: a document's first query has entropy 0), and log_z; every val_every steps: validation), checkpoints, full states (state_steps: the resumable states a later replay or branch starts from), branches; the DDP and state plumbing lives in the library. -->
 
 ```{.python .input #reference-model-pretrain}
 %%tab pytorch
@@ -366,7 +372,8 @@ def pretrain(model, stream, cfg, val_fn=None, hooks=(), resume=None):
             batch, micro, n_valid = run.batch(step)  # this rank's part
             t1 = time.perf_counter()
             before = run.snapshot(step)  # weights before, at probe steps
-            out = pretrain_step(run.model, run.optimizer, micro, cfg, n_valid)
+            out = pretrain_step(run.model, run.optimizer, micro, cfg, n_valid,
+                                step)
             row = dict(step=step + 1, tokens=(step + 1) * run.step_tokens,
                        lr=lr, **out)
             run.record(seg, row, batch, before, t1 - t0, t0)
@@ -494,71 +501,109 @@ d2l.plot_run_log(log, ['loss', 'grad_norm', 'rms', 'max_logit', 'mfu'],
 
 <!-- Placeholder (prose): Adam's update in units of the learning rate has RMS sqrt((1 - beta_1)/(1 + beta_1)) = 0.229 when the gradient is noise; near 1 when it is signal. Stable phase (from a sixth of the run, step 1,000 of r2, past warmup's transient) against decay phase, per module type. One sentence on token_emb: its RMS averages over every row, including the rows of tokens absent from the step's batch (no gradient, an update from the moments alone), so its ratio to 0.229 is not the noise-floor reading the matrices give. -->
 
+<!-- Placeholder (prose): claim 5 as measured (F12, from the committed log): per unit learning rate every module but W_v sits near the floor in the stable phase (ratios 0.83-0.94; W_v 0.73, named: its per-lr RMS climbs toward the floor through the stable phase, from about 0.60 of it near step 1,000 to 0.79 near 5,000, so 0.73 is the median of a rising series and part of its decay ÷ stable 1.19 is that trend); in the decay the per-unit-lr RMS rises slightly (decay ÷ stable 1.02-1.19, W_v the most) while the update itself falls with the learning rate (absolute decay ÷ stable 0.48-0.56, the decay's median lr being 0.47 of the peak). Never write that the per-lr value falls in the decay. Two units, two columns: say which one each sentence reads. -->
+
+```{.python .input #reference-model-update-size-by-module-1}
+%%tab pytorch
+#@save
+def update_rms_by_phase(log, cfg, stable_from):
+    """Medians per module kind of the logged update RMS (columns rms_<kind>,
+    in units of the learning rate) over the stable phase (steps stable_from
+    to the decay's start) and the decay; abs_<phase> multiplies them by the
+    phase's median learning rate: the size of the update itself."""
+    run = log.set_index('step')
+    rms = run.filter(like='rms_').dropna(how='all')
+    decay_from = cfg.steps - cfg.decay
+    out = {}
+    for phase, rows in (('stable', rms.loc[stable_from:decay_from]),
+                        ('decay', rms.loc[decay_from + 1:])):
+        assert len(rows), f'the {phase} phase has no probe steps'
+        out[phase] = rows.median()
+        out[f'abs_{phase}'] = out[phase] * run.loc[rows.index, 'lr'].median()
+    return pd.DataFrame(out).rename(lambda c: c.removeprefix('rms_'))
+```
+
 ```{.python .input #reference-model-update-rms}
 %%tab pytorch
 beta1 = run_cfg.betas[0]
 noise_floor = math.sqrt((1 - beta1) / (1 + beta1))
 STABLE_FROM = run_cfg.steps // 6  # r2: step 1,000, past warmup's transient
-MODULES = ('W_q', 'W_k', 'W_v', 'W_o', 'W_g', 'W_1', 'W_2', 'token_emb',
-           'norm')
-rms = main.set_index('step').filter(like='rms_').dropna(how='all')
-decay_from = run_cfg.steps - run_cfg.decay
-phases = {'stable': rms.loc[STABLE_FROM:decay_from],
-          'decay': rms.loc[decay_from + 1:]}
-assert all(len(p) for p in phases.values()), 'a phase has no probe steps'
-med = {k: v.median() for k, v in phases.items()}
-print(f'update RMS in units of the learning rate ({run_cfg.preset} run)')
+MODULES = ['W_q', 'W_k', 'W_v', 'W_o', 'W_g', 'W_1', 'W_2', 'token_emb',
+           'norm']
+rms = update_rms_by_phase(main, run_cfg, STABLE_FROM).loc[MODULES]
+per_lr = rms['decay'] / rms['stable']
+absolute = rms['abs_decay'] / rms['abs_stable']
+assert (absolute < 1).all(), 'an update grew in the decay'
+print(f'update RMS per unit learning rate ({run_cfg.preset} run); '
+      'absolute: times the median lr')
 print(f'{"module":>9} {"stable":>7} {"decay":>7} '
-      f'{f"ratio to {noise_floor:.3f}":>15}')
+      f'{f"stable ÷ {noise_floor:.3f}":>15} '
+      f'{"decay ÷ stable: per lr":>23} {"absolute":>9}')
 for m in MODULES:
-    stable, decay = med['stable'][f'rms_{m}'], med['decay'][f'rms_{m}']
-    print(f'{m:>9} {stable:7.3f} {decay:7.3f} {stable / noise_floor:15.2f}')
+    print(f'{m:>9} {rms.at[m, "stable"]:7.3f} {rms.at[m, "decay"]:7.3f} '
+          f'{rms.at[m, "stable"] / noise_floor:15.2f} {per_lr[m]:23.2f} '
+          f'{absolute[m]:9.2f}')
 ```
 
 ### Who Moves First
 
-<!-- Placeholder (prose): a change point per series: the first step within 200 steps after an event where the 20-step rolling median leaves ± 3 MAD around the line fitted to the 200 steps before it (detrended, so that a curve that keeps falling at the same rate does not count as moving). Read at the end of warmup, at the start of the decay and at the opening's gradient event (labelled mild when it was); the last row is the null: how often each series "moves" at 20 random stable-phase steps where nothing happens. Resolution: the rolling window (about 10-20 steps); the largest logit is sampled every 10 steps in r2 (every 50 in the t1 stand-in). -->
+<!-- Placeholder (prose): a change point per series: each series goes on one grid of 10-step blocks (the block median; the largest logit is probed every 10 steps, so every series meets the same detector, and a dense series is not judged by a stricter test than a sparse one), a line is fitted to the 20 blocks of the 200 steps before the event, and the series has moved at the first 20-step mean of the residual, within 200 steps, that leaves 3 standard errors of that line's prediction (the residual scatter plus the line's own extrapolation error; on white noise this fires in about 6-9% of windows, dense or sparse). Detrended, so that a curve that keeps falling at the same rate does not count as moving; and the line needs a stationary reference: an event whose 200 steps before fall inside warmup's ramp (the end of warmup itself; the reference run's gradient event at step 223) is not read, because the line extrapolates a convex, flattening curve and fires on its own misfit. The last row is the null: how often each series moves at 20 evenly spaced stable-phase steps (every reference window from step 1,000, horizons nearly disjoint) where nothing happens. Resolution: 10 steps (50 in the t1 stand-in, whose largest logit is probed every 50). -->
 
 ```{.python .input #reference-model-lead-lag}
 %%tab pytorch
-def moved(x, at, before=200, window=20, horizon=200, k=3):
-    """Steps after `at` until the rolling median of x over `window` steps
-    leaves k MAD around the line fitted to the `before` steps before `at`;
-    None if it stays inside for `horizon` steps."""
+#@save
+def moved(x, at, before=200, window=20, horizon=200, k=3, grid=10):
+    """Steps after `at` until x moves (None within `horizon`): on blocks of
+    `grid` steps (medians), the mean residual over `window` steps from the
+    line fitted to the `before` steps before `at` leaves k standard errors
+    of that line's prediction (residual scatter plus extrapolation)."""
     x = x.dropna()
-    ref = x[(x.index >= at - before) & (x.index < at)]
-    resid = x - np.polyval(np.polyfit(ref.index, ref.to_numpy(), 1), x.index)
-    center = resid[ref.index].median()
-    mad = (resid[ref.index] - center).abs().median()
-    width = max(1, round(window / np.median(np.diff(x.index))))  # samples
-    after = resid[(resid.index >= at) & (resid.index < at + horizon)]
-    roll = after.rolling(width, min_periods=width).median()
-    out = roll[(roll - center).abs() > k * mad]
-    return int(out.index[0] - at) if len(out) else None
+    b = x.groupby((x.index - at) // grid).median()  # block j: at + grid * j
+    ref, after = b.loc[-(before // grid):-1], b.loc[0:horizon // grid - 1]
+    j, i = ref.index.to_numpy(float), after.index.to_numpy(float)
+    line = np.polyfit(j, ref.to_numpy(), 1)
+    s2 = ((ref - np.polyval(line, j)) ** 2).sum() / (len(j) - 2)
+    w = max(1, window // grid)
+    resid = (after - np.polyval(line, i)).rolling(w).mean()
+    mid = pd.Series(i, after.index).rolling(w).mean() - j.mean()
+    se = np.sqrt(s2 * (1 / w + 1 / len(j)
+                       + mid ** 2 / ((j - j.mean()) ** 2).sum()))
+    out = resid[resid.abs() > k * se]
+    return int(grid * (out.index[0] + 1)) if len(out) else None
 ```
 
 ```{.python .input #reference-model-lead-lag-table}
 %%tab pytorch
 run = main.set_index('step')
-series = {'grad norm': run['grad_norm'], 'loss': run['loss'],
-          'largest logit': run.filter(like='max_logit_').max(axis=1)}
+series = {'grad norm': run['grad_norm'],
+          'largest logit': run.filter(like='max_logit_').max(axis=1),
+          'loss': run['loss']}
+grid = max(int(np.median(np.diff(x.dropna().index)))  # the coarsest
+           for x in series.values())                  # sampling, for all
+decay_from = run_cfg.steps - run_cfg.decay
 events = {'end of warmup': run_cfg.warmup, 'start of decay': decay_from,
           'gradient event' + (' (mild)' if event.mild else ''): event.step}
-null = np.random.default_rng(0).integers(  # stable phase, full windows
-    run_cfg.warmup + 200, decay_from - 200, size=20)
+null = np.linspace(STABLE_FROM + 200, decay_from - 200, 20).round()
 print(f'steps until each series moves ({run_cfg.preset} run)')
 print(f'{"event":>23} ' + ' '.join(f'{k:>13}' for k in series))
 for name, at in events.items():
+    if at - 200 < STABLE_FROM:  # the line would extrapolate warmup's ramp
+        print(f'{name:>23} {"(reference in warmup: not read)":>41}')
+        continue
     lags = ['—' if m is None else f'+{m}'
-            for m in (moved(x, at) for x in series.values())]
+            for m in (moved(x, at, grid=grid) for x in series.values())]
     print(f'{name:>23} ' + ' '.join(f'{m:>13}' for m in lags))
 cells = []
 for x in series.values():  # how often, and how late, each fires at random
-    lags = [m for m in (moved(x, t) for t in null) if m is not None]
-    cells.append(f'{len(lags)}/20'
+    lags = [m for m in (moved(x, int(t), grid=grid) for t in null)
+            if m is not None]
+    cells.append(f'{len(lags)}/{len(null)}'
                  + (f', +{np.median(lags):.0f}' if lags else ''))
-print(f'{"20 random steps (null)":>23} ' + ' '.join(f'{c:>13}' for c in cells))
+print(f'{"20 stable steps (null)":>23} '
+      + ' '.join(f'{c:>13}' for c in cells))
 ```
+
+<!-- Placeholder (prose): claim 6 as measured (F12 review, from the committed log): no monitor resolves a lead over the loss at this recipe. Only the start of the decay has a stable reference, and there no series moves within 200 steps (the learning rate falls gradually); the end of warmup and the reference run's gradient event (step 223, mild, inside warmup) are not read, and the section's gradient-event story is the ten-times arm's. The null row checks the detector: each series fires at 1 of 20 stable-phase steps (grad norm +60, largest logit +60, loss +80), about the rate white noise gives, so no series is more specific than another. Never write that the loss "moved first" at warmup's end or at the event, or that a series "never moves". -->
 
 ## Reading Checkpoints and the Ladder
 
@@ -742,16 +787,19 @@ LogitStats = collections.namedtuple('LogitStats', ['max_logit', 'entropy'])
 
 @torch.no_grad()  #@save
 def attn_logit_stats(model, batch, max_seqs=1, chunk=512):
-    """Largest attention logit and mean attention entropy of every head, per
-    block, on the first max_seqs sequences of batch, from explicit scores
-    (fused kernels return none); under DDP the maximum is over all ranks."""
+    """Largest attention logit (before a softcap) and mean attention entropy
+    (of the softmax the block computes, after its softcap) of every head,
+    per block, on the first max_seqs sequences of batch, from explicit
+    scores (fused kernels return none); under DDP the maximum is over all
+    ranks."""
     X, ctx = d2l._probe_inputs(batch, max_seqs, model)
     stats = {}
     for l, (attn, Y, tables) in enumerate(d2l._attention_inputs(model, X,
                                                                 ctx)):
         q, k, _ = attn.qkv(Y, tables=tables)
         k = k.repeat_interleave(attn.num_heads // attn.num_kv_heads, 1)
-        m, ent = d2l._chunked_logit_stats(q, k, ctx, chunk)
+        m, ent = d2l._chunked_logit_stats(q, k, ctx, chunk,
+                                          getattr(attn, 'softcap', None))
         stats[l] = LogitStats(d2l._all_reduce_max(m), ent)
     return stats
 
@@ -761,14 +809,31 @@ def softcap(x, c):
     return c * torch.tanh(x / c)
 
 #@save
-def make_bad_batch(batch, kind='random', vocab=32768, seed=0):
-    """A batch shaped like batch of one-document windows: uniform random ids
-    >= 32 ('random') or one repeated id ('repeat'), targets shifted ids."""
+def make_bad_batch(batch, kind='random', vocab=32768, seed=0, k=None,
+                   period=None, pool=None):
+    """A batch shaped like batch of one-document windows, targets shifted
+    ids: uniform random ids >= 32 ('random'), one repeated id ('repeat'),
+    or ('ngram') k of batch's rows (all if k is None; the others untouched)
+    replaced by one n-gram of period of the ids >= 32 of pool (default:
+    batch's own), repeated."""
     B, T = batch['input_ids'].shape
     g = torch.Generator().manual_seed(seed)
+    pos = torch.arange(T, dtype=torch.int32).expand(B, T).contiguous()
+    if kind == 'ngram':  # OLMo 2's spike shape
+        pool = (batch['input_ids'] if pool is None else pool).flatten().cpu()
+        pool = pool[pool >= 32]
+        start = int(torch.randint(len(pool) - period + 1, (), generator=g))
+        ids = pool[start:start + period].repeat(T // period + 1)[:T + 1]
+        rows = torch.randperm(B, generator=g)[:k]
+        bad = {key: v.clone() for key, v in batch.items()}
+        for key, v in (('input_ids', ids[:-1]), ('labels', ids[1:]),
+                       ('doc_ids', 0), ('pos_ids', pos[0])):
+            bad[key][rows] = torch.as_tensor(v).to(bad[key])
+        return bad
+    if kind not in ('random', 'repeat'):
+        raise ValueError(f'unknown bad-batch kind {kind!r}')
     ids = (torch.randint(32, vocab, (B, T + 1), generator=g) if kind ==
            'random' else torch.full((B, T + 1), 32 + seed % (vocab - 32)))
-    pos = torch.arange(T, dtype=torch.int32).expand(B, T).contiguous()
     return dict(input_ids=ids[:, :-1].contiguous(), labels=ids[:, 1:].clone(),
                 doc_ids=torch.zeros_like(pos), pos_ids=pos)
 
@@ -868,7 +933,7 @@ print(f'under QK-norm: no layer clipped, {len(caught)} warning')
 
 ### The Stable Learning-Rate Range
 
-<!-- Placeholder (prose): the T1 grid (six learning rates, two seeds, 400 steps, clipping off because it hides the growth that precedes a spike, z-loss and weight decay as in t1); tau fixed beforehand by the rule below; the stability criterion: finite and final loss at most l_ref + delta, l_ref the best final loss of the baseline over the grid, delta = 0.3 checked against three times the two-seed difference. What a variant changes is the upper edge: the largest rate above its best rate before the first unstable one. Rates below the best that miss l_ref + delta are slower (400 steps at a small constant rate leave them under-trained), not unstable, and are listed apart. The learning-rate sensitivity of Wortsman et al. -->
+<!-- Placeholder (prose): the T1 grid on the full t1 schedule (1,526 steps, warmup 76, constant to step 1,297, linear decay over the last 229; only the peak rate changes, six rates, two seeds), clipping off because it hides the growth that precedes a spike, z-loss and weight decay as in t1; tau fixed beforehand by the rule below. Six arms: the baseline, QK-norm, QK-clip, softcap (c = 50, through the math backend), and two baselines with the production recipe's fixes, gradient clipping at 1.0 and a longer warmup (20% of the run, 305 steps, about four times the presets' 76). The two seeds differ in initialization and data order; every variant at a seed sees the same batches, so the variants are paired. Statistics every 10 steps: the largest attention logit and the mean attention entropy per layer; the final validation loss on 2^20 tokens; the zero-layer reference (t1 with no blocks: embedding, final norm, tied head) at 1e-3 is Wortsman et al.'s line a model with attention must beat. Wortsman et al.'s divergence is a final loss far above the best (counted at ln V in the sensitivity), not a NaN: the collapse is silent. A rate has collapsed when some layer's mean entropy falls below 0.1 nats (pre-registered). -->
 
 ```{.python .input #reference-model-stable-lr}
 %%tab pytorch
@@ -878,64 +943,224 @@ def tau_rule(log, lo, hi):
     ceiling of a tenth of the largest logit in log over steps lo to hi."""
     rows = log[log['step'].between(lo, hi)]
     return 10 * math.ceil(rows.filter(like='max_logit_').max().max() / 10)
+
+#@save
+def first_collapsed_rate(arms, variant, seed=None, floor=0.1):
+    """The smallest learning rate at which an arm of variant (of seed, if
+    given) had a layer whose mean attention entropy fell below floor nats
+    at some statistics step; None if no rate collapsed."""
+    hit = arms[(arms['variant'] == variant) & (arms['min_entropy'] < floor)]
+    if seed is not None:
+        hit = hit[hit['seed'] == seed]
+    return float(hit['lr'].min()) if len(hit) else None
+
+#@save
+def departure(x, start, before=200, window=20, k=3):
+    """The first step from start + before on at which the rolling median of
+    x over window steps leaves k MAD around the median of x over the before
+    steps from start (for a paired series, so no trend line); None if it
+    never does."""
+    x = x[x.index >= start].dropna()
+    ref = x[x.index < start + before]
+    center = ref.median()
+    mad = (ref - center).abs().median()
+    roll = x.rolling(window).median()
+    out = roll[(roll.index >= start + before)
+               & ((roll - center).abs() > k * mad)]
+    return int(out.index[0]) if len(out) else None
 ```
 
 ```{.python .input #reference-model-stable-lr-arms}
 %%tab pytorch
 LRS = (1e-3, 2e-3, 4e-3, 8e-3, 1.6e-2, 3.2e-2)
-VARIANTS = ('none', 'qk_clip', 'qk_norm', 'softcap')
+VARIANTS = ('none', 'qk_norm', 'qk_clip', 'softcap', 'clip', 'warmup')
 TAU_T1 = tau_rule(t1[t1['seed'] == 0], t1_cfg.warmup, 400)
 inst = d2l.instability_arms(r2_config('t1', clip=None), lrs=LRS,
-                            variants=VARIANTS, seeds=(0, 1), steps=400,
-                            tau=TAU_T1)
-arms = inst.table
-ell_ref = arms.loc[arms['variant'] == 'none', 'final_loss'].min()
-pair = arms[(arms['variant'] == 'none') & (arms['lr'] == LRS[0])]
-seed_gap = 3 * pair['final_loss'].diff().abs().iloc[-1]
-print(f'τ (t1) = {TAU_T1}')
-print(f'δ = {DELTA} above 3 × two-seed difference at lr {LRS[0]:g} '
-      f'({seed_gap:.3f}): {"yes" if DELTA > seed_gap else "no"}')
+                            variants=VARIANTS, seeds=(0, 1), tau=TAU_T1)
+arms = inst.table.assign(  # diverged: ln V, as the sensitivity counts it
+    loss=inst.table['val_loss'].fillna(math.inf).clip(upper=math.log(V)))
+mean = arms.groupby(['variant', 'lr'])['loss'].mean()  # of the two seeds
+top = LRS[-1]
+print(f'{"variant":>8} {"best lr":>7} {"sensitivity":>11} '
+      f'{f"{top:g} − best":>12} {"largest logit":>13} '
+      f'{f"> 1,000 at {top:g}":>21}')  # first step, at the top rate
+for v in VARIANTS:
+    m, g = mean[v], arms[arms['variant'] == v]
+    at_top = g.loc[g['lr'] == top, 'first_logit_1000']  # one per seed
+    hit = at_top.dropna()
+    alarm = (f'step {int(hit.min()):,} ({len(hit)} of {len(at_top)})'
+             if len(hit) else '—')  # the earliest, and how many seeds
+    print(f'{v:>8} {m.idxmin():7g} {lr_sensitivity(m, math.log(V)):11.2f} '
+          f'{m[top] - m.min():12.2f} {g["max_logit"].max():13,.0f} '
+          f'{alarm:>21}')
+print(f'zero-layer reference: {inst.zero_layer:.2f}')
+print(f'τ (t1) = {inst.tau}')
 ```
+
+<!-- Placeholder (prose): read the table: the best rate and the sensitivity per arm; what QK-norm, QK-clip and softcap change, and whether clipping and the longer warmup change the baseline's curve (claims 15, 15b, 15c; the prediction is little), as measured. Softcap's largest logit is the value before the cap: the softmax sees at most 50 while the raw product grows (Kimi K2: it "can still grow excessively before capping"); its entropy is that of the softmax the model computes, over the capped scores. QK-clip's largest logit can sit far above tau: it is read after the optimizer step and before that step's clip, and both the clip and the statistic see one sequence of the batch. QK-norm's largest logit is the measured maximum (its bound sqrt(d_h)·max|g_q|·max|g_k| holds by construction, claim 20). The last column gives the earliest seed's step and how many of the two seeds crossed. -->
 
 ```{.python .input #reference-model-stable-lr-edge}
 %%tab pytorch
-def stable_range(g):
-    """A variant's best rate, the largest rate above it before the first
-    unstable one (None if the best is unstable), and the slower rates
-    below it: finite, but above ell_ref + DELTA."""
-    final = g.groupby('lr')['final_loss']
-    stable = final.max() <= ell_ref + DELTA  # both seeds; inf fails
-    best, edge = final.mean().idxmin(), None
-    for lr in stable.index[stable.index >= best]:  # upward from the best
-        if not stable[lr]:
-            break
-        edge = lr
-    slower = [lr for lr in stable.index[stable.index < best]
-              if not stable[lr] and np.isfinite(final.max()[lr])]
-    return best, edge, slower
-
-print(f'{"variant":>8} {"best lr":>8} {"stable up to":>12} '
-      f'{"slower":>19} {"lr sensitivity":>14}')
-for v in VARIANTS:
-    g = arms[arms['variant'] == v]
-    best, edge, slower = stable_range(g)
-    sens = lr_sensitivity(g.groupby('lr')['final_loss'].mean().to_numpy(),
-                          math.log(V))
-    print(f'{v:>8} {best:8g} {"—" if edge is None else f"{edge:g}":>12} '
-          f'{", ".join(f"{lr:g}" for lr in slower) or "—":>19} {sens:14.2f}')
+by_seed = arms.pivot_table('loss', 'lr', ['variant', 'seed'])
+gap = by_seed['none'] - by_seed['qk_norm']  # paired: same seed, batches
+spread = (by_seed['none'][0] - by_seed['none'][1]).abs()
+noise = 3 * max(spread[LRS[0]],
+                abs(by_seed['qk_norm'][0] - by_seed['qk_norm'][1])[LRS[0]])
+clip_gap = mean['clip'] - mean['none']
+dead = arms[arms['min_entropy'] < 0.1]
+print(f'Δ = baseline − QK-norm (paired); 3 × seed difference at '
+      f'{LRS[0]:g}: {noise:.3f}')
+print(f'{"lr":>7} {"Δ seed 0":>9} {"Δ seed 1":>9} {"resolved":>9} '
+      f'{"clip − none":>11} {"seed diff":>9} {"collapsed":>9}')
+for lr in LRS:
+    hit = ((dead['variant'] == 'none') & (dead['lr'] == lr)).any()
+    print(f'{lr:7g} {gap.loc[lr, 0]:+9.3f} {gap.loc[lr, 1]:+9.3f} '
+          f'{"yes" if (gap.loc[lr] > noise).all() else "no":>9} '
+          f'{clip_gap[lr]:+11.3f} {spread[lr]:9.3f} '
+          f'{"yes" if hit else "no":>9}')
+base, low = arms[arms['variant'] == 'none'], dead[dead['variant'] == 'none']
+print(f'collapsed baseline cells: {len(low)} of {len(base)}; finite: '
+      f'{int(low["first_nonfinite"].isna().sum())}; above the zero-layer '
+      f'loss: {int((low["loss"] > inst.zero_layer).sum())}')
+print(f'{"":>21}' + ''.join(f'{v:>9}' for v in VARIANTS))
+rates = [first_collapsed_rate(arms, v) for v in VARIANTS]
+print(f'{"first collapsed rate":>21}'
+      + ''.join(f'{"—" if r is None else f"{r:g}":>9}' for r in rates))
+print(f'{"smallest entropy":>21}' + ''.join(
+    f'{arms.loc[arms["variant"] == v, "min_entropy"].min():9.3f}'
+    for v in VARIANTS))
 ```
 
-<!-- Placeholder (prose): final loss against the learning rate per variant (mean of the two seeds; a diverged run drawn at ln V), the band l_ref to l_ref + delta shaded. -->
+<!-- Placeholder (prose): the three panels on one log axis of the rate, both seeds as points and a line through their mean: the final loss with the zero-layer line; the largest logit with tau marked; the smallest per-layer entropy at the end of the peak phase (step 1,290). Panels 2 and 3 are the mechanism: the loss departs where the entropy reaches zero, for the softcap arm as well, whose capped logit never passes 50. Then the collapsed cells: how many end with a finite loss and where they sit against the zero-layer model (claim 15a), and whether the decay brings them back (claim 15d), as measured. -->
 
 ```{.python .input #reference-model-stable-lr-plot}
 %%tab pytorch
-curves = arms.groupby(['lr', 'variant'])['final_loss'].mean().unstack()
-d2l.plot(list(LRS), [curves[v].clip(upper=math.log(V)).to_numpy()
-                     for v in VARIANTS], 'learning rate', 'final loss',
-         legend=list(VARIANTS), xscale='log', fmts=('o-', 's-', '^-', 'd-'))
-d2l.plt.axhspan(ell_ref, ell_ref + DELTA, color='0.9')
-d2l.plt.show()
+end = t1_cfg.steps - t1_cfg.decay  # the last step at the peak rate
+end -= end % d2l.INST_STATS_EVERY  # its last statistics step
+d2l.plot_lr_grid(arms, {'loss': ('final val loss', inst.zero_layer),
+                        'max_logit': ('largest logit', TAU_T1),
+                        'peak_entropy': (f'entropy at step {end:,} (nats)',
+                                         None)},
+                 VARIANTS, logy=['max_logit'])
 ```
+
+### Who Moves First at T1
+
+<!-- Placeholder (prose): the baseline (seed 0) at the first collapsed rate against its QK-norm twin (same rate, seed and batches): when the largest logit passes 1,000, when the smallest entropy falls below 0.1 nats, when the gradient norm moves, and when the loss first sits 0.1 nats above the twin's (20-step means; a diverged run's first non-finite step counts, since the run stops there). The gradient-norm detector is paired, like the loss: the log ratio of the baseline's norm to the twin's, its 20-step rolling median against ± 3 MAD of the ratio over the first 200 stable steps after warmup (steps 76-275), searched from step 276 to the end of the run; no trend line, since the pairing removes the schedule. (Cell 16's detector cannot be reused here: from the end of warmup its reference line is the warmup ramp, where the norm falls tenfold, so it fires within 30 steps in every run, collapse or not.) If the baseline departs within those first 200 stable steps, the reference band contains the departure and the detector reads late; say so if the printed steps show it. The statistics are sampled every 10 steps, so a lead under 10 steps is no lead (claim 6b). If no rate collapsed, the cell says so and the claim is dropped. -->
+
+```{.python .input #reference-model-who-moves-first-at-t1}
+%%tab pytorch
+lr_c = first_collapsed_rate(arms, 'none', seed=0)
+if lr_c is None:  # pre-registered: the claim is dropped
+    print('no baseline rate collapsed: every entropy stayed above 0.1 nats')
+else:
+    start = t1_cfg.warmup  # the grad-norm band: the 200 steps from here
+    steps = d2l.collapse_crossings(inst, lr_c, start, seed=0)
+    rule = 'loss 0.1 above QK-norm'
+    at = steps[rule]
+    print(f'baseline at lr {lr_c:g} (first collapsed rate), seed 0')
+    for name, s in steps.items():
+        lead = ('' if s is None or at is None or s == at else
+                f', {abs(at - s)} steps {"before" if s < at else "after"} '
+                'the loss')
+        never = (f'never (searched from step {start + 200})'
+                 if name == 'grad norm moves' else 'never')
+        print(f'{name:>22}: ' + (never if s is None else f'step {s:,}')
+              + lead)
+    calm = arms[(arms['variant'] == 'none') & (arms['seed'] == 0)
+                & (arms['min_entropy'] >= 0.1)]  # the same rule, no collapse
+    null = [(lr, d2l.collapse_crossings(inst, lr, start)[rule])
+            for lr in sorted(calm['lr'])]
+    print(f'{"loss rule, no collapse":>22}: ' + ', '.join(
+        f'{"never" if s is None else f"step {s:,}"} at {lr:g}'
+        for lr, s in null))
+    tr = inst.traces[(inst.traces['seed'] == 0) & (inst.traces['lr'] == lr_c)]
+    pair = tr[tr['variant'].isin(['none', 'qk_norm'])].copy()
+    loss = pair.pivot(index='step', columns='variant', values='loss')
+    gap = (loss['none'] - loss['qk_norm']).rolling(20).mean()  # the rule's
+    pair['loss − QK-norm'] = pair['step'].map(gap).where(
+        pair['variant'] == 'none')  # one line: the baseline's gap
+    d2l.plot_traces(pair, ['max_logit', 'min_entropy', 'grad_norm',
+                           'loss − QK-norm'],
+                    by='variant', logy=['max_logit', 'grad_norm'],
+                    dashed=['qk_norm'], refs={'loss − QK-norm': 0.1},
+                    figsize=(5, 5))
+```
+
+<!-- Placeholder (prose): claim 6b as measured (F11 review findings 1-3). The loss crossed first, but the printed control line shows the same loss rule firing at rates whose entropy never fell below 0.1 nats (QK-norm trains faster early at every rate from 2e-3 up), so the loss crossing does not warn of collapse; of the four monitors only the entropy and the logit are specific. The last panel is that rule's series, the 20-step mean of baseline − QK-norm with the 0.1 line. The grad norm cannot be read here: every collapsed cell departs before or inside the detector's reference window (steps 76-275), and the detector searches only from step 276. 4e-3 is a borderline first collapsed rate (seed 0 at 0.068, seed 1 at 0.1002); its paired gap is no larger than at the uncollapsed 2e-3, and 8e-3 is where the loss first fails clearly. -->
+
+### The Largest Logit and Model Size
+
+<!-- Placeholder (prose): size transfer (Wortsman et al., Figure 1 and 9): the rate at which logit growth sets in falls as the model grows, so a rate tuned on a small proxy can fail on a larger model; the method is to fit the largest logit at an early step against model size per rate on small shapes and predict a larger one before running it. Here: four shapes at T = 1,024 (t1, the ladder's 10 x 576 and 10 x 768, the reference shape 18 x 768; non-embedding parameters 12.6M, 35.4M, 62.9M, 113.3M), the T1 grid's baseline recipe (clipping off, warmup 76, then a constant rate), 300 steps of 64 x 1,024 tokens, rates 2e-3 to 1.6e-2, two seeds; the statistic is the largest logit at step 300 (Wortsman et al. read theirs at step 2,000 of 100,000, also early). A pilot came first (t1 against 10 x 768 at 4e-3 and 8e-3, both seeds; go only if the larger shape's logit is higher at both rates with both seeds agreeing; pre-registered). The fit is a least-squares line of log logit on log N per rate through the three smaller shapes' six runs; its 95% prediction interval at 113.3M is for the mean of log logit over the two seeds there (t with 4 degrees of freedom); the job stored that prediction before it trained the 113.3M shape, and the cell checks that its own fit equals the stored one. A run whose loss goes non-finite (diverged) gets no fitted line at its rate: leaving it out would drop the largest logits and flatten the slope; in the pilot, a larger shape that diverges where the smaller one does not counts as above it (fixed before the pilot ran). -->
+
+```{.python .input #reference-model-the-largest-logit-and-model-size-1}
+%%tab pytorch
+#@save
+def logit_fit(runs, at, level=0.95):
+    """Per rate: the least-squares line of log largest logit on log N
+    through runs (columns lr, seed, N, logit), its slope with a level
+    interval (slope_hw, the half-width), and its prediction at N = at with
+    a level prediction interval for the mean of log logit over as many
+    seeds as runs has, back in logit units. A rate with a non-finite logit
+    (a diverged run) gets no line: dropping the point would censor the
+    largest logits."""
+    rows = []
+    for lr, g in runs.groupby('lr'):
+        x, y = np.log(g['N'].to_numpy(float)), np.log(g['logit'].to_numpy())
+        n, x0 = len(x), math.log(at)
+        if n < 3 or not np.isfinite(y).all():  # no interval from two points
+            continue
+        b, a = np.polyfit(x, y, 1)
+        s = math.sqrt(((y - a - b * x) ** 2).sum() / (n - 2))  # residual sd
+        sxx, t = ((x - x.mean()) ** 2).sum(), d2l.t_quantile(n - 2, level)
+        h = t * s * math.sqrt(1 / g['seed'].nunique() + 1 / n
+                              + (x0 - x.mean()) ** 2 / sxx)
+        y0 = a + b * x0
+        rows.append(dict(lr=lr, slope=b, slope_hw=t * s / math.sqrt(sxx),
+                         intercept=a, predicted=math.exp(y0),
+                         lo=math.exp(y0 - h), hi=math.exp(y0 + h)))
+    return pd.DataFrame(rows, columns=['lr', 'slope', 'slope_hw', 'intercept',
+                                       'predicted', 'lo', 'hi'])
+```
+
+```{.python .input #reference-model-the-largest-logit-and-model-size-2}
+%%tab pytorch
+SHAPES = ('t1', 'ladder-54m', 'ladder-88m', 'r2')  # the last one held out
+xfer = d2l.size_transfer(SHAPES, lrs=(2e-3, 4e-3, 8e-3, 1.6e-2),
+                         seeds=(0, 1), steps=300)
+runs, held = xfer.table, xfer.table['shape'] == SHAPES[-1]
+if xfer.gate == 'no-go':  # the pilot's pre-registered rule
+    print(f'pilot: no size trend from {runs["N"].min() / 1e6:.1f}M to '
+          f'{runs["N"].max() / 1e6:.1f}M parameters at 300 steps '
+          '(gate failed)')
+    for lr, g in runs.groupby('lr'):  # a diverged pilot run, if any
+        if note := d2l.diverged_note(g):
+            print(f'lr {lr:g}: {note}')
+elif held.any():  # the full transfer ran
+    N = runs.loc[held, 'N'].iloc[0]
+    fit = logit_fit(runs[~held], at=N)
+    assert np.allclose(fit.to_numpy(float),  # the prediction stored before
+                       xfer.fit[fit.columns].to_numpy(float))  # r2 ran
+    print(f'{"lr":>6} {"slope ± 95%":>11} '
+          f'{f"logit at {N / 1e6:.1f}M, predicted [95%]":>32} '
+          f'{"measured":>9}')
+    for lr, g in runs.groupby('lr'):
+        h = g[g['shape'] == SHAPES[-1]]  # the held-out runs at lr
+        if lr not in fit['lr'].values:  # a diverged run at a smaller shape
+            print(f'{lr:6g} no fit: {d2l.diverged_note(g.drop(h.index))}')
+            continue
+        r = fit[fit['lr'] == lr].iloc[0]
+        pi = f'{r.predicted:,.0f} [{r.lo:,.0f}–{r.hi:,.0f}]'
+        if h['first_nonfinite'].notna().any():
+            m = f'diverged (step {h["first_nonfinite"].min():.0f})'
+        else:  # the geometric mean of the two seeds
+            m = math.exp(np.log(h['logit']).mean())
+            m = f'{m:9,.0f} ' + ('inside' if r.lo <= m <= r.hi else 'outside')
+        print(f'{lr:6g} {r.slope:5.2f} ± {r.slope_hw:.2f} {pi:>32} {m}')
+    d2l.plot_size_transfer(xfer, fit, held=SHAPES[-1])
+```
+
+<!-- Placeholder (prose): claim 16b as measured. Go: per rate the slope with its interval (does the largest logit grow with size at every rate, the interval clear of zero?) and whether the 113.3M shape's measured logit (the geometric mean of its two seeds) falls inside the prediction interval ("inside", or "outside (measured x, predicted y)"); four separate 95% intervals, so one "outside" alone is not a failed transfer; "no fit" or "diverged (step k)" rows, if any, are read as divergences, not as misses; the open markers are the held-out runs. No-go: one sentence ("12.6M against 62.9M, a fivefold step, showed no trend at 300 steps", as the cell prints it), Wortsman et al. for the trend over three orders of magnitude, no figure. Cell 26's ten-times arms use another recipe (clip 1.0, T = 4,096, 128 sequences); say so when the two are read together (claim 16). -->
 
 ### Ten Times the Learning Rate
 
@@ -963,33 +1188,66 @@ for _, r in t2.table.iterrows():
           f'{r["max_logit"]:13.0f} {first:>21}')
 ```
 
-### The Spike Protocol
+### One Bad Batch Under Adam
 
-<!-- Placeholder (prose): a bad batch on purpose at step 300 of the t1 preset with clipping off; PaLM's diagnosis by replay from the step-250 state with and without the batch and from the step-50 state; clipping at 1.0; the replay floor that sets every comparison on Ada (replays are not bit-exact). A table tab_lm_inst_diagnosis beside it maps outcomes to causes: bad data, unstable state, numerics. -->
+<!-- Placeholder (prose): one bad batch under Adam, paired. After one gradient far larger than its history, Adam's first step has size about lr(1 - beta1)/sqrt(1 - beta2) per coordinate (0.45 lr at beta2 = 0.95, 3.2 lr at 0.999 for a fully warmed second moment; at the experiment's bad step 300 the bias correction sqrt(1 - 0.999^300) = 0.51 makes it about 1.6 lr at 0.999, and about 0.45 lr at 0.95; quote 1.6 lr for the experiment; stated arithmetic, claim 22), and the kick decays like (beta1/sqrt(beta2))^k: second-moment underestimation in its simplest form, the reason for beta2 = 0.95 and PaLM's 1 - k^-0.8. Setup: t1 at 1e-3 with clipping off, one run per beta2 keeps full states (steps 76, the end of warmup, and 250); the late state is the t1 run's own at step 1,297 (it trained with clipping at 1.0; the arms run clipping off from there, at the same constant rate). Every arm replays 150 steps from a state with the bad batch at its step, against the skip replay from the same state, which takes the ordinary batch at that step, so both see identical data before and after (skipping the step in the stream, as PaLM does, would shift every later batch). The bad batch is built from step 300's data at every state (the same n-gram, period 7, in the same rows): `random` replaces all 64 sequences, `n-gram ×k` k of them, the shape OLMo 2 found in its spiking batches. The early and late states see it 4 steps after their state (steps 80 and 1,301), the mid state at 300, 50 steps after its own. Every replay starts at or after the end of warmup (the library refuses an earlier state) and runs at the same constant rate 1e-3, so the three states differ only in the model. Clip twins clip at 1.0 from the state on and pair against a skip replay that clips too. Statistic: the excess loss over the skip replay on the 100 steps after the bad batch, its peak, the steps until it stays below twice the floor (within the 100-step window: the offset of the last step at or above it; >100 = not back by the window's end), its sum; the pre-clip norm at the bad step over the skip replay's median norm. The replay floor (claim 23: the largest loss difference between replays of one state without a bad batch, i.e. a second skip replay over its window and every arm against its skip replay before its bad step; one floor for all rows) sets every comparison on Ada: replays are not bit-exact, and the smokes showed single pairs drifting from 3e-5 to 3e-3, so one pair alone would understate it. Read claims 22, 24 (clip ratio against min(1, 1/norm), within a factor of 2, from the table's peak columns and the stored norm; only for rows whose pre-clip norm exceeds 1 and whose no-clip peak is well above twice the floor, the others "no difference beyond twice the floor"; Adam normalizes the clipped gradient, so the peak may shrink far less than 1/norm: report the measured cut, do not widen the tolerance), 24b (beta2), 24c (k) and 24d (state) as measured. -->
 
 ```{.python .input #reference-model-spike}
 %%tab pytorch
-REPLAYS = (('from 250, same batches', 250, (), None),  # (label, from step,
-           ('from 250, skip 300', 250, (300,), None),  # skipped steps, clip)
-           ('from 50, same batches', 50, (), None),
-           ('clip 1.0', 0, (), 1.0))
-spike = d2l.spike_replay(r2_config('t1', clip=None), bad_step=300,
-                         kind='random', replays=REPLAYS)
-d2l.plot_traces(spike.traces, ['loss', 'grad_norm'], by='run',
-                logy=['grad_norm'], steps=(250, 400))
+ARMS = (  # β2, state (step), bad step, batch, sequences of 64, clip twin
+    (0.95, 250, 300, 'random', 64, True),
+    (0.95, 250, 300, 'ngram', 1, True),
+    (0.95, 250, 300, 'ngram', 8, True),
+    (0.95, 250, 300, 'ngram', 64, True),
+    (0.999, 250, 300, 'random', 64, True),
+    (0.999, 250, 300, 'ngram', 8, True),
+    (0.95, 76, 80, 'ngram', 8, False),
+    (0.95, 1297, 1301, 'ngram', 8, False))
+spike = d2l.spike_replay(r2_config('t1', clip=None), ARMS, period=7,
+                         source=300)
+d2l.plot_spike(spike)
 ```
 
 ```{.python .input #reference-model-spike-table}
 %%tab pytorch
-print(f'{"run":>22} {"loss at 300":>11} {"peak norm, 295-305":>18} '
-      f'{"max |Δ loss|, 301-400":>21}')
-for _, r in spike.table.iterrows():
-    print(f'{r["run"]:>22} {r["loss_at_bad"]:11.3f} '
-          f'{r["peak_grad_norm"]:18.2f} '
-          + ('—' if pd.isna(r['max_dloss']) else f'{r["max_dloss"]:.1e}')
-          .rjust(21))
-print(f'replay floor (same state, same batches, no bad batch): '
-      f'{spike.floor:.1e}')
+def show(v, fmt):  # steps: None (NaN) = not back within the window
+    if fmt != 'steps':
+        return f'{v:{fmt}}'
+    return f'>{d2l.SPIKE_WINDOW}' if pd.isna(v) else f'{v:.0f}'
+
+def pair(r, col, fmt):  # no clip / clip; '—' where there is no clip twin
+    twin = not pd.isna(r.peak_clip)
+    return (f'{show(getattr(r, col), fmt)} / '
+            + (show(getattr(r, col + '_clip'), fmt) if twin else '—'))
+
+if len(spike.table):  # nothing but the label while the result is pending
+    print(f'{"β2":>5} {"state":>5} {"batch":>10} {"norm÷med":>8} '
+          f'{"peak excess":>15} {"steps < 2×floor":>15} '
+          f'{"summed excess":>15}')
+    for r in spike.table.itertuples():
+        batch = 'random' if r.batch == 'random' else f'n-gram ×{r.k}'
+        print(f'{r.beta2:>5g} {r.state:>5} {batch:>10} {r.norm_ratio:8.1f} '
+              f'{pair(r, "peak", ".4f"):>15} {pair(r, "recover", "steps"):>15}'
+              f' {pair(r, "total", ".2f"):>15}')
+    print(f'replay floor (same state, same batches, no bad batch): '
+          f'{spike.floor:.1e}')
+```
+
+<!-- Placeholder (prose): tab_lm_inst_diagnosis, three causes, each row with the measured example of the table above that matches it or "none produced": bad data (a bad batch that hurts from every state: the rows whose excess exceeds the floor at all three states), unstable state (the same batch hurting from one state and not another: compare the n-gram ×8 rows at steps 76, 250 and 1,297), numerics (a difference the same-state replay shows without any bad batch: the floor itself). -->
+
+### OLMo 2's Repeated N-gram Rule
+
+<!-- Placeholder (prose): OLMo 2's data-side cure: drop documents with 32 or more consecutive repeats of an n-gram of 1 to 13 tokens, the shape of its spiking batches. Applied here to the training windows of the 100M-token t1 set on the CPU (claim 24e: a count, 0 would be a result too); the windows are the training sequences, not OLMo 2's documents. -->
+
+```{.python .input #reference-model-olmo-2-s-repeated-n-gram-rule}
+%%tab pytorch
+flags = d2l.repeated_ngram_flags(train, T=1024, min_repeats=32, max_n=13)
+k, n = len(flags.table), flags.windows
+print(f"windows flagged by OLMo 2's rule: {k:,} of {n:,} ({k / n:.3%})")
+if k:
+    r = flags.table.iloc[0]
+    print(f'example: n-gram of length {r["period"]} repeated '
+          f'{r["repeats"]} times: {r["text"]}')
 ```
 
 ## Optimizers as a Stated Fact

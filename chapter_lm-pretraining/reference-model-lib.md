@@ -23,8 +23,15 @@ show (docs/code-guide.md 7.1):
   lm-evaluation-harness cross-check;
 - the drivers behind the page's one-line calls: the opening's
   `gradient_event`, the plot helpers (`plot_run_log`, `plot_traces`,
-  `plot_ladder_runs`), the checkpoint evaluations, the instability arms and the
-  spike protocol. While the reference run is pending, each shows the T1
+  `plot_lr_grid`, `plot_ladder_runs`), the checkpoint evaluations, the
+  instability arms (the T1 grid on the full t1 schedule: six variants, one
+  regeneration each, the zero-layer reference, each finished arm kept under
+  `data/lm/rerun/ch21/inst-t1/` so that a restarted job resumes), the
+  size transfer of the largest logit (`size_transfer`: its pilot gate, the
+  prediction registered before the held-out shape runs, its plot), one
+  bad batch under Adam (`spike_replay`: states per beta2, paired skip
+  replays, clip twins, the replay floor, its plot) and OLMo 2's repeated
+  n-gram rule on the training windows (`repeated_ngram_flags`). While the reference run is pending, each shows the T1
   configuration under a printed label (the T1 run keeps checkpoints at the
   reference run's fractions of training for this).
 -->
@@ -156,6 +163,9 @@ d2l.DATA_HUB['lm-r2-inst-t2-v1'] = (
 d2l.DATA_HUB['lm-ladder-evals-v1'] = (
     d2l.LM_DATA_URL + 'lm-ladder-evals-v1.json.gz',
     'ef5eafbad161f4d0926a9178e7285bda1563294d')
+d2l.DATA_HUB['lm-r2-inst-t1-v2'] = (
+    d2l.LM_DATA_URL + 'lm-r2-inst-t1-v2.json.gz',
+    'f5b3f6ad50deb99c8b26e9032c380e8da8ee2d61')
 ```
 
 ```{.python .input #reference-model-lib-artifacts}
@@ -171,10 +181,12 @@ d2l.PRETRAIN_ARTIFACTS['ladder-evals'] = (
     'lm-ladder-evals-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['t1-runs'] = ('lm-r2t1-log-v1', 'jsonl')
 d2l.PRETRAIN_ARTIFACTS['instability-t1'] = (
-    'lm-r2-inst-t1-v1', 'json-table')
+    'lm-r2-inst-t1-v2', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['instability-t2'] = (
     'lm-r2-inst-t2-v1', 'json-table')
-d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['spike-replay'] = ('lm-r2-spike-v2', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['size-transfer'] = (
+    'lm-r2-size-xfer-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['throughput-probe'] = ('lm-r2-probe-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['val-domains'] = ('lm-fwedu-val-domains-v1', 'jsonl')
 ```
@@ -210,12 +222,14 @@ d2l.PRETRAIN_JOBS['inst-t1-qknorm'] = (
     'instability_arms', lambda: d2l._inst_t1_job())
 d2l.PRETRAIN_JOBS['inst-t1-softcap'] = (
     'instability_arms', lambda: d2l._inst_t1_job())
-d2l.PRETRAIN_JOBS['spike-replay'] = ('spike_replay', lambda: dict(
-    cfg=d2l.r2_config('t1', clip=None), bad_step=300, kind='random',
-    replays=(('from 250, same batches', 250, (), None),
-             ('from 250, skip 300', 250, (300,), None),
-             ('from 50, same batches', 50, (), None),
-             ('clip 1.0', 0, (), 1.0))))
+d2l.PRETRAIN_JOBS['inst-t1-clip'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['inst-t1-warmup'] = (
+    'instability_arms', lambda: d2l._inst_t1_job())
+d2l.PRETRAIN_JOBS['size-xfer-pilot'] = (
+    'size_transfer', lambda: d2l._size_xfer_job())
+d2l.PRETRAIN_JOBS['spike-replay'] = (
+    'spike_replay', lambda: d2l._spike_job())
 ```
 
 ## Presets, Fields and Peaks
@@ -283,10 +297,21 @@ def _peak_flops(device):
     return GPU_PEAK_BF16.get(torch.cuda.get_device_name(device))
 
 #@save
+# Fields added after runs were committed, each with its default then: a
+# field is left out of _cfg_json only while it equals that value, so if a
+# default here ever changes, the committed configurations change with it.
+_CFG_ADDED = {'clip_from': None}
+
+#@save
 def _cfg_json(cfg):
-    """A PretrainConfig as JSON values (the arch as a dict)."""
+    """A PretrainConfig as JSON values (the arch as a dict); a field added
+    after runs were committed is left out at its default, so the stored
+    configurations of those runs still match."""
     out = d2l._jsonable(cfg)
     out['arch'] = cfg.arch._asdict()
+    for k, default in _CFG_ADDED.items():
+        if out.get(k) == default:
+            del out[k]
     return out
 
 #@save
@@ -397,6 +422,7 @@ class _PretrainRun:
     def record(self, seg, row, batch, before, wait, t0):
         """Complete row in place (one host sync), probe, validate, save."""
         cfg, done = self.cfg, row['step']
+        log_z = row.pop('log_z', None)  # logged at the stats steps only
         for k, v in row.items():
             if torch.is_tensor(v):
                 row[k] = v.item()
@@ -418,8 +444,13 @@ class _PretrainRun:
         if before is not None:
             row.update(d2l._update_rms(self.raw, before, self.optimizer))
         if cfg.stats_every and done % cfg.stats_every == 0:
-            for l, s in d2l.attn_logit_stats(self.raw, batch).items():
+            stats = d2l.attn_logit_stats(self.raw, batch)
+            for l, s in stats.items():
                 row[f'max_logit_{l}'] = float(s.max_logit.max())
+            for l, s in stats.items():  # mean over heads, this rank's probe
+                row[f'entropy_{l}'] = float(s.entropy.mean())
+            if log_z is not None:
+                row['log_z'] = float(log_z)
         last = done == seg.total
         if self.val_fn is not None and self.rank == 0 and (
                 last or (cfg.val_every and done % cfg.val_every == 0)):
@@ -698,10 +729,11 @@ def _attention_inputs(model, X, ctx):
     return seen
 
 #@save
-def _chunked_logit_stats(q, k, ctx, chunk=512):
+def _chunked_logit_stats(q, k, ctx, chunk=512, softcap=None):
     """Per head: the largest logit q.k / sqrt(d_h) a query gives a key it
-    may see (same document, not later), and the mean entropy of its
-    attention, from fp32 scores, chunk queries at a time."""
+    may see (same document, not later; before the softcap, if any), and
+    the mean entropy of the attention the model computes (after the
+    softcap), from fp32 scores, chunk queries at a time."""
     B, H, T, d_h = q.shape
     q, k = q.float(), k.float()
     mx = torch.full((H,), -math.inf, device=q.device)
@@ -714,9 +746,10 @@ def _chunked_logit_stats(q, k, ctx, chunk=512):
         if ctx is not None:
             d = ctx.doc_ids
             ok = ok & (d[:, i, None] == d[:, None, :])[:, None]
-        s = s.masked_fill(~ok, -math.inf)
-        mx = torch.maximum(mx, s.amax((0, 2, 3)))
-        p = torch.softmax(s, -1)
+        mx = torch.maximum(mx, s.masked_fill(~ok, -math.inf).amax((0, 2, 3)))
+        if softcap is not None:
+            s = d2l.softcap(s, softcap)
+        p = torch.softmax(s.masked_fill(~ok, -math.inf), -1)
         ent += -(p * torch.log(p.clamp_min(1e-30))).sum(-1).sum((0, 2))
     return mx, ent / (B * T)
 ```
@@ -1122,7 +1155,8 @@ def _as_tuple(cls, result, tables, defaults=None):
 #@save
 _PANEL_LABELS = {'loss': 'train loss', 'grad_norm': 'grad norm\n(pre-clip)',
                  'rms': 'update RMS\n(units of lr)',
-                 'max_logit': 'largest\nattn. logit', 'mfu': 'MFU'}
+                 'max_logit': 'largest\nattn. logit', 'mfu': 'MFU',
+                 'min_entropy': 'smallest attn.\nentropy (nats)'}
 
 #@save
 def plot_run_log(log, cols, marks=(), figsize=(6, 7)):
@@ -1157,11 +1191,14 @@ def plot_run_log(log, cols, marks=(), figsize=(6, 7)):
     fig.align_ylabels()
 
 #@save
-def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
+def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4),
+                dashed=(), refs=None):
     """Stacked panels of per-step traces against step, one line per group
     of the columns by (named by their values): cols as in plot_run_log
-    ('loss', 'grad_norm', 'max_logit') or any column; logy: the columns on
-    a log scale; steps: the (first, last) step shown."""
+    ('loss', 'grad_norm', 'max_logit', 'min_entropy') or any column; logy:
+    the columns on a log scale; steps: the (first, last) step shown;
+    dashed: the group names drawn dashed (a twin); refs: {column: value}
+    drawn as a dotted black line (a threshold)."""
     d2l.use_svg_display()
     fig, axes = d2l.plt.subplots(len(cols), 1, sharex=True, figsize=figsize,
                                  squeeze=False)
@@ -1173,9 +1210,12 @@ def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
                         for k in np.atleast_1d(key))
         for ax, col in zip(axes, cols):
             ok = g[col].notna()
-            ax.plot(g['step'][ok], g[col][ok], lw=0.8, label=name)
+            ax.plot(g['step'][ok], g[col][ok], lw=0.8, label=name,
+                    ls='--' if name in dashed else '-')
     for ax, col in zip(axes, cols):
         ax.set_ylabel(_PANEL_LABELS.get(col, col), fontsize=8)
+        if refs and col in refs:
+            ax.axhline(refs[col], color='k', ls=':', lw=0.8)
         if col in logy:
             ax.set_yscale('log')
             d2l.set_log_ticks(ax.yaxis)
@@ -1183,6 +1223,39 @@ def plot_traces(traces, cols, by, logy=(), steps=None, figsize=(5, 4)):
         axes[0].legend(fontsize=7)
     axes[-1].set_xlabel('step')
     fig.align_ylabels()
+
+#@save
+def plot_lr_grid(arms, panels, variants, logy=(), figsize=(11, 3)):
+    """Side-by-side panels of a learning-rate grid (a table with variant, lr
+    and seed columns) on a log axis of the rate: per panel {column: (label,
+    reference)}, both seeds as points and a line through their mean per
+    variant, the reference (None: none) as a dotted black line; logy: the
+    columns on a log scale."""
+    d2l.use_svg_display()
+    fig, axes = d2l.plt.subplots(1, len(panels), figsize=figsize)
+    for i, (ax, (col, (label, ref))) in enumerate(zip(np.atleast_1d(axes),
+                                                      panels.items())):
+        X, Y = [], []
+        for v in variants:  # the mean lines first: the legend names them
+            g = arms[arms['variant'] == v].groupby('lr')[col].mean()
+            X.append(g.index.tolist())
+            Y.append(g.tolist())
+        for v in variants:
+            g = arms[arms['variant'] == v]
+            X.append(g['lr'].tolist())
+            Y.append(g[col].tolist())
+        fmts = ([f'C{k}-' for k in range(len(variants))]
+                + [f'C{k}o' for k in range(len(variants))])
+        if ref is not None and np.isfinite(ref):
+            X.append([arms['lr'].min(), arms['lr'].max()])
+            Y.append([ref, ref])
+            fmts.append('k:')
+        last = i == len(panels) - 1  # the legend beside the last panel
+        d2l.plot(X, Y, 'learning rate', label, xscale='log',
+                 yscale='log' if col in logy else 'linear', fmts=fmts,
+                 axes=ax, legend=list(variants) if last else None,
+                 legend_loc='outside')
+    fig.tight_layout()
 
 #@save
 def plot_ladder_runs(*logs, figsize=(5, 3)):
@@ -1441,21 +1514,31 @@ def ladder_evals(ladder, log, tasks):
 %%tab pytorch
 #@save
 InstabilityRuns = collections.namedtuple(
-    'InstabilityRuns', ['table', 'traces', 'tau', 'label'])
+    'InstabilityRuns', ['table', 'traces', 'tau', 'label', 'zero_layer'],
+    defaults=(math.nan,))
 
 #@save
-_INST_PARTS = {'none': 'inst-t1-none', 'qk_clip': 'inst-t1-qkclip',
-               'qk_norm': 'inst-t1-qknorm', 'softcap': 'inst-t1-softcap'}
+_INST_PARTS = {'none': 'inst-t1-none', 'qk_norm': 'inst-t1-qknorm',
+               'qk_clip': 'inst-t1-qkclip', 'softcap': 'inst-t1-softcap',
+               'clip': 'inst-t1-clip', 'warmup': 'inst-t1-warmup'}
 
 #@save
 INST_SOFTCAP = 50.0  # Gemma 2's attention-logit cap
+INST_CLIP = 1.0  # the 'clip' arm: the production recipe's gradient clipping
+INST_WARMUP = 0.2  # the 'warmup' arm: 4x the presets' 5% (305 of 1,526)
+INST_ZERO_LR = 1e-3  # the zero-layer reference (t1's own peak rate)
+INST_LOGIT_ALARM = 1000.0  # Kimi K2's "above 1,000"
+INST_STATS_EVERY = 10  # steps between logit and entropy statistics
+INST_VAL_TOKENS = 2 ** 20  # the final validation of every arm
+INST_STATS = 2  # version of the arm statistics: bump when they change
 
 #@save
 _INST_TABLES = dict(  # the columns of an InstabilityRuns' tables
     table=['variant', 'lr', 'seed', 'final_loss', 'max_logit',
-           'first_nonfinite', 'val_loss', 'steps'],
-    traces=['step', 'loss', 'grad_norm', 'max_logit', 'variant', 'lr',
-            'seed'])
+           'first_nonfinite', 'val_loss', 'steps', 'min_entropy',
+           'peak_entropy', 'first_logit_1000'],
+    traces=['step', 'loss', 'grad_norm', 'max_logit', 'min_entropy',
+            'variant', 'lr', 'seed'])
 
 #@save
 def _qk_clip_hook(tau):
@@ -1465,23 +1548,65 @@ def _qk_clip_hook(tau):
     return hook
 
 #@save
-def _inst_config(cfg, lr, seed, steps, **kw):
-    """An arm: cfg's warmup, then a constant learning rate (no decay), logit
-    statistics every 10 steps, validation at the end only, nothing saved."""
-    args = dict(steps=steps, peak_lr=lr, decay=0, seed=seed, stats_every=10,
-                probe_every=0, val_every=0, ckpt_steps=(), state_steps=(),
-                state_every=0, branches=(), out_dir=None)
+def _inst_config(cfg, lr, seed, steps=None, **kw):
+    """An arm at peak rate lr: the preset's full schedule (steps None: warmup,
+    constant rate, decay; update-RMS probes as the preset; the seed sets
+    the data order too) or cfg's warmup and then a constant rate for steps
+    (no probes); logit statistics every INST_STATS_EVERY steps, validation
+    at the end only, nothing saved."""
+    sched = (dict(data_seed=seed) if steps is None
+             else dict(steps=steps, decay=0, probe_every=0))
+    args = dict(peak_lr=lr, seed=seed, stats_every=INST_STATS_EVERY,
+                val_every=0, ckpt_steps=(), state_steps=(), state_every=0,
+                branches=(), out_dir=None, **sched)
     return dataclasses.replace(cfg, **dict(args, **kw))
 
 #@save
-def _arm_summary(log, variant, lr, seed, tail=20):
+def _inst_recipe():
+    """The library constants a stored T1 grid was computed with."""
+    return dict(softcap=INST_SOFTCAP, clip=INST_CLIP, warmup=INST_WARMUP,
+                zero_layer=dict(L=0, lr=INST_ZERO_LR, seed=0),
+                logit_alarm=INST_LOGIT_ALARM, stats_every=INST_STATS_EVERY,
+                val_tokens=INST_VAL_TOKENS, stats=INST_STATS)
+
+#@save
+def _inst_arm(cfg, variant, lr, seed, steps=None, L=None):
+    """The PretrainConfig and the PackedGPT options of one arm of variant
+    (L=0: the zero-layer model, embedding, final norm and tied head). A
+    later job that pairs a run with a grid cell builds the cell's config
+    here and checks that the two differ only where they should."""
+    if variant not in _INST_PARTS:
+        raise ValueError(f'unknown variant {variant!r}; one of '
+                         f'{list(_INST_PARTS)}')
+    arch = cfg.arch._replace(qk_norm=variant == 'qk_norm' or cfg.arch.qk_norm,
+                             **({} if L is None else dict(L=L)))
+    kw = dict(arch=arch)
+    if variant == 'clip':
+        kw['clip'] = INST_CLIP
+    if variant == 'warmup':
+        kw['warmup'] = round(INST_WARMUP * (steps or cfg.steps))
+    extra = (dict(softcap=INST_SOFTCAP, backend='math')
+             if variant == 'softcap' else {})
+    return _inst_config(cfg, lr, seed, steps, **kw), extra
+
+#@save
+def _arm_summary(log, variant, lr, seed, tail=20, peak_end=None):
     """One arm's row: final loss (mean of the last tail steps; inf after a
     non-finite loss), largest logit, first non-finite step, final
-    validation loss."""
+    validation loss; the smallest mean attention entropy of any layer
+    over the statistics steps (min_entropy) and at the last one up to
+    peak_end (peak_entropy; the end of the peak phase, None: the last
+    statistics step); the first step whose largest logit exceeds
+    INST_LOGIT_ALARM (None: never)."""
     loss = log['loss'].to_numpy(float)
     bad = np.flatnonzero(~np.isfinite(loss))
     first = int(log['step'].iloc[bad[0]]) if len(bad) else None
     logits = log.filter(like='max_logit_').to_numpy(float)
+    big = log.filter(like='max_logit_').max(axis=1)
+    small = log.filter(like='entropy_').min(axis=1)
+    peak = small[log['step'] <= (log['step'].max() if peak_end is None
+                                 else peak_end)].dropna()
+    alarm = log['step'][big > INST_LOGIT_ALARM]
     val = log['val_loss'].dropna() if 'val_loss' in log else pd.Series([])
     return dict(variant=variant, lr=lr, seed=seed,
                 final_loss=(math.inf if first is not None
@@ -1489,56 +1614,128 @@ def _arm_summary(log, variant, lr, seed, tail=20):
                 max_logit=float(np.nanmax(logits)) if np.isfinite(
                     logits).any() else math.nan, first_nonfinite=first,
                 val_loss=float(val.iloc[-1]) if len(val) else math.nan,
-                steps=int(log['step'].max()))
+                steps=int(log['step'].max()),
+                min_entropy=float(small.min()) if small.notna().any()
+                else math.nan,
+                peak_entropy=float(peak.iloc[-1]) if len(peak) else math.nan,
+                first_logit_1000=int(alarm.iloc[0]) if len(alarm) else None)
 
 #@save
 def _arm_trace(log, variant, lr, seed):
-    """Per step: loss, pre-clip norm, the largest logit per layer and over
-    layers (at the statistics steps)."""
-    t = log[['step', 'loss', 'grad_norm']
-            + [c for c in log if c.startswith('max_logit_')]].copy()
+    """Per step: loss and pre-clip norm; at the statistics steps the
+    largest logit and the mean attention entropy per layer, their extremes
+    over layers (max_logit, min_entropy) and log_z; at the probe steps the
+    update RMS per module (rms_*)."""
+    keep = [c for c in log if c == 'log_z' or c.startswith((
+        'max_logit_', 'entropy_', 'rms_'))]
+    t = log[['step', 'loss', 'grad_norm'] + keep].copy()
     t['max_logit'] = log.filter(like='max_logit_').max(axis=1)
+    t['min_entropy'] = log.filter(like='entropy_').min(axis=1)
     return t.assign(variant=variant, lr=lr, seed=seed)
 
 #@save
-def _inst_run(cfg, variant, lr, seed, steps, tau, shards, val_fn, device):
-    """One T1 arm in this process."""
-    arch = cfg.arch._replace(qk_norm=variant == 'qk_norm' or cfg.arch.qk_norm)
-    extra = (dict(softcap=INST_SOFTCAP, backend='math')
-             if variant == 'softcap' else {})
-    c = _inst_config(cfg, lr, seed, steps, arch=arch)
-    torch.manual_seed(seed)
-    model = d2l.PackedGPT.from_arch(arch, **extra).to(device)
-    stream = d2l.PackedStream(shards, arch.T, c.global_batch,
+def collapse_crossings(inst, lr, start, seed=0):
+    """The steps at which the baseline arm at (lr, seed) of a T1 grid
+    crosses each threshold, against its QK-norm twin (same rate, seed and
+    batches): largest logit above INST_LOGIT_ALARM; smallest entropy below
+    0.1 nats; gradient norm departs (d2l.departure of the paired log ratio
+    from start); loss 0.1 nats above the twin's (20-step rolling means, or
+    the first non-finite step if that comes first: a diverged arm stops).
+    None: never."""
+    tr = inst.traces[(inst.traces['lr'] == lr) & (inst.traces['seed'] == seed)]
+    run, twin = (tr[tr['variant'] == v].set_index('step')
+                 for v in ('none', 'qk_norm'))
+
+    def first(mask):  # the first step at which mask holds, or None
+        return int(mask.idxmax()) if mask.any() else None
+    t = inst.table
+    bad = t.loc[(t['variant'] == 'none') & (t['lr'] == lr)
+                & (t['seed'] == seed), 'first_nonfinite'].dropna()
+    loss = [int(s) for s in bad] + [s for s in [first(
+        run['loss'].sub(twin['loss']).rolling(20).mean() > 0.1)]
+        if s is not None]
+    return {'largest logit > 1,000': first(run['max_logit']
+                                           > INST_LOGIT_ALARM),
+            'entropy < 0.1': first(run['min_entropy'] < 0.1),
+            'grad norm moves': d2l.departure(
+                np.log(run['grad_norm'] / twin['grad_norm']), start),
+            'loss 0.1 above QK-norm': min(loss) if loss else None}
+
+#@save
+def _inst_run(c, extra, variant, tau, shards, val_fn, device):
+    """One T1 arm (config c, PackedGPT options extra) in this process."""
+    torch.manual_seed(c.seed)
+    model = d2l.PackedGPT.from_arch(c.arch, **extra).to(device)
+    stream = d2l.PackedStream(shards, c.arch.T, c.global_batch,
                               seed=c.data_seed)
     hooks = [_qk_clip_hook(tau)] if variant == 'qk_clip' else []
-    return d2l.pretrain(model, stream, c, val_fn=val_fn, hooks=hooks)
+    log = d2l.pretrain(model, stream, c, val_fn=val_fn, hooks=hooks)
+    del model
+    torch._dynamo.reset()
+    d2l.lm_free()
+    return log
+
+#@save
+def _inst_kept(path, config, compute):
+    """One arm's (row, trace): read from path if a finished arm of the same
+    configuration is there (a restarted job resumes), else compute() and
+    write it there first. Either way the values have been through the
+    file, so a resumed job's result equals an uninterrupted one's."""
+    if os.path.exists(path):
+        kept = d2l._read_result(path, 'json-table')
+        if d2l._config_diff(config, d2l._stored_config(kept)) is None:
+            return kept.table.iloc[0].to_dict(), kept.traces
+    row, trace = compute()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    d2l._write_result(path, 'json-table', dict(
+        table=pd.DataFrame([row]), traces=trace), dict(config=config,
+                                                       label=''))
+    kept = d2l._read_result(path, 'json-table')
+    return kept.table.iloc[0].to_dict(), kept.traces
 
 #@save
 def _inst_t1(cfg, lrs, variant, seeds, steps, tau, device=None):
-    """The T1 grid of one variant, on one GPU (device: tests only)."""
+    """The T1 grid of one variant on one GPU (device: tests only), each arm
+    kept under _job_root()/inst-t1/<part>/ as it finishes; 'none' adds the
+    zero-layer reference (L = 0 at INST_ZERO_LR, seed 0, same schedule)."""
     if device is None and not torch.cuda.is_available():
         raise RuntimeError('the instability arms train on a GPU')
     device, shards = torch.device(device or 'cuda'), _train_shards(cfg)
-    val = _val_fn(dataclasses.replace(cfg, val_tokens=2 ** 20))
+    val = _val_fn(dataclasses.replace(cfg, val_tokens=INST_VAL_TOKENS))
+    folder = os.path.join(_job_root(), 'inst-t1', _INST_PARTS[variant])
+
+    def arm(lr, seed, L=None):
+        c, extra = _inst_arm(cfg, variant, lr, seed, steps, L)
+        config = d2l._jsonable(dict(
+            cfg=_cfg_json(c), variant=variant, model=extra,
+            recipe=_inst_recipe(), tau=tau if variant == 'qk_clip' else None))
+
+        def compute():
+            log = _inst_run(c, extra, variant, tau, shards, val, device)
+            return (_arm_summary(log, variant, lr, seed,
+                                 peak_end=c.steps - c.decay),
+                    _arm_trace(log, variant, lr, seed))
+        name = f'{"zero-layer" if L == 0 else variant}-{lr:g}-s{seed}'
+        return _inst_kept(os.path.join(folder, name + '.json.gz'), config,
+                          compute)
     rows, traces = [], []
     for lr in lrs:
         for seed in seeds:
-            log = _inst_run(cfg, variant, lr, seed, steps, tau, shards, val,
-                            device)
-            rows.append(_arm_summary(log, variant, lr, seed))
-            traces.append(_arm_trace(log, variant, lr, seed))
-            torch._dynamo.reset()
-            d2l.lm_free()
+            row, trace = arm(lr, seed)
+            rows.append(row)
+            traces.append(trace)
+    zero = (arm(INST_ZERO_LR, 0, L=0)[0]['val_loss'] if variant == 'none'
+            else math.nan)
     return InstabilityRuns(pd.DataFrame(rows), pd.concat(
-        traces, ignore_index=True), tau, '')
+        traces, ignore_index=True), tau, '', float(zero))
 
 #@save
 def _inst_t2(cfg, lrs, variants, steps, tau):
     """The T2 arms as torchrun jobs on every GPU, and the reference run's
     first steps as the baseline (same recipe at its own learning rate)."""
-    if 'softcap' in variants:
-        raise ValueError('the torchrun job has no softcap variant')
+    if set(variants) - {'none', 'qk_clip', 'qk_norm'}:
+        raise ValueError('the torchrun job runs the none, qk_clip and '
+                         'qk_norm variants only')
     base = _job_log('reference-run')
     base = base[(base['run'] == cfg.preset) & (base['step'] <= steps)]
     cfgs, jobs, extra, arms = [], [], [], []
@@ -1566,11 +1763,15 @@ def _inst_t2(cfg, lrs, variants, steps, tau):
 
 #@save
 def _merge_arms(parts):
+    """The variants' parts as one InstabilityRuns; the zero-layer loss
+    from the part that ran it ('none')."""
     runs = list(parts.values())
+    zero = [z for z in (getattr(r, 'zero_layer', None) for r in runs)
+            if z is not None and math.isfinite(z)]
     return InstabilityRuns(
         pd.concat([r.table for r in runs], ignore_index=True),
         pd.concat([r.traces for r in runs], ignore_index=True), runs[0].tau,
-        '')
+        '', zero[0] if zero else math.nan)
 
 #@save
 T1_STAND_IN_LR = 1.6e-2  # the T1 grid's rate shown while inst-t2 is pending
@@ -1592,29 +1793,41 @@ def _t1_stand_in(res):
     return InstabilityRuns(*out, res.tau, d2l._label_of(res))
 
 #@save
-def instability_arms(cfg, lrs, variants, seeds=(0,), steps=400, tau=None):
-    """Short runs of cfg at each learning rate, per variant ('none';
-    'qk_clip', QK-clip at tau after every step; 'qk_norm'; 'softcap',
-    attention logits capped at INST_SOFTCAP) and seed, warmup as cfg and a
-    constant rate after it: InstabilityRuns(table, traces, tau, label), one
-    table row per arm (final loss = mean of the last 20 steps, inf after a
-    non-finite loss), traces per step. The t1 preset trains here on one GPU
-    (a regeneration name per variant); the reference preset launches
-    torchrun jobs (inst-t2) and adds the reference run's first steps as the
-    baseline."""
+def instability_arms(cfg, lrs, variants, seeds=(0,), steps=None, tau=None):
+    """Runs of cfg at each learning rate, per variant and seed: 'none';
+    'qk_norm'; 'qk_clip' (QK-clip at tau after every step); 'softcap'
+    (attention logits capped at INST_SOFTCAP, the math backend); 'clip'
+    ('none' with gradient clipping at INST_CLIP); 'warmup' ('none' with a
+    warmup of INST_WARMUP of the run). steps=None: the preset's full
+    schedule (the t1 grid); else cfg's warmup and then a constant rate for
+    steps. InstabilityRuns(table, traces, tau, label, zero_layer): a table
+    row per arm (_arm_summary), traces per step and, for t1 with 'none',
+    the final validation loss of the zero-layer model at INST_ZERO_LR. The
+    t1 preset trains here on one GPU, one regeneration name per variant;
+    the reference preset launches torchrun jobs (inst-t2) and adds the
+    reference run's first steps as the baseline."""
+    if set(variants) - set(_INST_PARTS):
+        raise ValueError(f'unknown variants {set(variants) - set(_INST_PARTS)}'
+                         f'; the variants are {list(_INST_PARTS)}')
     if 'qk_clip' in variants and tau is None:  # tau comes from tau_rule
         raise ValueError('the qk_clip variant needs tau')
     config = dict(cfg=_cfg_json(cfg), lrs=list(lrs), variants=list(variants),
                   seeds=list(seeds), steps=steps, tau=tau)
     if cfg.preset == 't1':
+        config['recipe'] = _inst_recipe()
         parts = {_INST_PARTS[v]: (lambda v=v: _inst_t1(
             cfg, lrs, v, seeds, steps, tau), dict(config, variants=[v]))
             for v in variants}
         res = d2l._pretrain_merged(None, parts, _merge_arms, config)
-        return d2l._show_label(_as_tuple(InstabilityRuns, res, _INST_TABLES))
+        return d2l._show_label(_as_tuple(InstabilityRuns, res, _INST_TABLES,
+                                         dict(zero_layer=math.nan)))
+    if steps is None:
+        raise ValueError('the reference-preset arms run a given number of '
+                         'steps (the full schedule is the t1 grid)')
     res = d2l._pretrain_result('inst-t2', lambda: _inst_t2(
         cfg, lrs, variants, steps, tau), config, fallback='instability-t1')
-    res = _as_tuple(InstabilityRuns, res, _INST_TABLES)
+    res = _as_tuple(InstabilityRuns, res, _INST_TABLES,
+                    dict(zero_layer=math.nan))
     if res.label.startswith('T2 run pending') and len(res.table):
         res = _t1_stand_in(res)
     return d2l._show_label(res)
@@ -1625,92 +1838,417 @@ def instability_arms(cfg, lrs, variants, seeds=(0,), steps=400, tau=None):
 #@save
 SpikeReplay = collections.namedtuple('SpikeReplay',
                                      ['table', 'traces', 'floor', 'label'])
+NgramFlags = collections.namedtuple('NgramFlags', ['table', 'windows'])
+
+#@save
+SPIKE_STEPS = 150  # each replay's length from its state
+SPIKE_WINDOW = 100  # steps after the bad batch that the statistics read
+SPIKE_CLIP = 1.0  # the clip twins' threshold, on from the replay's state
+SPIKE_LATE = {1297: ('lm-r2t1-s1297-state-v1', 0.95)}  # committed states:
+# step: (key, its beta2); t1-runs seed 0 at the end of its plateau
+SPIKE_STATS = 2  # version of the statistics: bump when they change
+
+#@save
+_SPIKE_TABLES = dict(  # the columns of a SpikeReplay's tables
+    table=['beta2', 'state', 'bad_step', 'batch', 'k', 'norm', 'median',
+           'norm_ratio', 'peak', 'recover', 'total', 'norm_clip',
+           'peak_clip', 'recover_clip', 'total_clip', 'clipped_before',
+           'clip_ratio', 'clip_predicted', 'drift'],
+    traces=['beta2', 'state', 'bad_step', 'batch', 'k', 'arm', 'step',
+            'loss', 'grad_norm', 'clipped'])
+
+#@save
+_SpikeArm = collections.namedtuple('_SpikeArm',
+                                   'beta2 state bad_step batch k clip')
 
 #@save
 class _BadBatchStream(d2l.PackedStream):
     """A PackedStream whose batch of log step bad_step (1-based, as the log
-    counts) is make_bad_batch(kind); skipping that step removes it, and
-    bad_step=None gives the plain stream."""
+    counts; clip_from=bad_step - 1 clips that step) is make_bad_batch(kind,
+    k, period), drawn from the data batch of log step source (its seed and
+    n-gram pool; None: bad_step itself), so that a bad batch put at another
+    step is the same one; skipping that step removes it, and bad_step=None
+    gives the plain stream. make_bad_batch sees this rank's rows only, so
+    'ngram' (k rows of one n-gram) is refused under more than one rank."""
     def __init__(self, shards, seq_len, global_batch, bad_step, kind, vocab,
-                 **kw):
+                 k=None, period=None, source=None, **kw):
         super().__init__(shards, seq_len, global_batch, **kw)
+        if kind not in ('random', 'repeat', 'ngram'):
+            raise ValueError(f'unknown bad-batch kind {kind!r}')
+        if kind == 'ngram' and not (
+                isinstance(period, int) and 1 <= period <= 13
+                and (k is None or 1 <= k <= global_batch)):
+            raise ValueError(f'ngram needs 1 <= period <= 13 and 1 <= k <= '
+                             f'{global_batch} (k=None: all rows); got '
+                             f'k={k}, period={period}')
+        if kind == 'ngram' and self.world > 1:
+            raise ValueError("'ngram' replaces k of this rank's rows; one "
+                             'rank only')
+        if source is not None and not (isinstance(source, int)
+                                       and source >= 1):
+            raise ValueError(f'source is a log step >= 1, got {source!r}')
         self.bad_step, self.kind, self.vocab = bad_step, kind, vocab
+        self.k, self.period, self.source = k, period, source
 
     def batch(self, step):
         b = super().batch(step)
         if (self.bad_step is not None
                 and self.physical_index(step) == self.bad_step - 1):
-            b = d2l.make_bad_batch(b, self.kind, self.vocab,
-                                   seed=self.bad_step)
+            src = self.source or self.bad_step
+            pool = (b if src == self.bad_step else self._unskipped(src - 1))
+            b = d2l.make_bad_batch(b, self.kind, self.vocab, seed=src,
+                                   k=self.k, period=self.period,
+                                   pool=pool['input_ids'])
         return b
 
+    def _unskipped(self, physical):
+        """The data batch of a physical step, the skip set aside."""
+        skipped, self.skipped = self.skipped, ()
+        try:
+            return super().batch(physical)
+        finally:
+            self.skipped = skipped
+
 #@save
-def _spike(cfg, bad_step, kind, replays, steps=400, window=(200, 400),
-           device=None):
-    """The spiked run (full states kept at the replays' starts), each
-    replay (from a state of the spiked run, skip set in log steps, clip),
-    and two same-state replays without the bad batch (the floor); device:
-    tests only."""
+def spike_excess(bad, ref, bad_step, floor, window=SPIKE_WINDOW):
+    """The excess loss of a bad-batch replay over its skip replay (losses
+    by log step) on the window steps after bad_step, the bad step itself
+    excluded: its peak, recover (the excess was at least 2 * floor for the
+    last time this many steps after the bad batch: 0 if never, None if
+    still at the end of the window) and its sum. A replay that stopped
+    (non-finite loss) gives inf, None, inf."""
+    e = (bad - ref).loc[bad_step + 1:bad_step + window]
+    if len(e) < window or not np.isfinite(e.to_numpy(float)).all():
+        return dict(peak=math.inf, recover=None, total=math.inf)
+    above = e.index[e.abs() >= 2 * floor]
+    recover = (0 if not len(above) else None if above[-1] >= bad_step
+               + window else int(above[-1] - bad_step))
+    return dict(peak=float(e.max()), recover=recover, total=float(e.sum()))
+
+#@save
+def _spike_arms(arms, global_batch, steps=SPIKE_STEPS, window=SPIKE_WINDOW,
+                late=None, warmup=0):
+    """The page's arm table as _SpikeArms, each (beta2, state, bad_step,
+    batch, k, clip twin), checked: 'random' replaces all global_batch rows,
+    'ngram' k of them; 0 < state < bad_step and the window fits into the
+    replay; the state at or after the end of warmup (so every replay runs
+    at the constant peak rate); a committed state (late) only at its own
+    beta2; no arm twice."""
+    late = SPIKE_LATE if late is None else late
+    out = []
+    for a in arms:
+        if len(a) != 6:
+            raise ValueError(f'an arm is (beta2, state, bad_step, batch, k, '
+                             f'clip twin), got {a!r}')
+        a = _SpikeArm(*a)
+        ok = (0 < a.beta2 < 1 and isinstance(a.state, int)
+              and isinstance(a.bad_step, int) and isinstance(a.k, int)
+              and isinstance(a.clip, bool) and 0 < a.state < a.bad_step
+              and a.bad_step + window <= a.state + steps
+              and (a.batch, a.k) in (('random', global_batch),) + tuple(
+                  ('ngram', k) for k in range(1, global_batch + 1)))
+        if not ok:
+            raise ValueError(f'bad arm {tuple(a)}: need 0 < beta2 < 1, '
+                             f'0 < state < bad_step <= state + {steps} - '
+                             f'{window}, batch random (k = {global_batch}) '
+                             f'or ngram (1 <= k <= {global_batch}), clip '
+                             'twin True or False')
+        if a.state < warmup:
+            raise ValueError(f'arm {tuple(a)}: the replay must start after '
+                             f'the {warmup} warmup steps (Adam\'s kick '
+                             'scales with the learning rate)')
+        if a.state in late and a.beta2 != late[a.state][1]:
+            raise ValueError(f'the committed state at step {a.state} has '
+                             f'beta2 {late[a.state][1]}, not {a.beta2}')
+        if any(b[:5] == a[:5] for b in out):
+            raise ValueError(f'arm {tuple(a)} twice')
+        out.append(a)
+    if not out:
+        raise ValueError('no arms')
+    return out
+
+#@save
+def _spike_recipe():
+    """The library constants a stored spike result was computed with."""
+    return dict(steps=SPIKE_STEPS, window=SPIKE_WINDOW, clip=SPIKE_CLIP,
+                late=[[s, key, b] for s, (key, b) in sorted(
+                    SPIKE_LATE.items())], stats=SPIKE_STATS)
+
+#@save
+def _spike_state_file(key):
+    """A committed state: its file (key may be a path: tests only)."""
+    if os.path.exists(key):
+        return key
+    with d2l._quiet():
+        return d2l.download_keyed(key)
+
+#@save
+def _spike(cfg, arms, period, source, steps=SPIKE_STEPS, window=SPIKE_WINDOW,
+           late=None, device=None):
+    """The paired replays behind spike_replay (device, steps, window and
+    late: tests only). Every replay starts from a full state of the same
+    run: at its state's step it has the state's weights, Adam moments and
+    data position, and it sees the same batches as its skip replay except
+    the bad one. The skip replay takes the ordinary batch at the bad step,
+    so that every later step sees identical data in both; skipping the
+    step in the stream (PaLM) would shift every later batch by one and put
+    batch-to-batch noise into the difference."""
     import shutil
+    late = SPIKE_LATE if late is None else late
+    arms = _spike_arms(arms, cfg.global_batch, steps, window, late,
+                       cfg.warmup)
+    if cfg.clip is not None or cfg.clip_from is not None:
+        raise ValueError('the states run with clipping off and the clip '
+                         'twins switch it on themselves: pass clip=None '
+                         f'(got clip={cfg.clip}, clip_from={cfg.clip_from})')
     if device is None and not torch.cuda.is_available():
         raise RuntimeError('the spike protocol trains on a GPU')
     device = device or 'cuda'
-    shards, folder = _train_shards(cfg), os.path.join(_job_root(), 'spike')
-    shutil.rmtree(folder, ignore_errors=True)  # this driver's own states
-    starts = tuple(sorted({s for _, s, _, _ in replays if s}))
-    base = _inst_config(cfg, cfg.peak_lr, cfg.seed, steps, stats_every=0)
+    shards = _train_shards(cfg)  # the states: only this driver's folder
+    folder = os.path.join(_job_root(), 'spike', 'v2')
+    shutil.rmtree(folder, ignore_errors=True)
 
-    def run(start=0, skip=(), clip=None, bad=bad_step, save=False):
-        c = dataclasses.replace(base, clip=base.clip if clip is None
-                                else clip, state_steps=starts if save
-                                else (), out_dir=folder if save else None)
+    def out(beta2):
+        return os.path.join(folder, f'beta2-{beta2:g}')
+
+    def state_file(beta2, step):
+        if step not in late:
+            return _state_path(out(beta2), step)
+        path = _spike_state_file(late[step][0])
+        state = torch.load(path, map_location='cpu', weights_only=False)
+        betas = tuple(state['optim']['param_groups'][0]['betas'])
+        if (state['step'] != step or state['stream']['seed'] != cfg.data_seed
+                or betas != (cfg.betas[0], beta2)):
+            raise ValueError(f'{late[step][0]}: step {state["step"]}, data '
+                             f'seed {state["stream"]["seed"]}, betas '
+                             f'{betas}; the arms need step {step}, data seed '
+                             f'{cfg.data_seed}, betas {(cfg.betas[0], beta2)}')
+        return path
+
+    def run(beta2, start, bad=None, batch='random', k=None, clip=False,
+            save=()):
+        c = _inst_config(
+            cfg, cfg.peak_lr, cfg.seed, max(save) if save else start + steps,
+            stats_every=0, betas=(cfg.betas[0], beta2),
+            clip=SPIKE_CLIP if clip else None,
+            clip_from=start if clip else None, state_steps=tuple(save),
+            out_dir=out(beta2) if save else None)
         torch.manual_seed(cfg.seed)
         model = d2l.PackedGPT.from_arch(cfg.arch).to(device)
+        ngram = batch == 'ngram'
         stream = _BadBatchStream(shards, cfg.arch.T, cfg.global_batch, bad,
-                                 kind, cfg.arch.vocab, seed=cfg.data_seed,
-                                 skip=[s - 1 for s in skip])
-        state = None
-        if start:
-            state = torch.load(_state_path(folder, start), map_location='cpu',
-                               weights_only=False)
-            state['stream'] = dict(state['stream'], skip=[s - 1 for s in skip])
-        log = d2l.pretrain(model, stream, c, resume=state)
+                                 batch, cfg.arch.vocab, k=k if ngram else None,
+                                 period=period if ngram else None,
+                                 source=source, seed=cfg.data_seed)
+        log = d2l.pretrain(model, stream, c, resume=state_file(beta2, start)
+                           if start else None)
+        del model
         torch._dynamo.reset()
-        return log.set_index('step')
-    spiked = run(save=True)
-    logs = {'spiked run': spiked}
-    for label, start, skip, clip in replays:
-        logs[label] = run(start, skip, clip)
-    floor = (run(starts[-1], bad=None)['loss']
-             - run(starts[-1], bad=None)['loss']).abs().max()
-    rows, traces = [], []
-    for label, g in logs.items():
-        near = g.loc[bad_step - 5:bad_step + 5, 'grad_norm']
-        after = (g['loss'] - spiked['loss']).loc[bad_step + 1:steps]
-        rows.append(dict(run=label, loss_at_bad=g['loss'].get(bad_step),
-                         peak_grad_norm=near.max(),
-                         max_dloss=math.nan if g is spiked
-                         else after.abs().max()))
-        traces.append(g.loc[window[0]:window[1], ['loss', 'grad_norm']]
-                      .reset_index().assign(run=label))
-    return SpikeReplay(pd.DataFrame(rows), pd.concat(traces, ignore_index=
-                       True), float(floor), '')
+        d2l.lm_free()
+        return log.set_index('step')[['loss', 'grad_norm', 'clipped']]
+    for beta2 in dict.fromkeys(a.beta2 for a in arms):  # the states
+        made = sorted({a.state for a in arms
+                       if a.beta2 == beta2 and a.state not in late})
+        if made:
+            run(beta2, 0, save=made)
+    logs, traces = {}, []
+
+    def keep(log, a, arm):
+        logs[a[:5] if arm.startswith('bad') else a[:2], arm] = log
+        traces.append(log.reset_index().assign(
+            beta2=a.beta2, state=a.state, arm=arm,
+            bad_step=a.bad_step if arm.startswith('bad') else 0,
+            batch=a.batch if arm.startswith('bad') else 'none',
+            k=a.k if arm.startswith('bad') else 0))
+    for beta2, state in dict.fromkeys(a[:2] for a in arms):
+        group = [a for a in arms if a[:2] == (beta2, state)]
+        keep(run(beta2, state), group[0], 'skip')
+        if any(a.clip for a in group):
+            keep(run(beta2, state, clip=True), group[0], 'skip+clip')
+        for a in group:
+            keep(run(beta2, state, a.bad_step, a.batch, a.k), a, 'bad')
+            if a.clip:
+                keep(run(beta2, state, a.bad_step, a.batch, a.k, clip=True),
+                     a, 'bad+clip')
+    first = arms[0]
+    keep(run(first.beta2, first.state), first, 'floor')
+
+    def gap(x, y, lo, hi):  # largest |loss difference| on steps lo..hi
+        return float((x['loss'] - y['loss']).loc[lo:hi].abs().max())
+    drift = {}  # every arm is a same-state replay before its bad step
+    for a in arms:
+        pre = [(logs[a[:5], 'bad'], logs[a[:2], 'skip'])] + (
+            [(logs[a[:5], 'bad+clip'], logs[a[:2], 'skip+clip'])]
+            if a.clip else [])
+        drift[a] = max([0.0] + [g for x, y in pre for g in [
+            gap(x, y, a.state + 1, a.bad_step - 1)] if not math.isnan(g)])
+    floor = max([gap(logs[first[:2], 'floor'], logs[first[:2], 'skip'],
+                     first.bad_step + 1, first.bad_step + window)]
+                + list(drift.values()))
+    rows = []
+    for a in arms:
+        ref, bad = logs[a[:2], 'skip'], logs[a[:5], 'bad']
+        row = dict(a._asdict(), norm=float(bad['grad_norm'][a.bad_step]),
+                   drift=drift[a],
+                   median=float(ref['grad_norm'].median()),
+                   **spike_excess(bad['loss'], ref['loss'], a.bad_step, floor,
+                                  window))
+        row['norm_ratio'] = row['norm'] / row['median']
+        if a.clip:
+            cref, cbad = logs[a[:2], 'skip+clip'], logs[a[:5], 'bad+clip']
+            ex = spike_excess(cbad['loss'], cref['loss'], a.bad_step, floor,
+                              window)
+            norm = float(cbad['grad_norm'][a.bad_step])
+            row.update(norm_clip=norm, peak_clip=ex['peak'],
+                       recover_clip=ex['recover'], total_clip=ex['total'],
+                       clipped_before=int(cbad['clipped'].loc[
+                           a.state + 1:a.bad_step - 1].sum()),
+                       clip_ratio=ex['peak'] / row['peak'],
+                       clip_predicted=min(1.0, SPIKE_CLIP / norm))
+        rows.append(row)
+    shutil.rmtree(folder, ignore_errors=True)  # the states served their runs
+    try:  # spike/ itself only if nothing else is in it
+        os.rmdir(os.path.dirname(folder))
+    except OSError:
+        pass
+    return SpikeReplay(
+        pd.DataFrame(rows).reindex(columns=_SPIKE_TABLES['table']),
+        pd.concat(traces, ignore_index=True)[_SPIKE_TABLES['traces']], floor,
+        '')
 
 #@save
-def spike_replay(cfg, bad_step=300, kind='random', replays=()):
-    """The spike protocol at cfg: a bad batch (make_bad_batch(kind)) at log
-    step bad_step of a run with a constant rate after warmup, then each
-    replay (label, from_step, skipped steps, clip or None) from the spiked
-    run's state at from_step (0: from the start), and the replay floor (two
-    same-state replays without the bad batch): SpikeReplay(table, traces,
-    floor, label)."""
-    config = dict(cfg=_cfg_json(cfg), bad_step=bad_step, kind=kind,
-                  replays=d2l._jsonable(replays))
+def spike_replay(cfg, arms, period=7, source=300):
+    """One bad batch under Adam at cfg (the t1 preset, clipping off). For
+    each beta2 of the arms one run keeps full states at the arms' states
+    (a state in SPIKE_LATE is the committed one). Each arm (beta2, state,
+    bad_step, batch, k, clip twin) is a replay of SPIKE_STEPS steps from
+    its state with the bad batch at bad_step ('random': all rows; 'ngram':
+    k rows of one n-gram of period tokens), built from the data batch of
+    log step source so that every state sees the same one; its clip twin
+    clips at SPIKE_CLIP from the state on. Each state's skip replay (with
+    clipping too where an arm has a twin) is the reference. The floor is
+    the largest |loss difference| between replays of one state without a
+    bad batch: a second skip replay of the first arm's state over its
+    window, and every arm (and twin) against its skip replay before its
+    bad step (a row's own part: drift). SpikeReplay(table, traces, floor,
+    label), one table row per arm (spike_excess's statistics, the
+    pre-clip norm at the bad step over the skip replay's median)."""
+    arms = tuple(tuple(a) for a in arms)
+    _spike_arms(arms, cfg.global_batch,  # refused before anything else
+                warmup=cfg.warmup)
+    config = dict(cfg=_cfg_json(cfg), arms=d2l._jsonable(arms),
+                  period=period, source=source, recipe=_spike_recipe())
     res = d2l._pretrain_result('spike-replay', lambda: _spike(
-        cfg, bad_step, kind, replays), config)
-    return d2l._show_label(_as_tuple(SpikeReplay, res, dict(
-        table=['run', 'loss_at_bad', 'peak_grad_norm', 'max_dloss'],
-        traces=['step', 'loss', 'grad_norm', 'run']), dict(floor=math.nan)))
+        cfg, arms, period, source), config)
+    return d2l._show_label(_as_tuple(SpikeReplay, res, _SPIKE_TABLES,
+                                     dict(floor=math.nan)))
+
+#@save
+def _spike_job():
+    """The page's call (cell 27) for tools/lm_regen.py."""
+    return dict(cfg=d2l.r2_config('t1', clip=None), arms=(
+        (0.95, 250, 300, 'random', 64, True),
+        (0.95, 250, 300, 'ngram', 1, True),
+        (0.95, 250, 300, 'ngram', 8, True),
+        (0.95, 250, 300, 'ngram', 64, True),
+        (0.999, 250, 300, 'random', 64, True),
+        (0.999, 250, 300, 'ngram', 8, True),
+        (0.95, 76, 80, 'ngram', 8, False),
+        (0.95, 1297, 1301, 'ngram', 8, False)), period=7, source=300)
+
+#@save
+def _spike_label(batch, k):
+    return 'random' if batch == 'random' else f'n-gram ×{k}'
+
+#@save
+def _spike_curve(spike, r, arm, window=SPIKE_WINDOW):
+    """|Excess loss| of table row r's arm ('bad' or 'bad+clip') over its
+    skip replay, by steps after the bad batch."""
+    tr = spike.traces
+    at = (tr['beta2'] == r.beta2) & (tr['state'] == r.state)
+    bad = tr[at & (tr['arm'] == arm) & (tr['batch'] == r.batch)
+             & (tr['k'] == r.k)].set_index('step')['loss']
+    ref = tr[at & (tr['arm'] == ('skip+clip' if arm == 'bad+clip' else
+                                 'skip'))].set_index('step')['loss']
+    e = (bad - ref).loc[r.bad_step + 1:r.bad_step + window].abs()
+    return (e.index - r.bad_step).tolist(), e.where(e > 0).tolist()
+
+#@save
+def plot_spike(spike, figsize=(6.5, 3)):
+    """|Excess loss| over the skip replay against steps after the bad batch
+    (log y): every arm at the first arm's beta2 and state, the first arm's
+    clip twin dashed, the first arm's batch at the other beta2s from the
+    same state, and the replay floor. Nothing is drawn for an empty
+    table."""
+    t = spike.table
+    if not len(t):
+        return
+    a = t.iloc[0]
+    same = t[(t['state'] == a.state) & ((t['beta2'] == a.beta2) | (
+        (t['batch'] == a.batch) & (t['k'] == a.k)))]
+    X, Y, legend, fmts = [], [], [], []
+    for i, r in enumerate(same.itertuples()):
+        x, y = _spike_curve(spike, r, 'bad')
+        X.append(x), Y.append(y), fmts.append(f'C{i}-')
+        legend.append(f'β2 {r.beta2:g}, {_spike_label(r.batch, r.k)}')
+    if not pd.isna(a.peak_clip):
+        x, y = _spike_curve(spike, a, 'bad+clip')
+        X.append(x), Y.append(y), fmts.append('C0--')
+        legend.append(f'β2 {a.beta2:g}, {_spike_label(a.batch, a.k)}, '
+                      f'clip {SPIKE_CLIP:.1f}')
+    X.append([1, SPIKE_WINDOW]), Y.append([spike.floor] * 2)
+    fmts.append('k:'), legend.append('replay floor')
+    d2l.use_svg_display()
+    fig, ax = d2l.plt.subplots(figsize=figsize)
+    d2l.plot(X, Y, 'steps after the bad batch', '|excess loss| (nats)',
+             legend=legend, yscale='log', fmts=fmts, axes=ax,
+             legend_loc='outside')
+    fig.tight_layout()
+
+#@save
+def repeated_ngram_flags(shards, T=1024, min_repeats=32, max_n=13,
+                         tokenizer=None, chars=50):
+    """OLMo 2's repeated n-gram rule on the inputs of the training windows
+    (T tokens at offsets i * T, as PackedStream cuts them): a window is
+    flagged if it holds min_repeats or more consecutive repeats of one
+    n-gram of 1 to max_n tokens. Per period n, x[i] == x[i + n] at
+    (min_repeats - 1) * n consecutive positions is such a run; a running
+    sum finds it in every window at once. One table row per flagged
+    window: its smallest such period, the repeats of its longest run at
+    that period, where the run starts, and the run's first chars decoded
+    characters, quoted (tokenizer: the reference one if None)."""
+    import json
+    windows = (shards.n_tokens - 1) // T
+    x = shards.read(0, windows * T).reshape(windows, T)
+    dtype = np.int16 if T < 2 ** 15 else np.int32
+    period = np.zeros(windows, np.int64)
+    for n in range(1, max_n + 1):
+        L = (min_repeats - 1) * n
+        if L > T - n:
+            break
+        run = np.zeros((windows, T - n + 1), dtype)
+        np.cumsum(x[:, :-n] == x[:, n:], axis=1, dtype=dtype, out=run[:, 1:])
+        hit = ((run[:, L:] - run[:, :-L]) == L).any(1)
+        period[hit & (period == 0)] = n
+    rows = []
+    for w in np.flatnonzero(period):
+        n = int(period[w])
+        same = np.concatenate([[0], x[w, :-n] == x[w, n:], [0]]).astype(int)
+        edges = np.flatnonzero(np.diff(same))  # run starts, ends in pairs
+        starts, ends = edges[::2], edges[1::2]
+        j = int(np.argmax(ends - starts))
+        rows.append(dict(window=int(w), period=n,
+                         repeats=int((ends[j] - starts[j]) // n + 1),
+                         start=int(starts[j]),
+                         ids=x[w, starts[j]:ends[j] + n].tolist()))
+    if rows and tokenizer is None:
+        with d2l._quiet():
+            tokenizer = d2l.r2_tokenizer()
+    for r in rows:
+        r['text'] = json.dumps(tokenizer.decode(r.pop('ids'))[:chars],
+                               ensure_ascii=False)
+    return NgramFlags(pd.DataFrame(rows, columns=[
+        'window', 'period', 'repeats', 'start', 'text']), windows)
 ```
 
 ```{.python .input #reference-model-lib-inst-jobs}
@@ -1722,7 +2260,294 @@ def _inst_t1_job():
     t1 = _job_log('t1-runs')
     return dict(cfg=d2l.r2_config('t1', clip=None),
                 lrs=(1e-3, 2e-3, 4e-3, 8e-3, 1.6e-2, 3.2e-2),
-                variants=('none', 'qk_clip', 'qk_norm', 'softcap'),
-                seeds=(0, 1), steps=400,
-                tau=d2l.tau_rule(t1[t1['seed'] == 0], 76, 400))
+                variants=('none', 'qk_norm', 'qk_clip', 'softcap', 'clip',
+                          'warmup'),
+                seeds=(0, 1), tau=d2l.tau_rule(t1[t1['seed'] == 0], 76, 400))
+```
+
+```{.python .input #reference-model-lib-size-transfer}
+%%tab pytorch
+#@save
+SizeTransfer = collections.namedtuple(
+    'SizeTransfer', ['table', 'traces', 'fit', 'gate', 'registered',
+                     'label'])
+
+#@save
+XFER_PILOT = dict(shapes=('t1', 'ladder-88m'), lrs=(4e-3, 8e-3))  # the gate
+XFER_LEVEL = 0.95  # the prediction interval and the slope's interval
+XFER_STATS = 2  # version of the run statistics: bump when they change
+
+#@save
+_XFER_TABLES = dict(  # the columns of a SizeTransfer's tables
+    table=['shape', 'N', 'lr', 'seed', 'logit', 'loss', 'first_nonfinite',
+           'finished'],
+    traces=['step', 'loss', 'max_logit', 'shape', 'lr', 'seed'],
+    fit=['lr', 'slope', 'slope_hw', 'intercept', 'predicted', 'lo', 'hi'])
+
+#@save
+def t_quantile(dof, level=0.95):
+    """The two-sided level quantile of Student's t with dof degrees of
+    freedom."""
+    if level == 0.95 and 1 <= dof <= len(d2l._T975):
+        return d2l._T975[dof - 1]
+    from scipy import stats
+    return float(stats.t.ppf((1 + level) / 2, dof))
+
+#@save
+def _non_embedding(arch):
+    """The parameters of a PackedGPT of arch without its embedding (and
+    head, if untied), counted on the meta device."""
+    with torch.device('meta'):
+        model = d2l.PackedGPT.from_arch(arch)
+    P = sum(p.numel() for p in model.parameters())
+    return P - arch.vocab * arch.d * (1 if arch.tie else 2)
+
+#@save
+def _xfer_config(shape, lr, seed, steps):
+    """One size-transfer run: shape's architecture at t1's T = 1,024 on the
+    T1 grid's baseline recipe (t1's 64 sequences, warmup 76, z-loss and
+    weight decay; clipping off), then a constant rate for the rest of
+    steps; statistics every INST_STATS_EVERY steps, no validation, nothing
+    saved. The seed sets the data order too, so every shape at a seed sees
+    the same batches."""
+    base = d2l.r2_config('t1', clip=None)
+    arch = d2l.r2_config(shape).arch._replace(T=base.arch.T)
+    return _inst_config(dataclasses.replace(base, preset=shape, arch=arch),
+                        lr, seed, steps, data_seed=seed)
+
+#@save
+def _xfer_recipe():
+    """The library constants a stored size transfer was computed with."""
+    return dict(pilot=d2l._jsonable(XFER_PILOT), level=XFER_LEVEL,
+                stats_every=INST_STATS_EVERY, stats=XFER_STATS)
+
+#@save
+def _xfer_path(shape, lr, seed):
+    """Where one finished size-transfer run is kept (a restarted job
+    reads it instead of training again)."""
+    return os.path.join(_job_root(), 'size-xfer',
+                        f'{shape}-{lr:g}-s{seed}.json.gz')
+
+#@save
+def _xfer_run(shape, lr, seed, steps, shards, device):
+    """One run's (row, trace), kept at _xfer_path: the largest attention
+    logit at the last step (over layers; NaN if the loss went non-finite),
+    the final loss (mean of the last 20 steps; inf after a non-finite
+    loss), the first non-finite step, when the run finished (UTC; the
+    stored order of prediction and held-out runs), and the trace at the
+    statistics steps."""
+    c = _xfer_config(shape, lr, seed, steps)
+    config = d2l._jsonable(dict(cfg=_cfg_json(c), recipe=_xfer_recipe()))
+
+    def compute():
+        log = _inst_run(c, {}, 'none', None, shards, None, device)
+        s = _arm_summary(log, 'none', lr, seed)
+        last = log.loc[log['step'] == steps].filter(like='max_logit_')
+        logit = (float(last.max(axis=1).iloc[0]) if len(last)
+                 and s['first_nonfinite'] is None else math.nan)
+        row = dict(shape=shape, N=_non_embedding(c.arch), lr=lr, seed=seed,
+                   logit=logit, loss=s['final_loss'],
+                   first_nonfinite=s['first_nonfinite'],
+                   finished=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
+        tr = _arm_trace(log, 'none', lr, seed)
+        tr = tr.loc[tr['max_logit'].notna(), ['step', 'loss', 'max_logit']]
+        return row, tr.assign(shape=shape, lr=lr, seed=seed).reset_index(
+            drop=True)
+    return _inst_kept(_xfer_path(shape, lr, seed), config, compute)
+
+#@save
+def _xfer_above(table, lr, seed):
+    """Whether the larger pilot shape is above the smaller one at lr and
+    seed: its largest logit is higher, or it diverged (a non-finite loss)
+    while the smaller shape did not, the trend in its strongest form. A
+    missing run, a diverged smaller shape or a non-finite logit of a run
+    that did not diverge counts against."""
+    small, large = XFER_PILOT['shapes']
+    t = table.set_index(['shape', 'lr', 'seed'])
+    if (small, lr, seed) not in t.index or (large, lr, seed) not in t.index:
+        return False
+    a, b = t.loc[(small, lr, seed)], t.loc[(large, lr, seed)]
+    if pd.notna(a['first_nonfinite']):
+        return False
+    if pd.notna(b['first_nonfinite']):
+        return True
+    return bool(b['logit'] > a['logit'])  # NaN counts against
+
+#@save
+def _xfer_gate(table, seeds):
+    """The pilot's pre-registered rule: 'go' if at each of XFER_PILOT's
+    rates and for every seed the larger pilot shape is above the smaller
+    one (_xfer_above; the seeds agree on the order); else 'no-go'."""
+    return 'go' if all(_xfer_above(table, lr, s) for lr in XFER_PILOT['lrs']
+                       for s in seeds) else 'no-go'
+
+#@save
+def diverged_note(runs):
+    """'k of n runs diverged (first: shape seed s, step j)' for the runs
+    (rows of a size transfer's table) with a non-finite loss, '' if none."""
+    d = runs[runs['first_nonfinite'].notna()].sort_values('first_nonfinite')
+    if not len(d):
+        return ''
+    r = d.iloc[0]
+    return (f'{len(d)} of {len(runs)} runs diverged (first: {r["shape"]} '
+            f'seed {r["seed"]}, step {int(r["first_nonfinite"])})')
+
+#@save
+def _xfer_register(fit, held):
+    """Write the prediction (fit, at the held-out shape) with its UTC time
+    to _job_root()/size-xfer/prediction.json before the first run of the
+    held-out shape; a restarted job finds it and checks it against fit
+    (the kept runs give the same fit). Refused if a held-out run is kept
+    without a prediction (it would have run first). Returns the time."""
+    path = os.path.join(_job_root(), 'size-xfer', 'prediction.json')
+    if os.path.exists(path):
+        with open(path) as f:
+            doc = json.load(f)
+        stored = pd.DataFrame(doc['fit'])[fit.columns].to_numpy(float)
+        if stored.shape != fit.shape or not np.allclose(
+                stored, fit.to_numpy(float), rtol=1e-12, equal_nan=True):
+            raise ValueError(f'{path} differs from the fit of the kept runs')
+        return doc['registered']
+    if any(os.path.exists(p) for p in held):
+        raise RuntimeError('a held-out run is kept without a prediction: '
+                           'the prediction is written before it runs')
+    doc = dict(registered=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+               fit=fit.to_dict('list'))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path + '.tmp', 'w') as f:
+        json.dump(doc, f, indent=1)
+    os.replace(path + '.tmp', path)
+    print(f'size transfer: prediction registered {doc["registered"]}\n'
+          f'{fit.to_string(index=False)}', flush=True)  # the job's log
+    return doc['registered']
+
+#@save
+def _size_transfer(shapes, lrs, seeds, steps, full, device=None):
+    """The pilot (XFER_PILOT's runs and the gate) or, if full, every run:
+    the pilot's runs first (a no-go stops the job), then every shape but
+    the last, the fit (logit_fit) at the last shape's N registered
+    (_xfer_register), and only then the last shape. device: tests only."""
+    if device is None and not torch.cuda.is_available():
+        raise RuntimeError('the size-transfer runs train on a GPU')
+    device = torch.device(device or 'cuda')
+    shards = _train_shards(_xfer_config(shapes[0], lrs[0], seeds[0], steps))
+    done = {}
+
+    def run(shapes_, lrs_):
+        for shape in shapes_:
+            for lr in lrs_:
+                for seed in seeds:
+                    if (shape, lr, seed) not in done:
+                        done[shape, lr, seed] = _xfer_run(
+                            shape, lr, seed, steps, shards, device)
+
+    def result(fit, gate, registered=None):
+        keys = [(s, lr, seed) for s in shapes for lr in lrs for seed in seeds
+                if (s, lr, seed) in done]
+        return SizeTransfer(pd.DataFrame([done[k][0] for k in keys]),
+                            pd.concat([done[k][1] for k in keys],
+                                      ignore_index=True),
+                            fit, gate, registered, '')
+    run(XFER_PILOT['shapes'], XFER_PILOT['lrs'])
+    gate = _xfer_gate(result(None, None).table, seeds)
+    print(f'size transfer: pilot gate {gate}', flush=True)
+    if not full:
+        return result(pd.DataFrame(columns=_XFER_TABLES['fit']), gate)
+    if gate != 'go':
+        raise RuntimeError("the pilot's gate is no-go: the full size "
+                           'transfer does not run')
+    *fitted, held = shapes
+    run(fitted, lrs)
+    at = _non_embedding(_xfer_config(held, lrs[0], seeds[0], steps).arch)
+    fit = d2l.logit_fit(result(None, None).table, at, XFER_LEVEL)
+    registered = _xfer_register(fit, [_xfer_path(held, lr, s) for lr in lrs
+                                      for s in seeds])
+    run([held], lrs)
+    if any(done[held, lr, s][0]['finished'] < registered for lr in lrs
+           for s in seeds):
+        raise RuntimeError('a held-out run finished before the prediction '
+                           'was registered')
+    return result(fit, gate, registered)
+
+#@save
+def size_transfer(shapes, lrs, seeds=(0, 1), steps=300):
+    """The largest attention logit against model size (Wortsman et al.):
+    runs of each shape (a preset's architecture at t1's T = 1,024; the T1
+    grid's baseline recipe, _xfer_config) per rate and seed for steps, and
+    a fit on every shape but the last that predicts the last. The
+    statistic is the largest logit at the last step, over layers.
+    SizeTransfer(table, traces, fit, gate, registered, label): a row per
+    run (shape, non-embedding parameters N, lr, seed, logit, final loss,
+    first non-finite step), the traces at the statistics steps, the
+    prediction (logit_fit at the last shape's N) as the job stored it
+    before it ran the last shape and when (registered, UTC), and the
+    pilot's gate ('go' or 'no-go'). Regenerations: size-xfer-pilot
+    (XFER_PILOT's runs and the gate; nothing else runs, the fit is empty)
+    and, after a go, size-xfer (every run; the pilot's runs are reused)."""
+    if not (set(XFER_PILOT['shapes']) <= set(shapes[:-1])
+            and set(XFER_PILOT['lrs']) <= set(lrs)):
+        raise ValueError(f'the pilot {XFER_PILOT} needs its shapes among '
+                         'the fitted shapes and its rates among lrs')
+    runs = {}
+    for s in shapes:  # each shape's run configuration, rate and seed aside
+        runs[s] = _cfg_json(_xfer_config(s, 0.0, 0, steps))
+        for k in ('peak_lr', 'seed', 'data_seed'):
+            del runs[s][k]
+    config = dict(shapes=list(shapes), lrs=list(lrs), seeds=list(seeds),
+                  steps=steps, runs=runs, recipe=_xfer_recipe())
+    rerun = d2l._regenerating()
+    full = 'size-xfer' in rerun
+    res = _as_tuple(SizeTransfer, d2l._pretrain_result(
+        'size-xfer' if full else 'size-xfer-pilot',
+        lambda: _size_transfer(shapes, lrs, seeds, steps, full), config),
+        _XFER_TABLES, dict(gate=None, registered=None))
+    if (res.gate == 'go' and 'size-xfer-pilot' not in rerun
+            and not (res.table['shape'] == shapes[-1]).any()):
+        raise ValueError(f'{d2l.PRETRAIN_ARTIFACTS["size-transfer"][0]} '
+                         'holds the pilot only (gate go): run size-xfer')
+    return d2l._show_label(res)
+
+#@save
+def _size_xfer_job():
+    """The page's size-transfer call (cell 25c) for tools/lm_regen.py: the
+    pilot (size-xfer-pilot) and, after its go, the full job (size-xfer)
+    take the same arguments. The full job's name is conditional (spec
+    5.3): after a go, add 'size-xfer' to PRETRAIN_RERUN_NAMES and
+    _RERUN_ARTIFACT ('size-transfer', data-path-lib.md), its
+    PRETRAIN_JOBS entry (as size-xfer-pilot's) and the tests' list."""
+    return dict(shapes=('t1', 'ladder-54m', 'ladder-88m', 'r2'),
+                lrs=(2e-3, 4e-3, 8e-3, 1.6e-2), seeds=(0, 1), steps=300)
+
+#@save
+def plot_size_transfer(xfer, fit, held, figsize=(5.5, 3)):
+    """The largest logit at the last step against non-embedding parameters
+    (log-log): per rate the fitted line (fit: logit_fit's table) extended
+    to the held-out shape, the fitted runs as points, the held-out shape's
+    runs as open markers; x ticks at the shapes' N in millions. Nothing
+    is drawn if fit is empty (every rate had a diverged run)."""
+    if not len(fit):
+        return
+    d2l.use_svg_display()
+    fig, ax = d2l.plt.subplots(figsize=figsize)
+    runs = xfer.table
+    grid = np.geomspace(runs['N'].min(), runs['N'].max(), 20)
+    lines, dots = [], []
+    for r in fit.itertuples():
+        lines.append(np.exp(r.intercept + r.slope * np.log(grid)).tolist())
+        g = runs[(runs['lr'] == r.lr) & (runs['shape'] != held)]
+        dots.append((g['N'].tolist(), g['logit'].tolist()))
+    k = range(len(fit))
+    d2l.plot([grid.tolist()] * len(fit) + [x for x, _ in dots],
+             lines + [y for _, y in dots], 'non-embedding parameters',
+             f'largest logit at step {int(xfer.traces["step"].max())}',
+             legend=[f'lr {lr:g}' for lr in fit['lr']], xscale='log',
+             yscale='log', fmts=[f'C{i}-' for i in k] + [f'C{i}o' for i in k],
+             axes=ax, legend_loc='outside')
+    for i, r in enumerate(fit.itertuples()):
+        g = runs[(runs['lr'] == r.lr) & (runs['shape'] == held)]
+        ax.plot(g['N'], g['logit'], 'o', color=f'C{i}', mfc='none')
+    Ns = sorted(runs['N'].unique())
+    ax.set_xticks(Ns, [f'{n / 1e6:.1f}M' for n in Ns])
+    ax.xaxis.set_minor_locator(d2l.plt.NullLocator())
+    fig.tight_layout()
 ```

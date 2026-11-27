@@ -9,27 +9,76 @@ Qwen3-0.6B-Base config (6 N_mm = 3,575,906,304, F(T=2,048) =
 4,985,192,448), `causal_half`, `T=None`; `mfu` arithmetic; `r2_config`
 overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
 `_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
-chapter's 35 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
+chapter's 38 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
 vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
-(losses 1e-6) and a branch from a saved state; `attn_logit_stats` against
-the explicit softmax input; the `qk_clip_` contract; `softcap`;
-`make_bad_batch`; `lr_sensitivity`; `_pretrain_result` and
+(losses 1e-6) and a branch from a saved state; the stats-step columns
+`entropy_<l>` and `log_z` (finite; `log_z` the explicit mean logsumexp
+1e-5; only at stats steps, absent without stats); `clip_from` (clipping
+after that many updates; losses before it equal an unclipped run's;
+clip_from = bad_step - 1 clips the bad batch, `_spike` refuses a
+configuration that clips; `_cpt_step` refuses clip_from);
+`_cfg_json` of a default config equal to the committed `lm-r2-config-v1`;
+`attn_logit_stats` against the explicit softmax input; the `qk_clip_`
+contract; `softcap`; `make_bad_batch` ('ngram': shape, period, one n-gram
+of the batch's own ids, untouched rows bit-identical; an unknown kind
+raises); `_BadBatchStream` argument checks (kind, period 1-13, k, one
+rank for 'ngram'; `source` puts the same bad batch at any step);
+`lr_sensitivity`; `_pretrain_result` and
 `_pretrain_merged` with a temporary registry (regenerate with the config
 stored, load, configuration mismatch, absent in a normal run, pending,
 two regeneration names with other calls in the same process, D2L_RERUN=1
 refused); `t_interval` against `scipy.stats.t` (dof 1-10, 1e-4);
 `packed_to_hf` against `LlamaForCausalLM` (fp32 1e-5);
-`load_reference_model` before the checkpoints are registered; a 2-process
-gloo DDP `pretrain` equal to one process at the same global batch (1e-5).
+`load_reference_model` before the checkpoints are registered; the T1
+grid: each variant's arm config (schedule, clip, warmup 305, softcap
+backend, QK-norm; unknown variants refused), the zero-layer model trains,
+`_arm_summary` (first step above 1,000, smallest and peak-phase entropy),
+`first_collapsed_rate`, `departure` and `collapse_crossings` on synthetic
+traces (a diverged arm's loss crossing is its first non-finite step);
+`update_rms_by_phase` (phase medians; the absolute update = the per-lr
+median x the phase's median lr) and `moved` (white noise fires at the same
+rate, under 12%, dense and every 10 steps; at most 2 of 20 stable steps of
+a noisy convex a + b/sqrt(t) curve, which fires inside its ramp; a shift
+found within the window, also every 10 steps; spikes and moves past the
+horizon ignored), the
+softcap entropy from capped scores with the raw maximum, the seed sets the
+data order, a resumed job reads its finished arms, the merge
+keeps the zero-layer loss, the regeneration stores the recipe (with the
+statistics version; a changed one is refused); a 2-process
+gloo DDP `pretrain` equal to one process at the same global batch (loss and
+`log_z`, 1e-5); the size transfer: `t_quantile` against `scipy.stats.t`,
+`logit_fit` (a noiseless line recovered exactly; over 1,000 noisy draws the
+slope's interval and the prediction interval for a two-seed mean cover the
+truth at 95% within 2 points; non-finite logits and two-point rates left
+out), the run configurations (shapes at T = 1,024, N = 12.6M to 113.3M, the
+grid's recipe, the seed sets the data order), the pilot's gate, the driver
+(the pilot runs only its 8 runs; a no-go stops the full job before any
+other run; the prediction is registered before the held-out shape's first
+run and equals the page's fit of the stored runs; a changed prediction or
+a held-out run kept without one is refused), a real 2-layer run kept and
+read back, the regeneration names (pilot, full after a go, pending) and
+the plot; one bad batch under Adam: the arm table's checks,
+`spike_excess` on a synthetic pair (peak, steps until it stays below twice
+the floor, sum; the bad step excluded; a stopped replay), the paired driver
+on a 2-layer toy (two skip replays of one state bit-identical, so the
+floor is 0; every arm equal to its skip replay before the bad step; clip
+twins clip from their state; a committed late state of another beta2
+refused; the run states removed), the regeneration (v2, the recipe, a
+changed period or recipe refused, pending), the page's 10-line table and
+the plot; OLMo 2's repeated n-gram rule (32 repeats of periods 1, 7 and 13
+flagged with period, repeats and start, 31 not; max_n).
 """
 import collections
 import contextlib
+import dataclasses
 import io
 import math
 import os
 import re
 import sys
 import tempfile
+import time
+import types
 import unittest
 import warnings
 from unittest import mock
@@ -58,7 +107,8 @@ torch.set_num_threads(min(8, torch.get_num_threads()))
 
 RERUN_NAMES = (
     'pdp-throughput', 'pdp-mask-runs', 't1-runs', 'inst-t1-none',
-    'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'spike-replay',
+    'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap', 'inst-t1-clip',
+    'inst-t1-warmup', 'size-xfer-pilot', 'spike-replay',
     'reference-run', 'ladder', 'inst-t2', 'reference-evals', 't1-evals',
     'ladder-evals',
     'gemm-sweep', 'lowp-runs', 'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B',
@@ -78,6 +128,14 @@ def toy_config(**kw):
                 z_loss=1e-4)
     args.update(kw)
     return d2l.PretrainConfig(**args)
+
+
+PRE_F04_FIELDS = (  # PretrainConfig's fields when the runs were committed
+    'preset', 'arch', 'steps', 'global_batch', 'micro_batch', 'peak_lr',
+    'warmup', 'decay', 'final_lr', 'betas', 'eps', 'wd', 'clip', 'z_loss',
+    'dtype', 'compile', 'ddp', 'probe_every', 'stats_every', 'val_every',
+    'val_tokens', 'ckpt_steps', 'state_steps', 'state_every', 'branches',
+    'data', 'data_seed', 'seed', 'out_dir')
 
 
 def toy_model(seed=0):
@@ -209,7 +267,8 @@ class ConfigTest(unittest.TestCase):
         self.assertLessEqual(set(d2l._RERUN_ARTIFACT.values()),
                              set(d2l.PRETRAIN_ARTIFACTS))
         needs_run = {'ladder-evals', 'inst-t2', 'inst-t1-none',
-                     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap'}
+                     'inst-t1-qkclip', 'inst-t1-qknorm', 'inst-t1-softcap',
+                     'inst-t1-clip', 'inst-t1-warmup'}
         with mock.patch.object(d2l, '_rerun_dir', lambda: '/nonexistent'), \
                 uncommitted():
             for name, (driver, kwargs) in d2l.PRETRAIN_JOBS.items():
@@ -227,6 +286,35 @@ class ConfigTest(unittest.TestCase):
     def test_cfg_json_round_trip(self):
         c = d2l.r2_config('ladder-54m', seed=2)
         self.assertEqual(d2l._cfg_from_json(d2l._cfg_json(c)), c)
+        c = d2l.r2_config('t1', clip_from=250)
+        self.assertEqual(d2l._cfg_json(c)['clip_from'], 250)
+        self.assertEqual(d2l._cfg_from_json(d2l._cfg_json(c)), c)
+
+    def test_cfg_json_identity_of_committed_runs(self):
+        # fields added later (clip_from) are left out at their default, so
+        # the configurations stored with committed runs still match
+        self.assertEqual(set(d2l._cfg_json(d2l.r2_config('r2'))), set(
+            PRE_F04_FIELDS))
+        self.assertNotIn('clip_from', d2l._cfg_json(d2l.r2_config('t1')))
+        root = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'data', 'lm')
+        key = 'lm-r2-config-v1'
+        paths = [os.path.join(root, key, key + '.json'),
+                 os.path.join(root, 'rerun', key + '.json')]
+        path = next((p for p in paths if os.path.exists(p)), None)
+        if path is None:
+            self.skipTest(f'{key} is not on disk')
+        import hashlib
+        import json
+        with open(path, 'rb') as f:
+            raw = f.read()
+        self.assertEqual(hashlib.sha1(raw).hexdigest(), d2l.DATA_HUB[key][1])
+        stored = json.loads(raw)['jobs']['r2-s0']['pretrain_config']
+        mine = d2l._cfg_json(d2l.r2_config('r2', ddp=True))
+        mine.pop('out_dir')
+        self.assertEqual(mine, stored)
+        self.assertEqual(d2l._cfg_from_json(dict(stored, out_dir=None)),
+                         d2l.r2_config('r2', ddp=True))
 
     def test_load_reference_model_unregistered(self):
         with uncommitted(), self.assertRaises(KeyError) as cm:
@@ -338,6 +426,72 @@ class PretrainTest(unittest.TestCase):
         self.assertIn('max_logit_0', log.columns)
         self.assertTrue(log['rms_W_q'].iloc[[1, 3]].notna().all())
 
+    def test_entropy_and_log_z(self):
+        log = self.run_toy(toy_config(steps=3, stats_every=1))
+        cols = ['entropy_0', 'entropy_1', 'log_z']
+        self.assertTrue(set(cols) <= set(log.columns))
+        vals = log[cols].to_numpy()
+        self.assertTrue(np.isfinite(vals).all())
+        ent = log[['entropy_0', 'entropy_1']].to_numpy()
+        self.assertTrue(((ent >= 0) & (ent <= math.log(TOY.T))).all())
+        # log_z of step 1: the mean logsumexp of the initial model's logits
+        # over the valid targets of batch 0
+        m, b = toy_model(), self.stream().batch(0)
+        with torch.no_grad():
+            H, W = m(b['input_ids'], d2l.PackCtx(b['doc_ids'], b['pos_ids']),
+                     return_hidden=True)
+            lse = torch.logsumexp(torch.nn.functional.linear(H, W), -1)
+        valid = b['labels'] != -100
+        self.assertLess(abs(log['log_z'].iloc[0] - lse[valid].mean().item()),
+                        1e-5)
+        # the last step's entropy: attn_logit_stats' mean over heads of
+        # the trained model on that step's batch
+        m = toy_model()
+        with contextlib.redirect_stdout(io.StringIO()):
+            d2l.pretrain(m, self.stream(), toy_config(steps=3, stats_every=3))
+        stats = d2l.attn_logit_stats(m, self.stream().batch(2))
+        for l, s in stats.items():
+            self.assertAlmostEqual(log[f'entropy_{l}'].iloc[2],
+                                   float(s.entropy.mean()), places=5)
+        # stats every 2 steps: the columns only at steps 2, 4
+        log = self.run_toy(toy_config(steps=4, stats_every=2))
+        for c in cols + ['max_logit_0']:
+            self.assertEqual(log[c].notna().tolist(),
+                             [False, True, False, True], c)
+        # no stats: none of the new columns (the old logs' columns)
+        log = self.run_toy(toy_config(steps=3))
+        self.assertFalse({'log_z', 'entropy_0', 'max_logit_0'}
+                         & set(log.columns))
+
+    def test_clip_from(self):
+        tiny = 1e-3  # every step's norm is above it
+        free = self.run_toy(toy_config(steps=10, clip=None))
+        late = self.run_toy(toy_config(steps=10, clip=tiny, clip_from=5))
+        always = self.run_toy(toy_config(steps=10, clip=tiny))
+        # steps 0-4 (log steps 1-5) unclipped, from step 5 on clipped
+        self.assertEqual(late['clipped'].tolist(), [False] * 5 + [True] * 5)
+        self.assertTrue(always['clipped'].all())
+        self.assertFalse(free['clipped'].any())
+        self.assertTrue(np.array_equal(late['loss'][:6], free['loss'][:6]))
+        self.assertTrue(np.array_equal(late['grad_norm'][:6],
+                                       free['grad_norm'][:6]))
+        self.assertGreater(abs(late['loss'].iloc[6] - free['loss'].iloc[6]),
+                           1e-6)
+        # pretrain_step without a step: clipping from cfg.clip, as before
+        m = toy_model()
+        opt = torch.optim.AdamW(d2l.param_groups(m, 0.1), lr=1e-3)
+        b = self.stream().batch(0)
+        n = (b['labels'] != -100).sum()
+        out = d2l.pretrain_step(m, opt, [b], toy_config(clip=tiny,
+                                                         clip_from=5), n)
+        self.assertTrue(bool(out['clipped']))
+        # the continued-pretraining step clips from the start: it refuses
+        # clip_from instead of ignoring it
+        with self.assertRaisesRegex(ValueError, 'clip_from'):
+            d2l._cpt_step(m, opt, [b], toy_config(clip_from=5), n)
+        out = d2l._cpt_step(m, opt, [b], toy_config(clip=tiny), n)
+        self.assertTrue(bool(out['clipped']))
+
     def test_attn_logit_stats(self):
         m = toy_model().eval()
         b = self.stream().batch(0)
@@ -359,6 +513,39 @@ class PretrainTest(unittest.TestCase):
             p = torch.softmax(s, -1)
             ent = -(p * torch.log(p.clamp_min(1e-30))).sum(-1).mean((0, 2))
             self.assertLess((stats[l].entropy - ent).abs().max(), 1e-5)
+
+    def test_attn_logit_stats_softcap(self):
+        """A softcap model: the entropy is that of the capped softmax the
+        model computes, the largest logit is the raw one (before the cap)."""
+        torch.manual_seed(0)
+        m = d2l.PackedGPT.from_arch(TOY, softcap=2.0, backend='math').eval()
+        with torch.no_grad():
+            for blk in m.blks:  # raw logits well above the cap
+                blk.attention.W_q.weight *= 12
+                blk.attention.W_k.weight *= 12
+        b = self.stream().batch(0)
+        stats = d2l.attn_logit_stats(m, b)
+        X, ctx = b['input_ids'][:1], d2l.PackCtx(b['doc_ids'][:1],
+                                                 b['pos_ids'][:1])
+        T = X.shape[1]
+        ok = (torch.ones(T, T, dtype=torch.bool).tril()
+              & (ctx.doc_ids[:, :, None] == ctx.doc_ids[:, None, :]))[:, None]
+
+        def entropy(s):
+            p = torch.softmax(s.masked_fill(~ok, -math.inf), -1)
+            return -(p * torch.log(p.clamp_min(1e-30))).sum(-1).mean((0, 2))
+        for l, (attn, Y, tables) in enumerate(
+                d2l._attention_inputs(m, X, ctx)):
+            with torch.no_grad():
+                q, k, _ = attn.qkv(Y, tables=tables)
+            k = k.repeat_interleave(2, 1)
+            s = q @ k.transpose(-2, -1) / math.sqrt(attn.head_dim)
+            raw = s.masked_fill(~ok, -math.inf).amax((0, 2, 3))
+            self.assertGreater(float(raw.max()), 4.0)  # the cap matters
+            self.assertLess((stats[l].max_logit - raw).abs().max(), 1e-5)
+            capped = entropy(d2l.softcap(s, 2.0))
+            self.assertLess((stats[l].entropy - capped).abs().max(), 1e-5)
+            self.assertGreater((entropy(s) - capped).abs().max(), 1e-2)
 
     def test_qk_clip(self):
         # one block: clipping a block changes the inputs of the next ones
@@ -423,6 +610,51 @@ class PretrainTest(unittest.TestCase):
             self.assertTrue((bad['doc_ids'] == 0).all())
         self.assertEqual(len(set(d2l.make_bad_batch(b, 'repeat')[
             'input_ids'].flatten().tolist())), 1)
+        # random: unchanged by the n-gram kind (fixed ids for seed 1)
+        g = torch.Generator().manual_seed(1)
+        ref = torch.randint(32, 512, (8, TOY.T + 1), generator=g)
+        self.assertTrue(torch.equal(d2l.make_bad_batch(
+            b, 'random', vocab=512, seed=1)['input_ids'], ref[:, :-1]))
+
+    def test_make_bad_batch_ngram(self):
+        b = d2l.PackedStream(self.shards, TOY.T, 16, seed=1).batch(0)
+        bad = d2l.make_bad_batch(b, 'ngram', seed=3, k=8, period=7)
+        self.assertEqual(set(bad), set(b))
+        for key in b:
+            self.assertEqual(bad[key].shape, b[key].shape, key)
+            self.assertEqual(bad[key].dtype, b[key].dtype, key)
+        hit = [r for r in range(16) if not torch.equal(bad['input_ids'][r],
+                                                       b['input_ids'][r])]
+        self.assertEqual(len(hit), 8)
+        rest = [r for r in range(16) if r not in hit]
+        for key in b:  # untouched rows: every field bit-identical
+            self.assertTrue(torch.equal(bad[key][rest], b[key][rest]), key)
+        X, Y = bad['input_ids'][hit], bad['labels'][hit]
+        self.assertTrue(torch.equal(X[:, 7:], X[:, :-7]))  # period 7
+        self.assertTrue(torch.equal(Y[:, :-1], X[:, 1:]))  # shifted targets
+        self.assertTrue(torch.equal(Y[:, -1], X[:, -7]))
+        self.assertTrue((X == X[0]).all())  # one n-gram in every row
+        gram = X[0, :7]
+        self.assertTrue((gram >= 32).all())
+        self.assertTrue(set(gram.tolist()) <= set(b['input_ids'].flatten()
+                                                  .tolist()))
+        self.assertTrue((bad['doc_ids'][hit] == 0).all())
+        self.assertTrue(torch.equal(bad['pos_ids'][hit], torch.arange(
+            TOY.T, dtype=b['pos_ids'].dtype).expand(8, -1)))
+        # deterministic per seed; k=None replaces every row; period 1
+        again = d2l.make_bad_batch(b, 'ngram', seed=3, k=8, period=7)
+        self.assertTrue(all(torch.equal(again[k], bad[k]) for k in b))
+        every = d2l.make_bad_batch(b, 'ngram', seed=3, period=13)
+        self.assertTrue((every['input_ids'] == every['input_ids'][0]).all())
+        X = every['input_ids']
+        self.assertTrue(torch.equal(X[:, 13:], X[:, :-13]))
+        one = d2l.make_bad_batch(b, 'ngram', seed=0, k=1, period=1)
+        r = [i for i in range(16) if not torch.equal(one['input_ids'][i],
+                                                     b['input_ids'][i])]
+        self.assertEqual(len(r), 1)
+        self.assertEqual(len(set(one['input_ids'][r[0]].tolist())), 1)
+        self.assertTrue(torch.equal(b['input_ids'], d2l.PackedStream(
+            self.shards, TOY.T, 16, seed=1).batch(0)['input_ids']))
         self.assertAlmostEqual(d2l.lr_sensitivity(
             [3.0, 2.5, float('nan'), 4.5], 4.0), (0.5 + 0 + 1.5 + 1.5) / 4)
 
@@ -457,7 +689,7 @@ def _ddp_worker(rank, world, shard_dir, out, port):
     shards = d2l.TokenShards(shard_dir)
     stream = d2l.PackedStream(shards, TOY.T, 8, seed=1, rank=rank,
                               world=world)
-    cfg = toy_config(steps=10, ddp=True, micro_batch=2)
+    cfg = toy_config(steps=10, ddp=True, micro_batch=2, stats_every=5)
     log = d2l.pretrain(toy_model(), stream, cfg)
     if rank == 0:
         log.to_json(out)
@@ -473,7 +705,8 @@ class DDPTest(unittest.TestCase):
             shards = dp.fixture_shards(shard_dir, n_docs=600)
             stream = d2l.PackedStream(shards, TOY.T, 8, seed=1)
             ref = d2l.pretrain(toy_model(), stream,
-                               toy_config(steps=10, micro_batch=4))
+                               toy_config(steps=10, micro_batch=4,
+                                          stats_every=5))
             out = os.path.join(d, 'log.json')
             env = dict(os.environ)
             os.environ['CUDA_VISIBLE_DEVICES'] = ''  # gloo on the CPU
@@ -488,6 +721,13 @@ class DDPTest(unittest.TestCase):
             log = pd.read_json(out)
         self.assertLess(np.abs(log['loss'].values - ref['loss'].values)
                         .max(), 1e-5)
+        # log_z: the mean over both ranks' targets (one stacked all-reduce
+        # with the loss), at the stats steps only
+        self.assertEqual(log['log_z'].notna().tolist(),
+                         ref['log_z'].notna().tolist())
+        self.assertEqual(int(log['log_z'].notna().sum()), 2)
+        self.assertLess(np.nanmax(np.abs(log['log_z'].values
+                                         - ref['log_z'].values)), 1e-5)
 
 
 def toy_log(steps=600, every=10, layers=2, seed=0):
@@ -586,51 +826,333 @@ class MeasurementTest(unittest.TestCase):
         none = d2l._BadBatchStream(self.shards, TOY.T, 8, None, 'repeat', 512)
         self.assertTrue(torch.equal(none.batch(4)['input_ids'],
                                     plain.batch(4)['input_ids']))
+        # 'ngram' passes k and period through; the other rows are the plain
+        # stream's
+        ng = d2l._BadBatchStream(self.shards, TOY.T, 8, 5, 'ngram', 512, k=3,
+                                 period=4)
+        ref = d2l.make_bad_batch(plain.batch(4), 'ngram', 512, seed=5, k=3,
+                                 period=4)
+        got = ng.batch(4)
+        self.assertTrue(all(torch.equal(got[k], ref[k]) for k in ref))
+        hit = (got['input_ids'] != plain.batch(4)['input_ids']).any(1)
+        self.assertEqual(int(hit.sum()), 3)
+        # arguments that would give an arm of another configuration
+        for kind, kw in (('n-gram', {}), ('ngrams', {}),
+                         ('ngram', dict(period=None)),
+                         ('ngram', dict(period=0)),
+                         ('ngram', dict(period=14)),
+                         ('ngram', dict(period=7, k=0)),
+                         ('ngram', dict(period=7, k=9)),
+                         ('ngram', dict(period=7, rank=0, world=2))):
+            with self.assertRaises(ValueError, msg=(kind, kw)):
+                d2l._BadBatchStream(self.shards, TOY.T, 8, 5, kind, 512, **kw)
+        with self.assertRaisesRegex(ValueError, 'unknown bad-batch kind'):
+            d2l.make_bad_batch(plain.batch(0), 'n-gram')
+        d2l._BadBatchStream(self.shards, TOY.T, 8, 5, 'ngram', 512, k=8,
+                            period=13)  # the bounds themselves are fine
+
+    def test_clip_from_and_bad_step(self):
+        """clip_from counts updates, bad_step log steps: clip_from = bad_step
+        - 1 clips the bad step, clip_from = bad_step does not (and the
+        spike driver refuses it)."""
+        tiny = 1e-3  # every step's norm is above it
+
+        def clipped(clip_from):
+            stream = d2l._BadBatchStream(self.shards, TOY.T, 8, 5, 'ngram',
+                                         512, k=4, period=3, seed=1)
+            cfg = toy_config(steps=7, clip=tiny, clip_from=clip_from)
+            with contextlib.redirect_stdout(io.StringIO()):
+                log = d2l.pretrain(toy_model(), stream, cfg)
+            return log.set_index('step')['clipped']
+        on = clipped(4)
+        self.assertEqual(on.tolist(), [False] * 4 + [True] * 3)
+        self.assertTrue(on[5])  # the bad batch's update is clipped
+        self.assertFalse(clipped(5)[5])
+        # the spike driver sets clipping per arm (from the state, so the bad
+        # step is always clipped) and refuses a configuration that clips
+        arms = ((0.95, 6, 8, 'random', 8, True),)
+        for kw in (dict(clip=1.0), dict(clip=None, clip_from=4)):
+            with self.assertRaisesRegex(ValueError, 'clip=None'):
+                d2l._spike(self.toy_cfg(**kw), arms, 3, 8, steps=12,
+                           window=6, device='cpu')
 
     def toy_cfg(self, **kw):
         return toy_config(preset='t1', compile=False, warmup=2, **kw)
 
     def test_inst_t1(self):
-        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards):
-            val = None
-            with mock.patch.object(d2l, '_val_fn', lambda c: (
-                    lambda m: 1.0)):
-                runs = {v: d2l._inst_t1(self.toy_cfg(clip=None), (1e-3, 1e-1),
-                                        v, (0, 1), 12, 0.5, device='cpu')
-                        for v in ('none', 'qk_clip', 'qk_norm')}
+        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
+                mock.patch.object(d2l, '_job_root', lambda: self.tmp.name), \
+                mock.patch.object(d2l, '_val_fn', lambda c: (lambda m: 1.0)):
+            runs = {v: d2l._inst_t1(self.toy_cfg(clip=None), (1e-3, 1e-1),
+                                    v, (0, 1), 12, 0.5, device='cpu')
+                    for v in ('none', 'qk_clip', 'qk_norm')}
         for r in runs.values():
             self.assertEqual(len(r.table), 4)
             self.assertEqual(set(r.traces['step']), set(range(1, 13)))
             self.assertTrue(r.traces['max_logit'].notna().any())
+            self.assertTrue(r.traces['min_entropy'].notna().any())
+            self.assertTrue(r.table['min_entropy'].notna().all())
         # the clip pulls every head back to tau after each step
         hi = {v: r.table[r.table['lr'] == 1e-1]['max_logit'].values
               for v, r in runs.items()}
         self.assertTrue((hi['qk_clip'] < 0.2 * hi['none']).all())
+        self.assertEqual(runs['none'].zero_layer, 1.0)  # the zero-layer run
+        self.assertTrue(math.isnan(runs['qk_norm'].zero_layer))
         merged = d2l._merge_arms(runs)
         self.assertEqual(len(merged.table), 12)
-        del val
+        self.assertEqual(merged.zero_layer, 1.0)
 
-    def test_spike(self):
-        replays = (('from 6, same batches', 6, (), None),
-                   ('from 6, skip 8', 6, (8,), None),
-                   ('from 2, same batches', 2, (), None),
-                   ('clip 1.0', 0, (), 1.0))
-        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
-                mock.patch.object(d2l, '_job_root', lambda: self.tmp.name):
-            r = d2l._spike(self.toy_cfg(clip=None, z_loss=0.0), 8, 'random',
-                           replays, steps=14, window=(1, 14), device='cpu')
-        self.assertEqual(r.table['run'].tolist(), ['spiked run'] + [
-            x[0] for x in replays])
-        t = r.table.set_index('run')
-        # same state, same batches: equal up to the floor (CPU: exact)
-        self.assertLessEqual(t.loc['from 6, same batches', 'max_dloss'],
-                             2 * r.floor + 1e-6)
-        self.assertGreater(t.loc['from 6, skip 8', 'max_dloss'], 1e-4)
-        self.assertNotAlmostEqual(t.loc['spiked run', 'loss_at_bad'],
-                                  t.loc['from 6, skip 8', 'loss_at_bad'], 4)
-        self.assertAlmostEqual(t.loc['spiked run', 'loss_at_bad'],
-                               t.loc['from 2, same batches', 'loss_at_bad'], 4)
-        self.assertEqual(set(r.traces['run']), set(t.index))
+    def test_inst_arm_configs(self):
+        cfg = d2l.r2_config('t1', clip=None)
+        arms = {v: d2l._inst_arm(cfg, v, 8e-3, 1) for v in d2l._INST_PARTS}
+        for v, (c, extra) in arms.items():  # the full t1 schedule
+            self.assertEqual((c.steps, c.warmup if v != 'warmup' else 76,
+                              c.decay, c.peak_lr, c.seed), (1526, 76, 229,
+                                                            8e-3, 1), v)
+            self.assertEqual((c.stats_every, c.val_every, c.probe_every,
+                              c.out_dir, c.state_steps), (10, 0, 50, None,
+                                                          ()), v)
+            self.assertEqual(c.arch.qk_norm, v == 'qk_norm', v)
+            self.assertEqual(c.clip, 1.0 if v == 'clip' else None, v)
+            self.assertEqual(extra, dict(softcap=50.0, backend='math')
+                             if v == 'softcap' else {}, v)
+            self.assertEqual(c.micro_batch, 16, v)
+            self.assertEqual(c.data_seed, 1, v)  # the seed sets the order
+        self.assertEqual(arms['warmup'][0].warmup, 305)
+        # a pair's later run differs from its grid cell in one field only
+        c, _ = d2l._inst_arm(cfg, 'clip', 1e-3, 0)
+        diff = {k for k, v in d2l._cfg_json(c).items()
+                if d2l._cfg_json(dataclasses.replace(c, eps=1e-6))[k] != v}
+        self.assertEqual(diff, {'eps'})
+        # the 10x arms and the spike runs: constant rate after the warmup
+        c, _ = d2l._inst_arm(cfg, 'none', 6e-3, 0, steps=500)
+        self.assertEqual((c.steps, c.decay, c.probe_every, c.warmup),
+                         (500, 0, 0, 76))
+        c, _ = d2l._inst_arm(cfg, 'none', 6e-3, 1, steps=500)
+        self.assertEqual(c.data_seed, cfg.data_seed)  # as before F10
+        c, _ = d2l._inst_arm(cfg, 'none', 1e-3, 0, L=0)
+        self.assertEqual(c.arch.L, 0)
+        with self.assertRaisesRegex(ValueError, 'unknown variant'):
+            d2l._inst_arm(cfg, 'qknorm', 1e-3, 0)
+        with self.assertRaisesRegex(ValueError, 'unknown variants'):
+            d2l.instability_arms(cfg, (1e-3,), ('none', 'clip_1'))
+        with self.assertRaisesRegex(ValueError, 'given number of steps'):
+            d2l.instability_arms(d2l.r2_config('r2'), (6e-3,), ('none',))
+        with self.assertRaisesRegex(ValueError, 'none, qk_clip and qk_norm'):
+            d2l._inst_t2(d2l.r2_config('r2'), (6e-3,), ('clip',), 500, 30)
+        job = d2l.PRETRAIN_JOBS['inst-t1-warmup'][1]
+        with mock.patch.object(d2l, '_job_log', lambda n: toy_log()):
+            kw = job()
+        self.assertEqual(kw['variants'], ('none', 'qk_norm', 'qk_clip',
+                                          'softcap', 'clip', 'warmup'))
+        self.assertNotIn('steps', kw)  # the full schedule
+        self.assertEqual((kw['seeds'], kw['cfg'].clip), ((0, 1), None))
+
+    def test_zero_layer_model(self):
+        arch = TOY._replace(L=0)
+        model = d2l.PackedGPT.from_arch(arch, backend='sdpa')
+        self.assertEqual(len(model.blks), 0)
+        self.assertEqual(sum(p.numel() for p in model.parameters()),
+                         TOY.vocab * TOY.d + TOY.d)  # embedding, final norm
+        stream = d2l.PackedStream(self.shards, TOY.T, 8)
+        cfg = toy_config(arch=arch, steps=6, stats_every=2, probe_every=2)
+        before = model.token_emb.weight.detach().clone()
+        with contextlib.redirect_stdout(io.StringIO()):
+            log = d2l.pretrain(model, stream, cfg, val_fn=lambda m: 2.0)
+        self.assertTrue(np.isfinite(log['loss']).all())
+        self.assertTrue(np.isfinite(log['grad_norm']).all())
+        self.assertFalse(torch.equal(model.token_emb.weight, before))
+        self.assertFalse(any(c.startswith(('max_logit_', 'entropy_'))
+                             for c in log))
+        row = d2l._arm_summary(log, 'none', 1e-3, 0)
+        self.assertTrue(math.isnan(row['min_entropy']))
+        self.assertEqual(row['val_loss'], 2.0)
+
+    def test_arm_summary_entropy(self):
+        log = toy_log(100)  # largest logit 10 + l + step / 50
+        for l in range(2):
+            log[f'entropy_{l}'] = np.where(log['step'] % 10 == 0,
+                                           3 - log['step'] / 40 - l, np.nan)
+        log.loc[log['step'] == 70, 'max_logit_1'] = 2000.0
+        row = d2l._arm_summary(log, 'none', 1e-3, 0, peak_end=55)
+        self.assertEqual(row['first_logit_1000'], 70)
+        self.assertAlmostEqual(row['min_entropy'], 3 - 100 / 40 - 1)
+        self.assertAlmostEqual(row['peak_entropy'], 3 - 50 / 40 - 1)
+        row = d2l._arm_summary(log, 'none', 1e-3, 0)
+        self.assertAlmostEqual(row['peak_entropy'], row['min_entropy'])
+        self.assertIsNone(d2l._arm_summary(toy_log(100), 'none', 1e-3, 0)[
+            'first_logit_1000'])
+        tr = d2l._arm_trace(log.assign(log_z=1.0), 'none', 1e-3, 0)
+        for c in ('entropy_0', 'entropy_1', 'min_entropy', 'log_z',
+                  'rms_W_q'):
+            self.assertIn(c, tr.columns)
+        self.assertAlmostEqual(tr.loc[tr['step'] == 40, 'min_entropy'].item(),
+                               3 - 1 - 1)
+
+    def test_first_collapsed_rate(self):
+        ent = {'none': (2.0, 0.05, 0.0), 'qk_norm': (2.0, 1.5, 1.2)}
+        rows = [dict(variant=v, lr=lr, seed=s, min_entropy=e)
+                for v in ent for s in (0, 1)
+                for lr, e in zip((1e-3, 8e-3, 3.2e-2), ent[v])]
+        arms = pd.DataFrame(rows)
+        self.assertEqual(d2l.first_collapsed_rate(arms, 'none'), 8e-3)
+        self.assertIsNone(d2l.first_collapsed_rate(arms, 'qk_norm'))
+        arms.loc[(arms['lr'] == 8e-3) & (arms['seed'] == 0),
+                 'min_entropy'] = 0.5
+        self.assertEqual(d2l.first_collapsed_rate(arms, 'none', seed=0),
+                         3.2e-2)
+        self.assertEqual(d2l.first_collapsed_rate(arms, 'none'), 8e-3)
+        self.assertIsNone(d2l.first_collapsed_rate(arms, 'none', floor=0.0))
+
+    def test_departure(self):
+        rng = np.random.default_rng(0)
+        step = np.arange(1, 1501)
+        x = pd.Series(0.3 + 0.05 * rng.standard_normal(1500), index=step)
+        x[step < 76] = np.linspace(2.0, 0.3, 75)  # a warmup ramp: ignored
+        self.assertIsNone(d2l.departure(x, 76))
+        y = x.where(step < 900, x + 1.0)  # a sustained shift at step 900
+        self.assertTrue(900 <= d2l.departure(y, 76) <= 912)
+        z = x.copy()
+        z[[500, 501, 700]] = 50.0  # single spikes: the median ignores them
+        self.assertIsNone(d2l.departure(z, 76))
+        y[y.index > 1000] = np.nan  # a stopped run: its missing tail
+        self.assertTrue(900 <= d2l.departure(y, 76) <= 912)
+        # never inside the reference steps 76-275
+        early = x.where(step < 200, x + 1.0)
+        self.assertGreaterEqual(d2l.departure(early, 76) or 276, 276)
+
+    def test_update_rms_by_phase(self):
+        cfg = toy_config(steps=600, warmup=50, decay=100, peak_lr=1e-3)
+        step = np.arange(1, 601)
+        rng = np.random.default_rng(0)
+        lr = [d2l.wsd_lr(s - 1, cfg.steps, cfg.warmup, cfg.decay,
+                         cfg.peak_lr) for s in step]
+        probe = step % 10 == 0
+        log = pd.DataFrame(dict(step=step, lr=lr, loss=3.0))
+        for k, base in (('W_q', 0.2), ('W_v', 0.15)):
+            val = base + 0.01 * rng.random(600) + 0.02 * (step > 500)
+            log[f'rms_{k}'] = np.where(probe, val, np.nan)
+        got = d2l.update_rms_by_phase(log, cfg, 100)
+        self.assertEqual(sorted(got.index), ['W_q', 'W_v'])
+        run = log.set_index('step')
+        for k in ('W_q', 'W_v'):
+            for phase, rows in (('stable', range(100, 501, 10)),
+                                ('decay', range(510, 601, 10))):
+                rows = list(rows)
+                med = run.loc[rows, f'rms_{k}'].median()
+                self.assertAlmostEqual(got.at[k, phase], med)
+                # the absolute update = per-lr median x the median lr
+                self.assertAlmostEqual(
+                    got.at[k, f'abs_{phase}'],
+                    med * run.loc[rows, 'lr'].median())
+        self.assertAlmostEqual(got.at['W_q', 'abs_stable'],
+                               got.at['W_q', 'stable'] * 1e-3)
+        # per lr the decay rises here; the update itself falls
+        self.assertTrue((got['decay'] > got['stable']).all())
+        self.assertTrue((got['abs_decay'] < got['abs_stable']).all())
+        with self.assertRaises(AssertionError):  # no probe in the decay
+            d2l.update_rms_by_phase(log[log['step'] <= 500], cfg, 100)
+
+    def test_moved(self):
+        rng = np.random.default_rng(0)
+        step = np.arange(1, 6001)
+        every10 = step % 10 == 0
+        # white noise: the same false-alarm rate dense and every 10 steps
+        # (the grid of 10-step blocks makes it one detector)
+        rate = {}
+        for name, keep in (('dense', step > 0), ('every 10', every10)):
+            fires = 0
+            for _ in range(20):
+                x = pd.Series(rng.standard_normal(6000), index=step)[keep]
+                fires += sum(d2l.moved(x, t) is not None
+                             for t in range(300, 5700, 270))
+            rate[name] = fires / 400
+        self.assertLess(max(rate.values()), 0.12)
+        self.assertLess(abs(rate['dense'] - rate['every 10']), 0.05)
+        # a convex, flattening curve with no change (the loss's shape):
+        # quiet at stable-phase steps, dense or sparse, reproducibly ...
+        curve = pd.Series(2.71 + 28 / np.sqrt(step)
+                          + 0.025 * rng.standard_normal(6000), index=step)
+        null = np.linspace(1200, 4900, 20).round().astype(int)
+        for x in (curve, curve[every10]):
+            lags = [d2l.moved(x, int(t)) for t in null]
+            self.assertEqual(lags, [d2l.moved(x, int(t)) for t in null])
+            self.assertLessEqual(sum(m is not None for m in lags), 2)
+        # ... but a line fitted inside its steep start misfits and fires:
+        # why the page reads no event whose reference lies in warmup
+        self.assertIsNotNone(d2l.moved(curve, 300))
+        # a sustained shift 30 steps after the event: found within the
+        # rolling window, on dense and on every-10-steps series
+        jump = curve + np.where(step >= 2030, 0.2, 0.0)
+        self.assertTrue(30 <= d2l.moved(jump, 2000) <= 60)
+        self.assertTrue(30 <= d2l.moved(jump[every10], 2000) <= 60)
+        self.assertIsNone(d2l.moved(curve, 2000))
+        # a change beyond the horizon is not counted
+        late = curve + np.where(step >= 2300, 0.2, 0.0)
+        self.assertIsNone(d2l.moved(late, 2000, horizon=200))
+        # single spikes: the block medians ignore them
+        spiky = curve.copy()
+        spiky[[2010, 2100]] = 50.0
+        self.assertIsNone(d2l.moved(spiky, 2000))
+
+    def test_collapse_crossings(self):
+        rng = np.random.default_rng(0)
+        step = np.arange(1, 1001)
+        stats = step % 10 == 0
+        twin = pd.DataFrame(dict(
+            step=step, loss=3 + 0.01 * rng.standard_normal(1000),
+            grad_norm=0.5 * np.exp(0.05 * rng.standard_normal(1000)),
+            max_logit=np.where(stats, 10.0, np.nan),
+            min_entropy=np.where(stats, 2.0, np.nan), variant='qk_norm'))
+        run = twin.assign(variant='none')
+        run['loss'] = twin['loss'] + np.where(step >= 600, 0.3, 0.0)
+        run['grad_norm'] = twin['grad_norm'] * np.where(step >= 500, 3, 1)
+        run['max_logit'] = np.where(stats, np.where(step >= 300, 2e3, 50),
+                                    np.nan)
+        run['min_entropy'] = np.where(stats, np.where(step >= 350, .05, 1),
+                                      np.nan)
+        other = run.assign(seed=1, loss=run['loss'] + 1)  # another seed
+        traces = pd.concat([run, twin], ignore_index=True).assign(
+            lr=8e-3, seed=0)
+        traces = pd.concat([traces, other.assign(lr=8e-3)],
+                           ignore_index=True)
+        table = pd.DataFrame([dict(variant='none', lr=8e-3, seed=0,
+                                   first_nonfinite=math.nan)])
+        inst = d2l.InstabilityRuns(table, traces, 30, '')
+        got = d2l.collapse_crossings(inst, 8e-3, 76)
+        self.assertEqual(got['largest logit > 1,000'], 300)
+        self.assertEqual(got['entropy < 0.1'], 350)
+        self.assertTrue(500 <= got['grad norm moves'] <= 512)
+        self.assertTrue(600 <= got['loss 0.1 above QK-norm'] <= 620)
+        # a run that diverges at step 450 and stops: no rolling crossing,
+        # the first non-finite step is the loss crossing
+        stop = traces[(traces['variant'] == 'qk_norm')
+                      | (traces['step'] < 450)].copy()
+        stop.loc[(stop['variant'] == 'none') & (stop['step'] == 449),
+                 'loss'] = np.nan
+        inst = d2l.InstabilityRuns(table.assign(first_nonfinite=449.0),
+                                   stop, 30, '')
+        got = d2l.collapse_crossings(inst, 8e-3, 76)
+        self.assertEqual(got['loss 0.1 above QK-norm'], 449)
+        self.assertIsNone(got['grad norm moves'])  # stopped before 500
+
+    def test_inst_kept(self):
+        path = os.path.join(self.tmp.name, 'kept', 'arm.json.gz')
+        calls = []
+
+        def compute():
+            calls.append(1)
+            return (dict(variant='none', lr=1e-3, seed=0,
+                         final_loss=math.inf, first_nonfinite=None),
+                    toy_log(20))
+        row, tr = d2l._inst_kept(path, dict(a=1), compute)
+        again, tr2 = d2l._inst_kept(path, dict(a=1), compute)
+        self.assertEqual(len(calls), 1)  # resumed: read, not trained
+        self.assertTrue(pd.isna(row['final_loss']))  # inf is stored as null
+        self.assertEqual(str(row), str(again))
+        pd.testing.assert_frame_equal(tr, tr2)
+        d2l._inst_kept(path, dict(a=2), compute)  # another configuration
+        self.assertEqual(len(calls), 2)
 
     def test_launch_jobs_arguments(self):
         calls = []
@@ -755,6 +1277,35 @@ class MeasurementTest(unittest.TestCase):
         self.assertEqual(len(fig.axes), 2)
         labels = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
         self.assertEqual(labels, ['0.001 none', '0.001 qk_clip'])
+        d2l.plt.close('all')
+        d2l.plot_traces(traces, ['loss'], by='variant', dashed=['qk_clip'])
+        styles = [ln.get_linestyle() for ln in d2l.plt.gcf().axes[0].lines]
+        self.assertEqual(styles, ['-', '--'])
+        d2l.plt.close('all')
+        d2l.plot_traces(traces, ['max_logit', 'loss'], by='variant',
+                        refs={'loss': 0.1})  # a threshold on one panel
+        top, bottom = d2l.plt.gcf().axes
+        self.assertEqual(len(top.lines), 2)  # no line where no ref
+        ref = bottom.lines[-1]
+        self.assertEqual((list(ref.get_ydata()), ref.get_linestyle()),
+                         ([0.1, 0.1], ':'))
+        d2l.plt.close('all')
+        arms = pd.DataFrame([dict(variant=v, lr=lr, seed=s, loss=3 + lr + s,
+                                  max_logit=10 * lr)
+                             for v in ('none', 'qk_norm')
+                             for lr in (1e-3, 1e-2) for s in (0, 1)])
+        d2l.plot_lr_grid(arms, {'loss': ('loss', 3.5),
+                                'max_logit': ('logit', None)},
+                         ('none', 'qk_norm'), logy=['max_logit'])
+        fig = d2l.plt.gcf()
+        self.assertEqual(len(fig.axes), 2)
+        self.assertEqual(len(fig.axes[0].lines), 5)  # 2 means, 2 seeds, ref
+        self.assertEqual(len(fig.axes[1].lines), 4)
+        self.assertEqual(fig.axes[1].get_yscale(), 'log')
+        labels = [t.get_text() for t in fig.axes[1].get_legend().get_texts()]
+        self.assertEqual(labels, ['none', 'qk_norm'])  # beside the last
+        np.testing.assert_allclose(fig.axes[0].lines[0].get_ydata(),
+                                   [3.5 + 1e-3, 3.5 + 1e-2])  # seed mean
         d2l.plt.close('all')
         log = toy_log(200).assign(job='ladder-25m-s0')
         log.loc[log['step'] > 150, 'run'] = 'b150'
@@ -938,6 +1489,892 @@ class ResultTest(unittest.TestCase):
             self.assertEqual(len(call(self.compute)), 6)
         self.assertEqual(self.calls, calls)
         self.assertTrue(os.path.exists(merged))
+
+
+    def test_inst_t1_regeneration(self):
+        """Each variant is its own regeneration; the merged result keeps the
+        zero-layer loss of the 'none' part and stores the recipe."""
+        cfg = d2l.r2_config('t1', clip=None)
+
+        def fake(cfg, lrs, v, seeds, steps, tau):
+            self.calls += 1
+            rows = [dict(variant=v, lr=lr, seed=s, val_loss=3.0)
+                    for lr in lrs for s in seeds]
+            return d2l.InstabilityRuns(
+                pd.DataFrame(rows), pd.DataFrame(rows).assign(step=1), tau,
+                '', 7.5 if v == 'none' else math.nan)
+
+        def call():
+            with contextlib.redirect_stdout(io.StringIO()):
+                return d2l.instability_arms(cfg, (1e-3, 8e-3),
+                                            ('none', 'clip'), seeds=(0, 1),
+                                            tau=30)
+        with mock.patch.object(d2l, '_inst_t1', fake):
+            os.environ['D2L_RERUN'] = 'inst-t1-clip'
+            self.assertTrue(call().label.endswith('pending'))
+            os.environ['D2L_RERUN'] = 'inst-t1-none'
+            res = call()
+        self.assertEqual(self.calls, 2)
+        self.assertEqual((len(res.table), res.zero_layer, res.tau),
+                         (8, 7.5, 30))
+        path = '../data/lm/rerun/lm-r2-inst-t1-v2.json.gz'
+        stored = d2l._read_result(path, 'json-table')
+        config = d2l._stored_config(stored)
+        self.assertEqual((config['steps'], config['variants']),
+                         (None, ['none', 'clip']))
+        self.assertEqual((config['recipe']['warmup'],
+                          config['recipe']['stats']), (0.2, 2))
+        self.assertEqual(stored.zero_layer, 7.5)
+        # the committed grid loads; a changed recipe is refused
+        d2l.DATA_HUB['lm-r2-inst-t1-v2'] = ('url', 'sha1')
+        os.environ['D2L_RERUN'] = ''
+        with mock.patch.object(d2l, 'download_keyed', lambda key: path):
+            self.assertEqual(call().zero_layer, 7.5)
+            with mock.patch.object(d2l, 'INST_CLIP', 0.5), \
+                    self.assertRaisesRegex(ValueError, 'recipe.clip'):
+                call()
+            with mock.patch.object(d2l, 'INST_STATS', 3), \
+                    self.assertRaisesRegex(ValueError, 'recipe.stats'):
+                call()
+
+    def test_size_transfer_regeneration(self):
+        """The pilot writes the result (its 8 runs, the gate); a normal run
+        loads it under the page's configuration; after a go the full job
+        (its name added) computes every run; another regeneration run
+        shows the pending result."""
+        calls = []
+
+        def fake(shapes, lrs, seeds, steps, full):
+            calls.append(full)
+            rows = [dict(shape='t1', N=1.0, lr=4e-3, seed=0, logit=2.0,
+                         loss=4.0, first_nonfinite=None)]
+            fit = pd.DataFrame(columns=d2l._XFER_TABLES['fit'])
+            return d2l.SizeTransfer(pd.DataFrame(rows), pd.DataFrame(
+                dict(step=[300], loss=[4.0], max_logit=[2.0])), fit,
+                'no-go', None, '')
+        kw = d2l._size_xfer_job()
+
+        def call(**over):
+            with contextlib.redirect_stdout(io.StringIO()):
+                return d2l.size_transfer(**dict(kw, **over))
+        path = '../data/lm/rerun/lm-r2-size-xfer-v1.json.gz'
+        with mock.patch.object(d2l, '_size_transfer', fake):
+            os.environ['D2L_RERUN'] = 'size-xfer-pilot'
+            res = call()
+            self.assertEqual((calls, res.gate, len(res.table)),
+                             ([False], 'no-go', 1))
+            self.assertTrue(os.path.exists(path))
+            config = d2l._stored_config(d2l._read_result(path, 'json-table'))
+            self.assertEqual(config['recipe']['pilot'],
+                             dict(shapes=['t1', 'ladder-88m'],
+                                  lrs=[4e-3, 8e-3]))
+            self.assertEqual(config['runs']['r2']['arch']['L'], 18)
+            self.assertNotIn('peak_lr', config['runs']['t1'])
+            os.environ['D2L_RERUN'] = 't1-runs'  # another job's run
+            res = call()
+            self.assertTrue(res.label.endswith('pending'))
+            self.assertIsNone(res.gate)
+            self.assertEqual(list(res.fit.columns), d2l._XFER_TABLES['fit'])
+            # after a go: the full job's name is added (spec 5.3)
+            names = d2l.PRETRAIN_RERUN_NAMES + ('size-xfer',)
+            with mock.patch.object(d2l, 'PRETRAIN_RERUN_NAMES', names), \
+                    mock.patch.dict(d2l._RERUN_ARTIFACT,
+                                    {'size-xfer': 'size-transfer'}):
+                os.environ['D2L_RERUN'] = 'size-xfer'
+                call()
+            self.assertEqual(calls, [False, True])
+        os.environ['D2L_RERUN'] = ''
+        d2l.DATA_HUB['lm-r2-size-xfer-v1'] = ('url', 'sha1')
+        with mock.patch.object(d2l, 'download_keyed', lambda key: path):
+            res = call()
+            self.assertEqual((res.gate, res.label), ('no-go', ''))
+            with self.assertRaisesRegex(ValueError, 'steps 400 != 300'):
+                call(steps=400)
+            with mock.patch.object(d2l, 'XFER_PILOT', dict(
+                    shapes=('t1', 'ladder-54m'), lrs=(4e-3, 8e-3))), \
+                    self.assertRaisesRegex(ValueError, 'recipe.pilot'):
+                call()
+
+
+class SizeTransferTest(unittest.TestCase):
+    """The size transfer of the largest logit (cell 25c) on CPU."""
+    SHAPES = ('t1', 'ladder-54m', 'ladder-88m', 'r2')
+    LRS = (2e-3, 4e-3, 8e-3, 1.6e-2)
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = os.path.join(self.tmp.name, 'ch21')
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    @staticmethod
+    def points(Ns, slope=0.7, a=-5.0, sigma=0.0, seeds=(0, 1), rng=None,
+               lrs=(1e-3,)):
+        rows = []
+        for lr in lrs:
+            for N in Ns:
+                for s in seeds:
+                    e = rng.normal(0, sigma) if sigma else 0.0
+                    rows.append(dict(lr=lr, seed=s, N=N, logit=math.exp(
+                        a + slope * math.log(N) + e)))
+        return pd.DataFrame(rows)
+
+    def test_t_quantile(self):
+        from scipy import stats
+        for dof in range(1, 16):
+            for level in (0.95, 0.9):
+                self.assertAlmostEqual(d2l.t_quantile(dof, level), float(
+                    stats.t.ppf((1 + level) / 2, dof)), delta=1e-4)
+
+    def test_logit_fit_exact(self):
+        Ns = (12.6e6, 35.4e6, 62.9e6)
+        fit = d2l.logit_fit(self.points(Ns, lrs=(2e-3, 4e-3)), at=113.2e6)
+        self.assertEqual(list(fit.columns), d2l._XFER_TABLES['fit'])
+        self.assertEqual(fit['lr'].tolist(), [2e-3, 4e-3])
+        truth = math.exp(-5 + 0.7 * math.log(113.2e6))
+        for r in fit.itertuples():
+            self.assertAlmostEqual(r.slope, 0.7, places=9)
+            self.assertAlmostEqual(r.intercept, -5.0, places=7)
+            self.assertAlmostEqual(r.predicted / truth, 1, places=7)
+            self.assertLess(r.slope_hw, 1e-6)
+            self.assertLess((r.hi - r.lo) / truth, 1e-6)
+
+    def test_logit_fit_coverage(self):
+        """Six points (three sizes, two seeds) per draw; the measured value
+        at the held-out size is the mean of log logit over two new seeds."""
+        rng = np.random.default_rng(0)
+        Ns, at, slope, a, sigma = (12.6e6, 35.4e6, 62.9e6), 113.2e6, 0.7, -5, .3
+        covered = slopes = 0
+        est = []
+        for _ in range(1000):
+            fit = d2l.logit_fit(self.points(Ns, slope, a, sigma, rng=rng),
+                                at).iloc[0]
+            new = a + slope * math.log(at) + rng.normal(0, sigma, 2).mean()
+            covered += math.log(fit.lo) <= new <= math.log(fit.hi)
+            slopes += abs(fit.slope - slope) <= fit.slope_hw
+            est.append(fit.slope)
+        self.assertLess(abs(covered / 1000 - 0.95), 0.02)
+        self.assertLess(abs(slopes / 1000 - 0.95), 0.02)
+        self.assertLess(abs(np.mean(est) - slope), 0.02)  # unbiased
+        # with one seed the interval is wider (1/m with m = 1)
+        one = d2l.logit_fit(self.points(Ns, sigma=sigma, seeds=(0,),
+                                        rng=rng), at).iloc[0]
+        two = d2l.logit_fit(self.points(Ns, sigma=sigma, rng=rng), at).iloc[0]
+        self.assertGreater(one.hi / one.lo, 1)
+        self.assertGreater(two.hi / two.lo, 1)
+
+    def test_logit_fit_non_finite(self):
+        """A rate with a non-finite logit gets no line (the point is not
+        dropped: that would censor the largest logits); so does a rate
+        with fewer than three points."""
+        pts = self.points((1e7, 3e7, 6e7), lrs=(2e-3, 4e-3, 8e-3))
+        pts.loc[0, 'logit'] = math.nan
+        pts.loc[(pts['lr'] == 4e-3) & (pts['N'] == 6e7), 'logit'] = math.inf
+        fit = d2l.logit_fit(pts, at=1e8)
+        self.assertEqual(fit['lr'].tolist(), [8e-3])
+        self.assertAlmostEqual(fit['slope'].iloc[0], 0.7, places=9)
+        two = self.points((1e7, 3e7), seeds=(0,))
+        fit = d2l.logit_fit(two, at=1e8)
+        self.assertEqual((len(fit), list(fit.columns)),
+                         (0, d2l._XFER_TABLES['fit']))
+
+    def test_xfer_config(self):
+        N = {s: d2l._non_embedding(d2l._xfer_config(s, 4e-3, 1, 300).arch)
+             for s in self.SHAPES}
+        self.assertEqual([round(n / 1e5) / 10 for n in N.values()],
+                         [12.6, 35.4, 62.9, 113.3])
+        for s in self.SHAPES:
+            c = d2l._xfer_config(s, 4e-3, 1, 300)
+            ref = d2l.r2_config(s).arch
+            self.assertEqual(c.arch, ref._replace(T=1024))
+            self.assertEqual((c.preset, c.steps, c.warmup, c.decay, c.clip,
+                              c.global_batch, c.micro_batch, c.peak_lr,
+                              c.seed, c.data_seed, c.stats_every, c.z_loss,
+                              c.wd, c.data, c.val_every, c.probe_every,
+                              c.ckpt_steps, c.state_steps, c.out_dir),
+                             (s, 300, 76, 0, None, 64, 16, 4e-3, 1, 1, 10,
+                              1e-4, 0.1, '100m', 0, 0, (), (), None))
+        # a constant rate after warmup
+        lr = [d2l.wsd_lr(k, c.steps, c.warmup, c.decay, c.peak_lr,
+                         c.final_lr) for k in range(76, 300)]
+        self.assertEqual(set(lr), {4e-3})
+        # N by formula (the embedding tied, counted once, left out)
+        a = d2l.r2_config('r2').arch
+        self.assertEqual(N['r2'], a.L * (2 * a.d * a.H * a.d_h + 2 * a.d
+                                         * a.H_kv * a.d_h + 3 * a.d * a.f
+                                         + 2 * a.d) + a.d)
+        with self.assertRaises(KeyError):
+            d2l._xfer_config('r3', 4e-3, 0, 300)
+
+    def table(self, larger=(1, 1, 1, 1)):
+        """A pilot table: at (4e-3, s0), (4e-3, s1), (8e-3, s0), (8e-3, s1)
+        the ladder-88m logit is above t1's where larger says 1."""
+        rows, i = [], 0
+        for lr in (4e-3, 8e-3):
+            for s in (0, 1):
+                rows.append(dict(shape='t1', lr=lr, seed=s, logit=100.0,
+                                 first_nonfinite=None))
+                rows.append(dict(shape='ladder-88m', lr=lr, seed=s,
+                                 logit=150.0 if larger[i] else 90.0,
+                                 first_nonfinite=None))
+                i += 1
+        return pd.DataFrame(rows)
+
+    @staticmethod
+    def diverge(t, shape, lr, seed, step=123):
+        i = t.index[(t['shape'] == shape) & (t['lr'] == lr)
+                    & (t['seed'] == seed)]
+        t.loc[i, 'logit'], t.loc[i, 'first_nonfinite'] = math.nan, step
+        return t
+
+    def test_gate(self):
+        self.assertEqual(d2l._xfer_gate(self.table(), (0, 1)), 'go')
+        for i in range(4):  # one seed disagrees at one rate
+            larger = [1] * 4
+            larger[i] = 0
+            self.assertEqual(d2l._xfer_gate(self.table(larger), (0, 1)),
+                             'no-go')
+        self.assertEqual(d2l._xfer_gate(self.table((0, 0, 0, 0)), (0, 1)),
+                         'no-go')  # agreeing on the wrong order
+        t = self.table()
+        t.loc[1, 'logit'] = math.nan  # a non-finite run
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'no-go')
+        self.assertEqual(d2l._xfer_gate(self.table().iloc[1:], (0, 1)),
+                         'no-go')  # a missing run
+        # divergence: only the larger shape diverged = above (the trend in
+        # its strongest form); the smaller one or both = against
+        t = self.diverge(self.table((1, 1, 0, 1)), 'ladder-88m', 8e-3, 0)
+        self.assertTrue(d2l._xfer_above(t, 8e-3, 0))
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'go')
+        t = self.diverge(self.table(), 't1', 8e-3, 0)
+        self.assertFalse(d2l._xfer_above(t, 8e-3, 0))
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'no-go')
+        t = self.diverge(t, 'ladder-88m', 8e-3, 0)
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'no-go')
+        # the stored JSON's NaN for "did not diverge" reads the same
+        t = self.table().astype({'first_nonfinite': float})
+        self.assertEqual(d2l._xfer_gate(t, (0, 1)), 'go')
+
+    def test_diverged_note(self):
+        t = self.table()
+        self.assertEqual(d2l.diverged_note(t), '')
+        t = self.diverge(self.diverge(t, 't1', 4e-3, 1, 250), 'ladder-88m',
+                         8e-3, 0, 212)
+        self.assertEqual(d2l.diverged_note(t), '2 of 8 runs diverged '
+                         '(first: ladder-88m seed 0, step 212)')
+
+    def fake_runs(self, order, pilot_up=True, diverge=(), finished=None):
+        """A _xfer_run that trains nothing: log logit linear in log N (two
+        seeds apart by 0.1), ladder-88m below t1 at 8e-3 unless pilot_up,
+        the (shape, lr, seed) in diverge diverged at step 123; finished =
+        now unless given; records the call order and whether the
+        prediction existed."""
+        pred = os.path.join(self.root, 'size-xfer', 'prediction.json')
+
+        def run(shape, lr, seed, steps, shards, device):
+            N = d2l._non_embedding(d2l._xfer_config(shape, lr, seed,
+                                                    steps).arch)
+            y = 1 + 0.5 * math.log(N / 1e6) + 50 * lr + 0.1 * seed
+            if not pilot_up and shape == 'ladder-88m' and lr == 8e-3:
+                y = 0.0
+            order.append((shape, lr, seed, os.path.exists(pred)))
+            bad = (shape, lr, seed) in diverge
+            row = dict(shape=shape, N=N, lr=lr, seed=seed,
+                       logit=math.nan if bad else math.exp(y),
+                       loss=math.inf if bad else 4.0,
+                       first_nonfinite=123 if bad else None,
+                       finished=finished or time.strftime(
+                           '%Y-%m-%dT%H:%M:%SZ', time.gmtime()))
+            tr = pd.DataFrame(dict(step=[10, steps], loss=[5.0, 4.0],
+                                   max_logit=[1.0, math.exp(y)]))
+            return row, tr.assign(shape=shape, lr=lr, seed=seed)
+        return run
+
+    def driver(self, full, run):
+        with mock.patch.object(d2l, '_xfer_run', run), \
+                mock.patch.object(d2l, '_train_shards', lambda c: None), \
+                mock.patch.object(d2l, '_job_root', lambda: self.root), \
+                contextlib.redirect_stdout(io.StringIO()):
+            return d2l._size_transfer(self.SHAPES, self.LRS, (0, 1), 300,
+                                      full, device='cpu')
+
+    def test_driver_pilot_and_full(self):
+        order = []
+        res = self.driver(False, self.fake_runs(order))
+        pilot = [(s, lr, seed) for s in ('t1', 'ladder-88m')
+                 for lr in (4e-3, 8e-3) for seed in (0, 1)]
+        self.assertEqual([o[:3] for o in order], pilot)
+        self.assertEqual((res.gate, len(res.table), len(res.fit),
+                          res.registered), ('go', 8, 0, None))
+        self.assertEqual(list(res.fit.columns), d2l._XFER_TABLES['fit'])
+        order.clear()
+        res = self.driver(True, self.fake_runs(order))
+        self.assertEqual(len(res.table), 32)
+        self.assertEqual(res.table[['shape', 'lr', 'seed']].values.tolist(),
+                         [[s, lr, seed] for s in self.SHAPES
+                          for lr in self.LRS for seed in (0, 1)])
+        r2 = [o for o in order if o[0] == 'r2']
+        self.assertEqual(len(r2), 8)
+        self.assertTrue(all(o[3] for o in r2))  # registered before r2 ran
+        self.assertFalse(any(o[3] for o in order if o[0] != 'r2'))
+        self.assertEqual(order[-8:], r2)  # r2 last
+        self.assertRegex(res.registered, r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$')
+        # the page's check: its own fit of the stored runs = the prediction
+        held = res.table['shape'] == 'r2'
+        N = res.table.loc[held, 'N'].iloc[0]
+        page = d2l.logit_fit(res.table[~held], at=N)
+        np.testing.assert_allclose(page.to_numpy(float),
+                                   res.fit[page.columns].to_numpy(float))
+        self.assertTrue(np.allclose(res.fit['slope'], 0.5))
+        # a restart reads the same prediction; a changed one is refused
+        again = self.driver(True, self.fake_runs([]))
+        self.assertEqual(again.registered, res.registered)
+        path = os.path.join(self.root, 'size-xfer', 'prediction.json')
+        import json
+        with open(path) as f:
+            doc = json.load(f)
+        doc['fit']['predicted'][0] *= 1.01
+        with open(path, 'w') as f:
+            json.dump(doc, f)
+        with self.assertRaisesRegex(ValueError, 'differs from the fit'):
+            self.driver(True, self.fake_runs([]))
+
+    def test_driver_refusals(self):
+        order = []
+        res = self.driver(False, self.fake_runs(order, pilot_up=False))
+        self.assertEqual(res.gate, 'no-go')
+        order.clear()
+        with self.assertRaisesRegex(RuntimeError, 'no-go'):
+            self.driver(True, self.fake_runs(order, pilot_up=False))
+        self.assertEqual({o[0] for o in order}, {'t1', 'ladder-88m'})
+        self.assertEqual(len(order), 8)  # no run beyond the pilot's
+        # a held-out run kept before any prediction was written
+        with mock.patch.object(d2l, '_job_root', lambda: self.root):
+            held = d2l._xfer_path('r2', 2e-3, 0)
+        os.makedirs(os.path.dirname(held), exist_ok=True)
+        open(held, 'w').close()
+        with self.assertRaisesRegex(RuntimeError, 'without a prediction'):
+            self.driver(True, self.fake_runs([]))
+        with self.assertRaisesRegex(ValueError, 'pilot'):
+            d2l.size_transfer(('t1', 'ladder-54m', 'r2'), self.LRS)
+        with self.assertRaisesRegex(ValueError, 'pilot'):
+            d2l.size_transfer(self.SHAPES, (2e-3, 8e-3))
+        # a held-out run that finished before the registration time
+        os.remove(held)
+        with self.assertRaisesRegex(RuntimeError, 'finished before'):
+            self.driver(True, self.fake_runs(
+                [], finished='2000-01-01T00:00:00Z'))
+
+    def test_pilot_only_go_refused(self):
+        """A stored pilot result whose gate is go must never pass for the
+        full transfer (the page would print nothing): refused outside the
+        pilot's own regeneration."""
+        res = self.driver(False, self.fake_runs([]))
+        self.assertEqual(res.gate, 'go')
+        with mock.patch.object(d2l, '_pretrain_result', lambda *a: res), \
+                mock.patch.object(d2l, '_regenerating', lambda: ()), \
+                self.assertRaisesRegex(ValueError, 'pilot only'):
+            d2l.size_transfer(self.SHAPES, self.LRS)
+        with mock.patch.object(d2l, '_pretrain_result', lambda *a: res), \
+                mock.patch.object(d2l, '_regenerating',
+                                  lambda: ('size-xfer-pilot',)):
+            self.assertEqual(d2l.size_transfer(self.SHAPES, self.LRS).gate,
+                             'go')
+        full = self.driver(True, self.fake_runs([]))
+        with mock.patch.object(d2l, '_pretrain_result', lambda *a: full), \
+                mock.patch.object(d2l, '_regenerating', lambda: ()):
+            self.assertEqual(len(d2l.size_transfer(self.SHAPES,
+                                                   self.LRS).table), 32)
+
+    def page(self, res):
+        """Cell 25c's printed output on res (d2l.size_transfer mocked)."""
+        path = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'chapter_lm-pretraining',
+            'reference-model.md')
+        with open(path) as f:
+            src = f.read().split(
+                '#reference-model-the-largest-logit-and-model-size-2}\n')[1]
+        src = src.split('```')[0].replace('%%tab pytorch\n', '')
+        out, plots = io.StringIO(), []
+        with mock.patch.object(d2l, 'size_transfer', lambda *a, **k: res), \
+                mock.patch.object(d2l, 'plot_size_transfer',
+                                  lambda *a, **k: plots.append(a)), \
+                contextlib.redirect_stdout(out):
+            exec(src, dict(d2l=d2l, np=np, math=math, pd=pd,
+                           logit_fit=d2l.logit_fit))
+        return out.getvalue().splitlines(), plots
+
+    def test_page_cell(self):
+        """Cell 25c: the no-go line names the range the pilot tested; a
+        diverged run gives 'no fit' at its rate (smaller shapes) or
+        'diverged (step k)' in the measured column (the held-out shape);
+        warnings-free."""
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            lines, plots = self.page(self.driver(
+                False, self.fake_runs([], pilot_up=False)))
+            self.assertEqual(lines, ['pilot: no size trend from 12.6M to '
+                                     '62.9M parameters at 300 steps '
+                                     '(gate failed)'])
+            self.assertEqual(plots, [])
+            bad = {('ladder-54m', 1.6e-2, 1), ('r2', 8e-3, 0)}
+            res = self.driver(True, self.fake_runs([], diverge=bad))
+            self.assertEqual(res.fit['lr'].tolist(), [2e-3, 4e-3, 8e-3])
+            lines, plots = self.page(res)
+        self.assertEqual(len(lines), 5)
+        self.assertIn('logit at 113.3M, predicted [95%]', lines[0])
+        self.assertTrue(lines[1].endswith('inside'))
+        self.assertTrue(lines[3].endswith('diverged (step 123)'), lines[3])
+        self.assertEqual(lines[4], ' 0.016 no fit: 1 of 6 runs diverged '
+                         '(first: ladder-54m seed 1, step 123)')
+        self.assertEqual(len(plots), 1)
+        self.assertLessEqual(max(map(len, lines)), 79)
+
+    def test_xfer_run_trains_and_keeps(self):
+        shards = dp.fixture_shards(os.path.join(self.tmp.name, 'set'),
+                                   n_docs=300)
+
+        def config(shape, lr, seed, steps):
+            return toy_config(preset=shape, steps=steps, warmup=2, decay=0,
+                              clip=None, stats_every=5, peak_lr=lr, seed=seed,
+                              data_seed=seed)
+        with mock.patch.object(d2l, '_xfer_config', config), \
+                mock.patch.object(d2l, '_job_root', lambda: self.root), \
+                contextlib.redirect_stdout(io.StringIO()):
+            row, tr = d2l._xfer_run('toy', 3e-3, 1, 10, shards, 'cpu')
+            with mock.patch.object(d2l, '_inst_run', None):  # not trained
+                again, tr2 = d2l._xfer_run('toy', 3e-3, 1, 10, shards, 'cpu')
+        self.assertEqual(row['N'], d2l._non_embedding(TOY))
+        self.assertEqual(row['N'], sum(p.numel() for p in toy_model()
+                                       .parameters()) - TOY.vocab * TOY.d)
+        self.assertTrue(math.isfinite(row['logit']) and row['logit'] > 0)
+        self.assertEqual(tr['step'].tolist(), [5, 10])
+        self.assertEqual(row['logit'], tr['max_logit'].iloc[-1])
+        self.assertIsNone(row['first_nonfinite'])
+        self.assertEqual(str(row), str(again))
+        pd.testing.assert_frame_equal(tr, tr2)
+
+    def test_plot(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        res = self.driver(True, self.fake_runs([]))
+        held = res.table['shape'] == 'r2'
+        fit = d2l.logit_fit(res.table[~held], at=res.table.loc[held, 'N']
+                            .iloc[0])
+        d2l.plot_size_transfer(res, fit, held='r2')
+        ax = d2l.plt.gcf().axes[0]
+        self.assertEqual((ax.get_xscale(), ax.get_yscale()), ('log', 'log'))
+        self.assertEqual(len(ax.lines), 12)  # 4 fits, 4 fitted, 4 held out
+        self.assertEqual([ln.get_markerfacecolor() for ln in ax.lines[8:]],
+                         ['none'] * 4)
+        self.assertEqual(len(ax.lines[4].get_xdata()), 6)  # 3 shapes x 2
+        self.assertEqual(ax.get_ylabel(), 'largest logit at step 300')
+        labels = [t.get_text() for t in ax.get_legend().get_texts()]
+        self.assertEqual(labels, ['lr 0.002', 'lr 0.004', 'lr 0.008',
+                                  'lr 0.016'])
+        self.assertEqual([t.get_text() for t in ax.get_xticklabels()],
+                         ['12.6M', '35.4M', '62.9M', '113.3M'])
+        d2l.plt.close('all')
+        d2l.plot_size_transfer(res, fit.iloc[:0], held='r2')  # nothing drawn
+        self.assertEqual(d2l.plt.get_fignums(), [])
+
+
+class _Shards:
+    """A token array that reads like TokenShards (n_tokens, read)."""
+    def __init__(self, x):
+        self.x, self.n_tokens = np.asarray(x, np.int32), len(x)
+
+    def read(self, start, n):
+        return self.x[start:start + n]
+
+
+class SpikeTest(unittest.TestCase):
+    """One bad batch under Adam (cell 27) and OLMo 2's repeated n-gram rule
+    (cell 27b) on CPU: the arm table's checks, the excess statistic, the
+    same bad batch at every state, the paired driver on a 2-layer toy
+    (skip replays of one state bit-identical, so the floor is 0; every arm
+    equals its skip replay before the bad step; states removed), the
+    regeneration, the page's table and the plot, and the n-gram flags."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.shards = dp.fixture_shards(os.path.join(cls.tmp.name, 'set'),
+                                       n_docs=600)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_arms(self):
+        job = d2l._spike_job()
+        arms = d2l._spike_arms(job['arms'], 64, warmup=job['cfg'].warmup)
+        self.assertEqual(job['cfg'].warmup, 76)
+        self.assertEqual(len(arms), 8)
+        self.assertEqual(arms[6], (0.95, 76, 80, 'ngram', 8, False))
+        self.assertEqual(arms[0].clip, True)
+        for bad in ((0.95, 250, 300, 'random', 8, True),  # random = all rows
+                    (0.95, 250, 300, 'ngram', 0, True),
+                    (0.95, 250, 300, 'ngram', 65, True),
+                    (0.95, 250, 300, 'n-gram', 8, True),
+                    (0.95, 0, 30, 'ngram', 8, True),  # no state 0
+                    (0.95, 250, 250, 'ngram', 8, True),
+                    (0.95, 250, 301, 'ngram', 8, True),  # window past 400
+                    (1.0, 250, 300, 'ngram', 8, True),
+                    (0.95, 250, 300, 'ngram', 8, 1),
+                    (0.95, 250, 300, 'ngram', 8)):
+            with self.assertRaises(ValueError, msg=bad):
+                d2l._spike_arms([bad], 64)
+        d2l._spike_arms([(0.95, 1, 51, 'ngram', 8, True)], 64)  # the bounds
+        d2l._spike_arms([(0.95, 76, 77, 'ngram', 8, True)], 64, warmup=76)
+        with self.assertRaisesRegex(ValueError, '76 warmup steps'):
+            d2l._spike_arms([(0.95, 75, 80, 'ngram', 8, True)], 64, warmup=76)
+        with self.assertRaisesRegex(ValueError, '76 warmup steps'):
+            d2l.spike_replay(job['cfg'], [(0.95, 50, 80, 'ngram', 8, False)])
+        with self.assertRaisesRegex(ValueError, 'beta2 0.95, not 0.999'):
+            d2l._spike_arms([(0.999, 1297, 1301, 'ngram', 8, False)], 64)
+        with self.assertRaisesRegex(ValueError, 'twice'):
+            d2l._spike_arms([(0.95, 250, 300, 'ngram', 8, True),
+                             (0.95, 250, 300, 'ngram', 8, False)], 64)
+        with self.assertRaisesRegex(ValueError, 'no arms'):
+            d2l._spike_arms([], 64)
+
+    def test_excess(self):
+        steps = range(1, 21)
+        ref = pd.Series(1.0, index=steps)
+        e = pd.Series(0.0, index=steps)
+        e.loc[10] = 5.0  # the bad step itself is not read
+        e.loc[11:15] = [0.5, -0.2, 0.05, 0.01, 0.004]
+        ex = d2l.spike_excess(ref + e, ref, 10, 0.003, window=8)
+        self.assertEqual(ex['recover'], 4)  # last |e| >= 0.006 at step 14
+        self.assertAlmostEqual(ex['peak'], 0.5)
+        self.assertAlmostEqual(ex['total'], 0.5 - 0.2 + 0.05 + 0.01 + 0.004)
+        self.assertEqual(d2l.spike_excess(ref, ref, 10, 0.003, 8)['recover'],
+                         0)
+        late = e.copy()
+        late.loc[18] = 0.01  # still above at the window's last step
+        self.assertIsNone(d2l.spike_excess(ref + late, ref, 10, 0.003,
+                                           8)['recover'])
+        late.loc[18] = 0.0
+        late.loc[17] = 0.01
+        self.assertEqual(d2l.spike_excess(ref + late, ref, 10, 0.003,
+                                          8)['recover'], 7)
+        nan = (ref + e).copy()
+        nan.loc[13] = math.nan
+        self.assertEqual(d2l.spike_excess(nan, ref, 10, 0.003, 8),
+                         dict(peak=math.inf, recover=None, total=math.inf))
+        short = (ref + e).loc[:15]  # a replay that stopped
+        self.assertEqual(d2l.spike_excess(short, ref, 10, 0.003, 8)['peak'],
+                         math.inf)
+
+    def test_same_bad_batch_at_every_state(self):
+        """source fixes the bad batch: the n-gram rows put at log step 4
+        equal those put at step 8 (both built from step 8's data); the
+        default (source None) is the old stream; make_bad_batch's pool."""
+        plain = d2l.PackedStream(self.shards, TOY.T, 8)
+
+        def bad(step, source):
+            s = d2l._BadBatchStream(self.shards, TOY.T, 8, step, 'ngram', 512,
+                                    k=3, period=4, source=source)
+            b = s.batch(step - 1)
+            rows = (b['input_ids'] != plain.batch(step - 1)['input_ids']).any(1)
+            return b, rows
+        (b4, r4), (b8, r8) = bad(4, 8), bad(8, 8)
+        self.assertEqual(int(r4.sum()), 3)
+        self.assertTrue(torch.equal(r4, r8))
+        for key in ('input_ids', 'labels', 'pos_ids', 'doc_ids'):
+            self.assertTrue(torch.equal(b4[key][r4], b8[key][r8]), key)
+        self.assertTrue(torch.equal(b4['input_ids'][~r4],
+                                    plain.batch(3)['input_ids'][~r4]))
+        default, _ = bad(8, None)
+        self.assertTrue(torch.equal(default['input_ids'], b8['input_ids']))
+        ref = d2l.make_bad_batch(plain.batch(3), 'ngram', 512, seed=8, k=3,
+                                 period=4, pool=plain.batch(7)['input_ids'])
+        self.assertTrue(torch.equal(ref['input_ids'], b4['input_ids']))
+        # random: the same ids at any step
+        rnd = [d2l._BadBatchStream(self.shards, TOY.T, 8, s, 'random', 512,
+                                   source=8).batch(s - 1)['input_ids']
+               for s in (4, 8)]
+        self.assertTrue(torch.equal(*rnd))
+        with self.assertRaisesRegex(ValueError, 'source'):
+            d2l._BadBatchStream(self.shards, TOY.T, 8, 4, 'random', 512,
+                                source=0)
+
+    def toy_cfg(self, **kw):
+        return toy_config(preset='t1', compile=False, warmup=2, clip=None,
+                          z_loss=0.0, **kw)
+
+    def test_driver(self):
+        root = tempfile.mkdtemp(dir=self.tmp.name)
+        cfg = self.toy_cfg()
+        late = os.path.join(root, 'late')  # a committed state at step 10
+        with contextlib.redirect_stdout(io.StringIO()):
+            d2l.pretrain(toy_model(), d2l.PackedStream(self.shards, TOY.T, 8),
+                         d2l._inst_config(cfg, cfg.peak_lr, 0, 10,
+                                          stats_every=0, state_steps=(10,),
+                                          out_dir=late))
+        late = {10: (d2l._state_path(late, 10), 0.95)}
+        arms = ((0.95, 6, 8, 'random', 8, True),
+                (0.95, 6, 8, 'ngram', 2, True),
+                (0.999, 6, 8, 'ngram', 2, True),
+                (0.95, 2, 4, 'ngram', 2, False),
+                (0.95, 10, 12, 'ngram', 2, False))
+        old = os.path.join(root, 'spike', 'log.jsonl')  # an earlier job's
+        os.makedirs(os.path.dirname(old))
+        with open(old, 'w') as f:
+            f.write('{}\n')
+        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
+                mock.patch.object(d2l, '_job_root', lambda: root), \
+                contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(ValueError, '2 warmup steps'):
+                d2l._spike(cfg, [(0.95, 1, 2, 'ngram', 2, False)], 3, 8,
+                           steps=12, window=6, late=late, device='cpu')
+            r = d2l._spike(cfg, arms, 3, 8, steps=12, window=6, late=late,
+                           device='cpu')
+            with self.assertRaisesRegex(ValueError, 'betas'):  # not its
+                d2l._spike(dataclasses.replace(cfg, betas=(0.8, 0.95)),
+                           arms[-1:], 3, 8, steps=12, window=6, late=late,
+                           device='cpu')
+        # the driver removes its own states only, not the earlier log
+        self.assertFalse(os.path.exists(os.path.join(root, 'spike', 'v2')))
+        self.assertEqual(os.listdir(os.path.join(root, 'spike')),
+                         ['log.jsonl'])
+        t = r.table
+        self.assertEqual(list(t.columns), d2l._SPIKE_TABLES['table'])
+        self.assertEqual([tuple(x) for x in t[['beta2', 'state', 'bad_step',
+                                               'batch', 'k']].values],
+                         [a[:5] for a in arms])
+        self.assertEqual(r.floor, 0.0)  # CPU: two replays bit-identical
+        self.assertTrue((t['drift'] == 0).all())
+        orig = d2l.pretrain
+
+        def drifting(model, stream, c, **kw):  # 1e-3 off at the first step
+            log = orig(model, stream, c, **kw)
+            if stream.bad_step is not None:
+                log.loc[log.index[0], 'loss'] += 1e-3
+            return log
+        with mock.patch.object(d2l, '_train_shards', lambda c: self.shards), \
+                mock.patch.object(d2l, '_job_root', lambda: root), \
+                mock.patch.object(d2l, 'pretrain', drifting), \
+                contextlib.redirect_stdout(io.StringIO()):
+            d = d2l._spike(cfg, (arms[0], arms[3]), 3, 8, steps=12, window=6,
+                           late=late, device='cpu')
+        # a replay drift before the bad step is part of the floor
+        np.testing.assert_allclose(d.table['drift'], [1e-3, 1e-3], rtol=1e-6)
+        self.assertAlmostEqual(d.floor, 1e-3, places=9)
+        tr = r.traces
+        self.assertEqual(list(tr.columns), d2l._SPIKE_TABLES['traces'])
+        runs = tr.groupby(['beta2', 'state', 'arm', 'batch', 'k'])['step']
+        self.assertEqual(len(runs), 7 + 4 + 2 + 2)  # skip, clip, floor
+        self.assertTrue((runs.count() == 12).all())
+
+        def loss(b2, state, arm, batch='none', k=0):
+            g = tr[(tr['beta2'] == b2) & (tr['state'] == state)
+                   & (tr['arm'] == arm) & (tr['batch'] == batch)
+                   & (tr['k'] == k)]
+            return g.set_index('step')['loss']
+        for a in arms:  # paired: equal to the skip replay before the bad step
+            b2, state, step, batch, k, clip = a
+            for arm, ref in (('bad', 'skip'),) + ((('bad+clip', 'skip+clip'),)
+                                                  if clip else ()):
+                x, y = loss(b2, state, arm, batch, k), loss(b2, state, ref)
+                self.assertEqual(x.index[0], state + 1)
+                pd.testing.assert_series_equal(x.loc[:step - 1],
+                                               y.loc[:step - 1])
+                self.assertGreater(abs(x[step] - y[step]), 1e-3, a)
+        row = t.iloc[0]
+        self.assertGreater(row.peak, 0)
+        self.assertIsNone(row.recover)  # 2 x floor = 0 on CPU: never below
+        bad = tr[(tr['arm'] == 'bad') & (tr['state'] == 6)
+                 & (tr['batch'] == 'random')].set_index('step')
+        self.assertAlmostEqual(row.norm, bad.loc[8, 'grad_norm'])
+        self.assertAlmostEqual(row['median'], tr[
+            (tr['arm'] == 'skip') & (tr['state'] == 6)
+            & (tr['beta2'] == 0.95)]['grad_norm'].median())
+        self.assertAlmostEqual(row.norm_ratio, row.norm / row['median'])
+        self.assertAlmostEqual(row.clip_ratio, row.peak_clip / row.peak)
+        self.assertAlmostEqual(row.clip_predicted, min(1, 1 / row.norm_clip))
+        self.assertGreaterEqual(row.clipped_before, 0)
+        self.assertTrue(t.iloc[3:][['peak_clip', 'clip_ratio']].isna()
+                        .all().all())
+        # the clip twins clip at 1.0 from their first step on (the bad step
+        # included); the other replays never clip
+        twin = tr['arm'].str.endswith('+clip')
+        self.assertTrue((tr.loc[twin, 'clipped']
+                         == (tr.loc[twin, 'grad_norm'] > 1.0)).all())
+        self.assertFalse(tr.loc[~twin, 'clipped'].any())
+        self.assertTrue(tr.loc[twin, 'clipped'].any())
+        # the two beta2 states differ (their runs), the late arm starts at 10
+        self.assertNotEqual(loss(0.95, 6, 'skip')[7],
+                            loss(0.999, 6, 'skip')[7])
+        self.assertEqual(loss(0.95, 10, 'skip').index[0], 11)
+
+    def test_regeneration_and_page(self):
+        kw = d2l._spike_job()
+        page = self.page_cells()
+        self.assertEqual(eval(page['arms'], dict(d2l=d2l)), kw['arms'])
+        self.assertIn('period=7', page['call'])
+        self.assertIn('source=300', page['call'])
+        res = self.fake_result()
+        with tempfile.TemporaryDirectory() as tmp, uncommitted(), \
+                mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset()), \
+                mock.patch.dict(os.environ, {'D2L_RERUN': 'spike-replay'}):
+            cwd = os.getcwd()
+            os.makedirs(os.path.join(tmp, 'chapter'))
+            os.chdir(os.path.join(tmp, 'chapter'))
+            try:
+                calls = []
+                with mock.patch.object(d2l, '_spike', lambda *a: calls.append(
+                        a) or res), contextlib.redirect_stdout(io.StringIO()):
+                    got = d2l.spike_replay(**kw)
+                    path = '../data/lm/rerun/lm-r2-spike-v2.json.gz'
+                    config = d2l._stored_config(d2l._read_result(
+                        path, 'json-table'))
+                    self.assertEqual(config['recipe']['late'], [
+                        [1297, 'lm-r2t1-s1297-state-v1', 0.95]])
+                    self.assertEqual((config['period'], config['source'],
+                                      len(config['arms'])), (7, 300, 8))
+                    os.environ['D2L_RERUN'] = 't1-runs'
+                    pending = d2l.spike_replay(**kw)
+                    os.environ['D2L_RERUN'] = ''
+                    d2l.DATA_HUB['lm-r2-spike-v2'] = ('url', 'sha1')
+                    with mock.patch.object(d2l, 'download_keyed',
+                                           lambda key: path):
+                        loaded = d2l.spike_replay(**kw)
+                        with self.assertRaisesRegex(ValueError, 'period'):
+                            d2l.spike_replay(**dict(kw, period=5))
+                        with mock.patch.object(d2l, 'SPIKE_STEPS', 200), \
+                                self.assertRaisesRegex(ValueError, 'recipe'):
+                            d2l.spike_replay(**kw)
+                    with self.assertRaises(ValueError):  # before any lookup
+                        d2l.spike_replay(kw['cfg'], kw['arms'][:1] * 2)
+            finally:
+                os.chdir(cwd)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(got.table), 8)
+        self.assertTrue(pending.label.endswith('pending'))
+        self.assertEqual(list(pending.table.columns),
+                         d2l._SPIKE_TABLES['table'])
+        self.assertTrue(math.isnan(pending.floor))
+        self.assertEqual(loaded.label, '')
+        pd.testing.assert_frame_equal(loaded.table, got.table,
+                                      check_dtype=False)
+        self.assertAlmostEqual(loaded.floor, res.floor)
+        # the page's table: header, 8 rows, floor line
+        lines = self.table_output(loaded)
+        self.assertEqual(len(lines), 10)
+        self.assertLessEqual(max(map(len, lines)), 80)
+        self.assertIn('peak excess', lines[0])
+        self.assertEqual(lines[1].split()[:3], ['0.95', '250', 'random'])
+        self.assertTrue(lines[7].rstrip().endswith('/ —'))
+        self.assertIn('>100 / 3', lines[2])  # not back within the window
+        self.assertEqual(lines[-1], 'replay floor (same state, same batches, '
+                         'no bad batch): 3.0e-03')
+        self.assertEqual(self.table_output(pending), [])
+
+    def page_cells(self):
+        path = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'chapter_lm-pretraining',
+            'reference-model.md')
+        with open(path) as f:
+            src = f.read()
+        call = src.split('#reference-model-spike}\n')[1].split('```')[0]
+        table = src.split('#reference-model-spike-table}\n')[1].split(
+            '```')[0]
+        arms = call.split('ARMS = ')[1].split('\nspike = ')[0]
+        return dict(arms=arms, call=call, table=table.replace(
+            '%%tab pytorch\n', ''))
+
+    def table_output(self, spike):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            exec(self.page_cells()['table'], dict(d2l=d2l, pd=pd,
+                                                  spike=spike))
+        return out.getvalue().splitlines()
+
+    def fake_result(self):
+        rows = []
+        for i, a in enumerate(d2l._spike_job()['arms']):
+            b2, state, step, batch, k, clip = a
+            row = dict(beta2=b2, state=state, bad_step=step, batch=batch, k=k,
+                       norm=12.0 + i, median=0.4, norm_ratio=(12.0 + i) / 0.4,
+                       peak=0.5 + i, recover=None if i == 1 else 12 + i,
+                       total=4.0 + i, drift=2e-4 * i)
+            if clip:
+                row.update(norm_clip=12.0 + i, peak_clip=0.05, recover_clip=3,
+                           total_clip=0.3, clipped_before=0,
+                           clip_ratio=0.05 / (0.5 + i),
+                           clip_predicted=1 / (12.0 + i))
+            rows.append(row)
+        traces = []
+        for r in rows:
+            for arm in ('bad', 'skip') + (('bad+clip', 'skip+clip')
+                                          if 'peak_clip' in r else ()):
+                bad = arm.startswith('bad')
+                st = np.arange(r['state'] + 1, r['state'] + 151)
+                traces.append(pd.DataFrame(dict(
+                    beta2=r['beta2'], state=r['state'],
+                    bad_step=r['bad_step'] if bad else 0,
+                    batch=r['batch'] if bad else 'none',
+                    k=r['k'] if bad else 0, arm=arm, step=st,
+                    loss=3.0 + bad * np.exp(-(st - r['bad_step']).clip(0)
+                                            / 10.0) * (st >= r['bad_step']),
+                    grad_norm=0.4, clipped=False)))
+        traces = pd.concat(traces, ignore_index=True).drop_duplicates(
+            ['beta2', 'state', 'arm', 'batch', 'k', 'step'])
+        return d2l.SpikeReplay(pd.DataFrame(rows).reindex(
+            columns=d2l._SPIKE_TABLES['table']), traces, 3e-3, '')
+
+    def test_plot(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        d2l.plot_spike(self.fake_result())
+        ax = d2l.plt.gcf().axes[0]
+        labels = [t.get_text() for t in ax.get_legend().get_texts()]
+        self.assertEqual(labels, [
+            'β2 0.95, random', 'β2 0.95, n-gram ×1', 'β2 0.95, n-gram ×8',
+            'β2 0.95, n-gram ×64', 'β2 0.999, random',
+            'β2 0.95, random, clip 1.0', 'replay floor'])
+        self.assertEqual(ax.get_yscale(), 'log')
+        self.assertEqual(ax.lines[0].get_xdata()[0], 1)
+        self.assertEqual(len(ax.lines[0].get_xdata()), 100)
+        self.assertEqual(ax.lines[-1].get_linestyle(), ':')
+        d2l.plt.close('all')
+        empty = d2l.SpikeReplay(pd.DataFrame(columns=d2l._SPIKE_TABLES[
+            'table']), pd.DataFrame(), math.nan, 'spike-replay pending')
+        n = len(d2l.plt.get_fignums())
+        d2l.plot_spike(empty)
+        self.assertEqual(len(d2l.plt.get_fignums()), n)
+
+    def test_repeated_ngram_flags(self):
+        """Windows of T = 512 with 32 and 31 repeats of n-grams of periods 1,
+        7 and 13 (distinct ids, so the smallest period is the n-gram's
+        length) in random text: the 32s are flagged with their period,
+        repeats and start, the 31s are not; max_n = 12 misses period 13."""
+        rng = np.random.default_rng(0)
+        T, windows = 512, 7
+        x = rng.integers(32, 30000, windows * T + 1)
+        for w, (n, r) in enumerate([(1, 32), (1, 31), (7, 32), (7, 31),
+                                    (13, 32), (13, 31)]):
+            gram = np.arange(30001 + 20 * w, 30001 + 20 * w + n)
+            x[w * T + 50:w * T + 50 + n * r] = np.tile(gram, r)
+        tok = types.SimpleNamespace(decode=lambda ids: ' '.join(map(str,
+                                                                    ids)))
+        flags = d2l.repeated_ngram_flags(_Shards(x), T=T, tokenizer=tok)
+        self.assertEqual(flags.windows, windows)
+        t = flags.table
+        self.assertEqual(t['window'].tolist(), [0, 2, 4])
+        self.assertEqual(t['period'].tolist(), [1, 7, 13])
+        self.assertEqual(t['repeats'].tolist(), [32, 32, 32])
+        self.assertEqual(t['start'].tolist(), [50, 50, 50])
+        self.assertEqual(t['text'][0], '"' + ' '.join(['30001'] * 32)[:50]
+                         + '"')
+        short = d2l.repeated_ngram_flags(_Shards(x), T=T, max_n=12,
+                                         tokenizer=tok)
+        self.assertEqual(short.table['window'].tolist(), [0, 2])
+        clean = d2l.repeated_ngram_flags(_Shards(x[3 * T:4 * T + 1]), T=T,
+                                         tokenizer=None)
+        self.assertEqual((len(clean.table), clean.windows), (0, 1))
 
 
 class LibraryStructureTest(unittest.TestCase):

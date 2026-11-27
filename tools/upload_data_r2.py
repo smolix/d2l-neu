@@ -191,6 +191,15 @@ class Bucket:
         if r.returncode != 0:
             raise UploadError(f'put-object {key}: {r.stderr.strip()[-300:]}')
 
+    def list(self, prefix):
+        """Every object under *prefix*: dicts with Key, Size, LastModified
+        (the AWS CLI follows the continuation tokens itself)."""
+        r = self._run('list-objects-v2', '--prefix', prefix)
+        if r.returncode != 0:
+            raise UploadError(f'list-objects-v2 {prefix}: '
+                              f'{r.stderr.strip()[-300:]}')
+        return json.loads(r.stdout or '{}').get('Contents') or []
+
     def delete(self, key):
         r = self._run('delete-object', '--key', key)
         if r.returncode != 0:

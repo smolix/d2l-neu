@@ -241,6 +241,7 @@ framework.
 | Inspect the state of a notebook run | [4.10](#410-diagnose-a-notebook-run-you-did-not-start) |
 | Publish (R2, Colab, forum) | [4.11](#411-publish) |
 | Publish a data file for a `DATA_HUB` entry | [4.13](#413-publish-a-data-artifact-data_hub) |
+| Delete data files no branch or tag names | [4.13a](#413a-pruning-unreferenced-lm-data) |
 | `make html` says outputs are stale | [4.12](#412-diagnose-a-stale-or-failing-freshness-gate) |
 
 ### 4.1 Render the book on a laptop
@@ -678,6 +679,67 @@ Common failures:
   `python3 tools/upload_data_r2.py --delete lm/_test/<file>`.
 
 Details: [`build-system.md` §6.9](build-system.md#69-makefile-layout-extracted-scripts--artifact-phase-timing).
+
+### 4.13a Pruning unreferenced LM data
+
+A new version never replaces the old object, so superseded `lm/` objects pile
+up in `d2l-data`. Now and then, list and delete the ones nothing names:
+
+```bash
+make prune-data              # dry run: lists, deletes nothing, exits 0
+make prune-data DELETE=1     # deletes the listed objects after a typed confirmation
+```
+
+Which objects are kept. Each key is reduced to its stem: the file name up to
+its version marker, without extension or `.<part>` suffixes
+(`lm-cpt-runs-v1.cpt-qwen-A.json.gz` → `lm-cpt-runs-v1`), plus the name of
+each folder (`lm/fwedu-r2-v1/train-00001.bin` → `fwedu-r2-v1`). An object
+stays if one of its stems occurs in any tracked file of any live branch of
+`origin` (`main` among them) or of any tag (the `en-*` release tags the
+translated books pin), and the occurrence counts:
+
+- anywhere, when the same quote character (`'` or `"`) appears somewhere
+  before it and somewhere after it on its line (the test does not check that
+  the quotes enclose it);
+- in a config file (`*.yaml`, `*.yml`, `*.toml`, `*.ini`, `*.cfg`, `*.mk`,
+  `Makefile`), also as a whole unquoted token, as in the campaign output lists
+  of `tools/lm_campaigns.yaml` (`… -> lm-mix-runs-t2-v1`); `lm-x-v12` does not
+  count for `lm-x-v1`.
+
+The match is textual: a key registered through a loop over a quoted key list
+(as `chapter_lm-pretrained/api.md` does) stays, and so does a key that only
+shows up in some unrelated string. A mention in Markdown prose, backticks
+included, usually keeps nothing; it keeps its object when quote characters
+happen to stand on both sides of it on its line (`it's `lm-x-v1`, don't`).
+Over-keeping is the safe direction.
+
+How the refs are read. The tool fetches the branches and tags of `origin`
+(`--depth 1`) into a temporary bare repository that borrows this checkout's
+object store, and runs `git grep` on each ref's whole tree there, wherever it
+is started; nothing is checked out and this checkout's refs and objects stay
+as they are. So a branch deleted on GitHub stops counting. `NO_FETCH=1` reads
+the local remote-tracking refs and tags instead (a stale ref of a deleted
+branch then still keeps its keys; the main checkout's configured refspec
+fetches only `main`). **Push a branch before pruning**: commits that exist
+only locally are not read, and only the grace period protects their keys.
+
+Output (log `logs/prune-data-<TS>.log`): the refs read, the referenced count,
+then the unreferenced objects with size and last-modified time; objects under
+`_test/` in their own list (never matched; deletable past the grace period,
+younger ones held back like the rest); and unreferenced objects younger than
+`MIN_AGE_DAYS` (default 14) held back. All parts of a stem are held back while
+any one of them is young (an upload still in progress). `DELETE=1` deletes the
+unreferenced and `_test/` objects past the grace period, only after you type
+`delete <count>` at the prompt, which names the count and the bytes. It checks
+that each key is gone. If the objects to delete hold more than 25% of the
+listed bytes, the run stops before the prompt (a dry run warns): a listing that
+large more likely means a wrong reading of the refs than real garbage; check it,
+then `ALLOW_LARGE=1` overrides. Deleting cannot be undone. A reader who still
+pins a deleted key, say a fork, gets a 404 on its next download (files already
+downloaded keep working).
+
+Tests: `tools/test_prune_lm_data.py` (in `make test-lm`). Credentials and
+failures: as `make upload-data` above.
 
 ## 5. Rules that bite
 

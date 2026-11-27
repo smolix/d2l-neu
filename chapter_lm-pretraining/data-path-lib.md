@@ -113,7 +113,8 @@ PRETRAIN_PENDING = frozenset()  # campaigns an author step declared pending
 PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'pdp-throughput', 'pdp-mask-runs',
     't1-runs', 'inst-t1-none', 'inst-t1-qkclip', 'inst-t1-qknorm',
-    'inst-t1-softcap', 'spike-replay', 'reference-run', 'ladder', 'inst-t2',
+    'inst-t1-softcap', 'inst-t1-clip', 'inst-t1-warmup', 'size-xfer-pilot',
+    'spike-replay', 'reference-run', 'ladder', 'inst-t2',
     'reference-evals', 't1-evals', 'ladder-evals',
     'gemm-sweep', 'lowp-runs',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
@@ -129,7 +130,9 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     'pdp-mask-runs': 'packing-mask-runs',
     't1-runs': 't1-runs', 'inst-t1-none': 'instability-t1',
     'inst-t1-qkclip': 'instability-t1', 'inst-t1-qknorm': 'instability-t1',
-    'inst-t1-softcap': 'instability-t1', 'spike-replay': 'spike-replay',
+    'inst-t1-softcap': 'instability-t1', 'inst-t1-clip': 'instability-t1',
+    'inst-t1-warmup': 'instability-t1', 'size-xfer-pilot': 'size-transfer',
+    'spike-replay': 'spike-replay',
     'reference-run': 'reference-run-log', 'ladder': 'ladder-logs',
     'inst-t2': 'instability-t2', 'reference-evals': 'reference-evals',
     't1-evals': 't1-evals', 'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
@@ -499,20 +502,37 @@ def reference_shards(which='100m', **kwargs):
 ```
 
 The loss of a pretraining step: `chunked_lm_loss` with the summed NLL
-alongside, which `pretrain_step` logs when the z-loss term is on.
+alongside, which `pretrain_step` logs when the z-loss term is on, and, on
+request, the summed log-partition (`pretrain_step` logs its mean, `log_z`).
 
 ```{.python .input #data-path-lib-losses}
 %%tab pytorch
 #@save
+def _lm_loss_terms_lse(h, W, y, ignore_index=-100):
+    """lm_loss_terms (summed NLL and logsumexp^2) and the summed logsumexp
+    over the valid targets y, from the same fp32 logits."""
+    logits = F.linear(h, W)
+    logits = logits.to(torch.promote_types(logits.dtype, torch.float32))
+    lse, valid = torch.logsumexp(logits, -1), y != ignore_index
+    nll = lse - logits.gather(-1, y.clamp(min=0)[:, None])[:, 0]
+    return torch.stack([torch.where(valid, nll, 0.0).sum(),
+                        torch.where(valid, lse ** 2, 0.0).sum(),
+                        torch.where(valid, lse, 0.0).sum()])
+
+#@save
 def chunked_lm_loss_and_nll(hidden, weight, labels, chunk=8192, z_loss=0.0,
-                            ignore_index=-100):
+                            ignore_index=-100, return_lse=False):
     """chunked_lm_loss's (sum_loss, n_valid) and the summed NLL without the
-    z-loss term, from the same chunks."""
+    z-loss term, from the same chunks; with return_lse also the summed
+    log-partition logsumexp over the valid targets (no gradient needed)."""
     H, y = hidden.flatten(0, -2), labels.flatten()
-    nll, z = sum(torch.utils.checkpoint.checkpoint(
-        d2l.lm_loss_terms, H[i:i + chunk], weight, y[i:i + chunk],
-        ignore_index, use_reentrant=False) for i in range(0, len(y), chunk))
-    return nll + z_loss * z, (y != ignore_index).sum(), nll
+    terms = _lm_loss_terms_lse if return_lse else d2l.lm_loss_terms
+    parts = sum(torch.utils.checkpoint.checkpoint(
+        terms, H[i:i + chunk], weight, y[i:i + chunk], ignore_index,
+        use_reentrant=False) for i in range(0, len(y), chunk))
+    nll, z = parts[0], parts[1]
+    out = (nll + z_loss * z, (y != ignore_index).sum(), nll)
+    return out + (parts[2],) if return_lse else out
 ```
 
 ## Attention Internals
@@ -607,6 +627,8 @@ def _doc_mask(ctx, backend, T, device):
 #@save
 def _packed_mask(model, ctx, X):
     """The mask every block of a PackedGPT uses, built once per forward."""
+    if not len(model.blks):  # the zero-layer reference model
+        return None
     backend = _attn_backend(model.blks[0].attention, X, ctx)
     return None if backend == 'causal' else _doc_mask(ctx, backend,
                                                       X.shape[1], X.device)

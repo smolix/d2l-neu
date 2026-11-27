@@ -23,6 +23,10 @@
 #   wheel's nccl.h and libnccl.so.2, the library the book's PyTorch runs.
 # GENCODE: the GPU architecture to compile for (default: the first visible
 #   GPU's compute capability, e.g. 89 for the RTX 4090).
+# NCCL_TESTS_MPI_HOME: build nccl-tests with MPI (MPI=1 MPI_HOME=...), one rank
+#   per GPU across nodes under srun or mpirun (chapter 22's two-node campaign,
+#   tools/hw_campaign/cluster_t4.sbatch); unset (the default) builds the
+#   single-process tests the box uses.
 # Each tool is pinned to a release tag and its commit (STREAM, which has no
 # repository, to its file's SHA-256); a mismatch stops the build. STREAM is
 # compiled with -O3 -fopenmp and changes only the compile-time parameters its
@@ -114,7 +118,10 @@ if want nccl-tests; then
   ln -sf "$NCCL_PKG/lib/libnccl.so.2" "$NCCL_HOME/lib/libnccl.so.2"
   ln -sf libnccl.so.2 "$NCCL_HOME/lib/libnccl.so"
   NCCL_VERSION=$("$PYTHON" -c 'import torch; print(".".join(map(str, torch.cuda.nccl.version())))')
-  ( cd "$SRC/nccl-tests" && make -j"$JOBS" MPI=0 CUDA_HOME="$CUDA_HOME" NCCL_HOME="$NCCL_HOME" \
+  MPI_ARGS=(MPI=0)
+  [ -n "${NCCL_TESTS_MPI_HOME:-}" ] && MPI_ARGS=(MPI=1 MPI_HOME="$NCCL_TESTS_MPI_HOME")
+  ( cd "$SRC/nccl-tests" && { make clean > /dev/null 2>&1 || true; } && make -j"$JOBS" "${MPI_ARGS[@]}" \
+      CUDA_HOME="$CUDA_HOME" NCCL_HOME="$NCCL_HOME" \
       NVCC_GENCODE="$NVCC_GENCODE" > "$PREFIX/nccl-tests-make.log" 2>&1 )
   for t in "$SRC"/nccl-tests/build/*_perf; do
     # the RUNPATH finds the wheel's libnccl.so.2 next to the binaries' link dir

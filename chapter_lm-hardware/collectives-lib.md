@@ -1252,8 +1252,9 @@ schema of :numref:`sec_lm_server_paths` with `algo` and `proto` filled
 def _coll_check(config):
     spec = _HW_COLL[config]
     if spec.get('launcher') == 'campaign':
-        raise ValueError(f'{config} runs on several nodes through the '
-                         'campaign launcher, not tools/hw_regen.py')
+        raise ValueError(f'{config} runs on several nodes through '
+                         'tools/hw_campaign/cluster_t4.sbatch (the campaign '
+                         'launcher), not tools/hw_regen.py')
     n = torch.cuda.device_count()
     host = len(d2l._hw_smi('--query-gpu=index'))
     if n < spec['g'] or n != host:

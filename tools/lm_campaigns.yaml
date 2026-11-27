@@ -46,3 +46,163 @@ campaigns:
     measured: 49 runs, 2.7 GPU-hours of runs (3.1 GPU-hours of reserved cards), 46 min wall on four RTX 4090s; the time stop left 4 runs at their step-768 checkpoints, and the resume finished them
     outputs:
       - data/lm/rerun/mix-t2s/lm-mix-runs-t2s-v1.json -> lm-mix-runs-t2s-v1 (registered)
+  # Chapter 22 (Hardware for Training and Inference): four campaigns on A100s that the
+  # book's 4 x RTX 4090 box cannot stand in for (author ruling 2026-11-25: "a ready-to-launch
+  # campaign package (config, launcher, expected time, memory and FLOP, and the artifact names
+  # its logs will get) waits for the A100 campaigns"). The single-node launcher is
+  # tools/hw_regen.py <name> --config <c> --out <dir>: it writes the campaign log that
+  # d2l.HW_CONFIG_LOGS[(name, c)] names, tags the tier and refuses any GPU that is not the
+  # campaign's chip-table row. `regenerations` lists its (name, config) pairs for
+  # tools/hw_campaign/dry_run.sh and the tests. Every number under flop, bytes,
+  # predicted_hours and memory_gib is printed by tools/hw_campaign/estimate.py (run
+  # 2026-11-27): the pages' own arithmetic (ServingModel, TrainStepModel, flops_per_token,
+  # nccl_busbw_factor) at the chip-table rows, and the box's measured seconds of the same
+  # entries scaled by the predicted A100/box ratio where the work is fixed (unscaled where a
+  # benchmark runs for a fixed time). Setup on a fresh host (not in predicted_hours, about
+  # 0.5 h): clone at the release tag, `make venv-lm`, `make lib`, `bash tools/build_hw_tools.sh`
+  # (GENCODE 80), `.venv-lm/bin/python tools/hw_regen.py --prefetch`.
+  - id: 22-hw-c-t2
+    section: sec_lm_accelerator_design, sec_lm_kernels, sec_lm_workload_hardware, sec_lm_energy_cost (chapter_lm-hardware)
+    tier: T2
+    status: packaged, not run (author ruling 2026-11-25)
+    hardware: one A100 PCIe 40 GB (d2l._HW_CAMPAIGN_GPUS['t2']; the drivers refuse another chip)
+    config: >-
+      box-microbench and box-workloads with config 't2' (the accelerator-design and kernels
+      pages' calls; HW_WORKLOAD_CONFIGS['t2'], the Qwen3-8B grid); box-clocksweep with
+      _HW_CLOCK_CONFIGS['t2'] (360-1410 MHz in steps of 150, edge 210 MHz)
+    regenerations:
+      - {name: box-microbench, config: t2}
+      - {name: box-workloads, config: t2}
+      - {name: box-clocksweep, config: t2}
+    command: |
+      OUT=data/lm/campaign/c-t2
+      .venv-lm/bin/python tools/hw_regen.py box-microbench --config t2 --out $OUT
+      .venv-lm/bin/python tools/hw_regen.py box-workloads --config t2 --out $OUT
+      if sudo -n nvidia-smi -rgc -i 0 > /dev/null 2>&1; then  # clocks may be locked here
+        bash tools/hw_clock_sweep.sh 0 --config t2 --out $OUT
+      else
+        echo "clock sweep skipped: no sudo -n nvidia-smi on this host (the A100 sweep stays pending)"
+      fi
+    resume: not supported inside a regeneration; re-run the failed command alone with --replace
+    depends:
+      - Qwen/Qwen3-8B @ b968826d (HF_REVISIONS; configuration for the grid, weights for the weight-value control)
+      - nvidia-smi with clock locking through sudo -n (only for the clock sweep)
+      - Triton of the pinned torch (the kernels section's sweeps)
+    runs: three processes per regeneration (the microbenchmark contract); 3 regenerations
+    flop: 5.9e15  # one run of the Qwen3-8B grid on the A100's capacity: decode 64 steps x flops_per_token(cfg, L) / 3 x b per kept point (and the eager points), prefill 5 x flops_per_token(cfg, n, causal_half) / 3 x n, training 13 steps x TrainStepModel.flops_per_token(s) x b s per depth; the microbenchmarks and the clock sweep run for fixed times
+    predicted_hours: 0.56  # microbench 0.10 (box seconds, fixed-time windows) + workloads 0.12 (box grid seconds x predicted A100 / predicted 4090 time of the grids, + the weight control) + clock sweep 0.30 (box seconds x 9 / 10 locks) + 16 GB of weights at 100 MB/s 0.05
+    memory_gib: 34  # the grid keeps points within 0.9 x 40 GB (ServingModel.max_batch); the microbenchmarks stay under 24 GiB (they ran on the RTX 4090)
+    stop_hours: 1.5
+    outputs:
+      - data/lm/campaign/c-t2/lm-hw-a100-microbench-v1.tar -> lm-hw-a100-microbench-v1
+      - data/lm/campaign/c-t2/lm-hw-a100-workloads-v1.tar -> lm-hw-a100-workloads-v1
+      - data/lm/campaign/c-t2/lm-hw-a100-clocksweep-v1.tar -> lm-hw-a100-clocksweep-v1
+    after: >-
+      make upload-data FILES=... PREFIX=lm/; one DATA_HUB statement per key with the printed
+      sha1 in accelerator-design-lib.md (a100-microbench, a100-clocksweep) and
+      workload-hardware-lib.md (a100-workloads); make lib; re-run accelerator-design, kernels,
+      workload-hardware and energy-cost (hw_campaign_log switches from the status line to the
+      log by itself; energy-cost shows the A100 sweep beside the box's); rewrite every
+      sentence marked "campaign: <key>" (claims C5, K6, W7 pending T2)
+  - id: 22-hw-c-t2pair
+    section: sec_lm_workload_hardware, sec_lm_server_paths (chapter_lm-hardware)
+    tier: T2pair
+    status: packaged, not run (author ruling 2026-11-25)
+    hardware: two A100 PCIe 40 GB joined by an NVLink bridge (d2l._HW_CAMPAIGN_GPUS['t2pair'])
+    config: >-
+      box-moe with HW_WORKLOAD_CONFIGS['t2pair']['moe'] (Qwen3-30B-A3B's router over 1,536
+      FineWeb-Edu and 64 code sequences of 256 tokens, micro-batches of 16, the model split over
+      both cards); box-p2p with _HW_P2P['t2pair'] (all-reduce and all-to-all over the bridge,
+      with NCCL_P2P_DISABLE=1, and the copy-engine knob, 8 B to 4 GiB, 50 iterations)
+    regenerations:
+      - {name: box-moe, config: t2pair}
+      - {name: box-p2p, config: t2pair}
+    command: |
+      OUT=data/lm/campaign/c-t2pair
+      nvidia-smi topo -m | grep -q 'GPU0.*NV[0-9]' || { echo "no NVLink between GPU 0 and 1"; exit 3; }
+      .venv-lm/bin/python tools/hw_regen.py box-moe --config t2pair --out $OUT
+      .venv-lm/bin/python tools/hw_regen.py box-p2p --config t2pair --out $OUT
+    resume: not supported inside a regeneration; re-run the failed command alone with --replace
+    depends:
+      - Qwen/Qwen3-30B-A3B @ ad44e777 (HW_REVISIONS; 61 GB of weights)
+      - lm-fwedu-shards-val, lm-r2-tokenizer-v1, lm-heldout-texts-v1 (the router's inputs)
+      - nccl-tests v2.21.1 and p2pBandwidthLatencyTest from tools/build_hw_tools.sh
+    runs: three processes per regeneration; 2 regenerations
+    flop: 2.5e15  # 2 x N_act (ServingModel.n_matmul of Qwen3-30B-A3B) x 1,600 x 256 tokens, one forward
+    bytes: 6.2e12  # three processes x (10 + 50 iterations) x nccl_busbw_factor(op, 2) x the sizes 8 B to 4 GiB, per series of _HW_P2P['t2pair'], bytes per GPU's link
+    predicted_hours: 0.32  # MoE: box seconds x (4 x 165 TFLOP/s) / (2 x 312) 0.07; collectives: bytes / 300 GB/s (bridge, per direction) or / 15.8 GB/s (P2P disabled: host-staged over PCIe 4.0) 0.07; 61 GB of weights at 100 MB/s 0.17
+    memory_gib: 28  # half of the 61 GB of weights per card (the router recording keeps micro-batches of 16 x 256 tokens)
+    stop_hours: 1.0
+    outputs:
+      - data/lm/campaign/c-t2pair/lm-hw-t2pair-moe-v1.tar -> lm-hw-t2pair-moe-v1
+      - data/lm/campaign/c-t2pair/lm-hw-t2pair-p2p-v1.tar -> lm-hw-t2pair-p2p-v1
+    after: >-
+      make upload-data FILES=... PREFIX=lm/; one DATA_HUB statement per key in
+      workload-hardware-lib.md (t2pair-moe) and server-paths-lib.md (t2pair-p2p); make lib;
+      re-run workload-hardware and server-paths; rewrite every sentence marked
+      "campaign: <key>" (claims W7, S6 pending T2pair)
+  - id: 22-hw-c-t3
+    section: sec_lm_memory_tiers, sec_lm_server_paths (chapter_lm-hardware)
+    tier: T3
+    status: packaged, not run (author ruling 2026-11-25)
+    hardware: one 8 x A100 40 GB node (NVSwitch or bridged pairs; topo.txt in the log says which), local NVMe, a shared file system
+    config: >-
+      box-storage with _HW_NODE_STORAGE['t3'] (the box's host-link, DRAM, fio, object-store and
+      offload configurations, plus raw nvbandwidth per NUMA node, gdsio through GPUDirect and
+      through a bounce buffer, fio on the shared file system); box-p2p with _HW_P2P['t3']
+      (g = 2, 4, 8, all-to-all, Ring and Tree, the NCCL_P2P_DISABLE=1 emulation of a
+      PCIe-only node, 8 B to 4 GiB)
+    regenerations:
+      - {name: box-storage, config: t3}
+      - {name: box-p2p, config: t3}
+    command: |
+      D2L_HW_NVME=/local/nvme/d2l D2L_HW_SHARED_FS=/shared/scratch/d2l \
+        bash tools/hw_campaign/node_t3.sh data/lm/campaign/c-t3
+    resume: not supported inside a regeneration; node_t3.sh stops at the first failure, re-run that hw_regen.py command with --replace
+    depends:
+      - fio, nvbandwidth v0.11.0, nccl-tests v2.21.1, p2pBandwidthLatencyTest (tools/build_hw_tools.sh), numactl; gdsio (GPUDirect Storage tools, optional)
+      - lm-fwedu-shards-100m-v1 (shard read and the object-store probe)
+    runs: three processes per regeneration; 2 regenerations
+    bytes: 2.2e13  # three processes x (10 + 50 iterations) x nccl_busbw_factor(op, k) x the sizes 8 B to 4 GiB, per series of _HW_P2P['t3'], bytes per GPU's link; fio and nvbandwidth run for fixed times
+    predicted_hours: 0.92  # storage: box seconds (fixed-time fio windows, CPU-bound offload; the concurrent copies twice for 8 cards) 0.77; raw tools 0.04; collectives: bytes / 300 GB/s (NVSwitch, per direction) or / 15.8 GB/s (P2P disabled) 0.09; captures
+    memory_gib: 14  # the toy offloaded run's peak on the box (attrs peak_gib); the collectives' two 4 GiB buffers
+    stop_hours: 2.0
+    outputs:
+      - data/lm/campaign/c-t3/lm-hw-node-storage-v1.tar -> lm-hw-node-storage-v1
+      - data/lm/campaign/c-t3/lm-hw-node-p2p-v1.tar -> lm-hw-node-p2p-v1
+    after: >-
+      make upload-data FILES=... PREFIX=lm/; one DATA_HUB statement per key in
+      memory-tiers-lib.md (node-storage; add the node's DIMMs to _HW_DIMMS before the tier plot
+      uses them) and server-paths-lib.md (node-p2p); make lib; re-run memory-tiers and
+      server-paths; rewrite every sentence marked "campaign: <key>" (claims M7, S6 pending T3)
+  - id: 22-hw-c-t4
+    section: sec_lm_networks, sec_lm_collectives (chapter_lm-hardware)
+    tier: T4
+    status: packaged, not run (author ruling 2026-11-25)
+    hardware: two 8 x A100 nodes with RDMA (one rail per GPU), one Slurm allocation shared by 22.6 and 22.7
+    config: >-
+      d2l._HW_COLL['t4']: all-reduce on 16 ranks, 8 B to 4 GiB, 10 warm-up and 50 timed
+      iterations, NCCL's default and every NCCL_ALGO x NCCL_PROTO pair (Ring, Tree, NVLS,
+      CollNet x LL, LL128, Simple; a pair the fabric lacks is dropped with its reason), three
+      timed repeats; perftest ib_write_bw and ib_write_lat per rail pair; ibstat; the default
+      pair on one rail (NCCL_IB_HCA)
+    regenerations: []  # multi-node: launched by Slurm, packed by tools/hw_campaign/pack_t4.py
+    command: |
+      sbatch tools/hw_campaign/cluster_t4.sbatch data/lm/campaign/c-t4   # from the repository root, OUT on a file system both nodes see
+    resume: not supported; the job's raw logs stay in OUT/raw, and pack_t4.py OUT --replace re-packs them
+    depends:
+      - nccl-tests v2.21.1 built with MPI (NCCL_TESTS_MPI_HOME=<mpi> bash tools/build_hw_tools.sh <prefix> nccl-tests), srun with PMIx
+      - perftest (ib_write_bw, ib_write_lat) and rdma-core (ibstat) on both nodes
+    runs: 13 pairs x (one check + 3 timed repeats) + the one-rail run; perftest bw and lat per rail
+    bytes: 3.9e13  # (13 x (one check iteration + 3 x 60 iterations) + 60) x nccl_busbw_factor('all_reduce', 16) x the sizes 8 B to 4 GiB, bytes per GPU's link
+    predicted_hours: 0.70  # wall: bytes / 25 GB/s (one HDR rail per GPU, the systems table's 8 x A100 SXM 40 GB row) 0.43 + perftest 2 minutes per rail and kind 0.27; 1.4 node-hours
+    memory_gib: 8  # nccl-tests' send and receive buffers of 4 GiB
+    stop_hours: 2.0  # the sbatch time limit
+    outputs:
+      - data/lm/campaign/c-t4/lm-hw-cluster-nccl-v1.tar -> lm-hw-cluster-nccl-v1
+    after: >-
+      make upload-data FILES=... PREFIX=lm/; one DATA_HUB statement in networks-lib.md
+      (cluster-nccl); make lib; re-run networks and collectives (fit_perftest and fit_pairs read
+      the log); rewrite every sentence marked "campaign: lm-hw-cluster-nccl-v1" (claims N5 and
+      22.7's C5 pending T4; C5's hierarchical-versus-default comparison across nodes is not in
+      this package: the hand-written hierarchical all-reduce runs on one node only)

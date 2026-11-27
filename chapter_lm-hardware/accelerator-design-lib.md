@@ -1906,7 +1906,10 @@ It runs the page's calls on the full configuration, then the kernels
 section's (`_regen_kernels`, in `kernels-lib.md`: entries three-ways,
 shape-sweep, wave, rmsnorm, flash-sweep) and writes the fingerprint, `nvidia-smi topo -m` and one
 BenchLog record per measured point next to the entries. With `--config t2`
-the same calls run on the A100 of campaign C-T2 and write its log.
+the same calls run on the A100 of campaign C-T2 and write its log. A
+campaign configuration runs only on its chip-table row and number of GPUs
+(`_HW_CAMPAIGN_GPUS`; C-T2pair's two cards are each the A100 PCIe 40 GB
+row, so the check compares rows, not the log's description of the pair).
 
 ```{.python .input #accelerator-design-lib-driver}
 %%tab pytorch
@@ -1914,17 +1917,25 @@ the same calls run on the A100 of campaign C-T2 and write its log.
 _HW_TIERS = {'box': 'T1', 't2': 'T2'}
 
 #@save
+_HW_CAMPAIGN_GPUS = {'t2': ('A100 PCIe 40 GB', 1),  # chip-table row, GPUs
+                     't2pair': ('A100 PCIe 40 GB', 2)}
+
+#@save
 def _hw_check_hardware(name, config):
-    """Raise unless this GPU is the chip-table row of the campaign log that
-    config writes (no check for the box run)."""
+    """Raise unless the visible GPUs are the chip-table row and at least the
+    number of GPUs of campaign configuration config (_HW_CAMPAIGN_GPUS; no
+    check for the box run); the message names the campaign's hardware."""
     if config == 'box':
         return
+    row, need = _HW_CAMPAIGN_GPUS[config]
     hardware = d2l.HW_CAMPAIGNS[d2l.HW_CONFIG_LOGS[(name, config)]][3]
+    n = torch.cuda.device_count()
     p = torch.cuda.get_device_properties(0)
     chip = _hw_chip_row(_gpu_short(p.name), p.total_memory, d2l.chip_specs())
-    if chip != hardware:
+    if chip != row or n < need:
         raise RuntimeError(f'config {config} measures the {hardware}, not '
-                           f'{p.name} ({p.total_memory / 2**30:.0f} GiB)')
+                           f'{n} x {p.name} ({p.total_memory / 2**30:.0f} '
+                           'GiB)')
 
 #@save
 def regen_microbench(config='box'):

@@ -3,6 +3,7 @@
 without a notebook.
 
     python tools/hw_regen.py <name> [--processes 3] [--replace] [--config C]
+                             [--out DIR] [--dry-run]
     python tools/hw_regen.py --prefetch
 
 `<name>` is a key of `d2l.HW_ARTIFACTS` (box-microbench, box-workloads,
@@ -41,7 +42,12 @@ output is the campaign log that `d2l.HW_CONFIG_LOGS[(name, C)]` names (for
 example `box-microbench --config t2` writes `lm-hw-a100-microbench-v1`), its
 records carry that configuration's tier, and the driver refuses a GPU that
 is not the campaign's chip-table row. `--config box` is the default (no
-configuration). `--config smoke` (box-clocksweep only) is a short test run:
+configuration). `--dry-run` checks the name, its driver and the
+configuration and prints what the run would write (driver, tier, processes,
+folder, artifact file and key), then exits without touching a GPU or
+writing a file (the campaign packages' dry run, tools/hw_campaign/
+dry_run.sh; not D2L_HW_DRYRUN, below, which runs the job and only prints the
+privileged calls). `--config smoke` (box-clocksweep only) is a short test run:
 it needs `--out`, and its folder is combined but never packed, so a smoke
 never reaches an upload. A dry run (`D2L_HW_DRYRUN=1`) is never packed
 either, and its combined entries record `dryrun` in their meta. SIGTERM, SIGINT and SIGHUP are passed on to the
@@ -141,6 +147,8 @@ def main():
     p.add_argument('--prefetch', action='store_true')
     p.add_argument('--out')
     p.add_argument('--config', help='a campaign configuration of the driver')
+    p.add_argument('--dry-run', action='store_true',
+                   help='check and print what the run would write; run nothing')
     p.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
     a = p.parse_args()
     if a.config == 'box':
@@ -193,6 +201,16 @@ def main():
     os.environ.pop('D2L_HW_PROC', None)
     folder = d2l._hw_regen_dir(a.name)
     out = folder + d2l._HW_EXT[kind]
+    if a.dry_run:
+        config = 'smoke' if smoke else a.config or 'box'
+        print(f'{a.name}: d2l.{driver}(config={config!r}), tier '
+              f'{d2l._HW_TIERS.get(config, config)}, {a.processes} '
+              f'process(es)\n  writes {os.path.abspath(folder)}\n  packs '
+              f'{os.path.basename(out)} -> DATA_HUB key '
+              f'{os.path.basename(folder)}'
+              + ('\n  (that folder exists: the run needs --replace)'
+                 if os.path.exists(folder) or os.path.exists(out) else ''))
+        return 0
     if os.path.exists(folder) or os.path.exists(out):
         if not a.replace:
             print(f'{folder} exists (an earlier regeneration); pass --replace '

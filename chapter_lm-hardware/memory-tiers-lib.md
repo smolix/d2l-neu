@@ -1815,6 +1815,105 @@ as an entry (`tiers`) and as `tiers.json` in the blueprint's schema (read by
 the serving chapters; unmeasured tiers omitted), and one BenchLog record per
 measured point.
 
+Campaign C-T3 (`tools/hw_regen.py box-storage --config t3` on one 8 x A100
+node, through `tools/hw_campaign/node_t3.sh`) runs the same calls with the
+tables of `_HW_NODE_STORAGE['t3']`, which the driver adds to the page's
+tables only when it runs them: the page's notebook then depends on the box's
+tables alone, and packaging a campaign changes no page. The node adds raw
+tool outputs in one process (`raw/` in the tar): nvbandwidth's host copies
+with the CPU and memory bound to each NUMA node, gdsio's reads through
+GPUDirect Storage (`-x 0`) and through a CPU bounce buffer (`-x 2`) on the
+node's scratch drive, and one fio read on the shared file system
+(`D2L_HW_SHARED_FS`); a missing tool or path is recorded in
+`raw/skipped.json`, never fatal.
+
+```{.python .input #memory-tiers-lib-node}
+%%tab pytorch
+#@save
+_HW_NODE_STORAGE = {'t3': dict(
+    fio=dict(_HW_FIO['box']), object=dict(_HW_OBJECT['box']),
+    offload=dict(HW_OFFLOAD_CONFIG['box']),
+    raw=dict(nvbandwidth=('host_to_device_memcpy_ce',
+                          'device_to_host_memcpy_ce'),
+             gdsio=dict(threads=4, size='4g', io='1m', xfer=(0, 2)),
+             shared_fio=dict(file_gib=16, bs=2**20, qd=32, jobs=4,
+                             runtime=10, ramp=2),
+             timeout_s=900))}
+
+#@save
+def _storage_config(config):
+    """The campaign tables of config (_HW_NODE_STORAGE), added to the
+    page's _HW_FIO, _HW_OBJECT and HW_OFFLOAD_CONFIG for this run; None for
+    the box."""
+    spec = _HW_NODE_STORAGE.get(config)
+    if spec is not None:
+        _HW_FIO[config], _HW_OBJECT[config] = spec['fio'], spec['object']
+        HW_OFFLOAD_CONFIG[config] = spec['offload']
+    return spec
+
+#@save
+def _numa_nodes():
+    """The host's NUMA node numbers (sysfs; [0] without it)."""
+    root = '/sys/devices/system/node'
+    names = os.listdir(root) if os.path.isdir(root) else []
+    return sorted(int(n[4:]) for n in names
+                  if re.fullmatch(r'node\d+', n)) or [0]
+
+#@save
+def _node_storage_raw(spec, folder):
+    """Campaign C-T3's raw tool outputs in folder/raw: nvbandwidth per NUMA
+    node (CPU and memory bound to it), gdsio reads through GPUDirect and
+    through a bounce buffer, fio on the shared file system; the names of
+    the runs that could not run, with the reason, in raw/skipped.json."""
+    raw, skipped = os.path.join(folder, 'raw'), {}
+    os.makedirs(raw, exist_ok=True)
+
+    def run(name, cmd):
+        r = d2l.hw_run(cmd, timeout_s=spec['timeout_s'], record=True)
+        if r.refused:
+            skipped[name] = r.refused
+        with open(os.path.join(raw, f'{name}.txt'), 'w') as f:
+            f.write(d2l._hw_scrub(r.stdout))
+    nvb, numactl = d2l.hw_bin('nvbandwidth'), shutil.which('numactl')
+    for node in _numa_nodes():
+        name = f'nvbandwidth-numa{node}'
+        if nvb and numactl:
+            run(name, [numactl, f'--cpunodebind={node}', f'--membind={node}',
+                       nvb, '-t', *spec['nvbandwidth']])
+        else:
+            skipped[name] = 'no nvbandwidth or numactl'
+    gds, g = d2l.hw_bin('gdsio'), spec['gdsio']
+    path = os.path.join(_HW_SCRATCH, 'gdsio')
+    if gds:
+        os.makedirs(path, exist_ok=True)
+        base = [gds, '-D', path, '-d', 0, '-w', g['threads'], '-s',
+                g['size'], '-i', g['io']]
+        try:
+            run('gdsio-write', base + ['-x', 0, '-I', 1])  # the files
+            for x in g['xfer']:
+                run(f'gdsio-read-x{x}', base + ['-x', x, '-I', 0])
+        finally:
+            shutil.rmtree(path, ignore_errors=True)
+    else:
+        skipped['gdsio'] = 'no gdsio (GPUDirect Storage tools)'
+    shared, f = os.environ.get('D2L_HW_SHARED_FS'), spec['shared_fio']
+    if shared and os.path.isdir(shared) and d2l.hw_bin('fio'):
+        file = os.path.join(shared, f'd2l-fio-{os.getpid()}.dat')
+        try:
+            run('fio-shared', _fio_cmd(file, f['file_gib'] << 30, 'read',
+                                       f['bs'], f['qd'], f['jobs'],
+                                       f['runtime'], f['ramp']))
+        finally:
+            if os.path.exists(file):
+                os.remove(file)
+    else:
+        skipped['fio-shared'] = ('no fio' if shared and os.path.isdir(shared)
+                                 else 'D2L_HW_SHARED_FS is not a folder')
+    with open(os.path.join(raw, 'skipped.json'), 'w') as fh:
+        json.dump(skipped, fh, indent=1)
+    return skipped
+```
+
 ```{.python .input #memory-tiers-lib-driver}
 %%tab pytorch
 #@save
@@ -1867,8 +1966,10 @@ def _tiers_json(links, fio, obj, repeats=10):
 def regen_storage(config='box'):
     """Driver of box-storage: the memory-tiers page's calls on the full
     configuration, the measured tiers (entry and tiers.json), and a
-    BenchLog record per measured point."""
+    BenchLog record per measured point; a campaign configuration adds its
+    tables first and its raw tool outputs in the first process."""
     _storage_check(config)
+    node = _storage_config(config)
     folder = d2l._hw_regen_dir('box-storage')
     os.makedirs(folder, exist_ok=True)
     with d2l.BenchLog(os.path.join(folder, 'benchlog.jsonl'), 'torch',
@@ -1900,4 +2001,8 @@ def regen_storage(config='box'):
                                                 dict(s_adam=s_adam)),
                          ('shard read', read)):
             log.record(cmd, {}, rec)
+    proc = os.environ.get('D2L_HW_PROC')
+    if node is not None and proc in (None, '0'):  # the run's top folder
+        _node_storage_raw(node['raw'], os.path.dirname(folder) if proc
+                          else folder)
 ```

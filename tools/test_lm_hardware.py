@@ -82,6 +82,16 @@ refuse it and the ladder records 'no fp8 tensor cores' without calling
 torch._scaled_mm, with the page's configuration stored; the displays' lines
 <= 80 columns; the live check skips fp8 without the cores. The FP4 cell of
 ruling D3 waits for chapter 21's F40 (not merged): no FP4 tests yet.
+Fix pass F14 (TestCampaignPackage): the campaign packages of
+tools/lm_campaigns.yaml (22-hw-c-t2, -t2pair, -t3, -t4): every C-* campaign
+log the output of exactly one package; every HW_CONFIG_LOGS pair a package
+regeneration whose driver has the configuration and whose command runs it;
+the YAML's FLOP, bytes, hours and memory equal to estimate.py's; the
+campaign hardware check (chip row and GPU count); the node campaign's
+tables and raw tools on mocks; hw_regen.py --dry-run; pack_t4.py on
+synthetic two-node logs (verdicts, fits within 3%, records, scrubbed node
+names) and on the committed samples; the launchers' syntax and the Slurm
+job's dry run; chapter 20's reader of the same file.
 Later steps add the section tests of the chapter spec (part 1.9).
 """
 import ast
@@ -5710,6 +5720,414 @@ with mock.patch.object(d2l, 'hw_run', run), \\
         self.assertEqual((fit.f_min, fit.f_knee), (2.1, 2.1))
         self.assertIsNone(scope['floor'])  # E5: decode slows everywhere
         self.assertTrue(scope['same'])
+
+
+def load_tool(name, path):
+    """A module from a tools/ script (not on the import path)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+CAMPAIGN_DIR = os.path.join(REPO, 'tools', 'hw_campaign')
+
+
+def ch22_campaigns():
+    import yaml
+    with open(os.path.join(REPO, 'tools', 'lm_campaigns.yaml')) as f:
+        doc = yaml.safe_load(f)
+    return {c['id']: c for c in doc['campaigns']
+            if c['id'].startswith('22-hw-')}
+
+
+def nccl_tests_text(alpha, B, g, sizes, wrong=0, iters=50, seed=0):
+    """nccl-tests' all_reduce_perf output (v2.21 layout) of g ranks on two
+    nodes for t = alpha + phi S / B (B: bus bandwidth), 1% noise."""
+    rng = np.random.default_rng(seed)
+    phi = d2l.nccl_busbw_factor('all_reduce', g)
+    lines = ['# nccl-tests version 2.21.1 (afd59ab) nccl-headers=22809 '
+             'nccl-library=22809',
+             '# Collective test starting: all_reduce_perf',
+             f'# nThread 1 nGpus 1 minBytes {sizes[0]} maxBytes {sizes[-1]} '
+             f'step: 2(factor) warmup iters: 10 iters: {iters}',
+             '#', '# Using devices']
+    for r in range(g):
+        node = 'gpu-node-a' if r < g // 2 else 'gpu-node-b'
+        lines.append(f'#  Rank {r:2d} Group  0 Pid {1000 + r:6d} on '
+                     f'{node:>10} device {r % 8:2d} [0000:{r:02x}:00] '
+                     'NVIDIA A100-SXM4-40GB')
+    lines += ['#', '#' + ' ' * 62 + 'out-of-place' + ' ' * 23 + 'in-place',
+              '#       size         count      type   redop    root     '
+              'time   algbw   busbw  #wrong     time   algbw   busbw  #wrong',
+              '#        (B)    (elements)                               (us)'
+              '  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)']
+    for S in sizes:
+        t = (alpha + phi * S / B) * (1 + 0.01 * rng.standard_normal())
+        alg = S / t / 1e9
+        cells = (f'{t * 1e6:.2f} {alg:.2f} {alg * phi:.2f} {wrong}')
+        lines.append(f'{S:12d} {S // 4:12d} float sum -1 {cells} {cells}')
+    lines += ['# Out of bounds values : 0 OK',
+              '# Avg bus bandwidth    : 1.0', '#']
+    return '\n'.join(lines) + '\n'
+
+
+def nccl_choices_text(name, sizes):
+    """NCCL INFO choice lines naming one pair at every size."""
+    algo, proto = name.split('/')
+    return ''.join(f'[0] NCCL INFO AllReduce: {S} Bytes -> Algo {algo.upper()}'
+                   f' proto {proto.upper()} channel{{Lo..Hi}}={{0..1}}\n'
+                   for S in sizes)
+
+
+class TestCampaignPackage(unittest.TestCase):
+    """Fix pass F14 (ch22_spec part 1.12): the campaign packages of C-T2,
+    C-T2pair, C-T3 and C-T4: the YAML entries against the registries, the
+    drivers' configurations and estimate.py; the hardware check of a
+    campaign configuration; the node campaign's tables and raw tools on
+    mocks; hw_regen.py --dry-run; the C-T4 packer on synthetic logs of
+    known alpha and beta (verdicts as the box's _pair_check, fits, records,
+    scrubbed node names) and on the committed samples; the launchers'
+    syntax and dry runs; chapter 20's reader of the same file."""
+
+    def test_outputs_cover_campaign_logs(self):
+        """Every C-* campaign log is the output of exactly one package and
+        every package output is such a log (chapter 23's logs excluded);
+        file name = key + .tar; tier matches the log's campaign."""
+        camps = ch22_campaigns()
+        self.assertEqual(set(camps), {'22-hw-c-t2', '22-hw-c-t2pair',
+                                      '22-hw-c-t3', '22-hw-c-t4'})
+        logs = {key: (name, campaign) for name, (key, _, campaign, _)
+                in d2l.HW_CAMPAIGNS.items() if campaign.startswith('C-')}
+        seen = []
+        for cid, c in camps.items():
+            self.assertEqual(c['status'][:len('packaged, not run')],
+                             'packaged, not run')
+            for line in c['outputs']:
+                path, key = [x.strip() for x in line.split('->')]
+                self.assertIn(key, logs, cid)
+                self.assertEqual(os.path.basename(path), key + '.tar')
+                self.assertEqual(logs[key][1], 'C-' + c['tier'], key)
+                seen.append(key)
+            for field in ('hardware', 'config', 'command', 'resume',
+                          'depends', 'runs', 'predicted_hours',
+                          'memory_gib', 'stop_hours', 'after'):
+                self.assertIn(field, c, cid)
+            self.assertTrue('flop' in c or 'bytes' in c, cid)
+            self.assertGreaterEqual(c['stop_hours'], c['predicted_hours'])
+        self.assertEqual(sorted(seen), sorted(logs))
+        self.assertNotIn('lm-mfu-table-v1', seen)
+
+    def test_regenerations_and_configs(self):
+        """Every package regeneration is an HW_ARTIFACTS name whose
+        (name, config) has a campaign log, the log is one of the package's
+        outputs, the command runs it, and the driver has the
+        configuration; every HW_CONFIG_LOGS pair is in a package."""
+        camps = ch22_campaigns()
+        tables = {
+            'box-microbench': lambda c: d2l._HW_CAMPAIGN_GPUS[c],
+            'box-workloads': lambda c: d2l.HW_WORKLOAD_CONFIGS[c]['decode'],
+            'box-moe': lambda c: d2l.HW_WORKLOAD_CONFIGS[c]['moe'],
+            'box-clocksweep': lambda c: (d2l._HW_CLOCK_CONFIGS[c],
+                                         d2l._HW_CAMPAIGN_GPUS[c]),
+            'box-p2p': lambda c: d2l._HW_P2P[c],
+            'box-storage': lambda c: d2l._HW_NODE_STORAGE[c]}
+        node_t3 = read(os.path.join(CAMPAIGN_DIR, 'node_t3.sh'))
+        pairs = []
+        for cid, c in camps.items():
+            keys = [line.split('->')[1].strip() for line in c['outputs']]
+            for r in c['regenerations']:
+                name, config = r['name'], r['config']
+                self.assertIn(name, d2l.HW_ARTIFACTS)
+                self.assertIn(config, d2l._HW_TIERS)
+                log = d2l.HW_CONFIG_LOGS[(name, config)]
+                self.assertIn(d2l.HW_CAMPAIGNS[log][0], keys, cid)
+                self.assertTrue(tables[name](config), (name, config))
+                if name == 'box-clocksweep':
+                    self.assertIn(f'hw_clock_sweep.sh 0 --config {config}',
+                                  c['command'])
+                elif 'node_t3.sh' in c['command']:
+                    self.assertIn(name, node_t3)
+                    self.assertIn(f'--config {config}', node_t3)
+                else:
+                    self.assertIn(f'hw_regen.py {name} --config {config}',
+                                  c['command'])
+                pairs.append((name, config))
+        self.assertEqual(sorted(pairs), sorted(d2l.HW_CONFIG_LOGS))
+        self.assertEqual(camps['22-hw-c-t4']['regenerations'], [])
+        self.assertIn('cluster_t4.sbatch', camps['22-hw-c-t4']['command'])
+        self.assertEqual(d2l._HW_COLL['t4']['launcher'], 'campaign')
+        with self.assertRaisesRegex(ValueError, 'cluster_t4.sbatch'):
+            d2l._coll_check('t4')
+
+    def test_estimates_in_yaml(self):
+        """The YAML's flop, bytes, hours and memory are estimate.py's (2
+        significant digits)."""
+        tool = load_tool('hw_estimate', os.path.join(CAMPAIGN_DIR,
+                                                     'estimate.py'))
+        cwd = os.getcwd()
+        try:
+            os.chdir(CHAPTER)
+            with quiet():
+                est = tool.estimates(d2l)
+        except Exception as e:  # needs the box artifacts and configurations
+            self.skipTest(f'estimate.py needs the registered box results '
+                          f'and pinned configurations: {e!r}')
+        finally:
+            os.chdir(cwd)
+        for cid, c in ch22_campaigns().items():
+            e = est[cid]
+            for field, got in (('flop', e.get('flop')),
+                               ('bytes', e.get('bytes')),
+                               ('predicted_hours', e['hours']),
+                               ('memory_gib', e['memory_gib'])):
+                if field in c:
+                    self.assertEqual(float(f'{got:.2g}'),
+                                     float(f"{float(c[field]):.2g}"),
+                                     (cid, field))
+
+    def test_check_hardware(self):
+        """A campaign configuration runs only on its chip row and GPU
+        count; the box run is never checked."""
+        def check(name, gib, n, config, regen='box-moe'):
+            p = mock.Mock(total_memory=int(gib * 2**30))
+            p.name = name
+            with mock.patch.object(torch.cuda, 'device_count',
+                                   return_value=n), \
+                    mock.patch.object(torch.cuda, 'get_device_properties',
+                                      return_value=p):
+                d2l._hw_check_hardware(regen, config)
+        a100 = ('NVIDIA A100-PCIE-40GB', 39.4)
+        check(*a100, 1, 't2', 'box-workloads')
+        check(*a100, 2, 't2pair')  # the pair's two cards are A100 rows
+        with self.assertRaisesRegex(RuntimeError, 'not 1 x NVIDIA'):
+            check(*a100, 1, 't2pair')
+        with self.assertRaisesRegex(
+                RuntimeError, 'config t2 measures the A100 PCIe 40 GB, not '
+                '1 x NVIDIA GeForce RTX 4090'):
+            check('NVIDIA GeForce RTX 4090', 23.5, 1, 't2', 'box-microbench')
+        with self.assertRaises(RuntimeError):  # an 80 GB card is another row
+            check('NVIDIA A100 80GB PCIe', 79.2, 1, 't2', 'box-microbench')
+        check('NVIDIA GeForce RTX 4090', 23.5, 1, 'box', 'box-microbench')
+
+    def test_node_storage(self):
+        """C-T3's tables join the page's only for the run; the raw tools
+        run per NUMA node, gdsio writes then reads twice, the shared-file-
+        system read is skipped without D2L_HW_SHARED_FS; skips recorded."""
+        tables = (d2l._HW_FIO, d2l._HW_OBJECT, d2l.HW_OFFLOAD_CONFIG)
+        with mock.patch.dict(d2l._HW_FIO), mock.patch.dict(d2l._HW_OBJECT), \
+                mock.patch.dict(d2l.HW_OFFLOAD_CONFIG):
+            self.assertIsNone(d2l._storage_config('box'))
+            spec = d2l._storage_config('t3')
+            self.assertEqual(d2l._HW_FIO['t3'], d2l._HW_FIO['box'])
+            self.assertEqual(d2l.HW_OFFLOAD_CONFIG['t3'],
+                             d2l.HW_OFFLOAD_CONFIG['box'])
+        for t in tables:
+            self.assertEqual(set(t), {'box'})  # the page's tables
+        calls = []
+
+        def run(cmd, timeout_s, env=None, record=False):
+            calls.append([str(c) for c in cmd])
+            refused = 'exit status 1' if 'gdsio' in str(cmd[0]) and \
+                '2' == str(cmd[cmd.index('-x') + 1]) else None
+            return d2l.HWRun(cmd, 0, 'out', '', 1.0, refused)
+        bins = {'nvbandwidth': '/bin/nvbandwidth', 'gdsio': '/bin/gdsio',
+                'fio': '/bin/fio'}
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(d2l, 'hw_run', side_effect=run), \
+                mock.patch.object(d2l, 'hw_bin', side_effect=bins.get), \
+                mock.patch.object(d2l.shutil, 'which',
+                                  return_value='/bin/numactl'), \
+                mock.patch.object(d2l, '_numa_nodes', return_value=[0, 1]), \
+                mock.patch.object(d2l, '_HW_SCRATCH', tmp), \
+                mock.patch.dict(os.environ, {'D2L_HW_SHARED_FS': ''}):
+            skipped = d2l._node_storage_raw(spec['raw'], tmp)
+            files = sorted(os.listdir(os.path.join(tmp, 'raw')))
+            self.assertEqual(json.load(open(os.path.join(
+                tmp, 'raw', 'skipped.json'))), skipped)
+        self.assertEqual(skipped, {'gdsio-read-x2': 'exit status 1',
+                                   'fio-shared': 'D2L_HW_SHARED_FS is not a '
+                                                 'folder'})
+        self.assertEqual(files, ['gdsio-read-x0.txt', 'gdsio-read-x2.txt',
+                                 'gdsio-write.txt', 'nvbandwidth-numa0.txt',
+                                 'nvbandwidth-numa1.txt', 'skipped.json'])
+        self.assertEqual(calls[1][:3], ['/bin/numactl', '--cpunodebind=1',
+                                        '--membind=1'])
+        self.assertEqual([c[c.index('-I') + 1] for c in calls[2:]],
+                         ['1', '0', '0'])
+
+    def test_regen_dry_run(self):
+        import subprocess
+        tool = os.path.join(REPO, 'tools', 'hw_regen.py')
+        env = dict(os.environ, PYTHONPATH=REPO)
+        with tempfile.TemporaryDirectory() as tmp:
+            r = subprocess.run([sys.executable, tool, 'box-storage',
+                                '--config', 't3', '--out', tmp, '--dry-run'],
+                               capture_output=True, text=True, timeout=300,
+                               env=env)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn('regen_storage', r.stdout)
+            self.assertIn('lm-hw-node-storage-v1.tar', r.stdout)
+            self.assertEqual(os.listdir(tmp), [])
+            r = subprocess.run([sys.executable, tool, 'box-storage',
+                                '--config', 't2', '--dry-run'],
+                               capture_output=True, text=True, timeout=300,
+                               env=env)
+            self.assertEqual(r.returncode, 2)
+
+    def pack_fixture(self, raw):
+        """Logs of a C-T4 run: default, Ring/LL and Ring/Simple kept (known
+        alpha and bus bandwidth), the other pairs dropped for each reason."""
+        spec = d2l._HW_COLL['t4']
+        sizes = d2l._sizes(spec['min_bytes'], spec['max_bytes'])
+        params = {'default': (20e-6, 20e9), 'Ring/LL': (12e-6, 6e9),
+                  'Ring/Simple': (40e-6, 22e9)}
+        os.makedirs(os.path.join(raw, 'nccl'))
+        os.makedirs(os.path.join(raw, 'perftest'))
+
+        def put(rel, text):
+            with open(os.path.join(raw, rel), 'w') as f:
+                f.write(text)
+        put('nodes.txt', 'gpu-node-a\ngpu-node-b\n')
+        for i in range(2):
+            put(f'ibstat-{i}.txt', sample('doc_ibstat.txt').replace(
+                "'mlx5_0'", f"'mlx5_0' on gpu-node-{'ab'[i]}"))
+        put('perftest/mlx5_0-bw.txt', sample('doc_ib_write_bw.txt'))
+        put('perftest/mlx5_0-lat.txt', sample('doc_ib_write_lat.txt'))
+        reasons = {}
+        for algo, proto in spec['pairs']:
+            name = d2l._pair_name(algo, proto)
+            s = 'default' if algo == 'default' else f'{algo}-{proto}'
+            rc, info, wrong = '0', '', 0
+            if name in params:
+                info = nccl_choices_text(
+                    'Ring/LL' if name == 'default' else name, sizes)
+            elif algo == 'Tree':
+                info, reasons[name] = (nccl_choices_text('Ring/Simple',
+                                                         sizes),
+                                       'ignored: ran Ring/Simple')
+            elif algo == 'NVLS':
+                rc, reasons[name] = '1', 'refused'
+            elif name == 'CollNet/LL':
+                rc, reasons[name] = '124', 'timed out'
+            elif name == 'CollNet/LL128':
+                reasons[name] = 'unverified'  # no choice lines
+            else:
+                wrong, reasons[name] = 3, 'wrong results'
+            alpha, B = params.get(name, (30e-6, 10e9))
+            put(f'nccl/{s}-check.txt', nccl_tests_text(alpha, B, 16, sizes,
+                                                       wrong=wrong))
+            put(f'nccl/{s}-check.rc', rc + '\n')
+            put(f'nccl/{s}-check.info', info)
+            if name in params:
+                for i in range(3):
+                    put(f'nccl/{s}-run{i}.txt', nccl_tests_text(
+                        alpha, B, 16, sizes, seed=i + 1))
+                    put(f'nccl/{s}-run{i}.rc', '0\n')
+        put('nccl/onenic-run0.txt', nccl_tests_text(20e-6, 2.5e9, 16, sizes))
+        put('nccl/onenic-run0.rc', '0\n')
+        return params, reasons
+
+    def test_pack_t4(self):
+        tool = load_tool('hw_pack_t4', os.path.join(CAMPAIGN_DIR,
+                                                    'pack_t4.py'))
+        with tempfile.TemporaryDirectory() as tmp:
+            params, reasons = self.pack_fixture(os.path.join(tmp, 'raw'))
+            raw = os.path.join(tmp, 'raw')
+            for algo, proto in d2l._HW_COLL['t4']['pairs']:  # = _pair_check
+                name = d2l._pair_name(algo, proto)
+                got = tool.verdict(d2l, raw, algo, proto)[0]
+                self.assertEqual(got, reasons.get(name, ''), name)
+            with quiet():
+                self.assertEqual(tool.pack(d2l, tmp), 0)
+            key = d2l.HW_CAMPAIGNS['cluster-nccl'][0]
+            tar = os.path.join(tmp, key + '.tar')
+            with mock.patch.dict(d2l.DATA_HUB, {key: ('file://x', None)}), \
+                    mock.patch.object(d2l, 'download_keyed',
+                                      return_value=tar):
+                log = d2l.hw_campaign_log('cluster-nccl')
+            pairs = log['pairs']
+            self.assertEqual(pairs.attrs['dropped'], reasons)
+            self.assertEqual(len(pairs.attrs['proc_us']), 3)
+            self.assertEqual(int(pairs.g.iloc[0]), 16)
+            fits = d2l.fit_pairs(log)
+            for name, (alpha, B) in params.items():
+                idx = (('default', 'default') if name == 'default'
+                       else tuple(name.split('/')))
+                r = fits.loc[idx]
+                self.assertLess(abs(r.beta / B - 1), 0.03, name)
+                self.assertLess(abs(r.alpha / alpha - 1), 0.1, name)
+                self.assertLess(r.beta_lo, r.beta_hi)
+            self.assertTrue(np.isfinite(
+                fits.attrs['crossover']['predicted']))
+            rail = d2l.fit_perftest(log).loc[('ib_write', 1, 'mlx5_0')]
+            self.assertAlmostEqual(rail.beta, 196.38e9 / 8)
+            folder = d2l._hw_unpack(tar, 'tar')
+            _, meta = d2l._hw_read(os.path.join(folder, 'pairs.json.gz'))
+            self.assertEqual(meta['config']['config'], 't4')
+            self.assertEqual(meta['env']['tier'], 'T4')
+            self.assertFalse(meta['sample'])
+            recs = json.load(open(os.path.join(folder, 'alpha_beta.json')))
+            self.assertEqual({r['scope'] for r in recs}, {'inter_node'})
+            self.assertEqual({r['link'] for r in recs}, {'infiniband'})
+            self.assertEqual(sorted(r['op'] for r in recs),
+                             ['all_reduce'] * 3 + ['ib_write'])
+            text = ''.join(open(p, errors='replace').read() for p in glob.glob(
+                os.path.join(folder, 'raw', '**', '*'), recursive=True)
+                if os.path.isfile(p))
+            self.assertNotIn('gpu-node-a', text)
+            self.assertIn('<node1>', text)
+            self.assertFalse(os.path.exists(os.path.join(folder, 'raw',
+                                                         'nodes.txt')))
+            with quiet():  # a second pack needs --replace
+                self.assertEqual(tool.pack(d2l, tmp), 2)
+
+    def test_pack_t4_samples(self):
+        """The committed sample logs pack as a sample tar (never the key's
+        own name) that the pages' readers accept."""
+        tool = load_tool('hw_pack_t4s', os.path.join(CAMPAIGN_DIR,
+                                                     'pack_t4.py'))
+        with tempfile.TemporaryDirectory() as tmp, quiet():
+            self.assertEqual(tool.make_sample(tmp), 0)
+            self.assertEqual(tool.pack(d2l, tmp, sample=True), 0)
+            tar = glob.glob(os.path.join(tmp, '*.tar'))
+            self.assertEqual([os.path.basename(t) for t in tar],
+                             ['lm-hw-cluster-nccl-v1-sample.tar'])
+            self.assertEqual(tool.verify(tar[0]), 0)
+            self.assertEqual(tool.pack(d2l, tmp), 1)  # 4 ranks, not 16
+
+    def test_launchers(self):
+        """bash -n on the scripts; the Slurm job's dry run runs a check for
+        every pair of _HW_COLL['t4'] and the timed repeats."""
+        import subprocess
+        for f in ('node_t3.sh', 'cluster_t4.sbatch', 'hw_job.sh',
+                  'dry_run.sh'):
+            r = subprocess.run(['bash', '-n', os.path.join(CAMPAIGN_DIR, f)],
+                               capture_output=True, text=True, timeout=60)
+            self.assertEqual(r.returncode, 0, (f, r.stderr))
+        with tempfile.TemporaryDirectory() as tmp:
+            r = subprocess.run(
+                ['bash', os.path.join(CAMPAIGN_DIR, 'cluster_t4.sbatch'),
+                 '--dry-run', tmp], capture_output=True, text=True,
+                timeout=300, env=dict(os.environ, PYTHONPATH=REPO))
+            self.assertEqual(r.returncode, 0, r.stderr)
+        pairs = d2l._HW_COLL['t4']['pairs']
+        self.assertEqual(r.stdout.count(' nccl check '), len(pairs))
+        self.assertEqual(r.stdout.count(' nccl run '), 3 * len(pairs) + 1)
+        self.assertEqual(r.stdout.count('perftest-client'), 2)
+
+    def test_mix_reader(self):
+        """run_mix_campaign.py's lookup by id still finds chapter 20's
+        entry; ids are unique."""
+        import yaml
+        with open(os.path.join(REPO, 'tools', 'lm_campaigns.yaml')) as f:
+            doc = yaml.safe_load(f)
+        ids = [e['id'] for e in doc['campaigns']]
+        self.assertEqual(len(ids), len(set(ids)))
+        entry = next(e for e in doc['campaigns']
+                     if e['id'] == '20.4-mixtures-t2')
+        self.assertEqual(entry['tier'], 'T2')
 
 
 def collections_counter(tree):

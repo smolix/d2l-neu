@@ -870,6 +870,26 @@ class TestFp8Gating(unittest.TestCase):
         self.assertIn('fp8: none measured, no fp8 tensor cores', lines)
         self.assertLessEqual(max(map(len, lines)), 80)
 
+    def test_unsupported_survives_store(self):
+        # F9 review: attrs['unsupported'] (nested and empty) survives the
+        # three-process merge and the gzipped-JSON store
+        for cap, want in (((8, 0), {'fp8': 'no fp8 tensor cores'}),
+                          ((8, 9), {})):
+            df, _, _ = self.ladder(cap)
+            other = df.copy()
+            other.attrs = dict(df.attrs)
+            other['tflops'] = other['tflops'] * 1.02
+            merged = d2l._hw_combine([df, other])
+            self.assertEqual(merged.attrs['unsupported'], want)
+            self.assertEqual(merged.attrs['n_proc'], 2)
+            with tempfile.TemporaryDirectory() as tmp:
+                path = os.path.join(tmp, 'dtypes.json.gz')
+                d2l._hw_write(path, merged, dict(config={'n': 64}))
+                back, meta = d2l._hw_read(path)
+            self.assertEqual(back.attrs['unsupported'], want)
+            self.assertEqual(list(back.format), list(merged.format))
+            self.assertEqual(meta['config'], {'n': 64})
+
     def test_ladder_with_fp8(self):
         for cap in ((8, 9), (9, 0), (10, 0), (12, 0)):
             df, seen, _ = self.ladder(cap)

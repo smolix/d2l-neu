@@ -349,15 +349,20 @@ dtypes = d2l.hw_dtype_ladder(n=8192,
 ```
 
 <!-- Placeholder (prose): C3's fp16 gap (fix F9, measured with torch.profiler
-and clock locks): cuBLAS picks a different kernel for fp16 than for bf16 at
-8192^3; at the same locked clock it draws 11-17% more power and does 1-2% less
-work per cycle, so under the 450 W limit it runs at a lower clock (2.49 vs
-2.58 GHz in the table). The reduced-precision-reduction setting does not
-change the kernel. Ruling D3, 4-bit: NVFP4 and MXFP4 are simulated on this
-Ada card and run natively on sm_100 / sm_120 through chapter 21's native path
-(cite :numref:`sec_lm_low_precision`); the 4-bit cell
-(accelerator-design-fp4) is added once chapter 21's native FP4 product lands
-(fix F9, held on chapter 21's F40). -->
+and clock locks): fp16 is about 8% below bf16 in the table (89% vs 97% of the
+peak). cuBLAS picks a different kernel for fp16 (m16n8k16, 128x64 tile) than
+for bf16 (m16n8k8, 64x128) at 8192^3; at the same locked clock the fp16 kernel
+does up to 2% less work per cycle and draws 11-17% more power. At default
+clocks fp16 runs at a lower SM clock (2.49 vs 2.58 GHz in the table) and does
+about 4% less work per measured cycle. The clock and the locked-clock kernel
+difference explain about 5 of the 8 points; why the per-cycle gap widens at
+default clocks is not measured. Neither format sat at the 450 W limit (406 and
+411 W in the table). The reduced-precision-reduction setting does not change
+the kernel. Ruling D3, 4-bit: NVFP4 and MXFP4 are simulated on this Ada card
+and run natively on sm_100 / sm_120 through chapter 21's native path (cite
+:numref:`sec_lm_low_precision`); the 4-bit cell (accelerator-design-fp4) is
+added once chapter 21's native FP4 product lands (fix F9, held on chapter 21's
+F40). -->
 
 ### Shared Memory and Latency
 

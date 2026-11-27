@@ -604,8 +604,12 @@ python3 tools/create_forum_topics.py --create  # create topics, insert the links
 Buckets: `staging-d2l` serves d2l.smola.org and is the default; `d2l-en`
 serves d2l.ai and en.d2l.ai. The previous edition stays in `d2l-en-v2` at
 en-v2.d2l.ai, linked as "English (old)" at the bottom of the navbar's
-language menu (`_quarto.yml`); other languages' old editions go under the
-same divider when their new sites launch. The language buckets (`d2l-<code>`: `d2l-zh`, `d2l-ru`,
+language menu (`_quarto.yml`), with "中文 (第一版)" at zh-v1.d2l.ai; other
+languages' old editions go under the same divider when their new sites
+launch. That static menu is only the fallback for a failed load of
+`languages.json`; keep English first and the rest of each group sorted by the
+name it shows, as `l10n menu` sorts the runtime list (Latin-script names first,
+then the other scripts). The language buckets (`d2l-<code>`: `d2l-zh`, `d2l-ru`,
 `d2l-ja`, ...) share the `d2l-buckets.env` keys.
 
 Rules: the `notebooks` branch is an orphan serving branch; never open a PR

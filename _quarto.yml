@@ -71,25 +71,31 @@ book:
       - icon: translate
         aria-label: Language
         menu:
+          # English first, then each group sorted by the name it shows, as
+          # d2l-localization's `l10n menu` sorts languages.json: Latin-script
+          # names first, then the other scripts.
           - text: "en · English"
             href: /
-          - text: "zh · 中文"
-            href: https://zh.d2l.ai
+          - text: "de · Deutsch"
+            href: https://de.d2l.ai
           - text: "pt · Português"
             href: https://pt.d2l.ai
-          - text: "tr · Türkçe"
-            href: https://tr.d2l.ai
           - text: "vi · Tiếng Việt"
             href: https://vi.d2l.ai
-          - text: "ko · 한국어"
-            href: https://ko.d2l.ai
+          - text: "tr · Türkçe"
+            href: https://tr.d2l.ai
+          - text: "zh · 中文"
+            href: https://zh.d2l.ai
           - text: "ja · 日本語"
             href: https://ja.d2l.ai
-          # Earlier editions, after every current language. Add "zh · 中文 (old)"
-          # etc. here as each language's new site replaces its old one.
+          - text: "ko · 한국어"
+            href: https://ko.d2l.ai
+          # Earlier editions, after every current language, in the same order.
           - text: "---"
           - text: "en · English (old)"
             href: https://en-v2.d2l.ai
+          - text: "zh · 中文 (第一版)"
+            href: https://zh-v1.d2l.ai
   sidebar:
     logo: static/logo-with-text.png
   chapters:

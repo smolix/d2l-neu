@@ -826,7 +826,9 @@ with the same table columns and a timeout of its own. nccl-tests' first
 line names the tool and the NCCL headers it was built against; the library
 it runs is the torch wheel's (`libnccl.so.2` first on the library path).
 NCCL's own account of a run (`NCCL_DEBUG=INFO`) is taken in a separate
-small run, since its lines interleave with the table.
+small run, since its lines interleave with the table. The gloo path of the
+`torch.distributed` sweep settles its group before the first size (the
+group's first barrier and 200 calls; `_torchrun_sweep` says why).
 
 ```{.python .input #server-paths-lib-nccl}
 %%tab pytorch
@@ -863,6 +865,11 @@ else:
     dev = torch.device('cpu')
     dist.init_process_group(backend)
 sync = torch.cuda.synchronize if backend == 'nccl' else (lambda: None)
+if backend == 'gloo':  # settle: the first barrier, then 200 calls
+    dist.barrier()
+    x = torch.ones(max(sizes[0] // 4 // k, 1) * k)
+    for _ in range(200):
+        dist.all_reduce(x)
 for size in sizes:
     n = max(size // 4 // k, 1) * k  # float32 elements, a multiple of k
     x, y = torch.ones(n, device=dev), torch.empty(n, device=dev)
@@ -911,7 +918,12 @@ def _torchrun_sweep(op, k, sizes, iters, warmup, env, timeout_s,
     a timeout of its own; the workers' output goes to files (--redirects
     3), and a timeout kills them too. backend 'gloo' runs CPU ranks in
     sec_lm_networks' _gloo_env, with env added on top (_GLOO_PIN, first in
-    the script, pins those ranks)."""
+    the script, pins those ranks). A gloo group's first barrier slows its
+    next 50-100 small all-reduces about twofold on four ranks of the build
+    box (a pause does not help; two ranks show none), and the sweep's first
+    barrier sits between the first size's warm-up and its timed calls, so
+    the gloo path takes that barrier and 200 all-reduces of the first size
+    before the sweep."""
     if backend == 'gloo':
         env = dict(d2l._gloo_env(), **env)
     with tempfile.TemporaryDirectory() as tmp:

@@ -259,6 +259,19 @@ step") becomes "about 200 us per message"; its "about three times" for 4
 against 2 ranks is 3.5x in alpha (1.2x per message). The gloo live check now
 compares (3%). -->
 
+<!-- Placeholder (prose): fix pass F12 review (N2): box-net v2's 4-rank
+gloo alpha (1,200 us [1,200-1,300], 200 us per message, 3.5x the 2-rank
+alpha) is about 10% high: a start-up transient of the sweep harness, not
+gloo's steady cost (a gloo group's first barrier slows its next 50-100
+small all-reduces about twofold on four ranks, a pause does not clear it,
+two ranks show none; the sweep's first barrier sat between the first
+size's warm-up and its timed calls, so 64-256 B were timed inside it). The
+same data without those three sizes gives about 1,100 us. The harness now
+settles the group before the sweep; quote the 4-rank alpha, its interval,
+the per-message figure and the 4-to-2 ratio from box-net v3 only, never
+1,200. Possible pitfall for the reader: warm up after the first
+synchronization, not before it. -->
+
 ## Which Axes Fit Where
 :label:`subsec_lm_hw_layout`
 

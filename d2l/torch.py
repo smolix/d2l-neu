@@ -36584,6 +36584,11 @@ else:
     dev = torch.device('cpu')
     dist.init_process_group(backend)
 sync = torch.cuda.synchronize if backend == 'nccl' else (lambda: None)
+if backend == 'gloo':  # settle: the first barrier, then 200 calls
+    dist.barrier()
+    x = torch.ones(max(sizes[0] // 4 // k, 1) * k)
+    for _ in range(200):
+        dist.all_reduce(x)
 for size in sizes:
     n = max(size // 4 // k, 1) * k  # float32 elements, a multiple of k
     x, y = torch.ones(n, device=dev), torch.empty(n, device=dev)
@@ -36632,7 +36637,12 @@ def _torchrun_sweep(op, k, sizes, iters, warmup, env, timeout_s,
     a timeout of its own; the workers' output goes to files (--redirects
     3), and a timeout kills them too. backend 'gloo' runs CPU ranks in
     sec_lm_networks' _gloo_env, with env added on top (_GLOO_PIN, first in
-    the script, pins those ranks).
+    the script, pins those ranks). A gloo group's first barrier slows its
+    next 50-100 small all-reduces about twofold on four ranks of the build
+    box (a pause does not help; two ranks show none), and the sweep's first
+    barrier sits between the first size's warm-up and its timed calls, so
+    the gloo path takes that barrier and 200 all-reduces of the first size
+    before the sweep.
 
     Defined in :numref:`sec_lm_server_paths`"""
     if backend == 'gloo':
@@ -38644,7 +38654,9 @@ def show_pair_fits(fits):
                 'fits'))
         if x.get('resid'):
             lo, hi = (d2l._hw_bytes(b) for b in x['window'])
-            pct = lambda e: f'{100 * e:+.0f}%'
+            def pct(e):  # '+11%', '-2%', '0%' (never '-0%')
+                text = f'{100 * e:+.0f}%'
+                return '0%' if text[1:] == '0%' else text
             fits_vs = ', '.join(f'{n} {pct(e0)} to {pct(e1)}'
                                 for n, (e0, e1) in x['resid'].items())
             _say(f'fit against measured, {lo} to {hi}: {fits_vs}; '

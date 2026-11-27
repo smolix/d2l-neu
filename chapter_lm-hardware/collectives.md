@@ -605,6 +605,12 @@ leaves out the gloo stage's copies between GPU and host), so the measured
 gain falls short of the model's. By the gate's rule this box's gloo setup cannot emulate a slow
 network by bandwidth (it is slower by latency). -->
 
+<!-- Placeholder (prose): fix pass F12 review (C4): the latency ratio in
+the gate line ("1/37") comes from box-net v2's 4-rank gloo alpha, which a
+start-up transient inflates by about 10% (sec_lm_networks, N2); about 1/34
+from v2's steady points. Quote it from box-net v3. C4's branch, its gain
+and every bandwidth figure are unchanged (256 MiB is bandwidth-bound). -->
+
 <!-- Placeholder (prose): what the box cannot show. The ring/tree crossover
 of D1 needs a tree deeper than a chain (several nodes), the rail effect of
 D2 needs one NIC per GPU, and SHARP and NVLS need the switches. Campaign

@@ -760,7 +760,9 @@ def show_pair_fits(fits):
                 'fits'))
         if x.get('resid'):
             lo, hi = (d2l._hw_bytes(b) for b in x['window'])
-            pct = lambda e: f'{100 * e:+.0f}%'
+            def pct(e):  # '+11%', '-2%', '0%' (never '-0%')
+                text = f'{100 * e:+.0f}%'
+                return '0%' if text[1:] == '0%' else text
             fits_vs = ', '.join(f'{n} {pct(e0)} to {pct(e1)}'
                                 for n, (e0, e1) in x['resid'].items())
             _say(f'fit against measured, {lo} to {hi}: {fits_vs}; '

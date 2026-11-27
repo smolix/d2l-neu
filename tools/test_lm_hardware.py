@@ -2473,6 +2473,37 @@ class TestCommittedClaims(unittest.TestCase):
         self.assertEqual(tuple(round(100 * g) for g in x['gap']), (11, 0))
         self.assertGreater(min(max(map(abs, v)) for v in x['resid'].values()),
                            max(map(abs, x['gap'])))
+        # the -0.17% gap at 1 MiB prints as 0%, never -0% (F12 review)
+        lines, _ = lines_of(self, d2l.show_pair_fits, d2l.fit_pairs(pairs))
+        text = ' '.join(l.strip() for l in lines)
+        self.assertIn("Ring/LL's: +11% at 16 KiB, 0% at 1 MiB", text)
+        self.assertNotIn('-0%', text)
+
+    def test_gloo_small_messages_flat(self):
+        """box-net's gloo sweeps carry no start-up transient (F12 review):
+        in every process's sweep, on each number of ranks, every message up
+        to 64 KiB (the sizes alpha is fitted from) within 25% of their
+        median. box-net v2 ran before _TORCH_SWEEP settled the group (a gloo
+        group's first barrier slows the next 50-100 small all-reduces about
+        twofold on four ranks), and the check finds exactly that: the first
+        sizes on 4 ranks, never on 2. Any later version must pass."""
+        if not d2l.hw_registered('box-net'):
+            self.skipTest('box-net is not registered yet')
+        r, _ = d2l._hw_load('box-net', 'gloo')
+        procs = r.attrs.get('proc_us') or [r.oop_us.tolist()]
+        small = (r['size'] <= 2**16).to_numpy()
+        out = set()
+        for p in procs:
+            t = np.asarray(p, dtype=float)
+            for g in sorted(set(r.g)):
+                sel = small & (r.g == g).to_numpy()
+                med = np.median(t[sel])
+                out |= {(int(g), int(s)) for s, ti in
+                        zip(r['size'][sel], t[sel]) if abs(ti / med - 1) > 0.25}
+        if d2l.HW_ARTIFACTS['box-net'][0] == 'lm-hw-buildbox-net-v2':
+            self.assertEqual(out, {(4, 64), (4, 128), (4, 256)})
+        else:
+            self.assertEqual(out, set())
 
     def test_w1_w4(self):
         """W1: for Qwen3-8B (the plan's question) M3 within 15% on every

@@ -52,7 +52,10 @@ campaigns:
     status: packaged, not run (no FP4 tensor cores on the RTX 4090s)
     ruling: D3 revised 2026-11-25 (NVFP4/MXFP4 simulated on Ada, native on Blackwell)
     config: d2l.PRETRAIN_JOBS['lowp-blackwell'] (fp8 preset, 400 steps)
-    schedule: decay 60, validation every 100; arms bf16 seeds 0-3, nvfp4-mlp simulated and native, seed 0
+    schedule: >-
+      the fp4_backend line; d2l._fp4_gemm_check on one batch (16 x 1,024 tokens) of the MLP shapes 768 -> 2,048
+      and 2,048 -> 768, fp32 and bf16, native against simulated forward/dgrad/wgrad; then decay 60, validation
+      every 100; arms bf16 seeds 0-3, nvfp4-mlp simulated and native, seed 0 (the same SR draws)
     check: >-
       before the runs, python -c "from d2l import torch as d2l; print(d2l.fp4_backend('cuda'))"
       must print "native (NVFP4: E4M3 scales, blocks of 16)"; a "simulated (...)" line names why not
@@ -63,13 +66,21 @@ campaigns:
       - lm-r2-tokenizer-v1
       - lm-fwedu-shards-100m-v1
       - lm-fwedu-val-v1
-    runs: 6 runs of 400 steps (6.6M tokens each); FP4 GEMMs eager, no speed claimed
+    runs: GEMM check, then 6 runs of 400 steps (6.6M tokens each); no speed claimed
     predicted_gpu_hours: 0.5  # RTX 4090 arms (lm-lowp-runs-v1): bf16 about 3.5 min per 1,221 steps, simulated nvfp4-mlp about 17 min; at 400 steps about 25 min on a 4090, less on a B200
     memory_gib_per_run: 12  # lm-lowp-runs-v1 peak on the RTX 4090: bf16 10.1 GiB, nvfp4-mlp 11.3 GiB
     gpus: one card; the runs are sequential in one process
     outputs:
       - data/lm/rerun/lm-lowp-blackwell-v1.json.gz -> lm-lowp-blackwell-v1
     after: >-
-      upload and register lm-lowp-blackwell-v1 in low-precision-lib.md's data-hub cell; add the page cell that
-      prints the native - simulated final validation loss of the nvfp4 arms against the bf16 seeds' SD at
-      400 steps (claim 13: within one SD) and rewrite the "not run on Blackwell" sentences of 21.3
+      upload and register lm-lowp-blackwell-v1 in low-precision-lib.md's data-hub cell; add the page cell
+      that reads it (claim 13). (1) The stored backend line must say native (NVFP4). (2) Primary: every row
+      of the gemms table within its bound (relative Frobenius error, native against simulated, at the
+      arm's shapes: fp32 <= 1e-5, bf16 <= 4e-3, about one bf16 ulp; CPU with the GEMM stubbed: 2e-7 and
+      2.5e-3). (3) Training: |native - simulated| final validation loss of the nvfp4 arms against the
+      half-width of claim 11's 95% prediction interval for one more bf16 seed, t_3 s sqrt(1 + 1/4) from
+      this job's four bf16 seeds at 400 steps; inside holds. Fallbacks: a gemms row above its bound means
+      the native path is not the simulator's GEMM on that card (layout, scales or kernel): investigate
+      before any wording, no claim. Rows within bounds but the loss gap outside the half-width: report the
+      gap in seed SDs and investigate the bf16 operand rounding (the only difference the table allows)
+      before any wording. Then rewrite the "not run on Blackwell" sentences of 21.3

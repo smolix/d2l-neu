@@ -14,8 +14,9 @@ that the section explains in a sentence but does not show
   statistics behind `Fp8Linear.stats()`, the GEMM and layout helpers of
   `Fp8Linear` and `Fp4Linear`, the Hadamard matrix;
 - the native FP4 path on Blackwell (`has_fp4_cores`, `fp4_backend`, the
-  E2M1 packing, the blocked scale layout, the probe GEMM, `_fp4_mm`) and
-  its campaign `lowp-blackwell`;
+  E2M1 packing, the blocked scale layout, the probe GEMM, `_fp4_mm`, the
+  native-against-simulated GEMM check) and its campaign `lowp-blackwell`
+  (`lowp_blackwell`);
 - the opening's activation capture (`mlp_input`);
 - the Inductor workaround for fp8 copies (`_lowp_compile_settings`);
 - the GEMM sweep (`fp8_gemm_sweep`) and the six-arm driver (`lowp_arms`:
@@ -73,19 +74,20 @@ d2l.PRETRAIN_JOBS['lowp-runs'] = ('lowp_arms', lambda: dict(
 ```
 
 The Blackwell campaign (not run on the build box, which has no FP4
-tensor cores): the `nvfp4-mlp` arm with native and with simulated FP4
-GEMMs, 400 steps of the `fp8` preset, against four bf16 seeds for the
-noise scale (claim 13 of the section).
+tensor cores): the card's backend line, native against simulated FP4 on
+one batch of the MLP's GEMM shapes (`_fp4_gemm_check`), and the
+`nvfp4-mlp` arm with native and with simulated FP4 GEMMs, 400 steps of
+the `fp8` preset, against four bf16 seeds for the noise scale (claim 13
+of the section).
 
 ```{.python .input #low-precision-lib-registries-1}
 %%tab pytorch
 #@save
-d2l.PRETRAIN_JOBS['lowp-blackwell'] = ('lowp_arms', lambda: dict(
+d2l.PRETRAIN_JOBS['lowp-blackwell'] = ('lowp_blackwell', lambda: dict(
     cfg=d2l.r2_config('fp8', steps=400, decay=60, val_every=100),
     arms={'bf16': ('bf16', (0, 1, 2, 3)),
           'nvfp4-sim': ('nvfp4-mlp-sim', (0,)),
-          'nvfp4-native': ('nvfp4-mlp-native', (0,))},
-    job='lowp-blackwell'))
+          'nvfp4-native': ('nvfp4-mlp-native', (0,))}))
 ```
 
 ## Formats, Tiles and Operand Statistics
@@ -426,12 +428,16 @@ def _fp4_native_mm(a, b, block, scale):
 
 #@save
 def _fp4_probe(device, scale):
-    """One 128 x 128 x 128 GEMM through the native path against the
-    simulator's on device: None if they agree to 1e-2 (relative Frobenius
-    error), else why not, in one line."""
+    """One (192 x 160) @ (160 x 96) GEMM through the native path against
+    the simulator's on device: None if they agree to 1e-4 (relative
+    Frobenius error; both accumulate the same operands in fp32, about 1e-7
+    apart), else why not, in one line. Neither 192 nor 96 rows are a
+    multiple of 128 and K / 16 = 10, K / 32 = 5 are no multiples of 4, so
+    the probe reads padded scale tiles (every size a multiple of 32)."""
     block = _FP4_HW[scale][1]
     g = torch.Generator().manual_seed(0)
-    A, B = (torch.randn(128, 128, generator=g).to(device) for _ in range(2))
+    A = torch.randn(192, 160, generator=g).to(device)
+    B = torch.randn(160, 96, generator=g).to(device)
     qa = d2l.fake_quant_fp4(A, block, scale)
     qb = d2l.fake_quant_fp4(B, block, scale, dim=0)
     try:
@@ -441,7 +447,7 @@ def _fp4_probe(device, scale):
         return f'the probe GEMM failed: {type(e).__name__}: {msg}'
     ref = _f32_mm(qa, qb, torch.float32)
     err = float(torch.linalg.norm(got.float() - ref) / torch.linalg.norm(ref))
-    if not err < 1e-2:
+    if not err < 1e-4:
         return f'the probe GEMM is off the simulator by {err:.1e}'
     return None
 
@@ -500,15 +506,62 @@ def _fp4_native(lin, device):
     return bool(lin.native) or has_fp4_cores(device, lin.scale)
 
 #@save
-def _fp4_mm(a, b, lin, out_dtype):
-    """A @ B for Fp4Linear lin, with a = (Aq, A[, tiles]), b = (Bq, B[,
-    tiles]) as in _fp4_native_mm: Aq @ Bq in fp32 (simulated) or on FP4
-    tensor cores, returned as out_dtype. The simulator's operands are
+def _fp4_mm(Aq, Bq, lin, out_dtype, raw, weight=True):
+    """Aq @ Bq for Fp4Linear lin, Aq and Bq the simulator's quantization
+    of raw = (A, B) in blocks along K (B is the layer's weight, in lin's
+    tiles, unless weight=False): in fp32 (simulated) or on FP4 tensor cores
+    (encoded from raw), returned as out_dtype. The simulator's operands are
     rounded to the inputs' dtype (bf16 under autocast), the hardware's are
     not: the two differ by at most that rounding."""
-    if _fp4_native(lin, a[0].device):
-        return _fp4_native_mm(a, b, lin.block, lin.scale).to(out_dtype)
-    return _f32_mm(a[0], b[0], out_dtype)
+    if _fp4_native(lin, Aq.device):
+        b = (Bq, raw[1], weight and lin.weight_block2d)
+        return _fp4_native_mm((Aq, raw[0]), b, lin.block,
+                              lin.scale).to(out_dtype)
+    return _f32_mm(Aq, Bq, out_dtype)
+
+#@save
+_FP4_CHECK_BOUNDS = {'fp32': 1e-5, 'bf16': 4e-3}  # bf16: one ulp, 2^-8
+
+#@save
+def _fp4_gemm_check(shapes, device, seed=0):
+    """Native against simulated Fp4Linear on device, one batch per shape
+    (tokens, in, out) of random inputs, in fp32 and in bf16 under autocast,
+    the same stochastic-rounding draws on both paths: the relative
+    Frobenius error of the forward (Y), input-gradient (dX) and
+    weight-gradient (dW) GEMMs, with the bound each must stay under."""
+    device, rows = torch.device(device), []
+    precision = torch.get_float32_matmul_precision()
+    torch.set_float32_matmul_precision('highest')  # fp32 means IEEE fp32
+    try:
+        for M, n_in, n_out in shapes:
+            g = torch.Generator().manual_seed(seed)
+            X, dY = (torch.randn(M, n, generator=g).to(device)
+                     for n in (n_in, n_out))
+            W = torch.randn(n_out, n_in, generator=g) / math.sqrt(n_in)
+            for dtype, bound in _FP4_CHECK_BOUNDS.items():
+                bf16 = dtype == 'bf16'
+                out = {}
+                for native in (False, True):
+                    lin = d2l.Fp4Linear(n_in, n_out, native=native).to(device)
+                    with torch.no_grad():
+                        lin.weight.copy_(W)
+                    x = X.bfloat16() if bf16 else X.clone()  # a leaf
+                    x.requires_grad_()
+                    torch.manual_seed(seed)  # the same SR draws
+                    with torch.autocast(device.type, torch.bfloat16,
+                                        enabled=bf16):
+                        Y = lin(x)
+                    Y.backward(dY.to(Y.dtype))
+                    out[native] = (Y.detach(), x.grad, lin.weight.grad)
+                for gemm, a, b in zip(('Y', 'dX', 'dW'), *out.values()):
+                    err = torch.linalg.norm(b.float() - a.float()) / \
+                        torch.linalg.norm(a.float())
+                    rows.append((f'{M}x{n_in}x{n_out}', dtype, gemm,
+                                 float(err), bound))
+    finally:
+        torch.set_float32_matmul_precision(precision)
+    return pd.DataFrame(rows, columns=['shape', 'dtype', 'GEMM', 'rel err',
+                                       'bound'])
 ```
 
 ## The Opening's Activations
@@ -984,10 +1037,22 @@ def _lowp_run(cfg, recipe, seed, profile=False, stats=False):
                 profile=prof.get('table'))
 
 #@save
+def _lowp_backend(recipe, dev):
+    """The native column _lowp_convert gives recipe on dev where it depends
+    on the card's fp8 or FP4 tensor cores; None for the other recipes."""
+    if recipe == 'nvfp4-mlp':
+        return 'eager' if d2l.has_fp4_cores(dev) else 'simulated'
+    if recipe == 'fp8-delayed':
+        return 'eager' if has_fp8_cores(dev) else 'simulated'
+    return {'nvfp4-mlp-sim': 'simulated',
+            'nvfp4-mlp-native': 'eager'}.get(recipe)
+
+#@save
 def _lowp_run_cached(cfg, name, recipe, seed, profile, stats,
                      job='lowp-runs'):
     """_lowp_run, or the file an earlier attempt of the same run wrote (in
-    the job's folder)."""
+    the job's folder), which must have run on the path this card takes (a
+    resumed regeneration never mixes simulated and native seeds)."""
     folder = os.path.join(d2l._job_root(),
                           'lowp' if job == 'lowp-runs' else job)
     os.makedirs(folder, exist_ok=True)
@@ -997,6 +1062,11 @@ def _lowp_run_cached(cfg, name, recipe, seed, profile, stats,
     if os.path.exists(path):
         r = d2l._read_result(path, 'json-table')
         d2l._check_config(r, config, path)
+        want = _lowp_backend(recipe, torch.device('cuda'))
+        if want is not None and r.native != want:
+            raise RuntimeError(f'{path} ran {recipe} {r.native}, this card '
+                               f'runs it {want}: resume on a card of the '
+                               f'kind that wrote it, or delete the file')
         return r._asdict()
     r = _lowp_run(cfg, recipe, seed, profile, stats)
     parts = dict(log=r['log'], stats=r['stats'], profile=(
@@ -1047,7 +1117,19 @@ def _lowp_merge(runs, arms):
                     profile, label='')
 
 #@save
-def lowp_arms(cfg, arms, job='lowp-runs'):
+def _lowp_compute(cfg, arms, job):
+    """The runs of lowp_arms (each run's file in job's folder), merged."""
+    if not has_fp8_cores('cuda' if torch.cuda.is_available() else 'cpu'):
+        raise RuntimeError('the arms need an Ada or newer GPU')
+    _fp8_compile_check(_torchao_recipes(arms))
+    runs = {(name, s): _lowp_run_cached(
+        cfg, name, recipe, s, profile=(s == seeds[0]),
+        stats=(recipe == 'fp8-delayed'), job=job)
+        for name, (recipe, seeds) in arms.items() for s in seeds}
+    return _lowp_merge(runs, arms)
+
+#@save
+def lowp_arms(cfg, arms):
     """Train cfg once per arm and seed; arms = {name: (recipe, seeds)} with
     recipes 'bf16', 'torchao-tensorwise', 'torchao-rowwise' (native if the
     card can, else the simulated rowwise Fp8Linear), 'fp8-delayed' (the
@@ -1061,23 +1143,44 @@ def lowp_arms(cfg, arms, job='lowp-runs'):
     over steps 200-400) and its IQR, ratio to the baseline, peak GiB;
     speeds only where the fp8 GEMMs run natively in the compiled step),
     losses, stats, profile (per arm). Computed only in a regeneration (one
-    whole card, about an hour); else the committed result. job names the
-    regeneration ('lowp-runs', or 'lowp-blackwell': native against
-    simulated FP4 on a Blackwell card)."""
+    whole card, about an hour); else the committed result."""
+    config = dict(cfg=d2l._cfg_json(cfg),
+                  arms={k: [r, list(s)] for k, (r, s) in arms.items()})
+    result = d2l._pretrain_result(
+        'lowp-runs', lambda: _lowp_compute(cfg, arms, 'lowp-runs'), config)
+    return d2l._show_label(d2l._as_tuple(LowpRuns, result, _LOWP_COLUMNS))
+
+#@save
+LowpBlackwell = collections.namedtuple(
+    'LowpBlackwell', 'table losses stats profile gemms backend label')
+
+#@save
+def lowp_blackwell(cfg, arms):
+    """The Blackwell campaign of claim 13 (regeneration 'lowp-blackwell',
+    one Blackwell card): the card's fp4_backend line, then
+    _fp4_gemm_check on one batch of cfg's two MLP shapes (W_g and W_1:
+    d to f, W_2: f to d; micro_batch x T tokens), then lowp_arms's runs of
+    arms in their own folder. Returns LowpBlackwell: lowp_arms's four
+    tables, gemms (per shape, dtype and GEMM: native against simulated
+    relative error and its bound) and backend (the line). Refuses to start
+    on a card without FP4 tensor cores (the line says why)."""
     config = dict(cfg=d2l._cfg_json(cfg),
                   arms={k: [r, list(s)] for k, (r, s) in arms.items()})
 
     def compute():
-        if not has_fp8_cores('cuda' if torch.cuda.is_available() else 'cpu'):
-            raise RuntimeError('the arms need an Ada or newer GPU')
-        _fp8_compile_check(_torchao_recipes(arms))
-        runs = {(name, s): _lowp_run_cached(
-            cfg, name, recipe, s, profile=(s == seeds[0]),
-            stats=(recipe == 'fp8-delayed'), job=job)
-            for name, (recipe, seeds) in arms.items() for s in seeds}
-        return _lowp_merge(runs, arms)
-    result = d2l._pretrain_result(job, compute, config)
-    return d2l._show_label(d2l._as_tuple(LowpRuns, result, _LOWP_COLUMNS))
+        dev = torch.device('cuda')
+        backend = fp4_backend(dev)
+        if not has_fp4_cores(dev):
+            raise RuntimeError(f'lowp-blackwell: {backend}')
+        a, M = cfg.arch, cfg.micro_batch * cfg.arch.T
+        gemms = _fp4_gemm_check([(M, a.d, a.f), (M, a.f, a.d)], dev)
+        runs = _lowp_compute(cfg, arms, 'lowp-blackwell')
+        return LowpBlackwell(*runs[:4], gemms, backend, label='')
+    result = d2l._pretrain_result('lowp-blackwell', compute, config)
+    tables = dict(_LOWP_COLUMNS, gemms=['shape', 'dtype', 'GEMM', 'rel err',
+                                        'bound'])
+    return d2l._show_label(d2l._as_tuple(LowpBlackwell, result, tables,
+                                         defaults={'backend': ''}))
 
 #@save
 def _torchao_recipes(arms):

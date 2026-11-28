@@ -409,9 +409,8 @@ class _Fp4Matmul(torch.autograd.Function):
         ctx.save_for_backward(X, W)
         Wq = d2l._fp4_weight(W, lin.block, lin.weight_block2d,
                              scale=lin.scale)
-        x = (fake_quant_fp4(X, lin.block, lin.scale), X)
-        return d2l._fp4_mm(x, (Wq.T, W.T, lin.weight_block2d), lin,
-                           d2l._out_dtype(X))
+        Xq = fake_quant_fp4(X, lin.block, lin.scale)
+        return d2l._fp4_mm(Xq, Wq.T, lin, d2l._out_dtype(X), raw=(X, W.T))
 
     @staticmethod
     def backward(ctx, dY):
@@ -421,12 +420,11 @@ class _Fp4Matmul(torch.autograd.Function):
         sr = 'sr' if lin.sr_grads else 'rtn'  # stochastic for gradients
         Wq = d2l._fp4_weight(W, lin.block, lin.weight_block2d, dim=0,
                              scale=lin.scale)
-        w = (Wq, W, lin.weight_block2d)  # A @ B operands: (quantized, raw)
-        dX = d2l._fp4_mm((q(dY, sr), dY), w, lin, X.dtype)  # dY W
+        dX = d2l._fp4_mm(q(dY, sr), Wq, lin, X.dtype, raw=(dY, W))  # dY W
         if lin.H is not None:  # rotate each 16 tokens: dY^T X is unchanged
             X, dY = d2l._rotate_rows(X, lin.H), d2l._rotate_rows(dY, lin.H)
-        dW = d2l._fp4_mm((q(dY, sr, 0).T, dY.T), (q(X, 'rtn', 0), X), lin,
-                         W.dtype)
+        dW = d2l._fp4_mm(q(dY, sr, 0).T, q(X, 'rtn', 0), lin, W.dtype,
+                         raw=(dY.T, X), weight=False)  # not in W's tiles
         return dX, dW, None  # dW = dY^T X, blocks along the tokens
 
 #@save
@@ -580,13 +578,15 @@ for phase, step in phases.items():
 d2l.plot_lowp_stats(runs.stats, marks=(cfg.warmup, cfg.steps - cfg.decay))
 ```
 
-<!-- Placeholder (prose): NVFP4 at this scale: the gap of the simulated NVFP4 arm to the bf16 mean in units of the bf16 seed SD; visible means outside the 95% interval and more than three SDs. The NVFP4 paper reports parity with fp8 at 12B parameters and 10T tokens; quote it as the paper's result (and Nemotron 3's NVFP4 pretraining for up to 25T tokens with the sensitive layers kept in higher precision, and Four Over Six's adaptive block scaling as the refinement that narrows the gap). A 75M model on 20M tokens is not evidence against the recipe at scale. Closing hand-off: the same formats at inference (chap_lm_compression). -->
+<!-- Placeholder (prose): NVFP4 at this scale: the gap of the NVFP4 arm to the bf16 mean (name the path the cell prints from the arms table's native column: simulated on the build box, "native FP4" if the result was regenerated on Blackwell) in units of the bf16 seed SD; visible means outside the 95% interval and more than three SDs. The NVFP4 paper reports parity with fp8 at 12B parameters and 10T tokens; quote it as the paper's result (and Nemotron 3's NVFP4 pretraining for up to 25T tokens with the sensitive layers kept in higher precision, and Four Over Six's adaptive block scaling as the refinement that narrows the gap). A 75M model on 20M tokens is not evidence against the recipe at scale. Closing hand-off: the same formats at inference (chap_lm_compression). -->
 
 ```{.python .input #low-precision-nvfp4-gap}
 %%tab pytorch
 gap = final['nvfp4-mlp'].mean() - m
 where = 'inside' if lo <= m + gap <= hi else 'outside'
-print(f'NVFP4 (simulated, MLP) − bf16 mean: {gap:+.3f} = {gap / sd:.1f} '
+path = runs.table.set_index('arm').loc['nvfp4-mlp', 'native']
+path = {'eager': 'native FP4'}.get(path, path)  # 'simulated' off Blackwell
+print(f'NVFP4 ({path}, MLP) − bf16 mean: {gap:+.3f} = {gap / sd:.1f} '
       f'seed SDs, {where} the 95% interval')
 ```
 

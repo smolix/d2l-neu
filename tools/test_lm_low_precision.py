@@ -37,8 +37,13 @@ exactly (NVFP4 with 16 x 16 weight tiles repeated into 1 x 16 blocks, 1-D
 weight blocks, MXFP4; fp32 inputs exactly, bf16 inputs up to the
 simulator's rounding to bf16), and the layer's outputs and gradients match;
 the backend never enters `lowp_arms`'s configuration or the state dict;
-`_lowp_convert`'s FP4 recipes; the `lowp-blackwell` job, its run folder and
-its campaign entry in `tools/lm_campaigns.yaml`.
+`_lowp_convert`'s FP4 recipes; a stored run is reused only on a card that
+takes the same path; the probe's padded shapes and its 1e-4 threshold (one
+scale code off by one fails it); `_fp4_gemm_check` (within its bounds for a
+correct GEMM, above them for one wrong scale code); the `lowp-blackwell`
+job (`lowp_blackwell`: backend line, GEMM table, arms; it refuses a card
+without FP4 tensor cores), its run folder and its campaign entry in
+`tools/lm_campaigns.yaml`.
 """
 import ast
 import collections
@@ -473,11 +478,25 @@ class Fp4NativeTest(unittest.TestCase):
 
     def test_probe(self):
         for kind, block in (('e4m3', 16), ('pow2', 32)):
-            good = lambda a, b, sa, sb: ref_gemm(a, b, sa, sb, block, kind)
+            seen = []
+
+            def good(a, b, sa, sb):
+                seen.append((tuple(a.shape), tuple(b.shape), sa.numel(),
+                             sb.numel()))
+                return ref_gemm(a, b, sa, sb, block, kind)
             with mock.patch.object(d2l, '_fp4_scaled_mm', good):
                 self.assertIsNone(d2l._fp4_probe('cpu', kind), kind)
-            swapped = lambda a, b, sa, sb: ref_gemm(a, b, sb, sa, block, kind)
-            with mock.patch.object(d2l, '_fp4_scaled_mm', swapped):
+            # padded scale tiles: 192 and 96 rows to 256 and 128, K / block
+            # (10 or 5) to 12 or 8 columns
+            cols = {16: 12, 32: 8}[block]
+            self.assertEqual(seen, [((192, 80), (80, 96), 256 * cols,
+                                     128 * cols)])
+
+            def one_ulp(a, b, sa, sb):  # one of B's block scales off by one
+                sb = sb.view(torch.uint8).clone()
+                sb[0] += 1
+                return ref_gemm(a, b, sa, sb.view(sa.dtype), block, kind)
+            with mock.patch.object(d2l, '_fp4_scaled_mm', one_ulp):
                 self.assertIn('off the simulator by', d2l._fp4_probe('cpu',
                                                                     kind))
 
@@ -703,9 +722,8 @@ class Fp4NativeTest(unittest.TestCase):
 
     def test_blackwell_job(self):
         name, kw = d2l.PRETRAIN_JOBS['lowp-blackwell']
-        self.assertEqual(name, 'lowp_arms')
+        self.assertEqual(name, 'lowp_blackwell')
         kw = kw()
-        self.assertEqual(kw['job'], 'lowp-blackwell')
         self.assertEqual(kw['cfg'], d2l.r2_config('fp8', steps=400, decay=60,
                                                   val_every=100))
         self.assertEqual({r for r, _ in kw['arms'].values()},
@@ -735,6 +753,114 @@ class Fp4NativeTest(unittest.TestCase):
             self.assertEqual(sorted(os.listdir(tmp)),
                              ['lowp', 'lowp-blackwell'])
             self.assertEqual(run.call_count, 2)
+
+    def test_cached_run_backend(self):
+        """A stored run of an FP4 recipe is reused only on a card that
+        takes the same path (finding 1 of the F40 review)."""
+        cfg = d2l.r2_config('fp8', steps=400, decay=60, val_every=100)
+        log = pd.DataFrame(dict(step=[1], tokens=[1], loss=[3.0],
+                                val_loss=[3.0], tok_s=[1.0]))
+
+        def run(native):
+            return lambda *a, **k: dict(
+                log=log, native=native, stats=pd.DataFrame(), gib=1.0,
+                profile=None)
+        cases = (('nvfp4-mlp', 'simulated', 'eager'),
+                 ('nvfp4-mlp', 'eager', 'simulated'))
+        for recipe, stored, other in cases:
+            with tempfile.TemporaryDirectory() as tmp, \
+                    mock.patch.object(d2l, '_job_root', lambda: tmp):
+                has = lambda native: mock.patch.object(
+                    d2l, 'has_fp4_cores',
+                    lambda dev, kind='e4m3': native == 'eager')
+                with mock.patch.object(d2l, '_lowp_run', run(stored)), \
+                        has(stored):
+                    d2l._lowp_run_cached(cfg, 'nvfp4-mlp', recipe, 0, False,
+                                         False)
+                    got = d2l._lowp_run_cached(cfg, 'nvfp4-mlp', recipe, 0,
+                                               False, False)  # reused
+                self.assertEqual(got['native'], stored)
+                with has(other), self.assertRaisesRegex(
+                        RuntimeError, f'ran nvfp4-mlp {stored}, this card '
+                                      f'runs it {other}'):
+                    d2l._lowp_run_cached(cfg, 'nvfp4-mlp', recipe, 0, False,
+                                         False)
+        for recipe, want in (('nvfp4-mlp-sim', 'simulated'),
+                             ('nvfp4-mlp-native', 'eager'), ('bf16', None),
+                             ('torchao-tensorwise', None)):
+            self.assertEqual(d2l._lowp_backend(recipe, 'cpu'), want)
+
+    def test_gemm_check(self):
+        """_fp4_gemm_check (the Blackwell job's GEMM table) on the CPU with
+        the hardware GEMM stubbed: within the bounds for a correct GEMM,
+        above them for one wrong scale code."""
+        def stub(a, b, sa, sb):
+            return ref_gemm(a, b, sa, sb, 16, 'e4m3')
+
+        def wrong(a, b, sa, sb):
+            sb = sb.view(torch.uint8).clone()
+            sb[0] += 1
+            return ref_gemm(a, b, sa, sb.view(sa.dtype), 16, 'e4m3')
+        shapes = [(64, 32, 48), (64, 48, 32)]
+        with mock.patch.object(d2l, '_fp4_scaled_mm', stub):
+            t = d2l._fp4_gemm_check(shapes, 'cpu')
+        self.assertEqual(list(t.columns), ['shape', 'dtype', 'GEMM',
+                                           'rel err', 'bound'])
+        self.assertEqual(len(t), 12)
+        self.assertEqual(list(t['GEMM'][:3]), ['Y', 'dX', 'dW'])
+        self.assertEqual(set(t['shape']), {'64x32x48', '64x48x32'})
+        self.assertTrue((t['rel err'] <= t['bound']).all(), t)
+        fp32 = t[t['dtype'] == 'fp32']
+        self.assertTrue((fp32['rel err'] < 1e-6).all(), fp32)
+        self.assertTrue((t.loc[t['dtype'] == 'bf16', 'rel err'] > 0).any())
+        with mock.patch.object(d2l, '_fp4_scaled_mm', wrong):
+            t = d2l._fp4_gemm_check(shapes, 'cpu')
+        self.assertTrue((t['rel err'] > t['bound']).any(), t)
+        self.assertEqual(torch.get_float32_matmul_precision(), 'highest')
+
+    def test_blackwell_driver(self):
+        cfg, arms = (d2l.PRETRAIN_JOBS['lowp-blackwell'][1]()[k]
+                     for k in ('cfg', 'arms'))
+        seen = {}
+
+        def fake(name, compute, config, **kw):
+            seen['name'] = name
+            return compute()
+        lowp = d2l.LowpRuns(*(pd.DataFrame(columns=d2l._LOWP_COLUMNS[k])
+                              for k in ('table', 'losses', 'stats',
+                                        'profile')), label='')
+        with mocked_gpu((10, 0)), \
+                mock.patch.object(d2l, '_pretrain_result', fake), \
+                mock.patch.object(d2l, '_fp4_gemm_check',
+                                  return_value='gemms') as check, \
+                mock.patch.object(d2l, '_lowp_compute',
+                                  return_value=lowp) as compute, \
+                contextlib.redirect_stdout(io.StringIO()):
+            r = d2l.lowp_blackwell(cfg, arms)
+        self.assertEqual(seen['name'], 'lowp-blackwell')
+        self.assertEqual(r.backend, 'FP4 GEMMs on B200 (sm_100): native '
+                                    '(NVFP4: E4M3 scales, blocks of 16)')
+        self.assertEqual(r.gemms, 'gemms')
+        self.assertEqual(check.call_args.args[0],
+                         [(16 * 1024, 768, 2048), (16 * 1024, 2048, 768)])
+        self.assertEqual(compute.call_args.args[2], 'lowp-blackwell')
+        with mocked_gpu((8, 9), 'NVIDIA GeForce RTX 4090'), \
+                mock.patch.object(d2l, '_pretrain_result', fake), \
+                mock.patch.object(d2l, '_lowp_compute') as compute, \
+                self.assertRaisesRegex(RuntimeError, 'native needs '
+                                                     'Blackwell'):
+            d2l.lowp_blackwell(cfg, arms)
+        compute.assert_not_called()
+        # pending: empty tables with their columns, no backend line
+        with mock.patch.object(d2l, 'PRETRAIN_PENDING',
+                               frozenset({'lowp-blackwell'})), \
+                mock.patch.dict(os.environ, {'D2L_RERUN': ''}), \
+                uncommitted(), contextlib.redirect_stdout(io.StringIO()):
+            r = d2l.lowp_blackwell(cfg, arms)
+        self.assertIn('pending', r.label)
+        self.assertEqual(list(r.gemms.columns), ['shape', 'dtype', 'GEMM',
+                                                 'rel err', 'bound'])
+        self.assertEqual(r.backend, '')
 
 
 class ModelTest(unittest.TestCase):

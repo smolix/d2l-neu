@@ -1561,6 +1561,98 @@ class ArmsEndToEndTest(ArmsBase):
         self.assertEqual(len(steps), 6)
         d2l.plt.close('all')
 
+    def test_t2_first_build(self):
+        """F35's campaign: seed 0 of PI and YaRN and the progressive arm
+        are the first build's finished folders (trained without the
+        periodic needle evaluation, an old-format timeline beside them);
+        the part jobs read them and never retrain them or touch their
+        weights; only seed 1 trains, after the recipe check against seed
+        0's arm.json; the merge evaluates every model with the new probe;
+        the timeline holds seed 1 only and the page says which arms have
+        none; the T2 scheme difference pairs the two seeds."""
+        trained, checked = [], []
+        real_train, real_check = d2l._lc_train, d2l._lc_check_recipe
+
+        def train(model, stream, cfg, job, stop=None):
+            trained.append((cfg['arm'], cfg['seed'], cfg['evaluate']))
+            return real_train(model, stream, cfg, job, stop)
+
+        def check(cfg):
+            checked.append((cfg['arm'], cfg['seed']))
+            return real_check(cfg)
+
+        with tempfile.TemporaryDirectory() as root:
+            with self.campaign(root, ''):
+                cfgs = d2l._lc_configs(ARMS, 'r2', **CALL)  # toy cadence
+                first = [k for k in cfgs if k[1] == 0]
+                for k in first:  # the first build: no periodic evaluation
+                    d2l._lc_arm_run(dict(cfgs[k], evaluate=False))
+                    with open(os.path.join(d2l._lc_job(cfgs[k]),
+                                           'timeline.jsonl'), 'w') as f:
+                        f.write(json.dumps(dict(arm=k[0], seed=0, step=2,
+                                                recall_lo=0.1)) + '\n')
+                ckpts = {k: os.path.join(d2l._lc_job(c), 'ckpt',
+                                         f's{c["steps"]}.safetensors')
+                         for k, c in cfgs.items() if k in first}
+                before = {k: (d2l._file_id(p), os.path.getmtime(p))
+                          for k, p in ckpts.items()}
+            parts = ','.join(d2l._LC_T2_NAMES[k] for k in cfgs)
+            with self.campaign(root, parts), \
+                    mock.patch.object(d2l, '_lc_train', train), \
+                    mock.patch.object(d2l, '_lc_check_recipe', check):
+                res = d2l.lc_arms(ARMS, base='r2', **CALL)
+            self.assertIn('pending', res.label)
+            self.assertEqual(sorted(trained), [('PI', 1, True),
+                                               ('YaRN', 1, True)])
+            self.assertEqual(sorted(checked), [('PI', 1), ('YaRN', 1)])
+            with self.campaign(root, 'lc-t2-evals'):
+                runs = d2l.lc_arms(ARMS, base='r2', **CALL)
+            self.assertEqual(sorted(trained), [('PI', 1, True),
+                                               ('YaRN', 1, True)])
+            for k, p in ckpts.items():  # read, never written
+                self.assertEqual((d2l._file_id(p), os.path.getmtime(p)),
+                                 before[k], k)
+                self.assertTrue(os.path.exists(os.path.join(
+                    os.path.dirname(os.path.dirname(p)), 'evals.json.gz')))
+            with self.campaign(root, ''):
+                ns = page_ns(lc=runs, t1=runs)
+                steps = run_cell('long-context-first-steps', ns)
+                with contextlib.redirect_stdout(io.StringIO()) as buf:
+                    d2l.show_lc_seeds(runs, runs)  # T1 slot: not t1
+                seeds = buf.getvalue()
+                with contextlib.redirect_stdout(io.StringIO()) as buf:
+                    d2l.show_lc_table(runs)
+                table = buf.getvalue()
+        self.assertEqual(runs.label, '')
+        self.assertEqual(
+            sorted(set(zip(runs.timeline['arm'], runs.timeline['seed']))),
+            [('PI', 1), ('YaRN', 1)])
+        self.assertEqual(set(runs.needles['seed']), {0, 1})
+        self.assertEqual(set(runs.needles[runs.needles['model'] ==
+                                          'YaRN-prog']['length']),
+                         {512, 1024})
+        lines = check_display(self, steps)
+        self.assertEqual(len(lines), 4)  # header, PI s1, YaRN s1, missing
+        self.assertEqual([x.split()[:2] for x in lines[1:3]],
+                         [['PI', '1'], ['YaRN', '1']])
+        self.assertEqual(lines[3], 'no timeline (trained before the periodic '
+                                   'needle evaluation): PI s0, YaRN s0, '
+                                   'YaRN-prog s0')
+        lines = check_display(self, seeds)
+        self.assertIn('T1: pending', lines)
+        self.assertRegex(seeds, r'(?m)^YaRN − PI, T2 \(2 seeds\): loss '
+                                r'[-+]\d\.\d{3} \[.*\] \((seeds|windows)\)$')
+        self.assertEqual(d2l.scheme_difference(runs, 'YaRN', 'PI')['seeds'],
+                         [0, 1])
+        lines = check_display(self, table)
+        self.assertEqual([x.split(' (')[0].strip() for x in lines[1:4]],
+                         ['PI', 'YaRN', 'YaRN-prog'])
+        self.assertIn('PI (2 seeds)', table)
+        self.assertIn('YaRN-prog (1 seed)', table)
+        self.assertRegex(table, r'YaRN-prog − YaRN, seed 0 of each \(single '
+                                r'seed\)')
+        d2l.plt.close('all')
+
     def test_resume_equal(self):
         cfg = dict(d2l._lc_configs(ARMS, 't1', 12 * 2048, 1024, 2048, 1e-3,
                                    2, 0.25, 0.5)['YaRN-prog', 0],

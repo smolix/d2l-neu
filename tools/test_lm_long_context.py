@@ -1773,6 +1773,55 @@ class PageCellsTest(unittest.TestCase):
                                  'pilot checks hold at both')
         self.assertLessEqual(max(map(len, out)), 80)
 
+    def test_check_asserts(self):
+        """F36: the checks of cells 4 (claim 2), 5 (the profiler) and 9
+        fail loudly when what they check is broken."""
+        ns = page_ns()
+        exec(page_cells()['long-context-rope-inv-freq'], ns)
+        hf = d2l.transformers_yarn
+        off = lambda *a, **k: (hf(*a, **k)[0] * (1 + 1e-4), None)
+        with mock.patch.object(d2l, 'rope_inv_freq', ns['rope_inv_freq']), \
+                mock.patch.object(d2l, 'transformers_yarn', off), \
+                self.assertRaises(AssertionError):
+            run_cell('long-context-scheme-checks', ns)
+        count = d2l.flop_counter_per_token
+        with mock.patch.object(d2l, 'flop_counter_per_token',
+                               lambda *a: 1.05 * count(*a)), \
+                self.assertRaises(AssertionError):
+            run_cell('long-context-attention-share', page_ns())
+        torch.manual_seed(0)
+        ns = page_ns(model=toy_model(max_len=256), s=4, L=64,
+                     books=torch.randint(32, V, (4, 257)))
+        with mock.patch.object(d2l, 'CopyOracle', d2l.UnigramModel), \
+                self.assertRaises(AssertionError):
+            run_cell('long-context-measure-checks', ns)
+
+    def test_no_replaced_key_read(self):
+        """F36: no artifact name maps to a key the fix pass replaced (the
+        first build's results, the test books cut to their first 16K
+        tokens), no page cell names one, and the library names each only
+        in its registration. Run B's 16K weights stay -v1 (seed 0 of the
+        T2 arms, the 'r2-16k-*' presets)."""
+        old = ('lm-lc-evals-v1', 'lm-lc-t1-v1', 'lm-pg19-test-v1')
+        self.assertFalse(set(old) & {v[0] for v in
+                                     d2l.PRETRAIN_ARTIFACTS.values()})
+        for name, key in (('lc-evals', 'lm-lc-evals-v2'),
+                          ('lc-zeroshot', 'lm-lc-evals-v2'),
+                          ('lc-reference', 'lm-lc-evals-v2'),
+                          ('lc-t1', 'lm-lc-t1-v2'),
+                          ('lc-probe', 'lm-lc-probe-v1'),
+                          ('pg19-test', 'lm-pg19-test-v2')):
+            self.assertEqual(d2l.PRETRAIN_ARTIFACTS[name][0], key)
+        code = ''.join(page_cells().values())
+        self.assertFalse([k for k in old if k in code])
+        with open(d2l.__file__) as f:
+            lib = f.read()
+        for k in old:
+            ext = '.tar' if 'pg19' in k else '.json.gz'
+            self.assertEqual(lib.count(k), 2, k)  # the DATA_HUB entry only
+            self.assertIn(f"d2l.DATA_HUB['{k}'] = (\n    d2l.LM_DATA_URL + "
+                          f"'{k}{ext}',", lib)
+
 
 class PendingPageTest(unittest.TestCase):
     """The page's later cells run on pending results (empty tables)."""

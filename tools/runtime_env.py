@@ -462,8 +462,11 @@ HEAVY_GPU_NOTEBOOKS = {
     ("pytorch", "chapter_lm-data/tokenizers.ipynb"): 2,
     # 21.4 takes a whole card (FULL_CARD_NOTEBOOKS: its live cell reserves
     # 20.9 GiB).
-    # 21.5 runs the reference model at 16K tokens (32 books, 50 recall items
-    # through the cached scorer: about 8 GiB).
+    # 21.5 runs the reference model at 4K and 16K tokens (100 needle windows
+    # each, one prefill and eight two-token queries; 32 test windows of 16K):
+    # 4.2 GiB allocated; 15.0 GiB reserved with the default allocator, 4.2
+    # GiB with expandable segments (NOTEBOOK_ENV; F36 timed runs, 2026-11-28,
+    # 4.0 min). One slot would hold that; two stay until a scheduler run.
     ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): 2,
 }
 
@@ -579,10 +582,13 @@ NOTEBOOK_ENV = {
     },
     # 21.5: the Hub's X-HF-Warning (as 18.6; the regeneration's suite
     # reads). The 16K-token prompts use d2l.lc_tokenizer, whose raised
-    # model_max_length leaves Transformers nothing to warn about.
+    # model_max_length leaves Transformers nothing to warn about. Expandable
+    # segments: the 16K forwards leave the default allocator 15.0 GiB
+    # reserved for 4.2 GiB allocated, the whole of the two slots.
     ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): {
         "HF_HUB_VERBOSITY": "error",
         "OMP_NUM_THREADS": "8",
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
     # 21.6: the Hub's X-HF-Warning on the Qwen3 config reads; the bootstrap
     # refits run on the notebook's 8 threads.

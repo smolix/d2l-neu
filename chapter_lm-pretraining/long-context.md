@@ -37,7 +37,7 @@ when the section is written.
 - Courses, tutorials and blogs: [SmolLM3 blog](https://huggingface.co/blog/smollm3) (a documented long-context extension stage with its data mixture).
 -->
 
-<!-- Placeholder (prose): opening. The reader has the reference model, trained at 4K, and the RoPE extension schemes of subsec_pos-context-extension. Scaled by interpolation, the model accepts 16K tokens; the cell shows, unscaled at 4K, needle recall 128-256 tokens back against 2-4K back (claim 1b, the opening's contrast: the base retrieves near and not across its own trained window, unless the 2-4K bound clears 0.5, in which case the opening uses the 16K contrast alone), then with PI at 16K the loss by position bucket, recall 128-256 back with the query at 16K (whether PI zero-shot still copies at short range at all) and recall 8-16K back. Opening question: extended from 4K to 16K with interpolation and with YaRN on long-dependency data, which scheme keeps more of the 4K accuracy, and does perplexity or recall say so first? -->
+<!-- Placeholder (prose): opening. The reader has the reference model, trained at 4K, and the RoPE extension schemes of subsec_pos-context-extension. Scaled by interpolation, the model accepts 16K tokens; the cell shows, unscaled at 4K, needle recall 128-256 tokens back against 2-4K back (claim 1b, the opening's contrast: the base retrieves near and not across its own trained window, unless the 2-4K bound clears 0.5, in which case the opening uses the 16K contrast alone), then with PI at 16K the loss by position bucket, recall 128-256 back with the query at 16K (whether PI zero-shot still copies at short range at all) and recall 8-16K back. Opening question: extended from 4K to 16K with interpolation and with YaRN on long-dependency data, which scheme keeps more of the 4K accuracy, and does perplexity or recall say so first? The opening states claims 1 and 1b from this cell as measured; their readings are in the placeholder after it. -->
 
 ```{.python .input #long-context-imports}
 %%tab pytorch
@@ -81,7 +81,7 @@ print(f'reading: loss {"rising" if rising else "flat"} beyond 4K; recall '
       f'{side(near)} chance 128-256 back, {side(far)} chance 8-16K back')
 ```
 
-<!-- Placeholder (prose): reading of the opening: the window a model accepts, the window it was trained on and the distance it retrieves across are three numbers. Inside its trained window the base copies a value 128-256 tokens back and fails 2-4K back (as measured). With PI at 16K the loss beyond 4K stays flat (or rises; the cell decides from the bucket intervals); recall 128-256 back with the query at 16K says whether interpolation without training still copies at short range, and only if it does is chance-level recall 8-16K back a statement about distance (otherwise PI broke copying at every gap; state which, as measured). Perplexity at a length is not use of that length. Roadmap of the section: the schemes without training, what training needs (schedule, data), three measurements, the trained arms. -->
+<!-- Placeholder (prose): reading of the opening: the window a model accepts, the window it was trained on and the distance it retrieves across are three numbers. Inside its trained window the base copies a value 128-256 tokens back and fails 2-4K back (as measured). With PI at 16K the loss beyond 4K stays flat (or rises; the cell decides from the bucket intervals); recall 128-256 back with the query at 16K says whether interpolation without training still copies at short range, and only if it does is chance-level recall 8-16K back a statement about distance (otherwise PI broke copying at every gap; state which, as measured). Perplexity at a length is not use of that length. Roadmap of the section: the schemes without training, what training needs (schedule, data), three measurements, the trained arms. Claims 1 and 1b, live half (cell 11 adds the paired interval of loss 12-16K minus 0-4K and 250-window recalls): claim 1 holds if the buckets are flat and recall 8-16K back is at chance, else "rises by x nats" or "above chance (k of n)"; claim 1b holds if the lower bound 128-256 back is above 0.5 and the one 2-4K back below it, else "the base model retrieves across its window" and the opening uses the 16K contrast alone. -->
 
 ## Extension without Training
 
@@ -120,7 +120,7 @@ def yarn_mscale(s):
     return 0.1 * math.log(s) + 1.0 if s > 1 else 1.0
 ```
 
-<!-- Placeholder (prose): the checks below: scale 1 gives the base frequencies for every scheme; interpolation is division by s; the YaRN pair counts for the reference model's 32 pairs at L = 4,096 (derived in the text); the temperature; and agreement with Transformers' YaRN initialization (whose default truncate=True rounds the ramp edges to whole pairs). The plot shows each scheme's frequency ratio per pair. -->
+<!-- Placeholder (prose): the checks below: scale 1 gives the base frequencies for every scheme; interpolation is division by s; the YaRN pair counts for the reference model's 32 pairs at L = 4,096 (derived in the text); the temperature; and agreement with Transformers' YaRN initialization (whose default truncate=True rounds the ramp edges to whole pairs). The plot shows each scheme's frequency ratio per pair. Claim 2: the cell asserts the derived values (scale 1 and Transformers within 1e-6, interpolation exact, 9 / 12 / 11 pairs); there is no fallback. -->
 
 ```{.python .input #long-context-scheme-checks}
 %%tab pytorch
@@ -133,14 +133,16 @@ pi = d2l.rope_inv_freq(d_head, scheme='pi', s=4)
 print(f'PI equals θ/s: {torch.equal(pi, theta / 4)}')
 yarn = d2l.rope_inv_freq(d_head, scheme='yarn', s=4, L=L_r2)
 ratio = yarn / theta
-print(f'YaRN pairs: {(ratio == 1 / 4).sum()} interpolated, '
-      f'{((ratio > 1 / 4) & (ratio < 1)).sum()} blended, '
-      f'{(ratio == 1).sum()} untouched')
+pairs = [int(m.sum()) for m in (ratio == 1 / 4, (ratio > 1 / 4) & (ratio < 1),
+                                ratio == 1)]
+print('YaRN pairs: {} interpolated, {} blended, {} untouched'.format(*pairs))
 print(f'yarn_mscale(4) = {d2l.yarn_mscale(4):.4f}')
 hf, _ = d2l.transformers_yarn(d_head, s=4, L=L_r2, truncate=False)
 rounded, _ = d2l.transformers_yarn(d_head, s=4, L=L_r2, truncate=True)
 print(f'vs Transformers (truncate=False): {(yarn - hf).abs().max():.1e}; '
       f'truncate=True differs by {(yarn - rounded).abs().max():.1e}')
+assert same < 1e-6 and (yarn - hf).abs().max() < 1e-6  # as derived
+assert torch.equal(pi, theta / 4) and pairs == [9, 12, 11]
 ntk = d2l.rope_inv_freq(d_head, scheme='ntk', s=4)
 d2l.plot(torch.arange(d_head // 2), [pi / theta, ntk / theta, ratio],
          'pair index m', 'θ′ / θ', legend=['PI', 'NTK', 'YaRN'],
@@ -153,7 +155,7 @@ d2l.plot(torch.arange(d_head // 2), [pi / theta, ntk / theta, ratio],
 
 ### The Cost of Length
 
-<!-- Placeholder (prose): the attention share a(T) of F(T) = 6 N_mm + 12 L H d_h T for the reference model (the dense count of the attention scores; kernels that skip the masked causal half do about half of that work, printed beside it); the ×2.35 of a 16K window holds for windows without document masks (one long document, or unrelated documents attended across); a progressive schedule (a stage at 8K before 16K) saves compute as well as easing optimization; the learning-rate recipe for extension (a low constant rate, fresh optimizer moments, a short final decay). -->
+<!-- Placeholder (prose): the attention share a(T) of F(T) = 6 N_mm + 12 L H d_h T for the reference model (the dense count of the attention scores; kernels that skip the masked causal half do about half of that work, printed beside it); the ×2.35 of a 16K window holds for windows without document masks (one long document, or unrelated documents attended across); a progressive schedule (a stage at 8K before 16K) saves compute as well as easing optimization; the learning-rate recipe for extension (a low constant rate, fresh optimizer moments, a short final decay). Claim 3: the shares 0.45 / 0.62 / 0.77 and the 15% saving are exact arithmetic; the cell asserts the profiler ratio within 3%. Claim 10, cost half: the ×2.35 line. -->
 
 ```{.python .input #long-context-attention-share}
 %%tab pytorch
@@ -172,13 +174,14 @@ print(f'{stage / 1e6:.0f}M of {total / 1e6:.0f}M tokens at 8K: '
       f"{saving:+.0%} of the arm's compute")
 ratio = d2l.flop_counter_per_token(arch, 16_384) / cost[16_384]
 print(f'FlopCounterMode at 16K (dense scores as well): ratio {ratio:.3f}')
+assert abs(ratio - 1) < 0.03  # the count agrees with the profiler
 print('16K windows, no document mask: '
       f'×{cost[16_384] / cost[4096]:.2f} the FLOPs of 4K windows')
 ```
 
 ### Data with Long-Range Dependencies
 
-<!-- Placeholder (prose): books and long papers have dependencies across thousands of tokens; concatenated unrelated documents attended across (no document mask) cost 2.35 times the FLOPs per token of 4K windows and teach no long-range dependence (ProLong's finding, cited, not measured here). The arms mix half long data and half short replay under document masks, so the short-context skills keep being trained; fig_lm_length_schedule shows the two stages, the learning rate and the mixture. -->
+<!-- Placeholder (prose): books and long papers have dependencies across thousands of tokens; concatenated unrelated documents attended across (no document mask) cost 2.35 times the FLOPs per token of 4K windows and teach no long-range dependence (ProLong's finding, cited, not measured here). The arms mix half long data and half short replay under document masks, so the short-context skills keep being trained; fig_lm_length_schedule shows the two stages, the learning rate and the mixture. Claim 10, second half (unrelated documents teach no long-range dependence): cited, not measured. -->
 
 <!-- Figure (generator): fig_lm_length_schedule, img/mdl-lm-pretraining-length-schedule.svg (tools/gen_mdl_lm_pretraining_figures.py): the context-length staircase (8K at scale 2, then 16K at scale 4) against tokens, the learning rate beneath, and each stage's long/short mixture as a stacked bar. -->
 
@@ -240,7 +243,7 @@ print('oracle copier: ' + ', '.join(f'{h:.0%}' for h in oracle.values())
       + ' at 4K, 16K; the pilot checks hold at both')
 ```
 
-<!-- Placeholder (prose): the format table: the first build's template against the one-hop needle on the same book windows of 1,024 tokens (item i of both formats: the same book, offset, relative line positions and candidate order; 200 items, the queried line at mid depth), each candidate scored by its summed log-probability, for the oracle copier, the t1 and r2 final checkpoints and Qwen3-0.6B-Base; the last column is template minus one-hop paired by item with its interval (claim 1c). State as measured whether the reference model fails the template and solves the one-hop needle inside its trained window, and whether Qwen3 solves both (it is the check that the template is solvable at all). -->
+<!-- Placeholder (prose): the format table: the first build's template against the one-hop needle on the same book windows of 1,024 tokens (item i of both formats: the same book, offset, relative line positions and candidate order; 200 items, the queried line at mid depth), each candidate scored by its summed log-probability, for the oracle copier, the t1 and r2 final checkpoints and Qwen3-0.6B-Base; the last column is template minus one-hop paired by item with its interval (claim 1c). State as measured whether the reference model fails the template and solves the one-hop needle inside its trained window, and whether Qwen3 solves both (it is the check that the template is solvable at all). Claim 1c: if Qwen3 scores below 90% on either format, "the reference scores x% on the one-hop format", as measured; the oracle copier is 100% on Qwen3's own items, so the shortfall is the model's, not the probe's. -->
 
 ```{.python .input #long-context-format-table}
 %%tab pytorch
@@ -249,7 +252,7 @@ probe = d2l.lc_probe_runs(t1_steps=(509, 1017, 1526),
 d2l.show_lc_format(probe)
 ```
 
-<!-- Placeholder (prose): reach during pretraining: recall by gap at the trained length for the committed checkpoints of t1 (at 1K) and r2 (at 4K). The steps between which copying appears (from a checkpoint whose 32-64 interval contains chance, 1/8, to the first with a lower 95% bound above 0.25; 'by step b' alone when the checkpoint before is already above chance), r2's reach at each checkpoint from step 1,000 to step 6,000 and whether it is non-decreasing (within one bin), and its recall 256-1K back at step 6,000 minus at step 1,000, paired by query (claim 11, fixed steps), as measured; the induction-head literature (cited) places the onset early in training. -->
+<!-- Placeholder (prose): reach during pretraining: recall by gap at the trained length for the committed checkpoints of t1 (at 1K) and r2 (at 4K). The steps between which copying appears (from a checkpoint whose 32-64 interval contains chance, 1/8, to the first with a lower 95% bound above 0.25; 'by step b' alone when the checkpoint before is already above chance), r2's reach at each checkpoint from step 1,000 to step 6,000 and whether it is non-decreasing (within one bin), and its recall 256-1K back at step 6,000 minus at step 1,000, paired by query (claim 11, fixed steps), as measured; the induction-head literature (cited) places the onset early in training. Claim 12 is an observation on two runs, not a law in steps: copying appears between steps 500 and 1,000 in each run, stated per model as measured. Claim 11's fallback: "reach was x at step 1,000 and y at the end". -->
 
 ```{.python .input #long-context-reach-train}
 %%tab pytorch
@@ -301,8 +304,9 @@ def long_context_gain(model, windows, short_len, long_len, min_gap,
 edges = range(0, s * L + 1, L)
 parts = d2l.nll_by_position(model, books[:4], edges)
 whole = d2l.nll_by_position(model, books[:4], [0, s * L])
-print('bucket means average to the total: |Δ| '
-      f'{abs(parts["nll"].mean() - whole["nll"][0]):.1e}')
+gap = abs(parts['nll'].mean() - whole['nll'][0])
+print(f'bucket means average to the total: |Δ| {gap:.1e}')
+assert gap < 1e-6
 V, T, short = 2048, 2048, 256  # vocabulary, window, short context
 torch.manual_seed(0)
 x = torch.stack([torch.randperm(V)[:T // 2] for _ in range(8)])
@@ -314,6 +318,7 @@ gain = {name: d2l.long_context_gain(
                         ('unigram', d2l.UnigramModel(V)))}
 print(f'long-context gain: oracle {gain["oracle"]:+.2f} nats, '
       f'unigram {gain["unigram"]:.3f}')
+assert gain['oracle'] > 0.99 * math.log(V) and abs(gain['unigram']) < 1e-3
 ```
 
 ### The Test Data and the Zero-Shot Baseline
@@ -363,7 +368,7 @@ for arm, a in ARMS.items():
 
 ### Three Arms at 16K
 
-<!-- Placeholder (prose): the result table (seeds averaged): val loss at 4K (and its change from the base), loss in the last position bucket, the loss of the second half of each window with the whole 16K window minus with its last 4K [95% CI], near recall (gaps 32-512) and far recall (4-16K back) at 16K, the reach (every octave bin up to it has a lower 95% Wilson bound of at least 0.5) and the detectable range (above 0.25). Each arm's row is the mean over the seeds named beside it (PI and YaRN three, YaRN-prog one). The base row is the zero-shot PI model at 16K with the base's own val loss; the Qwen3-0.6B-Base row (trained to 32K) has recall only, its losses are in its own tokens. The line under the table compares progressive and one-shot YaRN at seed 0 of each (paired by window and query), a single-seed comparison (claim 7); its bounds get extra decimals where they would round to 0, so a difference below the printed precision shows as such. The plot shows the training loss of each arm's first seed; the dotted line marks the progressive arm's switch to 16K. -->
+<!-- Placeholder (prose): the result table (seeds averaged): val loss at 4K (and its change from the base), loss in the last position bucket, the loss of the second half of each window with the whole 16K window minus with its last 4K [95% CI], near recall (gaps 32-512) and far recall (4-16K back) at 16K, the reach (every octave bin up to it has a lower 95% Wilson bound of at least 0.5) and the detectable range (above 0.25). Each arm's row is the mean over the seeds named beside it (PI and YaRN three, YaRN-prog one). The base row is the zero-shot PI model at 16K with the base's own val loss; the Qwen3-0.6B-Base row (trained to 32K) has recall only, its losses are in its own tokens. The line under the table compares progressive and one-shot YaRN at seed 0 of each (paired by window and query), a single-seed comparison (claim 7); its bounds get extra decimals where they would round to 0, so a difference below the printed precision shows as such. The plot shows the training loss of each arm's first seed; the dotted line marks the progressive arm's switch to 16K. Claim 6b reads the ctx column (16K minus 4K on the same target tokens): an interval below 0 after training, against the base row's zero-shot value; else "no measurable benefit from context beyond 4K". Claim 13 also reads the Qwen3 row. -->
 
 ```{.python .input #long-context-arms}
 %%tab pytorch
@@ -381,7 +386,7 @@ d2l.plot_lc_train(lc.logs)
 d2l.show_lc_loss(lc)
 ```
 
-<!-- Placeholder (prose): recall against the gap (octave bins, 500 windows per length, seeds pooled per query, Wilson bands; dashed chance, dotted 0.5 and 0.25), at 16K and inside the trained window at 4K, with Qwen3-0.6B-Base in grey. Reach is the upper edge of the largest bin up to which every bin's lower 95% Wilson bound is at least 0.5; "detectable to" uses 0.25. Both thresholds are protocol parameters, not another model's; the lines below are seed 0's. Each arm's line adds its far recall (4-16K back) minus the unscaled base's recall in its own top bin (2-4K back at 4K), an unpaired difference with a window-resampled interval (claim 8); then Qwen3-0.6B-Base's recall per bin at 16K with Wilson intervals (claim 13: per-bin recall as measured; the pilot found the fallback likely, so say "the reference falls to x% at gaps beyond y" from lc-reference's 250 windows and never call Qwen3 a 90% ceiling). The per-bin Wilson bands treat queries as independent and do not account for the eight queries of a window sharing its text or windows from one book overlapping; the differences resample whole windows. -->
+<!-- Placeholder (prose): recall against the gap (octave bins, 500 windows per length, seeds pooled per query, Wilson bands; dashed chance, dotted 0.5 and 0.25), at 16K and inside the trained window at 4K, with Qwen3-0.6B-Base in grey. Reach is the upper edge of the largest bin up to which every bin's lower 95% Wilson bound is at least 0.5; "detectable to" uses 0.25. Both thresholds are protocol parameters, not another model's; the lines below are seed 0's. Each arm's line adds its far recall (4-16K back) minus the unscaled base's recall in its own top bin (2-4K back at 4K), an unpaired difference with a window-resampled interval (claim 8); then Qwen3-0.6B-Base's recall per bin at 16K with Wilson intervals (claim 13: per-bin recall as measured; the pilot found the fallback likely, so say "the reference falls to x% at gaps beyond y" from lc-reference's 250 windows and never call Qwen3 a 90% ceiling). The per-bin Wilson bands treat queries as independent and do not account for the eight queries of a window sharing its text or windows from one book overlapping; the differences resample whole windows. Claim 8's fallback: if far recall stays at chance, "extension made 16K positions usable and left reach at x". -->
 
 ```{.python .input #long-context-recall-grid}
 %%tab pytorch
@@ -417,7 +422,7 @@ d2l.show_lc_first_steps(lc, margin=MARGIN)
 
 ### The Cost at Short Context
 
-<!-- Placeholder (prose): what the extension costs at short context: the val loss at 4K, the suite mean (five tasks, 2,000 items each) and near recall at 4K minus the base's, with intervals paired by window, item and query (seeds averaged). -->
+<!-- Placeholder (prose): what the extension costs at short context: the val loss at 4K, the suite mean (five tasks, 2,000 items each) and near recall at 4K minus the base's, with intervals paired by window, item and query (seeds averaged). Claim 9: a cost is stated where a paired interval excludes 0; else "no measurable cost". -->
 
 ```{.python .input #long-context-short-cost}
 %%tab pytorch

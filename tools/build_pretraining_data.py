@@ -86,10 +86,13 @@ Stages:
                    shards of at least 8M tokens (the first shard is the T1
                    prefix): data/lm/lc-long-v1/ and the upload tar
                    data/lm/rerun/lm-lc-long-60m-v1.tar.
-  --stage pg19-test 21.5's test books: the first 64 PG-19 test books (file
-                   order) of at least 16,385 R2 tokens, each cut to its first
-                   16,385 tokens (one evaluation window of 16,384 targets):
-                   data/lm/pg19-test-v1/ and data/lm/rerun/lm-pg19-test-v1.tar.
+  --stage pg19-test 21.5's test books (v2): all 100 PG-19 test books whole,
+                   in file order (R2 tokens, uint16; the evaluations draw
+                   windows at seeded random offsets, which the first 16K
+                   tokens of v1 could not give): data/lm/pg19-test-v2/ and
+                   data/lm/rerun/lm-pg19-test-v2.tar. --check: 100 books,
+                   each re-tokenized from the pinned parquet to the same
+                   ids.
 
   --stage domains  21.2's per-domain validation texts (lm-fwedu-val-domains-v1,
                    jsonl.gz with doc_id, domain, url_host, text): FineWeb-Edu
@@ -153,7 +156,7 @@ TRACE_UPLOADS = {'traces': 'lm-traces-12m-v1',
 REPLAY_T1 = 'lm-fwedu-replay-12m-v1'  # hosted; rebuilt byte-equal
 LC = {  # 21.5: the long half's two parts, their token targets, the windows
     'pg19': 50_000_000, 'pes2o': 10_000_000, 'min_paper': 8_192,
-    'shard': 8_000_000, 'test_books': 64, 'test_tokens': 16_385}
+    'shard': 8_000_000, 'test_books': 100}  # PG-19's whole test split
 PES2O_LONG = 'data/v2/validation-00001-of-00002.json.gz'  # all s2orc/valid
 LC_ATTRIBUTION = (
     'PG-19 (deepmind/pg19, Apache-2.0; public-domain books from Project '
@@ -322,17 +325,13 @@ class PreTokenized:
 
 
 def pg19_test_docs(d2l, tok):
-    """The first LC['test_books'] test books of at least LC['test_tokens']
-    tokens, cut to that many: (doc_id, key, meta) and the ids by key."""
+    """Every PG-19 test book, whole, in file order: (doc_id, key, meta) and
+    the ids by key."""
     docs, ids = [], {}
     for k, title, text in pg19_books(d2l, 'test'):
-        x = tok(text, add_special_tokens=False)['input_ids']
-        if len(x) >= LC['test_tokens']:
-            key = f'pg19-test:{k}'
-            ids[key] = x[:LC['test_tokens']]
-            docs.append((key, key, {'part': 'test', 'title': title}))
-        if len(docs) == LC['test_books']:
-            break
+        key = f'pg19-test:{k}'
+        ids[key] = tok(text, add_special_tokens=False)['input_ids']
+        docs.append((key, key, {'part': 'test', 'title': title}))
     return docs, ids
 
 
@@ -340,8 +339,8 @@ def lc_dirs(stage):
     root = os.path.join(ROOT, 'data', 'lm')
     return {'lc-long': (os.path.join(root, 'lc-long-v1'),
                         'lm-lc-long-60m-v1'),
-            'pg19-test': (os.path.join(root, 'pg19-test-v1'),
-                          'lm-pg19-test-v1')}[stage]
+            'pg19-test': (os.path.join(root, 'pg19-test-v2'),
+                          'lm-pg19-test-v2')}[stage]
 
 
 def build_lc(stage):
@@ -401,9 +400,11 @@ def check_lc(stage):
         ok &= bool(s.shards[0]['n_tokens'] >= LC['shard'])
         ok &= bool((meta['part'].iloc[:(meta.part == 'pg19').sum()] ==
                     'pg19').all())  # PG-19 first: the T1 prefix
-    else:
-        ok &= len(meta) == LC['test_books'] and bool(
-            (meta['n_tokens'] == LC['test_tokens'] + 1).all())
+    else:  # every book whole: the same ids from the pinned parquet
+        docs, ids = pg19_test_docs(d2l, d2l.r2_tokenizer())
+        ok &= len(meta) == len(docs) == LC['test_books']
+        ok &= all(np.array_equal(s.doc(i)[:-1], ids[key]) and s.doc(i)[-1]
+                  == 0 for i, (key, _, _) in enumerate(docs))
     print(f'{stage}: verified; tokens by part {tokens.to_dict()}')
     print('check passed' if ok else 'CHECK FAILED')
     return ok

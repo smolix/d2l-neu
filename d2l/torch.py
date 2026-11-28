@@ -12312,31 +12312,35 @@ def yarn_mscale(s):
     Defined in :numref:`sec_lm_long_context`"""
     return 0.1 * math.log(s) + 1.0 if s > 1 else 1.0
 
-def make_recall_task(tokenizer, length, depth, n_pairs=None, n_candidates=8,
-                     n_items=200, seed=0):
-    """Key-value recall items of at most length tokens for score_choices:
-    lines 'The value of <key> is <value>.' with distinct two-word keys and
-    five-digit values, the queried line at fraction depth of the prompt,
-    then the query 'The value of <key> is'; the choices are n_candidates
-    distinct values of the haystack, the gold value among them once.
+def needle_windows(tokenizer, L, n, seed=0, n_needles=8):
+    """n needle windows of L tokens: test-book text with n_needles lines
+    '<key> <value>' inserted after line breaks. The prefix holds the first
+    L - 2 tokens; the query of needle j is '\\n<key j>' at positions L - 2
+    and L - 1, its answer value j. A needle's gap runs from its value to
+    the query (L - 1), log-uniform in (32, L - 64]. Returns
+    Needles(prefix (n, L - 2), keys (n, k), values (n, k), gaps (n, k), nl).
 
     Defined in :numref:`sec_lm_long_context`"""
-    g = d2l.recall_generator(seed, length, depth)
-    out = dict(prompts=[], choices=[], gold=[], depth_actual=[])
-    for _ in range(n_items):
-        keys, values, lines, start = d2l.recall_haystack(
-            tokenizer, length, g, n_pairs, min_lines=n_candidates)
-        q = round(depth * (len(lines) - 1))  # the queried line
-        others = values[:q] + values[q + 1:]
-        picks = torch.randperm(len(others), generator=g)[:n_candidates - 1]
-        choices = [f' {values[q]}'] + [f' {others[i]}' for i in picks]
-        order = torch.randperm(n_candidates, generator=g).tolist()
-        out['prompts'].append(d2l.RECALL_HEAD + ''.join(lines)
-                              + f'The value of {keys[q]} is')
-        out['choices'].append([choices[j] for j in order])
-        out['gold'].append(order.index(0))
-        out['depth_actual'].append(start[q] / start[-1])
-    return out
+    nl, = d2l._encode(tokenizer, '\n')
+    key_pool, value_pool = d2l.needle_pools(tokenizer)
+    text = d2l.test_books(n, L - 3 - 3 * n_needles, seed, tokenizer)
+    ends, out = d2l._line_ends(tokenizer), ([], [], [], [])
+    for i, t in enumerate(text):
+        g = torch.Generator().manual_seed(seed * 1_000_003 + L * 1009 + i)
+        gaps, at = d2l._needle_slots(ends[t], L, n_needles, g)
+        words = d2l._text_words(tokenizer, t)
+        keys = d2l._needle_pick(key_pool, words, t, n_needles, g)
+        values = d2l._needle_pick(value_pool, words, t, n_needles, g)
+        lines = torch.tensor([[k, v, nl] for (_, k), (_, v) in
+                              zip(keys, values)])
+        parts, prev = [], 0
+        for j, a in enumerate(at.tolist()):  # after text token a
+            parts += [t[prev:a + 1], lines[j]]
+            prev = a + 1
+        for x, v in zip(out, (torch.cat(parts + [t[prev:]]), lines[:, 0],
+                              lines[:, 1], gaps)):
+            x.append(v)
+    return d2l.Needles(*map(torch.stack, out), nl)
 
 def nll_by_position(model, windows, edges, ctx=None):
     """Mean next-token loss (nats) of windows (n, T + 1) in each position
@@ -12370,6 +12374,17 @@ def long_context_gain(model, windows, short_len, long_len, min_gap,
                                                      counts[:, k]),
              int(counts[:, k].sum())) for k, (lo, hi) in enumerate(pairs)]
     return pd.DataFrame(rows, columns=['bucket', 'gain', 'lo', 'hi', 'n'])
+
+def reach(bins, lo=0.5, strict=False):
+    """The upper edge of the largest octave bin of gap up to which every
+    bin's lower 95% Wilson bound is at least lo (above lo if strict); 0
+    when the first bin fails.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    b = bins.sort_values('gap_lo')
+    ok = (b['lo'] > lo if strict else b['lo'] >= lo).to_numpy()
+    k = len(ok) if ok.all() else int(ok.argmin())  # bins that pass
+    return int(b['gap_hi'].iloc[k - 1]) if k else 0
 
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
@@ -21462,8 +21477,9 @@ PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'smollm3-4', 'smollm3-5',  # smollm3-symbolic joins here (and in
     # _RERUN_ARTIFACT, PRETRAIN_JOBS) if 21.4's full GSM8K rules it in
     # (_SMOLLM3_RUNGS)
-    'lc-t1', 'lc-zeroshot', 'lc-t2-pi', 'lc-t2-yarn', 'lc-t2-prog',
-    'lc-t2-evals',
+    'lc-t1', 'lc-zeroshot', 'lc-reference', 'lc-probe', 'lc-t2-pi',
+    'lc-t2-yarn', 'lc-t2-prog', 'lc-t2-pi-s1', 'lc-t2-pi-s2',
+    'lc-t2-yarn-s1', 'lc-t2-yarn-s2', 'lc-t2-evals',
     'decode-rates')
 
 _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
@@ -21482,9 +21498,12 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     'cpt-qwen-B': 'cpt-runs', 'cpt-qwen-C': 'cpt-runs',
     'cpt-qwen-A2': 'cpt-runs', 'cpt-qwen-evals': 'cpt-runs',
     **{f'smollm3-{i}': 'smollm3-trajectory' for i in range(6)},
-    'lc-t1': 'lc-t1', 'lc-zeroshot': 'lc-zeroshot', 'lc-t2-pi': 'lc-evals',
-    'lc-t2-yarn': 'lc-evals', 'lc-t2-prog': 'lc-evals',
-    'lc-t2-evals': 'lc-evals', 'decode-rates': 'decode-rates'}
+    'lc-t1': 'lc-t1', 'lc-zeroshot': 'lc-zeroshot',
+    'lc-reference': 'lc-reference', 'lc-probe': 'lc-probe',
+    **{n: 'lc-evals' for n in ('lc-t2-pi', 'lc-t2-yarn', 'lc-t2-prog',
+                               'lc-t2-pi-s1', 'lc-t2-pi-s2', 'lc-t2-yarn-s1',
+                               'lc-t2-yarn-s2', 'lc-t2-evals')},
+    'decode-rates': 'decode-rates'}
 
 d2l.PRETRAIN_ARTIFACTS['packing-throughput'] = (
     'lm-pdp-throughput-v1', 'parquet')
@@ -28197,6 +28216,9 @@ d2l.DATA_HUB['lm-lc-long-60m-v1'] = (
 d2l.DATA_HUB['lm-pg19-test-v1'] = (
     d2l.LM_DATA_URL + 'lm-pg19-test-v1.tar',
     'a92784936e0d0da6a0623c0b9bd22d335b3a39df')
+d2l.DATA_HUB['lm-pg19-test-v2'] = (
+    d2l.LM_DATA_URL + 'lm-pg19-test-v2.tar',
+    '974337dadd192fe4b08a97be65a89b6272e1249c')
 d2l.DATA_HUB['lm-lc-t1-v1'] = (
     d2l.LM_DATA_URL + 'lm-lc-t1-v1.json.gz',
     '05a0b45828fbfe613d5b63e0eaa3e275b618f0c2')
@@ -28211,22 +28233,34 @@ d2l.DATA_HUB['lm-r2-16k-yarn-v1'] = (
     'aa606cf42aca9bfea1169b40f99fa2148e0b9792')
 
 d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'] = (  # the zero-shot part
-    'lm-lc-evals-v1', 'json-table')
+    'lm-lc-evals-v2', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['lc-reference'] = (  # the reference part
+    'lm-lc-evals-v2', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['lc-t1'] = (
-    'lm-lc-t1-v1', 'json-table')
+    'lm-lc-t1-v2', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['lc-evals'] = (
-    'lm-lc-evals-v1', 'json-table')
+    'lm-lc-evals-v2', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['lc-probe'] = (
+    'lm-lc-probe-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['lc-long'] = (
     'lm-lc-long-60m-v1', 'shards')
 d2l.PRETRAIN_ARTIFACTS['pg19-test'] = (
-    'lm-pg19-test-v1', 'shards')
+    'lm-pg19-test-v2', 'shards')
 
 d2l.PRETRAIN_JOBS['lc-t1'] = ('lc_arms', lambda: d2l._lc_t1_call())
 d2l.PRETRAIN_JOBS['lc-zeroshot'] = ('lc_zeroshot',
                                     lambda: d2l._lc_zeroshot_call())
+d2l.PRETRAIN_JOBS['lc-reference'] = ('lc_reference',
+                                     lambda: d2l._lc_reference_call())
+d2l.PRETRAIN_JOBS['lc-probe'] = ('lc_probe_runs',
+                                 lambda: d2l._lc_probe_call())
 d2l.PRETRAIN_JOBS['lc-t2-pi'] = ('lc_arms', lambda: d2l._lc_t2_call())
 d2l.PRETRAIN_JOBS['lc-t2-yarn'] = ('lc_arms', lambda: d2l._lc_t2_call())
 d2l.PRETRAIN_JOBS['lc-t2-prog'] = ('lc_arms', lambda: d2l._lc_t2_call())
+d2l.PRETRAIN_JOBS['lc-t2-pi-s1'] = ('lc_arms', lambda: d2l._lc_t2_call())
+d2l.PRETRAIN_JOBS['lc-t2-pi-s2'] = ('lc_arms', lambda: d2l._lc_t2_call())
+d2l.PRETRAIN_JOBS['lc-t2-yarn-s1'] = ('lc_arms', lambda: d2l._lc_t2_call())
+d2l.PRETRAIN_JOBS['lc-t2-yarn-s2'] = ('lc_arms', lambda: d2l._lc_t2_call())
 d2l.PRETRAIN_JOBS['lc-t2-evals'] = ('lc_arms', lambda: d2l._lc_t2_call())
 
 LC_TASKS = ('hellaswag', 'arc_easy', 'piqa', 'sciq', 'winogrande')
@@ -28237,27 +28271,39 @@ _LC_SCHEMES = {'none': dict(scheme='none', s=4),
                'YaRN': dict(scheme='yarn', s=4),
                'YaRN, mscale 1': dict(scheme='yarn', s=4, mscale=1.0)}
 
-_LC_ARMS = {'PI': dict(scheme='pi', stages=((16_384, 4, 1.0),)),
-            'YaRN': dict(scheme='yarn', stages=((16_384, 4, 1.0),)),
-            'YaRN-prog': dict(scheme='yarn', stages=((8_192, 2, 0.4),
-                                                     (16_384, 4, 0.6)))}
+_LC_ARMS = {
+    'PI': dict(scheme='pi', stages=((16_384, 4, 1.0),), seeds=(0, 1, 2)),
+    'YaRN': dict(scheme='yarn', stages=((16_384, 4, 1.0),), seeds=(0, 1, 2)),
+    'YaRN-prog': dict(scheme='yarn', stages=((8_192, 2, 0.4),
+                                             (16_384, 4, 0.6)), seeds=(0,))}
 
 _LC_ARMS_T1 = {
-    'PI': dict(scheme='pi', stages=((4096, 4, 1.0),), seeds=(0, 1, 2)),
-    'YaRN': dict(scheme='yarn', stages=((4096, 4, 1.0),), seeds=(0, 1, 2)),
+    'PI': dict(scheme='pi', stages=((4096, 4, 1.0),), seeds=(0, 1, 2, 3, 4)),
+    'YaRN': dict(scheme='yarn', stages=((4096, 4, 1.0),),
+                 seeds=(0, 1, 2, 3, 4)),
     'YaRN-prog': dict(scheme='yarn', stages=((2048, 2, 0.4),
                                              (4096, 4, 0.6)), seeds=(0,))}
 
-_LC_T2_NAMES = {'PI': 'lc-t2-pi', 'YaRN': 'lc-t2-yarn',
-                'YaRN-prog': 'lc-t2-prog'}
+_LC_T2_NAMES = {('PI', 0): 'lc-t2-pi', ('YaRN', 0): 'lc-t2-yarn',
+                ('YaRN-prog', 0): 'lc-t2-prog', ('PI', 1): 'lc-t2-pi-s1',
+                ('PI', 2): 'lc-t2-pi-s2', ('YaRN', 1): 'lc-t2-yarn-s1',
+                ('YaRN', 2): 'lc-t2-yarn-s2'}
 
 _LC_TIERS = {
-    't2': dict(trained=4096, lengths=(4096, 8192, 12288, 16384), books=64,
-               n_items=100, zs_items=100, eval_books=16, eval_items=50),
-    't1': dict(trained=1024, lengths=(1024, 2048, 3072, 4096), books=64,
-               n_items=100, zs_items=100, eval_books=16, eval_items=50)}
+    't2': dict(trained=4096, length=16_384, needles=500, zs_needles=250,
+               loss_windows=64, contexts=(256, 1024, 4096), eval_needles=50,
+               eval_windows=16),
+    't1': dict(trained=1024, length=4096, needles=1000, zs_needles=250,
+               loss_windows=64, contexts=(256, 1024), eval_needles=50,
+               eval_windows=16)}
 
-LC_DEPTHS = (0.1, 0.3, 0.5, 0.7, 0.9)
+_LC_NEAR = (32, 512)  # the near gaps of every table
+
+_LC_SHORT = 256  # the sliding context of the gain, the first context
+
+_LC_REFERENCE = 'Qwen/Qwen3-0.6B-Base'  # ruling (d) of 2026-11-25
+
+_LC_PROBE = dict(length=1024, items=200, depth=0.5, windows=500)
 
 _LC_SUITE_N = 2000  # suite items per task (fewer where a task has fewer)
 
@@ -28273,7 +28319,16 @@ def _lc_zeroshot_call():
     """lc_zeroshot's arguments in the page's zero-shot cell.
 
     Defined in :numref:`sec_lm_long_context`"""
-    return dict(base='r2', schemes=_LC_SCHEMES, lengths=(4096, 8192, 16384))
+    return dict(base='r2', schemes=_LC_SCHEMES, lengths=(4096, 16384))
+
+def _lc_reference_call():
+    """lc_reference's arguments (the merge folds the result in)."""
+    return dict(model_id=_LC_REFERENCE, lengths=(4096, 16384))
+
+def _lc_probe_call():
+    """lc_probe_runs' arguments in the page's format cell."""
+    return dict(t1_steps=(509, 1017, 1526),
+                r2_steps=(500, 1000, 2000, 3000, 4000, 6000))
 
 def _lc_t2_call():
     """lc_arms' arguments in the page's T2 cell."""
@@ -28289,7 +28344,9 @@ def _lc_t1_call():
 LcData = collections.namedtuple('LcData', ['table', 'shards', 'label'])
 
 _LC_LOCAL = {'lc-long': os.path.join('..', 'data', 'lm', 'lc-long-v1'),
-             'pg19-test': os.path.join('..', 'data', 'lm', 'pg19-test-v1')}
+             'pg19-test': os.path.join('..', 'data', 'lm', 'pg19-test-v2')}
+
+_LC_BOOKS = {}  # tokenizer id: the test books in its tokens
 
 def _lc_shards(name, max_tokens=None):
     """A shard set of this section: the hosted one, or the builder's local
@@ -28353,7 +28410,7 @@ def _lc_parts_table(shards):
 def long_data(tier='t2'):
     """The arms' data: LcData(table, shards, label). shards: 'long' (the
     long half; T1: its first shard), 'short' (the replay) and 'test' (the
-    64 test books); table: per part documents, tokens, median length in
+    100 test books); table: per part documents, tokens, median length in
     tokens and source."""
     if tier not in ('t1', 't2'):
         raise ValueError(f"tier is 't1' or 't2', not {tier!r}")
@@ -28362,15 +28419,48 @@ def long_data(tier='t2'):
                   test=_lc_shards('pg19-test'))
     return LcData(_lc_parts_table(shards), shards, '')
 
-def test_books(n, T):
-    """The first T + 1 tokens of the first n PG-19 test books, as a
-    LongTensor (n, T + 1) (64 books of 16,385 tokens at most)."""
-    s = _lc_shards('pg19-test')
-    if n > s.n_docs or T + 1 > s.doc(0).shape[0] - 1:
-        raise ValueError(f'{s.n_docs} test books of '
-                         f'{s.doc(0).shape[0] - 1} tokens')
-    return torch.from_numpy(np.stack([s.doc(i)[:T + 1].astype(np.int64)
-                                      for i in range(n)]))
+def _tok_id(tokenizer):
+    """A short id of a tokenizer's vocabulary, cached on the object."""
+    if '_d2l_tok_id' not in tokenizer.__dict__:
+        import hashlib
+        vocab = sorted(tokenizer.get_vocab().items(), key=lambda x: x[1])
+        tokenizer.__dict__['_d2l_tok_id'] = hashlib.sha1(
+            json.dumps(vocab).encode()).hexdigest()[:12]
+    return tokenizer.__dict__['_d2l_tok_id']
+
+def _encode(tokenizer, text):
+    """Token ids of text (no special tokens), quietly (a book is longer
+    than any tokenizer's nominal length)."""
+    with d2l._quiet():
+        return tokenizer(text, add_special_tokens=False)['input_ids']
+
+def _test_book_tokens(tokenizer=None):
+    """The test books (without their EOS) as int64 arrays in the tokens of
+    tokenizer (default and the reference tokenizer: the stored R2 tokens;
+    any other: the decoded text encoded with it), cached."""
+    r2 = lc_tokenizer()
+    key = _tok_id(tokenizer or r2)
+    if key not in _LC_BOOKS:
+        s = _lc_shards('pg19-test')
+        books = [s.doc(i)[:-1].astype(np.int64) for i in range(s.n_docs)]
+        if key != _tok_id(r2):
+            books = [np.asarray(_encode(tokenizer, r2.decode(b.tolist())),
+                                dtype=np.int64) for b in books]
+        _LC_BOOKS[key] = books
+    return _LC_BOOKS[key]
+
+def test_books(n, T, seed=0, tokenizer=None):
+    """n windows of T + 1 tokens of the PG-19 test books as a LongTensor
+    (n, T + 1): window i from book i (cycling over the books longer than
+    T + 1 tokens) at an offset seeded by (seed, T, i), in the tokens of
+    tokenizer (default the reference tokenizer's)."""
+    books = [b for b in _test_book_tokens(tokenizer) if len(b) > T + 1]
+    out = []
+    for i in range(n):
+        b = books[i % len(books)]
+        a = int(np.random.default_rng([seed, T, i]).integers(len(b) - T))
+        out.append(b[a:a + T + 1])
+    return torch.from_numpy(np.stack(out).astype(np.int64))
 
 def _val_windows(T, tokens=None):
     """Windows (n, T + 1) of the FineWeb-Edu validation shard, the first
@@ -28380,6 +28470,324 @@ def _val_windows(T, tokens=None):
     n = (tokens or _LC_VAL_TOKENS) // T
     W = np.stack([s.read(i * T, T + 1) for i in range(n)]).astype(np.int64)
     return torch.from_numpy(W), s.eos_id
+
+Needles = collections.namedtuple('Needles', ['prefix', 'keys', 'values',
+                                             'gaps', 'nl'])
+
+_LC_QUERY_COLUMNS = ['window', 'needle', 'gap', 'correct']
+
+def lc_tokenizer(max_len=65_536):
+    """The reference tokenizer with its nominal length (4,096) raised to
+    max_len tokens.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    tok = d2l.r2_tokenizer()
+    tok.model_max_length = max_len
+    return tok
+
+def _needle_words(lo=200, hi=8000, tokens=2 ** 24):
+    """Lowercase words of 4-9 letters that are one reference token with a
+    leading space, in the order of their counts among the first tokens of
+    the 100M shard, ranks lo to hi (cached)."""
+    key = (lo, hi, tokens)
+    if getattr(_needle_words, 'key', None) != key:
+        with d2l._quiet():
+            s = d2l.fwedu_shards('100m')
+            tok = d2l.r2_tokenizer()
+        counts = np.bincount(s.read(0, min(tokens, s.n_tokens)).astype(
+            np.int64), minlength=len(tok))
+        order = np.argsort(-counts, kind='stable')[lo:hi]
+        word = re.compile(r' [a-z]{4,9}')
+        texts = tok.batch_decode([[int(i)] for i in order])
+        _needle_words.words = [t[1:] for t in texts if word.fullmatch(t)]
+        _needle_words.key = key
+    return _needle_words.words
+
+def needle_pools(tokenizer, words=None):
+    """(keys, values): disjoint lists of (word, token id) for the needles
+    of tokenizer. Keys are the even-ranked words of words (default
+    _needle_words()) that are one token on their own, values the odd-ranked
+    ones that are one token with a leading space."""
+    words = list(_needle_words() if words is None else words)
+    cache = tokenizer.__dict__.setdefault('_d2l_needle_pools', {})
+    if tuple(words) not in cache:
+        forms = [w if i % 2 == 0 else ' ' + w for i, w in enumerate(words)]
+        with d2l._quiet():
+            ids = tokenizer(forms, add_special_tokens=False)['input_ids']
+        pools = ([], [])
+        for i, (w, x) in enumerate(zip(words, ids)):
+            if len(x) == 1:
+                pools[i % 2].append((w, int(x[0])))
+        cache[tuple(words)] = pools
+    return cache[tuple(words)]
+
+def _line_ends(tokenizer):
+    """A bool tensor over the vocabulary: the tokens whose text ends with a
+    line break (cached on the tokenizer)."""
+    if '_d2l_line_ends' not in tokenizer.__dict__:
+        texts = tokenizer.batch_decode([[i] for i in range(len(tokenizer))])
+        tokenizer.__dict__['_d2l_line_ends'] = torch.tensor(
+            [t.endswith('\n') for t in texts])
+    return tokenizer.__dict__['_d2l_line_ends']
+
+def _text_words(tokenizer, ids):
+    """The lowercase words of the text of ids."""
+    text = tokenizer.decode([int(i) for i in ids]).lower()
+    return set(re.findall(r'[a-z]+', text))
+
+def _needle_pick(pool, words, text, k, generator):
+    """k entries of pool drawn with generator, none whose word is in words
+    or whose token occurs in text."""
+    present = set(text.tolist())
+    ok = [p for p in pool if p[0] not in words and p[1] not in present]
+    if len(ok) < k:
+        raise ValueError(f'{len(ok)} pool words left for {k} needles')
+    return [ok[i] for i in torch.randperm(len(ok), generator=generator)[
+        :k].tolist()]
+
+def _needle_slots(ends, L, k, generator, sep=16, tries=10_000):
+    """(gaps, at) of k needles in a window of L tokens whose text (the
+    filler) has line ends ends (bool, one per text token): at[j] is the text
+    token after which needle j goes (increasing, at least sep apart), and
+    gaps[j] = L - 1 - v_j its gap, with v_j = at[j] + 3 j + 2 the position
+    of its value; the gaps are log-uniform in (32, L - 64] before each
+    needle is snapped to the nearest line end, and every snapped gap stays
+    in that range."""
+    where = torch.nonzero(ends).flatten()
+    if not len(where):
+        raise ValueError('the window has no line break')
+    j = torch.arange(k)
+    for _ in range(tries):
+        gap = torch.empty(k, dtype=torch.float64).uniform_(
+            math.log(33), math.log(L - 64), generator=generator).exp()
+        target = (L - 1) - gap.sort(descending=True).values - 3 * j - 2
+        hi = torch.searchsorted(where.double(), target).clamp(
+            max=len(where) - 1)
+        lo = (hi - 1).clamp(min=0)
+        closer = (target - where[lo]).abs() <= (where[hi] - target).abs()
+        at = torch.where(closer, where[lo], where[hi])
+        gaps = (L - 1) - (at + 3 * j + 2)
+        if ((at[1:] - at[:-1]) >= sep).all() and (gaps > 32).all() and (
+                gaps <= L - 64).all():
+            return gaps, at
+    raise ValueError(f'no layout of {k} needles in {tries} draws')
+
+def _needle_logits(model, needles, i, chunk=2048):
+    """Logits (n_needles, vocabulary) at the query of each needle of window
+    i: one prefill of the prefix into the KV cache (chunk tokens at a
+    time), then each query '\\n<key>' on the cached prefix, always in the
+    same two cache slots, so no query sees another."""
+    dev = _device_of(model)
+    P = needles.prefix[i].to(dev)
+    T = len(P)
+    ks, vs = model.init_cache(1, T + 2)
+    for t in range(0, T, chunk):
+        model.forward_cached(P[None, t:t + chunk], ks, vs, t)
+    out = []
+    for k in needles.keys[i].tolist():
+        Q = torch.tensor([[needles.nl, k]], device=dev)
+        out.append(model.forward_cached(Q, ks, vs, T)[0][0])
+    return torch.stack(out)
+
+def needle_recall(model, needles, chunk=2048):
+    """Per query of needles: DataFrame(window, needle, gap, correct). The
+    prediction is the value with the largest logit among the window's
+    values at the query (_needle_logits; chance 1 / n_needles). bf16
+    autocast on a GPU."""
+    dev, rows = _device_of(model), []
+    was_training = model.training
+    model.eval()
+    auto = torch.autocast(dev.type, torch.bfloat16,
+                          enabled=dev.type == 'cuda')
+    with torch.inference_mode(), auto:
+        for i in range(len(needles.prefix)):
+            logits = _needle_logits(model, needles, i, chunk)
+            pick = logits[:, needles.values[i].to(dev)].argmax(-1).cpu()
+            rows += [(i, j, int(needles.gaps[i, j]), int(p) == j)
+                     for j, p in enumerate(pick)]
+    model.train(was_training)
+    return pd.DataFrame(rows, columns=_LC_QUERY_COLUMNS)
+
+def needle_oracle(needles):
+    """needle_recall's rows for the oracle copier: it predicts the token
+    after the last earlier occurrence of the queried key."""
+    rows = []
+    for i, P in enumerate(needles.prefix):
+        for j, k in enumerate(needles.keys[i].tolist()):
+            at = (P[:-1] == k).nonzero().flatten()
+            pred = int(P[at[-1] + 1]) if len(at) else -1
+            rows.append((i, j, int(needles.gaps[i, j]),
+                         pred == int(needles.values[i, j])))
+    return pd.DataFrame(rows, columns=_LC_QUERY_COLUMNS)
+
+def needle_diagnostics(tokenizer, needles):
+    """The pilot's checks of a miss, as bools: 'oracle' (the oracle copier
+    recalls every query of these windows), 'single' (every pool word is one
+    token in the form the windows use: a key on its own, as after a line
+    break, a value with its leading space), 'absent' (no key or value of a
+    window occurs in that window's text, as a word or as a token), and
+    'unique' (the needle tokens sit where the gaps say, each key once in
+    its window, the values of a window distinct)."""
+    keys, values = needle_pools(tokenizer)
+    single = all(_encode(tokenizer, w) == [i] for w, i in keys) and all(
+        _encode(tokenizer, ' ' + w) == [i] for w, i in values)
+    word = {i: w for w, i in keys + values}
+    absent = unique = True
+    for i, P in enumerate(needles.prefix):
+        v = (len(P) + 1) - needles.gaps[i]  # the values' positions
+        keep = torch.ones(len(P), dtype=torch.bool)
+        keep[torch.cat([v - 1, v, v + 1])] = False
+        text = P[keep]
+        found, ids = _text_words(tokenizer, text), set(text.tolist())
+        mine = needles.keys[i].tolist() + needles.values[i].tolist()
+        absent &= all(word.get(t) not in found and t not in ids
+                      for t in mine)
+        unique &= bool((P[v - 1] == needles.keys[i]).all()
+                       and (P[v] == needles.values[i]).all()
+                       and (P[v + 1] == needles.nl).all())
+        unique &= all(int((P == k).sum()) == 1 for k in mine[:len(v)])
+        unique &= len(set(mine[len(v):])) == len(v)
+    oracle = bool(needle_oracle(needles)['correct'].all())
+    return dict(oracle=oracle, single=single, absent=absent, unique=unique)
+
+def gap_bins(L):
+    """The octave bins of gap (32, 64], (64, 128], ..., (L / 2, L]."""
+    return [(32 * 2 ** k, 64 * 2 ** k) for k in range(int(math.log2(L //
+                                                                      32)))]
+
+def recall_by_gap(rec, L=None):
+    """Recall per octave bin of gap (gap_bins(L); L defaults to the power
+    of two above the largest gap): DataFrame(gap_lo, gap_hi, n, k, rate,
+    lo, hi) with 95% Wilson bounds. rec has rows (gap, correct); correct
+    may be a mean over seeds of the same query."""
+    L = L or 2 ** math.ceil(math.log2(max(64, int(rec['gap'].max()))))
+    rows = []
+    for a, b in gap_bins(L):
+        x = rec[(rec['gap'] > a) & (rec['gap'] <= b)]['correct']
+        k, n = float(x.sum()), len(x)
+        rows.append((a, b, n, k, k / n if n else math.nan,
+                     *d2l.wilson_ci(k, n)))
+    return pd.DataFrame(rows, columns=['gap_lo', 'gap_hi', 'n', 'k', 'rate',
+                                       'lo', 'hi'])
+
+def recall_between(rec, lo, hi):
+    """The share of the queries with a gap in (lo, hi] that are correct."""
+    return float(rec[(rec['gap'] > lo) & (rec['gap'] <= hi)][
+        'correct'].mean())
+
+_RECALL_ADJ = (
+    'amber', 'ancient', 'autumn', 'bitter', 'bold', 'brave', 'bright',
+    'broken', 'calm', 'clever', 'cold', 'copper', 'crimson', 'dark', 'dry',
+    'dusty', 'eager', 'early', 'empty', 'frozen', 'gentle', 'golden',
+    'green', 'hidden', 'hollow', 'honest', 'little', 'lonely', 'lucky',
+    'mighty', 'misty', 'narrow', 'noble', 'quiet', 'rapid', 'rough', 'round',
+    'rusty', 'sharp', 'silent', 'silver', 'simple', 'small', 'smooth',
+    'solid', 'steady', 'sweet', 'wild')
+
+_RECALL_NOUN = (
+    'anchor', 'apple', 'arrow', 'basket', 'bell', 'bridge', 'bucket',
+    'candle', 'castle', 'cloud', 'coin', 'desert', 'door', 'eagle', 'engine',
+    'feather', 'field', 'forest', 'garden', 'harbor', 'hammer', 'island',
+    'jacket', 'kettle', 'ladder', 'lake', 'lantern', 'letter', 'meadow',
+    'mirror', 'needle', 'orchard', 'pencil', 'pillow', 'planet', 'river',
+    'rocket', 'saddle', 'shadow', 'shell', 'signal', 'spoon', 'stone',
+    'temple', 'tower', 'valley', 'wagon', 'window')
+
+def _format_lines(tokenizer, fmt, n_lines, words, text, generator):
+    """(lines, query, candidates) of one format item as token lists.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    nl = _encode(tokenizer, '\n')
+    if fmt == 'template':
+        adj, noun = _RECALL_ADJ, _RECALL_NOUN
+        pick = torch.randperm(len(adj) * len(noun), generator=generator)[
+            :n_lines].tolist()
+        keys = [f'{adj[i // len(noun)]} {noun[i % len(noun)]}' for i in pick]
+        values = [str(v + 10_000) for v in torch.randperm(
+            90_000, generator=generator)[:n_lines].tolist()]
+        head = _encode(tokenizer, f'The value of {keys[0]} is')
+        conts = []
+        for v in values:
+            ids = _encode(tokenizer, f'The value of {keys[0]} is {v}')
+            assert ids[:len(head)] == head, 'the query tokenizes apart'
+            conts.append(ids[len(head):])
+        lines = [nl + _encode(tokenizer, f'The value of {k} is {v}.') + nl
+                 for k, v in zip(keys, values)]
+        return lines, nl + head, conts
+    if fmt != 'one-hop':
+        raise ValueError(f"fmt is 'template' or 'one-hop', not {fmt!r}")
+    key_pool, value_pool = needle_pools(tokenizer)
+    keys = _needle_pick(key_pool, words, text, n_lines, generator)
+    values = _needle_pick(value_pool, words, text, n_lines, generator)
+    lines = [nl + [k, v] + nl for (_, k), (_, v) in zip(keys, values)]
+    return lines, nl + [keys[0][1]], [[v] for _, v in values]
+
+def _format_items(tokenizer, fmt, L, n, seed=0, n_lines=8, depth=0.5):
+    """n items dict(ctx, query, conts, gold) of format fmt in windows of
+    about L tokens: book text with n_lines lines inserted at token
+    positions, the queried line (the first) at fraction depth of the text,
+    the others at random, then the query; the candidates in a random
+    order."""
+    g = torch.Generator().manual_seed(seed * 1_000_003 + L * 1009
+                                      + (fmt == 'template'))
+    books = [torch.as_tensor(b) for b in _test_book_tokens(tokenizer)
+             if len(b) > L]
+    items = []
+    for i in range(n):
+        book = books[i % len(books)]
+        a = int(torch.randint(len(book) - L, (1,), generator=g))
+        words = _text_words(tokenizer, book[a:a + L])
+        lines, query, conts = _format_lines(tokenizer, fmt, n_lines, words,
+                                            book[a:a + L], g)
+        budget = L - sum(map(len, lines)) - len(query) - max(map(len, conts))
+        text = book[a:a + budget].tolist()
+        cuts = [round(depth * budget)] + torch.randint(
+            budget + 1, (n_lines - 1,), generator=g).tolist()
+        ids, prev = [], 0
+        for j in sorted(range(n_lines), key=lambda j: (cuts[j], j)):
+            ids += text[prev:cuts[j]] + lines[j]
+            prev = cuts[j]
+        order = torch.randperm(n_lines, generator=g).tolist()
+        items.append(dict(ctx=ids + text[prev:] + query, query=query,
+                          conts=[conts[j] for j in order],
+                          gold=order.index(0)))
+    return items
+
+def _format_oracle(item):
+    """The candidate that continues the last earlier occurrence of the
+    query in the context (-1 if none does)."""
+    ctx, q = item['ctx'], item['query']
+    for p in range(len(ctx) - 2 * len(q), -1, -1):
+        if ctx[p:p + len(q)] == q:
+            after = ctx[p + len(q):]
+            for j, c in enumerate(item['conts']):
+                if after[:len(c)] == c:
+                    return j
+            return -1
+    return -1
+
+def _choice_ll(model, ctx, conts, chunk=2048):
+    """Summed log-probabilities of each continuation (token lists) after
+    the context ids ctx: one cached prefill, the cache repeated for the
+    candidates, one cached forward of every candidate's tokens."""
+    dev = _device_of(model)
+    m = max(map(len, conts))
+    auto = torch.autocast(dev.type, torch.bfloat16,
+                          enabled=dev.type == 'cuda')
+    with torch.inference_mode(), auto:
+        ks, vs = model.init_cache(1, len(ctx) - 1 + m)
+        for t in range(0, len(ctx) - 1, chunk):
+            model.forward_cached(torch.tensor(
+                [ctx[t:min(t + chunk, len(ctx) - 1)]], device=dev), ks, vs, t)
+        X = torch.tensor([[ctx[-1]] + c[:-1] + [0] * (m - len(c))
+                          for c in conts], device=dev)
+        C = len(conts)
+        logits, _, _ = model.forward_cached(
+            X, ks.repeat(1, C, 1, 1, 1), vs.repeat(1, C, 1, 1, 1),
+            len(ctx) - 1, all_logits=True)
+    lp = logits.float().log_softmax(-1)
+    return [float(lp[j, torch.arange(len(c)), torch.tensor(c)].sum())
+            for j, c in enumerate(conts)]
 
 def _device_of(model):
     import itertools
@@ -28440,6 +28848,18 @@ def sliding_nlls(model, windows, short_len):
         out[:, a + h:a + short_len] = nll[:, k, h:]
     return out
 
+def context_nlls(model, windows, c, full=None):
+    """Per-target loss (n, T / 2) of the second half of windows (n, T + 1)
+    when each target is given c / 2 to c tokens of context (sliding_nlls on
+    the c tokens before the second half and the half itself); c = T: the
+    whole window (full, if given, is window_nlls of the windows)."""
+    W = torch.as_tensor(windows).long()
+    T = W.shape[1] - 1
+    h = T // 2
+    if c >= T:
+        return (window_nlls(model, W) if full is None else full)[:, h:]
+    return sliding_nlls(model, W[:, h - c:], c)[:, c:]
+
 def repeat_gaps(windows, rare_ids):
     """Per target (n, T): the distance back to the previous occurrence of
     the target token in its window when that token is in rare_ids, else 0
@@ -28485,6 +28905,10 @@ def bucket_name(lo, hi):
         return f'{lo / 1024:g}-{hi / 1024:g}K'
     return f'{lo}-{hi}'
 
+def _length_name(L):
+    """'16K', '1.5K' or '256' for a length in tokens."""
+    return f'{L / 1024:g}K' if L >= 1024 and L % 512 == 0 else str(L)
+
 def _rare_ids(rank=2000, min_letters=3, tokens=2 ** 25):
     """Token ids beyond rank in the unigram counts of the first tokens of
     the 100M shard (and seen there) that decode to at least min_letters
@@ -28503,126 +28927,6 @@ def _rare_ids(rank=2000, min_letters=3, tokens=2 ** 25):
             and word.fullmatch(tok.decode([int(i)]))))
         _rare_ids.key = key
     return _rare_ids.ids
-
-_RECALL_ADJ = (
-    'amber', 'ancient', 'autumn', 'bitter', 'bold', 'brave', 'bright',
-    'broken', 'calm', 'clever', 'cold', 'copper', 'crimson', 'dark', 'dry',
-    'dusty', 'eager', 'early', 'empty', 'frozen', 'gentle', 'golden',
-    'green', 'hidden', 'hollow', 'honest', 'little', 'lonely', 'lucky',
-    'mighty', 'misty', 'narrow', 'noble', 'quiet', 'rapid', 'rough', 'round',
-    'rusty', 'sharp', 'silent', 'silver', 'simple', 'small', 'smooth',
-    'solid', 'steady', 'sweet', 'wild')
-
-_RECALL_NOUN = (
-    'anchor', 'apple', 'arrow', 'basket', 'bell', 'bridge', 'bucket',
-    'candle', 'castle', 'cloud', 'coin', 'desert', 'door', 'eagle', 'engine',
-    'feather', 'field', 'forest', 'garden', 'harbor', 'hammer', 'island',
-    'jacket', 'kettle', 'ladder', 'lake', 'lantern', 'letter', 'meadow',
-    'mirror', 'needle', 'orchard', 'pencil', 'pillow', 'planet', 'river',
-    'rocket', 'saddle', 'shadow', 'shell', 'signal', 'spoon', 'stone',
-    'temple', 'tower', 'valley', 'wagon', 'window')
-
-RECALL_HEAD = 'Each line below gives the value of a key.\n'
-
-def lc_tokenizer(max_len=65_536):
-    """The reference tokenizer with its nominal length (4,096) raised to
-    max_len tokens.
-
-    Defined in :numref:`sec_lm_long_context`"""
-    tok = d2l.r2_tokenizer()
-    tok.model_max_length = max_len
-    return tok
-
-def recall_generator(seed, length, depth):
-    """The random generator of the recall items of one (seed, length,
-    depth)."""
-    return torch.Generator().manual_seed(
-        seed * 1_000_003 + length * 1009 + round(1000 * depth))
-
-def _recall_lines(tokenizer, keys, values):
-    """The haystack lines and their token counts."""
-    lines = [f'The value of {k} is {v}.\n' for k, v in zip(keys, values)]
-    return lines, [len(x) for x in d2l._lm_encode(tokenizer, lines)]
-
-def recall_haystack(tokenizer, length, generator, n_pairs=None,
-                    min_lines=8, value_tokens=6):
-    """(keys, values, lines, start) of one recall item: distinct two-word
-    keys and five-digit values, and as many haystack lines as fit length
-    tokens after RECALL_HEAD with the query and a value (n_pairs lines if
-    given, at least min_lines); start: the token offset of every line and
-    of the query."""
-    adj, noun = _RECALL_ADJ, _RECALL_NOUN
-    pick = torch.randperm(len(adj) * len(noun), generator=generator).tolist()
-    keys = [f'{adj[i // len(noun)]} {noun[i % len(noun)]}' for i in pick]
-    values = (torch.randperm(90_000, generator=generator)[:len(keys)]
-              + 10_000).tolist()
-    n_max = min(len(keys), n_pairs or length // 10 + 1)
-    lines, sizes = _recall_lines(tokenizer, keys[:n_max], values[:n_max])
-    head = len(d2l._lm_encode(tokenizer, [RECALL_HEAD])[0])
-    cum = np.cumsum(sizes)
-    budget = length - head - max(sizes) - value_tokens
-    n = n_pairs or int(np.searchsorted(cum, budget, side='right'))
-    if n < min_lines or cum[n - 1] > budget:
-        raise ValueError(f'{max(n, min_lines)} lines do not fit {length} '
-                         'tokens')
-    if n_pairs is None and n == n_max and budget - cum[-1] > max(sizes):
-        raise ValueError(f'the {n_max:,} keys fill {head + cum[-1]:,} of '
-                         f'{length:,} tokens')
-    start = [head] + (head + cum[:n]).tolist()
-    return keys[:n], values[:n], lines[:n], start
-
-def _recall_ll(model, tokenizer, task, chunk=2048):
-    """Summed log-probabilities (N, C) of every candidate of every item,
-    with one prefill of the prompt per item (the cache repeated for the C
-    candidates); equal to score_choices(..., norm='sum')."""
-    dev = _device_of(model)
-    ll = torch.full((len(task['prompts']), len(task['choices'][0])),
-                    -math.inf, dtype=torch.float64)
-    auto = torch.autocast(dev.type, torch.bfloat16,
-                          enabled=dev.type == 'cuda')
-    for i, (prompt, choices) in enumerate(zip(task['prompts'],
-                                              task['choices'])):
-        tail = prompt[prompt.rfind('\n') + 1:]  # the query line
-        _, inputs, conts, _, _ = d2l._lm_continuations(
-            tokenizer, [tail], [list(choices)])
-        ctx = d2l._lm_encode(tokenizer, [prompt])[0]
-        head = inputs[0][:len(inputs[0]) - len(conts[0]) + 1]
-        assert ctx[-len(head):] == head, 'the query line tokenizes apart'
-        m = max(map(len, conts))
-        ks, vs = model.init_cache(1, len(ctx) - 1 + m)
-        with auto:
-            for t in range(0, len(ctx) - 1, chunk):
-                X = torch.tensor([ctx[t:min(t + chunk, len(ctx) - 1)]],
-                                 device=dev)
-                model.forward_cached(X, ks, vs, t)
-            X = torch.tensor([[ctx[-1]] + c[:-1] + [0] * (m - len(c))
-                              for c in conts], device=dev)
-            C = len(conts)
-            logits, _, _ = model.forward_cached(
-                X, ks.repeat(1, C, 1, 1, 1), vs.repeat(1, C, 1, 1, 1),
-                len(ctx) - 1, all_logits=True)
-        lp = logits.float().log_softmax(-1)
-        for j, c in enumerate(conts):
-            ll[i, j] = lp[j, torch.arange(len(c)), torch.tensor(c)].double(
-                ).sum().cpu()
-    return ll
-
-def score_recall(model, tokenizer, task):
-    """Per item (a bool array): whether the gold value scores highest
-    among the candidates (summed log-probability, one prefill per item)."""
-    ll = _recall_ll(model, tokenizer, task)
-    return (ll.argmax(1).numpy() == np.asarray(task['gold']))
-
-def _recall_task(tokenizer, length, depth, n_items, seed=0):
-    """make_recall_task, cached on the tokenizer object (tokenizing
-    16K-token items takes a while; every model is scored on the same
-    items)."""
-    cache = tokenizer.__dict__.setdefault('_d2l_recall_tasks', {})
-    key = (length, depth, n_items, seed)
-    if key not in cache:
-        cache[key] = d2l.make_recall_task(tokenizer, length, depth,
-                                          n_items=n_items, seed=seed)
-    return cache[key]
 
 class CopyOracle(nn.Module):
     """Logits that put `confidence` on the token that followed the
@@ -28656,38 +28960,12 @@ class UnigramModel(nn.Module):
     def forward(self, X):
         return torch.zeros(*X.shape, self.vocab_size, device=X.device)
 
-def effective_context(recall, gain, threshold=0.5):
-    """Per model: the largest evaluated length L whose recall, pooled over
-    depths, has a lower 95% Wilson bound of at least threshold and whose
-    long-context gain in the gap bucket (L/2, L] has a lower 95% bound
-    above 0; 0 where no length clears both. Seeds share the items, so an
-    item counts once, with its recall averaged over the seeds.
-
-    Defined in :numref:`sec_lm_long_context`"""
-    out = {}
-    for model, r in recall.groupby('model', sort=False):
-        ok = [0]
-        for L, rl in r.groupby('length'):
-            item = rl.groupby(['depth', 'item'])['correct'].mean()
-            lo = d2l.wilson_ci(float(item.sum()), len(item))[0]
-            g = gain[(gain['model'] == model) & gain['rule'] & (
-                gain['bucket'] == bucket_name(L // 2, L))]
-            if lo >= threshold and len(g) and g['lo'].iloc[0] > 0:
-                ok.append(int(L))
-        out[model] = max(ok)
-    return pd.Series(out, name='effective', dtype='int64')
-
-def _length_name(L):
-    """'16K', '1.5K' or '256' for a length in tokens."""
-    return f'{L / 1024:g}K' if L >= 1024 and L % 512 == 0 else str(L)
-
-def _context_name(L, lengths):
-    return _length_name(L) if L else f'below {_length_name(min(lengths))}'
-
 def flop_counter_per_token(arch, T):
     """Training FLOPs per token that FlopCounterMode counts in one forward
     and backward pass of a PackedGPT of arch on one window of T tokens, on
-    the meta device (nothing is allocated or computed)."""
+    the meta device (nothing is allocated or computed).
+
+    Defined in :numref:`sec_lm_long_context`"""
     from torch.utils.flop_counter import FlopCounterMode
     with torch.device('meta'):
         model = d2l.PackedGPT.from_arch(arch, max_len=T, backend='sdpa')
@@ -28712,40 +28990,59 @@ def transformers_yarn(d_head, base=10000.0, s=4.0, L=4096, truncate=False):
     return inv.float(), float(factor)
 
 LcZeroShot = collections.namedtuple(
-    'LcZeroShot', ['table', 'position', 'recall', 'gain', 'label'])
+    'LcZeroShot', ['table', 'windows', 'needles', 'label'])
 
-def _lc_gain_pairs(trained, T, lengths):
-    """The display gap buckets (doubling from a quarter of the trained
-    length to T) and the rule buckets (L/2, L], with a rule flag.
+LcReference = collections.namedtuple(
+    'LcReference', ['windows', 'needles', 'label'])
+
+LcEval = collections.namedtuple('LcEval', ['windows', 'needles', 'items',
+                                           'label'])
+
+_LC_WINDOW_COLUMNS = ['measure', 'bucket', 'window', 'sum', 'n']
+
+def _lc_gain_bins(T):
+    """The gain's gap buckets: the octave bins of gap from 256 to T.
 
     Defined in :numref:`sec_lm_long_context`"""
-    short, out = trained // 4, []
-    hi = short
-    while hi < T:
-        out.append((hi, 2 * hi, False))
-        hi *= 2
-    return out + [(L // 2, L, True) for L in lengths]
+    return [b for b in gap_bins(T) if b[0] >= _LC_SHORT]
 
-def _lc_eval(model, tier, books, lengths, n_items, tokenizer, val=False,
-             suite=None):
-    """Rows of one model: windows (measure, bucket, window, sum, n) for
-    'nll' (position buckets), 'gain', 'rule' and 'val'; recall (length,
-    depth, item, correct); items (task, item_id, score) of the suite."""
-    L0, T = _LC_TIERS[tier]['trained'], books.shape[1] - 1
-    nll = window_nlls(model, books)
-    rows = []
-    for lo in range(0, T, L0):
-        for w in range(len(books)):
-            rows.append(('nll', bucket_name(lo, lo + L0), w,
-                         float(nll[w, lo:lo + L0].sum()), L0))
-    pairs = _lc_gain_pairs(L0, T, lengths)
-    gain = sliding_nlls(model, books, L0 // 4) - nll
-    s, c = gain_sums(gain, repeat_gaps(books, _rare_ids()),
-                      [p[:2] for p in pairs], L0 // 4)
-    for k, (lo, hi, rule) in enumerate(pairs):
-        for w in range(len(books)):
-            rows.append(('rule' if rule else 'gain', bucket_name(lo, hi), w,
-                         float(s[w, k]), float(c[w, k])))
+def _lc_contexts(tier, T):
+    """The contexts of the loss-against-context curve below T, then T."""
+    return [c for c in _LC_TIERS[tier]['contexts'] if c < T] + [T]
+
+def _lc_eval(model, tokenizer, tier, T, lengths, n_probe, n_windows, *,
+             gain=True, contexts=True, val=False, suite=None):
+    """Rows of one model (n_probe needle windows per length, n_windows
+    loss windows of T + 1 tokens): windows (measure, bucket, window, sum, n) for
+    'nll' (position buckets), 'ctx' (the second half per context; 'bytes'
+    its bytes), 'gain' and 'val'; needles (length, window, needle, gap,
+    correct); items (task, item_id, score) of the suite."""
+    L0, rows = _LC_TIERS[tier]['trained'], []
+    if n_windows:
+        books = test_books(n_windows, T, tokenizer=tokenizer)
+        nll = window_nlls(model, books)
+        for lo in range(0, T, L0):
+            rows += [('nll', bucket_name(lo, lo + L0), w,
+                      float(nll[w, lo:lo + L0].sum()), L0)
+                     for w in range(len(books))]
+        short = sliding_nlls(model, books, _LC_SHORT) if gain else None
+        if contexts:
+            for c in _lc_contexts(tier, T):
+                part = (short[:, T // 2:] if c == _LC_SHORT and gain else
+                        context_nlls(model, books, c, nll))
+                name = 'full' if c == T else _length_name(c)
+                rows += [('ctx', name, w, float(part[w].sum()), T - T // 2)
+                         for w in range(len(books))]
+            rows += [('bytes', 'targets', w, float(len(tokenizer.decode(
+                books[w, T // 2 + 1:].tolist()).encode('utf-8'))), T - T // 2)
+                for w in range(len(books))]
+        if gain:
+            pairs = _lc_gain_bins(T)
+            s, c = gain_sums(short - nll, repeat_gaps(books, _rare_ids()),
+                             pairs, _LC_SHORT)
+            for k, (lo, hi) in enumerate(pairs):
+                rows += [('gain', bucket_name(lo, hi), w, float(s[w, k]),
+                          float(c[w, k])) for w in range(len(books))]
     if val:
         W, eos = _val_windows(L0)
         v = window_nlls(model, W, eos=eos, batch=max(1, 8192 // L0))
@@ -28753,18 +29050,13 @@ def _lc_eval(model, tier, books, lengths, n_items, tokenizer, val=False,
             ok = ~torch.isnan(v[w])
             rows.append(('val', 'val', w, float(v[w][ok].sum()),
                          float(ok.sum())))
-    rec = []
-    for L in lengths:
-        for d in LC_DEPTHS:
-            task = _recall_task(tokenizer, L, d, n_items)
-            ok = score_recall(model, tokenizer, task)
-            rec += [(L, d, i, bool(x)) for i, x in enumerate(ok)]
+    queries = [needle_recall(model, needle_windows(tokenizer, L, n_probe))
+               .assign(length=L) for L in lengths]
     items = (pd.DataFrame(columns=['task', 'item_id', 'score'])
              if suite is None else d2l._suite_items(suite, model, tokenizer))
-    return (pd.DataFrame(rows, columns=['measure', 'bucket', 'window', 'sum',
-                                        'n']),
-            pd.DataFrame(rec, columns=['length', 'depth', 'item',
-                                       'correct']), items)
+    return (pd.DataFrame(rows, columns=_LC_WINDOW_COLUMNS),
+            pd.concat(queries, ignore_index=True)[
+                ['length'] + _LC_QUERY_COLUMNS], items)
 
 def _lc_summary(windows, measure):
     """(model, bucket, value, lo, hi, n) of one measure: per model and
@@ -28786,11 +29078,61 @@ def _lc_position(windows):
                                                'lo', 'hi']]
 
 def _lc_gain(windows):
-    g = pd.concat([_lc_summary(windows, 'gain').assign(rule=False),
-                   _lc_summary(windows, 'rule').assign(rule=True)],
-                  ignore_index=True)
-    return g.rename(columns={'value': 'gain'})[
-        ['model', 'bucket', 'rule', 'gain', 'lo', 'hi', 'n']]
+    g = _lc_summary(windows, 'gain')
+    return g.rename(columns={'value': 'gain'})[['model', 'bucket', 'gain',
+                                                'lo', 'hi', 'n']]
+
+def _lc_ctx_delta(windows, model, a, b='full'):
+    """The loss of model's second-half targets with context b minus with
+    context a (nats per token; window-resampled 95% interval, seeds
+    averaged per window) and the same in bits per byte."""
+    w = windows[(windows['model'] == model) & (windows['measure'].isin(
+        ['ctx', 'bytes']))]
+    per = w.groupby(['measure', 'bucket', 'window'])[['sum', 'n']].mean()
+    if ('ctx', a, 0) not in per.index or ('ctx', b, 0) not in per.index:
+        return (math.nan,) * 6
+    d = (per.loc[('ctx', b)]['sum'] - per.loc[('ctx', a)]['sum']).to_numpy()
+    n = per.loc[('ctx', b)]['n'].to_numpy()
+    nb = per.loc[('bytes', 'targets')]['sum'].to_numpy() * math.log(2)
+    return (*window_ci(d, n), *window_ci(d, nb))
+
+def _lc_context(windows, models):
+    """Per model and context: the loss of the second half minus its loss
+    with the first context, nats per token and bits per byte, with
+    window-resampled 95% intervals."""
+    rows = []
+    for m in models:
+        names = list(dict.fromkeys(windows[(windows['model'] == m) & (
+            windows['measure'] == 'ctx')]['bucket']))
+        for c in names:
+            rows.append((m, c, *_lc_ctx_delta(windows, m, names[0], c)))
+    return pd.DataFrame(rows, columns=d2l._LC_COLUMNS['context'])
+
+def _lc_recall(needles):
+    """Per model, seed and length the recall by octave bin of gap; seed -1:
+    the seeds pooled (each query once, its correctness averaged over the
+    seeds, which share the windows)."""
+    out = []
+    for (m, L), x in needles.groupby(['model', 'length'], sort=False):
+        for s, y in x.groupby('seed'):
+            out.append(recall_by_gap(y, L).assign(model=m, seed=s, length=L))
+        pooled = x.groupby(['window', 'needle', 'gap'])['correct'].mean()
+        out.append(recall_by_gap(pooled.reset_index(), L).assign(
+            model=m, seed=-1, length=L))
+    if not out:
+        return pd.DataFrame(columns=d2l._LC_COLUMNS['recall'])
+    return pd.concat(out, ignore_index=True)[d2l._LC_COLUMNS['recall']]
+
+def _lc_range(needles, model, L, lo, hi):
+    """Recall of model at length L over the gaps (lo, hi], seeds averaged
+    per query, with a window-resampled 95% interval: (rate, lo, hi)."""
+    x = needles[(needles['model'] == model) & (needles['length'] == L)
+                & (needles['gap'] > lo) & (needles['gap'] <= hi)]
+    if not len(x):
+        return (math.nan,) * 3
+    q = x.groupby(['window', 'needle'])['correct'].mean().reset_index()
+    per = q.groupby('window')['correct'].agg(['sum', 'count'])
+    return window_ci(per['sum'], per['count'])
 
 def _lc_set_scheme(model, scheme, s, trained, mscale=None):
     """Scaled RoPE on model: frequencies of scheme at scale s (base RoPE
@@ -28823,133 +29165,292 @@ def _lc_base_path(base):
 def _lc_device():
     return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def lc_reference_model():
-    """The reference model at step 6000 (trained at 4K) on the GPU if
-    there is one; while it is pending, the t1 checkpoint (trained at 1K)
-    under a printed label."""
-    if _LC_BASES['r2'][0] in d2l.DATA_HUB:
-        return d2l._load_bf16(_lc_base_path('r2'), device=_lc_device())
-    model = d2l._load_bf16(_lc_base_path('t1'), device=_lc_device())
-    print('[reference run pending; the t1 checkpoint, trained at 1K]')
-    return model
-
 def _lc_tier(base):
     if base not in _LC_BASES:
         raise ValueError(f"base is 'r2' or 't1', not {base!r}")
     return 't2' if base == 'r2' else 't1'
 
-def _lc_zs_columns(trained, lengths):
-    T = max(lengths)
-    return (['scheme'] + [f'NLL {bucket_name(lo, lo + trained)}'
-                          for lo in range(0, T, trained)]
-            + [f'recall {_length_name(L)}' for L in lengths])
+def _lc_zs_table(tier, windows, needles, names):
+    """Per scheme at the longest length, then 'none' at the trained length
+    (the control): the losses of the first and last position buckets, recall
+    in the gap bin (128, 256] and in the top octave (L / 2, L], with
+    intervals, and the reach."""
+    L0, T = _LC_TIERS[tier]['trained'], int(needles['length'].max())
+    pos, rec = _lc_position(windows), _lc_recall(needles)
+    first, last = bucket_name(0, L0), bucket_name(T - L0, T)
+    rows = []
+    for name, L in [(n, T) for n in names] + [('none', L0)]:
+        p = pos[pos['model'] == name].set_index('bucket')
+        b = rec[(rec['model'] == name) & (rec['seed'] == 0)
+                & (rec['length'] == L)].set_index('gap_lo')
+        cell = lambda k: tuple(p.loc[k, ['nll', 'lo', 'hi']]) if (
+            k in p.index and L == T) else (math.nan,) * 3
+        rows.append((name, L, *(cell(first) if L == T else
+                                tuple(p.loc[first, ['nll', 'lo', 'hi']])),
+                     *cell(last), *b.loc[128, ['rate', 'lo', 'hi']],
+                     *b.loc[L // 2, ['rate', 'lo', 'hi']],
+                     d2l.reach(b.reset_index())))
+    return pd.DataFrame(rows, columns=d2l._LC_COLUMNS['zs_table'])
 
 def _lc_zeroshot_compute(base, schemes, lengths):
     """LcZeroShot of base under each scheme (no training)."""
     tier = _lc_tier(base)
     spec, dev, tok = _LC_TIERS[tier], _lc_device(), lc_tokenizer()
-    books = test_books(spec['books'], max(lengths))
-    windows, recall = [], []
+    windows, needles = [], []
     for name, sc in schemes.items():
         model = d2l._load_bf16(_lc_base_path(base), device=dev)
         _lc_set_scheme(model, sc['scheme'], sc['s'], spec['trained'],
                        sc.get('mscale'))
-        w, r, _ = _lc_eval(model, tier, books, lengths, spec['zs_items'],
-                           tok)
+        w, r, _ = _lc_eval(model, tok, tier, max(lengths), lengths,
+                           spec['zs_needles'], spec['loss_windows'])
         windows.append(w.assign(model=name, seed=0))
-        recall.append(r.assign(model=name, seed=0))
+        needles.append(r.assign(model=name, seed=0))
         del model
         d2l.lm_free()
-    windows = pd.concat(windows, ignore_index=True)
-    recall = pd.concat(recall, ignore_index=True)
-    position = _lc_position(windows)
-    acc = recall.groupby(['model', 'length'], sort=False)['correct'].mean()
-    rows = [[name] + list(position[position['model'] == name]['nll'])
-            + [acc[name, L] for L in lengths] for name in schemes]
-    table = pd.DataFrame(rows, columns=_lc_zs_columns(spec['trained'],
-                                                      lengths))
-    cols = d2l._LC_COLUMNS['recall']
-    return LcZeroShot(table, position, recall[cols], _lc_gain(windows), '')
+    C = _LC_COLUMNS
+    windows = pd.concat(windows, ignore_index=True)[C['windows']]
+    needles = pd.concat(needles, ignore_index=True)[C['needles']]
+    return LcZeroShot(_lc_zs_table(tier, windows, needles, list(schemes)),
+                      windows, needles, '')
 
-def _lc_zs_path():
-    key = d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'][0]
-    return os.path.join(d2l._rerun_dir(),
-                        f'{d2l._next_key(key)}.lc-zeroshot.json.gz')
+def _lc_part_path(part):
+    """The file a part of lm-lc-evals-v2 (lc-zeroshot, lc-reference) is
+    written to by its regeneration."""
+    key = d2l.PRETRAIN_ARTIFACTS['lc-evals'][0]
+    return os.path.join(d2l._rerun_dir(), f'{d2l._next_key(key)}.{part}'
+                        '.json.gz')
 
 def _lc_zs_as_tuple(res):
     """The zero-shot fields of a stored, pending or fallback result."""
     if isinstance(res, pd.DataFrame):  # pending: empty tables
         return d2l._as_tuple(LcZeroShot, res, {
-            'table': [], 'position': _LC_COLUMNS['position'],
-            'recall': _LC_COLUMNS['recall'], 'gain': _LC_COLUMNS['gain']})
-    return LcZeroShot(res.zeroshot, res.zs_position, res.zs_recall,
-                      res.zs_gain, res.label)
+            'table': _LC_COLUMNS['zs_table'],
+            'windows': _LC_COLUMNS['windows'],
+            'needles': _LC_COLUMNS['needles']})
+    return LcZeroShot(res.zs_table, res.zs_windows, res.zs_needles,
+                      res.label)
 
-def lc_zeroshot(base, schemes, lengths):
-    """The base model ('r2' or 't1') under each RoPE scheme without
-    training: LcZeroShot(table, position, recall, gain, label). schemes =
-    {name: dict(scheme, s[, mscale])}; table: per scheme the loss per
-    position bucket of the trained length on 64 test books and recall at
-    each length (five depths, 100 items each). Regeneration lc-zeroshot;
-    otherwise the zero-shot part of the committed lm-lc-evals-v1; while
-    that is pending, the T1 zero-shot table, labelled so (show_lc_zeroshot
-    prints the label)."""
-    config = d2l._jsonable(dict(base=base, schemes=schemes, lengths=lengths))
+def _lc_part_result(part, compute, config, committed):
+    """A part of lm-lc-evals-v2: computed and written when D2L_RERUN names
+    it; else committed(result) of the committed lm-lc-evals-v2 after the
+    configuration check (its field part's config); else pending."""
     rerun = d2l._regenerating()
-    if 'lc-zeroshot' in rerun:
-        res = _lc_zeroshot_compute(base, schemes, lengths)
-        meta = dict(config=config, label=d2l._label_of(res))
-        d2l.lm_save_rerun(os.path.basename(_lc_zs_path()),
+    if part in rerun:
+        res = compute()
+        meta = dict(config=d2l._jsonable(config), label=d2l._label_of(res))
+        d2l.lm_save_rerun(os.path.basename(_lc_part_path(part)),
                           lambda p: d2l._write_result(p, 'json-table', res,
                                                       meta),
                           rerun_dir=d2l._rerun_dir())
         return res
-    key = d2l.PRETRAIN_ARTIFACTS['lc-zeroshot'][0]
+    key = d2l.PRETRAIN_ARTIFACTS['lc-evals'][0]
     if key in d2l.DATA_HUB:
         res = d2l.load_artifact('lc-evals')
-        d = d2l._config_diff(config, d2l._jsonable(res.zs_config))
+        stored = getattr(res, {'lc-zeroshot': 'zs_config',
+                               'lc-reference': 'ref_config'}[part])
+        d = d2l._config_diff(d2l._jsonable(config), d2l._jsonable(stored))
         if d:
             raise ValueError(f'page configuration differs from the committed '
-                             f'run {key}: zero-shot{d[0]} {d[1]!r} != '
-                             f'{d[2]!r}')
-        return _lc_zs_as_tuple(res)
-    if rerun or 'lc-zeroshot' in d2l.PRETRAIN_PENDING:
-        res = d2l._pending_result('lc-zeroshot', 'lc-t1')
-        return _lc_zs_as_tuple(res)
+                             f'run {key}: {part}.{d[0]} {d[1]!r} != {d[2]!r}')
+        return committed(res)
+    return None
+
+def lc_zeroshot(base, schemes, lengths):
+    """The base model ('r2' or 't1') under each RoPE scheme without
+    training: LcZeroShot(table, windows, needles, label). schemes =
+    {name: dict(scheme, s[, mscale])}; table: per scheme at the longest
+    length (and 'none' at the trained length) the losses of the first and
+    last position buckets on 64 test windows, recall in the gap bins
+    (128, 256] and (L / 2, L] (250 needle windows per length) and the
+    reach. Regeneration lc-zeroshot; otherwise the zero-shot part of the
+    committed lm-lc-evals-v2; while that is pending, the T1 zero-shot
+    table, labelled so (show_lc_zeroshot prints the label)."""
+    config = dict(base=base, schemes=schemes, lengths=lengths)
+    res = _lc_part_result('lc-zeroshot', lambda: _lc_zeroshot_compute(
+        base, schemes, lengths), config, _lc_zs_as_tuple)
+    if res is not None:
+        return res
+    if d2l._regenerating() or 'lc-zeroshot' in d2l.PRETRAIN_PENDING:
+        return _lc_zs_as_tuple(d2l._pending_result('lc-zeroshot', 'lc-t1'))
     raise KeyError('lc-zeroshot is not committed yet')
 
+def _lc_load_reference(model_id):
+    """(PackedGPT, tokenizer) of the pinned reference model on the GPU if
+    there is one, bf16, quietly."""
+    import transformers
+    rev = d2l.HF_REVISIONS[model_id]
+    with d2l._quiet():
+        qwen = d2l.load_qwen3(model_id, rev, dtype=torch.bfloat16,
+                              device=_lc_device())
+        tok = transformers.AutoTokenizer.from_pretrained(model_id,
+                                                         revision=rev)
+    tok.model_max_length = 10 ** 7  # whole books are encoded once
+    return d2l.PackedGPT.adopt(qwen).eval(), tok
+
+def _lc_reference_compute(model_id, lengths):
+    model, tok = _lc_load_reference(model_id)
+    spec = _LC_TIERS['t2']
+    w, r, _ = _lc_eval(model, tok, 't2', max(lengths), lengths,
+                       spec['zs_needles'], spec['loss_windows'], gain=False)
+    del model
+    d2l.lm_free()
+    name = model_id.split('/')[-1]
+    return LcReference(w.assign(model=name, seed=0)[_LC_COLUMNS['windows']],
+                       r.assign(model=name, seed=0)[_LC_COLUMNS['needles']],
+                       '')
+
+def lc_reference(model_id, lengths):
+    """The reference model (Qwen3-0.6B-Base, trained to 32,768 tokens) on
+    the needle probe at each length (250 windows) and the loss
+    measurements at the longest (64 windows, its own tokenizer):
+    LcReference(windows, needles, label). Regeneration lc-reference (a part
+    of lm-lc-evals-v2 that the T2 merge folds in); otherwise the reference
+    part of the committed lm-lc-evals-v2; pending while that is."""
+    config = dict(model_id=model_id, revision=d2l.HF_REVISIONS[model_id],
+                  lengths=lengths)
+    res = _lc_part_result(
+        'lc-reference', lambda: _lc_reference_compute(model_id, lengths),
+        config, lambda r: LcReference(r.ref_windows, r.ref_needles, r.label))
+    if res is not None:
+        return res
+    if d2l._regenerating() or 'lc-reference' in d2l.PRETRAIN_PENDING:
+        return d2l._as_tuple(LcReference, d2l._pending_result(
+            'lc-reference'), {'windows': _LC_COLUMNS['windows'],
+                              'needles': _LC_COLUMNS['needles']})
+    raise KeyError('lc-reference is not committed yet')
+
+def _lc_part_for_merge(part, call, compute, as_tuple):
+    """A part for the T2 merge: the file its regeneration wrote, or
+    computed here when that regeneration was not run; and its config."""
+    config = d2l._jsonable(dict(call, revision=d2l.HF_REVISIONS[
+        call['model_id']]) if part == 'lc-reference' else call)
+    path = _lc_part_path(part)
+    if os.path.exists(path):
+        res = d2l._read_result(path, 'json-table')
+        d2l._check_config(res, config, os.path.basename(path))
+        return as_tuple(res), config
+    return compute(**call), config
+
+LcProbe = collections.namedtuple(
+    'LcProbe', ['format', 'reach_train', 'format_items', 'reach_queries',
+                'label'])
+
+_LC_PROBE_COLUMNS = {
+    'format': ['model', 'format', 'n', 'k', 'rate', 'lo', 'hi'],
+    'reach_train': ['model', 'step', 'tokens', 'gap_lo', 'gap_hi', 'n', 'k',
+                    'rate', 'lo', 'hi'],
+    'format_items': ['model', 'format', 'item', 'correct'],
+    'reach_queries': ['model', 'step', 'tokens'] + _LC_QUERY_COLUMNS}
+
+def _lc_probe_compute(t1_steps, r2_steps):
+    """LcProbe: the format table and reach during pretraining.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    f, dev, tok = _LC_PROBE, _lc_device(), lc_tokenizer()
+    load = lambda preset: lambda: (d2l.load_reference_model(
+        preset=preset, device=dev), tok)
+    models = [('oracle', lambda: (None, tok)), ('t1', load('t1')),
+              ('r2', load('r2')), (_LC_REFERENCE.split('/')[-1],
+                                   lambda: _lc_load_reference(_LC_REFERENCE))]
+    rows = []
+    for name, get in models:
+        model, tk = get()
+        for fmt in ('template', 'one-hop'):
+            for i, it in enumerate(_format_items(tk, fmt, f['length'],
+                                                 f['items'])):
+                pred = (_format_oracle(it) if model is None else int(
+                    np.argmax(_choice_ll(model, it['ctx'], it['conts']))))
+                rows.append((name, fmt, i, pred == it['gold']))
+        del model
+        d2l.lm_free()
+    items = pd.DataFrame(rows, columns=_LC_PROBE_COLUMNS['format_items'])
+    table = [(m, fmt, len(x), int(x.sum()), x.mean(),
+              *d2l.wilson_ci(int(x.sum()), len(x)))
+             for (m, fmt), x in items.groupby(['model', 'format'],
+                                              sort=False)['correct']]
+    queries, bins = [], []
+    for preset, steps in (('t1', t1_steps), ('r2', r2_steps)):
+        c = d2l.r2_config(preset)
+        L = c.arch.T
+        needles = needle_windows(tok, L, f['windows'])
+        for step in steps:
+            model = d2l.load_reference_model(step, preset=preset, device=dev)
+            q = needle_recall(model, needles).assign(
+                model=preset, step=step, tokens=step * c.global_batch * L)
+            queries.append(q)
+            bins.append(recall_by_gap(q, L).assign(
+                model=preset, step=step, tokens=step * c.global_batch * L))
+            del model
+            d2l.lm_free()
+    P = _LC_PROBE_COLUMNS
+    return LcProbe(pd.DataFrame(table, columns=P['format']),
+                   pd.concat(bins, ignore_index=True)[P['reach_train']],
+                   items, pd.concat(queries, ignore_index=True)[
+                       P['reach_queries']], '')
+
+def lc_probe_runs(t1_steps, r2_steps):
+    """The format table (template against one-hop needle at 1K, 200 items,
+    for the oracle copier, t1, r2 and Qwen3-0.6B-Base) and recall by gap
+    at the trained length for the checkpoints of t1 (at 1K) and r2 (at 4K)
+    at the steps given, 500 windows each: LcProbe(format, reach_train,
+    format_items, reach_queries, label). Regeneration lc-probe; otherwise
+    the committed lm-lc-probe-v1; pending while that is."""
+    config = dict(t1_steps=t1_steps, r2_steps=r2_steps, probe=_LC_PROBE,
+                  reference=[_LC_REFERENCE, d2l.HF_REVISIONS[_LC_REFERENCE]])
+    res = d2l._pretrain_result('lc-probe', lambda: _lc_probe_compute(
+        t1_steps, r2_steps), config)
+    return d2l._as_tuple(LcProbe, res, _LC_PROBE_COLUMNS)
+
 LcRuns = collections.namedtuple(
-    'LcRuns', ['table', 'logs', 'position', 'recall', 'gain', 'timeline',
-               'short', 'windows', 'items', 'zeroshot', 'zs_position',
-               'zs_recall', 'zs_gain', 'zs_config', 'label'])
+    'LcRuns', ['table', 'logs', 'position', 'context', 'recall', 'gain',
+               'timeline', 'short', 'windows', 'needles', 'items',
+               'zs_table', 'zs_windows', 'zs_needles', 'zs_config',
+               'ref_windows', 'ref_needles', 'ref_config', 'tier', 'label'])
 
 _LC_COLUMNS = {
-    'table': ['arm', 'val loss', 'Δ val', 'NLL 12-16K', 'recall 4K',
-              'recall 16K', '95% lo', '95% hi', 'effective'],
+    'table': ['arm', 'val', 'Δ val', 'NLL last', 'ctx', 'ctx lo', 'ctx hi',
+              'near', 'far', 'reach', 'detectable'],
     'logs': ['arm', 'seed', 'step', 'tokens', 'stage', 'lr', 'loss',
              'grad_norm', 'tok_s'],
     'position': ['model', 'bucket', 'nll', 'lo', 'hi'],
-    'recall': ['model', 'seed', 'length', 'depth', 'item', 'correct'],
-    'gain': ['model', 'bucket', 'rule', 'gain', 'lo', 'hi', 'n'],
+    'context': ['model', 'context', 'nats', 'lo', 'hi', 'bpb', 'bpb_lo',
+                'bpb_hi'],
+    'recall': ['model', 'seed', 'length', 'gap_lo', 'gap_hi', 'n', 'k',
+               'rate', 'lo', 'hi'],
+    'gain': ['model', 'bucket', 'gain', 'lo', 'hi', 'n'],
     'timeline': ['arm', 'seed', 'step', 'tokens', 'nll_first', 'nll_last',
-                 'recall_k', 'recall_n', 'recall_lo', 'gain', 'gain_lo'],
+                 'near_k', 'near_n', 'near_lo', 'far_k', 'far_n', 'far_lo',
+                 'gain', 'gain_lo'],
     'short': ['arm', 'Δ val', 'val lo', 'val hi', 'Δ suite', 'suite lo',
-              'suite hi'],
+              'suite hi', 'Δ near', 'near lo', 'near hi'],
     'windows': ['model', 'seed', 'measure', 'bucket', 'window', 'sum', 'n'],
+    'needles': ['model', 'seed', 'length', 'window', 'needle', 'gap',
+                'correct'],
     'items': ['model', 'seed', 'task', 'item_id', 'score'],
-    'zeroshot': [], 'zs_position': ['model', 'bucket', 'nll', 'lo', 'hi'],
-    'zs_recall': ['model', 'seed', 'length', 'depth', 'item', 'correct'],
-    'zs_gain': ['model', 'bucket', 'rule', 'gain', 'lo', 'hi', 'n']}
+    'zs_table': ['scheme', 'length', 'first', 'first lo', 'first hi',
+                 'last', 'last lo', 'last hi', 'near', 'near lo', 'near hi',
+                 'far', 'far lo', 'far hi', 'reach'],
+    'zs_windows': ['model', 'seed', 'measure', 'bucket', 'window', 'sum',
+                   'n'],
+    'zs_needles': ['model', 'seed', 'length', 'window', 'needle', 'gap',
+                   'correct'],
+    'ref_windows': ['model', 'seed', 'measure', 'bucket', 'window', 'sum',
+                    'n'],
+    'ref_needles': ['model', 'seed', 'length', 'window', 'needle', 'gap',
+                    'correct']}
 
 _LC_STATE_EVERY = 50
+
+_LC_NOT_IDENTITY = ('evaluate',)  # fields that do not change training
 
 def _lc_slug(arm):
     return arm.lower().replace(' ', '-')
 
-def _lc_configs(arms, base, tokens, seq_len, batch_tokens, peak_lr, warmup,
-                decay_frac, long_share):
+def _lc_configs(arms, base, tokens, seq_len, batch_tokens, peak_lr=1e-4,
+                warmup=20, decay_frac=0.15, long_share=0.5):
     """One JSON-able configuration per (arm, seed): the stages (window T,
-    scale s, steps), the schedule and the data shares.
+    scale s, steps), the schedule and the data shares; evaluate: whether
+    the periodic needle evaluation runs (T2 only).
 
     Defined in :numref:`sec_lm_long_context`"""
     tier = _lc_tier(base)
@@ -28971,7 +29472,7 @@ def _lc_configs(arms, base, tokens, seq_len, batch_tokens, peak_lr, warmup,
                 micro_batch=_LC_MICRO[tier], peak_lr=peak_lr, warmup=warmup,
                 decay=round(decay_frac * steps), long_share=long_share,
                 trained_len=_LC_TIERS[tier]['trained'], z_loss=1e-4,
-                eval_every=_LC_EVAL_EVERY)
+                eval_every=_LC_EVAL_EVERY, evaluate=tier == 't2')
     return out
 
 def _lc_stage_of(cfg, step):
@@ -29041,50 +29542,78 @@ def _lc_job(cfg):
                         f'{_lc_slug(cfg["arm"])}-s{cfg["seed"]}')
 
 def _lc_identity(cfg):
-    """The record of an arm in its job folder: configuration and base."""
-    return dict(config=d2l._jsonable(cfg),
+    """The record of an arm in its job folder: configuration (without the
+    fields that do not change training) and base."""
+    keep = {k: v for k, v in cfg.items() if k not in _LC_NOT_IDENTITY}
+    return dict(config=d2l._jsonable(keep),
                 base=[cfg['base'], d2l._file_id(_lc_base_path(cfg['base']))])
+
+def _lc_check_recipe(cfg):
+    """Refuse a T2 arm of seed > 0 whose configuration differs from its
+    seed-0 arm (the finished folder's record, else the configuration seed 0
+    would have) in anything but the seed and the evaluation flag."""
+    zero = dict(cfg, seed=0)
+    path = os.path.join(_lc_job(zero), 'arm.json')
+    ref = _lc_identity(zero)
+    if os.path.exists(path):
+        with open(path) as f:
+            ref = json.load(f)
+    mine = _lc_identity(cfg)
+    diff = sorted(k for k in set(mine['config']) | set(ref['config'])
+                  if mine['config'].get(k) != ref['config'].get(k))
+    if diff != ['seed'] or mine['base'] != ref['base']:
+        raise ValueError(f'{cfg["arm"]} seed {cfg["seed"]} differs from seed '
+                         f'0 in {diff or ["base"]}')
 
 def _bf16_copy(model):
     import copy
     return copy.deepcopy(model).to(torch.bfloat16).eval()
 
 def _lc_timeline_row(model, cfg, step, tokenizer):
-    """The periodic evaluation of a bf16 copy of model: losses of the first
-    and last position buckets, recall at the longest length (pooled over
-    depths) with its lower Wilson bound, and the gain in the rule bucket
-    of the longest length with its lower bound."""
-    spec, T = _LC_TIERS[cfg['tier']], cfg['seq_len']
+    """The periodic evaluation of a bf16 copy of model: the losses of the
+    first and last position buckets, near recall (32, 512] and far recall
+    (beyond the trained length) at the arm's length with lower Wilson
+    bounds, and the gain beyond the trained length with its lower bound."""
+    spec, T, L0 = _LC_TIERS[cfg['tier']], cfg['seq_len'], cfg['trained_len']
     ev = _bf16_copy(model)
-    w, r, _ = _lc_eval(ev, cfg['tier'], test_books(spec['eval_books'], T),
-                       (T,), spec['eval_items'], tokenizer)
+    w, r, _ = _lc_eval(ev, tokenizer, cfg['tier'], T, (T,),
+                       spec['eval_needles'], spec['eval_windows'],
+                       contexts=False)
     del ev
     d2l.lm_free()
-    nll = w[w['measure'] == 'nll']
-    first, last = nll['bucket'].iloc[0], nll['bucket'].iloc[-1]
     ratio = lambda x: float(x['sum'].sum() / x['n'].sum())
-    rule = w[(w['measure'] == 'rule') & (w['bucket'] ==
-                                         bucket_name(T // 2, T))]
-    g, g_lo, _ = window_ci(rule['sum'], rule['n'])
-    k, n = int(r['correct'].sum()), len(r)
-    return dict(arm=cfg['arm'], seed=cfg['seed'], step=step,
-                tokens=step * cfg['global_batch'] * T,
-                nll_first=ratio(nll[nll['bucket'] == first]),
-                nll_last=ratio(nll[nll['bucket'] == last]), recall_k=k,
-                recall_n=n, recall_lo=d2l.wilson_ci(k, n)[0], gain=g,
-                gain_lo=g_lo)
+    nll = w[w['measure'] == 'nll']
+    far = [bucket_name(a, b) for a, b in _lc_gain_bins(T) if a >= L0]
+    g = w[(w['measure'] == 'gain') & w['bucket'].isin(far)].groupby(
+        'window')[['sum', 'n']].sum()
+    gain, gain_lo, _ = window_ci(g['sum'], g['n'])
+    out = dict(arm=cfg['arm'], seed=cfg['seed'], step=step,
+               tokens=step * cfg['global_batch'] * T,
+               nll_first=ratio(nll[nll['bucket'] == bucket_name(0, L0)]),
+               nll_last=ratio(nll[nll['bucket'] == bucket_name(T - L0, T)]))
+    for name, (a, b) in (('near', _LC_NEAR), ('far', (L0, T))):
+        x = r[(r['gap'] > a) & (r['gap'] <= b)]['correct']
+        out.update({f'{name}_k': int(x.sum()), f'{name}_n': len(x),
+                    f'{name}_lo': d2l.wilson_ci(int(x.sum()), len(x))[0]})
+    return dict(out, gain=gain, gain_lo=gain_lo, probe='needle')
 
 def _lc_read_timeline(job):
+    """The periodic needle evaluations in job (none for an arm trained
+    before them: its rows have no 'probe' field)."""
     path = os.path.join(job, 'timeline.jsonl')
-    if not os.path.exists(path):
+    rows = []
+    if os.path.exists(path):
+        with open(path) as f:
+            rows = [r for r in map(json.loads, f) if r.get('probe') ==
+                    'needle']
+    if not rows:
         return pd.DataFrame(columns=_LC_COLUMNS['timeline'])
-    with open(path) as f:
-        rows = [json.loads(line) for line in f]
-    return pd.DataFrame(rows).drop_duplicates('step', keep='last')
+    return pd.DataFrame(rows).drop_duplicates('step', keep='last')[
+        _LC_COLUMNS['timeline']]
 
 def _lc_train(model, stream, cfg, job, stop=None):
     """Train one arm (resumable in job; at most `stop` steps): the log
-    rows; the periodic evaluations (unless cfg['evaluate'] is False) go to
+    rows; the periodic evaluations (when cfg['evaluate']) go to
     job/timeline.jsonl."""
     dev = _device_of(model)
     T = cfg['seq_len']
@@ -29098,7 +29627,7 @@ def _lc_train(model, stream, cfg, job, stop=None):
     run = d2l._PretrainRun(model, stream, pc, None, 'auto')
     stage = _lc_stage_of(cfg, run.start)
     _lc_set_stage(run.raw, cfg, stage)  # RoPE is not in the state
-    evaluate = cfg.get('evaluate', True)
+    evaluate = cfg.get('evaluate', False)
     tok = lc_tokenizer() if evaluate else None
     timeline = os.path.join(job, 'timeline.jsonl')
 
@@ -29153,6 +29682,8 @@ def _lc_arm_run(cfg):
     done = os.path.join(job, 'DONE')
     if not d2l._cpt_check_job(job, ident):
         d2l._cpt_check_job(job, ident, 'arm.json')  # resume the same arm
+        if cfg['tier'] == 't2' and cfg['seed']:
+            _lc_check_recipe(cfg)
         _lc_check_disk(cfg)
         os.makedirs(job, exist_ok=True)
         with open(os.path.join(job, 'arm.json'), 'w') as f:
@@ -29178,9 +29709,71 @@ def _lc_arm_run(cfg):
     log = d2l._read_job_logs(job).assign(arm=cfg['arm'], seed=cfg['seed'])
     steady = log.loc[log['step'] > 20, 'tok_s']
     return dict(log=log.reindex(columns=_LC_COLUMNS['logs']),
-                timeline=_lc_read_timeline(job), gib=info['gib'],
+                timeline=_lc_read_timeline(job) if cfg.get('evaluate')
+                else pd.DataFrame(columns=_LC_COLUMNS['timeline']),
+                gib=info['gib'],
                 tok_s=float(steady.median()) if len(steady) else math.nan,
                 label='')
+
+def _lc_eval_settings(tier, cfg):
+    """What a final evaluation measures: the base (cfg None) at its trained
+    length (needles, val loss, suite); an arm at the trained length, every
+    stage's window and its own (needles), loss windows at its own length,
+    val loss and suite."""
+    spec = _LC_TIERS[tier]
+    common = dict(needles=spec['needles'], val=_LC_VAL_TOKENS,
+                  suite=[list(LC_TASKS), _LC_SUITE_N])
+    if cfg is None:
+        return dict(common, T=spec['trained'], lengths=[spec['trained']],
+                    windows=0)
+    lengths = sorted({spec['trained'], cfg['seq_len']}
+                     | {st['T'] for st in cfg['stages']})
+    return dict(common, T=cfg['seq_len'], lengths=lengths,
+                windows=spec['loss_windows'],
+                contexts=_lc_contexts(tier, cfg['seq_len']))
+
+def _lc_model_job(tier, cfg):
+    """(job folder, weights) of a final evaluation: the base or an arm."""
+    if cfg is None:
+        base = 'r2' if tier == 't2' else 't1'
+        return (os.path.join(d2l._job_root(), 'lc', f'{tier}-base'),
+                _lc_base_path(base))
+    job = _lc_job(cfg)
+    if not d2l._cpt_check_job(job, _lc_identity(cfg)):
+        raise FileNotFoundError(f'{job}: the arm is not done')
+    return job, os.path.join(job, 'ckpt', f's{cfg["steps"]}.safetensors')
+
+def _lc_model_eval(tier, cfg):
+    """LcEval of one model (the base when cfg is None), kept in its job
+    folder's evals.json.gz under the settings and the weights' id."""
+    job, weights = _lc_model_job(tier, cfg)
+    s = _lc_eval_settings(tier, cfg)
+    ident = d2l._jsonable(dict(s, weights=d2l._file_id(weights)))
+    path = os.path.join(job, 'evals.json.gz')
+    if os.path.exists(path):
+        res = d2l._read_result(path, 'json-table')
+        d2l._check_config(res, ident, path)
+        return res
+    model = d2l._load_bf16(weights, device=_lc_device())
+    suite = d2l._cpt_suite(LC_TASKS, n_max=_LC_SUITE_N, name='lc')
+    w, r, it = _lc_eval(model, lc_tokenizer(), tier, s['T'], s['lengths'],
+                        s['needles'], s['windows'], val=True, suite=suite)
+    del model
+    d2l.lm_free()
+    res = LcEval(w, r, it, '')
+    os.makedirs(job, exist_ok=True)
+    d2l._write_result(path, 'json-table', res, dict(config=ident, label=''))
+    return res
+
+def _lc_eval_one(cfgs, only):
+    """lc-t2-evals --only: the final evaluation of the model whose job
+    folder is named only ('t2-base' or an arm's)."""
+    tier = next(iter(cfgs.values()))['tier']
+    names = {f'{tier}-base': None, **{os.path.basename(_lc_job(c)): c
+                                      for c in cfgs.values()}}
+    if only not in names:
+        raise ValueError(f'--only is one of {sorted(names)}, not {only!r}')
+    return _lc_model_eval(tier, names[only])
 
 def _suite_delta(a, b, n_boot=2000, seed=0):
     """Suite mean (the mean over tasks of each task's mean) of a minus b on
@@ -29200,124 +29793,110 @@ def _suite_delta(a, b, n_boot=2000, seed=0):
     lo, hi = np.quantile(np.mean(boots, 0), [0.025, 0.975])
     return float(np.mean(point)), float(lo), float(hi)
 
-def _lc_short(windows, items, arms):
-    """Per arm: the val loss at the trained length and the suite mean
-    minus the base's, with 95% intervals (paired by window and by item;
-    seeds averaged per window and item)."""
+def _lc_short(tier, windows, items, needles, arms):
+    """Per arm: the val loss at the trained length, the suite mean and near
+    recall at the trained length minus the base's, with 95% intervals
+    (paired by window, item and query; seeds averaged per window, item
+    and query)."""
+    L0 = _LC_TIERS[tier]['trained']
     val = windows[windows['measure'] == 'val'].groupby(
         ['model', 'window'])[['sum', 'n']].sum()
     per = (val['sum'] / val['n']).unstack('model')
     score = items.groupby(['model', 'task', 'item_id'])['score'].mean()
+    near = needles[(needles['length'] == L0) & (needles['gap'] >
+                                                _LC_NEAR[0])
+                   & (needles['gap'] <= _LC_NEAR[1])]
+    q = near.groupby(['model', 'window', 'needle'])['correct'].mean(
+        ).unstack('model')
     rows = []
     for arm in arms:
         d, lo, hi = window_ci(per[arm] - per['base'], np.ones(len(per)))
         s = _suite_delta(score[arm].reset_index(),
                          score['base'].reset_index())
-        rows.append((arm, d, lo, hi, *s))
+        dq = (q[arm] - q['base']).groupby('window').agg(['sum', 'count'])
+        rows.append((arm, d, lo, hi, *s, *window_ci(dq['sum'],
+                                                    dq['count'])))
     return pd.DataFrame(rows, columns=_LC_COLUMNS['short'])
 
-def _lc_table(tier, recall, position, windows, gain, arms):
-    """Per model (the base, then each arm): val loss at the trained length
-    and its difference from the base, the loss in the last position
-    bucket, recall at the trained and the longest length (pooled over
-    depths and seeds) with a 95% Wilson interval (one seed) or the range
-    over seeds, and the effective context."""
-    spec = _LC_TIERS[tier]
-    L0, Lmax = spec['trained'], max(spec['lengths'])
+def _lc_reach(recall, model, L, lo=0.5, strict=False):
+    b = recall[(recall['model'] == model) & (recall['seed'] == -1)
+               & (recall['length'] == L)]
+    return d2l.reach(b, lo, strict) if len(b) else math.nan
+
+def _lc_table(tier, T, windows, needles, recall, arms, ref):
+    """Per model (the arms, the base as the zero-shot PI model, the
+    reference): val loss at the trained length, the loss in the last
+    position bucket, loss with the whole window minus with the trained
+    length on the second half of each window (with its interval), near
+    and far recall at T (seeds averaged per query), reach and detectable
+    to at T."""
+    L0 = _LC_TIERS[tier]['trained']
     val = windows[windows['measure'] == 'val'].groupby('model')[
         ['sum', 'n']].sum()
     val = val['sum'] / val['n']
-    eff = effective_context(recall, gain)
-    last = position['bucket'].iloc[-1]
-    multi = recall.groupby('model')['seed'].nunique().max() > 1
-    names = ['min', 'max'] if multi else ['95% lo', '95% hi']
+    pos = _lc_position(windows)
+    last = bucket_name(T - L0, T)
     rows = []
-    for model in ['base'] + list(arms):
-        r = recall[recall['model'] == model]
-        at = lambda L: r[r['length'] == L]['correct']
-        long = r[r['length'] == Lmax]
-        if multi:
-            per_seed = long.groupby('seed')['correct'].mean()
-            lo, hi = float(per_seed.min()), float(per_seed.max())
-        else:
-            lo, hi = d2l.wilson_ci(int(long['correct'].sum()), len(long))
-        p = position[(position['model'] == model) &
-                     (position['bucket'] == last)]['nll']
-        rows.append((model, val[model], val[model] - val['base'],
-                     float(p.iloc[0]), at(L0).mean(), at(Lmax).mean(), lo,
-                     hi, _context_name(int(eff.get(model, 0)),
-                                       spec['lengths'])))
-    return pd.DataFrame(rows, columns=[
-        'arm', 'val loss', 'Δ val', f'NLL {last}',
-        f'recall {_length_name(L0)}', f'recall {_length_name(Lmax)}',
-        *names, 'effective'])
+    for name, model in [(a, a) for a in arms] + [('base', 'PI, zero-shot')] + (
+            [(ref, ref)] if ref else []):
+        p = pos[(pos['model'] == model) & (pos['bucket'] == last)]['nll']
+        v = val.get('base' if name == 'base' else model, math.nan)
+        ctx = _lc_ctx_delta(windows, model, _length_name(L0))[:3]
+        if model == ref:
+            v, ctx, p = math.nan, (math.nan,) * 3, []
+        rows.append((name, v, v - val.get('base', math.nan),
+                     float(p.iloc[0]) if len(p) else math.nan, *ctx,
+                     _lc_range(needles, model, T, *_LC_NEAR)[0],
+                     _lc_range(needles, model, T, L0, T)[0],
+                     _lc_reach(recall, model, T),
+                     _lc_reach(recall, model, T, 0.25, strict=True)))
+    return pd.DataFrame(rows, columns=_LC_COLUMNS['table'])
 
-def _lc_merge(parts, cfgs, zs, zs_config):
-    """LcRuns from the arms' parts {(arm, seed): part} and the zero-shot
-    result: the base (base RoPE, the long window accepted) and every arm's
-    final weights on the full evaluation."""
+def _lc_merge(parts, cfgs, zs, zs_config, ref=None, ref_config=None):
+    """LcRuns from the arms' parts {(arm, seed): part}, the zero-shot result
+    and (T2) the reference: every model's final evaluation (read from its
+    job folder, computed if missing), then the tables."""
     cfg0 = next(iter(cfgs.values()))
-    tier, T = cfg0['tier'], cfg0['seq_len']
-    spec, dev, tok = _LC_TIERS[tier], _lc_device(), lc_tokenizer()
-    books = test_books(spec['books'], T)
-    suite = d2l._cpt_suite(LC_TASKS, n_max=_LC_SUITE_N, name='lc')
-    models = [('base', 0, None)] + [(a, s, c) for (a, s), c in cfgs.items()]
-    windows, recall, items = [], [], []
-    for name, seed, cfg in models:
-        if cfg is None:
-            model = d2l._load_bf16(_lc_base_path(cfg0['base']), device=dev)
-            _lc_set_scheme(model, 'none', T / spec['trained'],
-                           spec['trained'])
-        else:
-            if not d2l._cpt_check_job(_lc_job(cfg), _lc_identity(cfg)):
-                raise FileNotFoundError(f'{_lc_job(cfg)}: not done')
-            model = d2l._load_bf16(os.path.join(
-                _lc_job(cfg), 'ckpt', f's{cfg["steps"]}.safetensors'),
-                device=dev)
-        w, r, it = _lc_eval(model, tier, books, spec['lengths'],
-                            spec['n_items'], tok, val=True, suite=suite)
-        windows.append(w.assign(model=name, seed=seed))
-        recall.append(r.assign(model=name, seed=seed))
-        items.append(it.assign(model=name, seed=seed))
-        del model
-        d2l.lm_free()
-    C = _LC_COLUMNS
-    windows = pd.concat(windows, ignore_index=True)[C['windows']]
-    recall = pd.concat(recall, ignore_index=True)[C['recall']]
-    items = pd.concat(items, ignore_index=True)[C['items']]
-    position, gain = _lc_position(windows), _lc_gain(windows)
+    tier, T, C = cfg0['tier'], cfg0['seq_len'], _LC_COLUMNS
+    evals = [('base', 0, _lc_model_eval(tier, None))] + [
+        (a, s, _lc_model_eval(tier, c)) for (a, s), c in cfgs.items()]
+    cat = lambda xs, cols: pd.concat(xs, ignore_index=True)[cols]
+    windows = cat([e.windows.assign(model=a, seed=s) for a, s, e in evals],
+                  C['windows'])
+    needles = cat([e.needles.assign(model=a, seed=s) for a, s, e in evals],
+                  C['needles'])
+    items = cat([e.items.assign(model=a, seed=s) for a, s, e in evals],
+                C['items'])
+    zero = lambda df: df.assign(model=df['model'] + ', zero-shot')
+    ref_name = None if ref is None else ref.needles['model'].iloc[0]
+    all_w = pd.concat([windows, zero(zs.windows)] + (
+        [] if ref is None else [ref.windows]), ignore_index=True)
+    all_n = pd.concat([needles, zero(zs.needles)] + (
+        [] if ref is None else [ref.needles]), ignore_index=True)
     arms = list(dict.fromkeys(a for a, _ in cfgs))
-    table = _lc_table(tier, recall, position, windows, gain, arms)
-    zs_pos = zs.position[zs.position['model'].isin(['PI', 'YaRN'])]
-    position = pd.concat([zs_pos.assign(model=zs_pos['model'] +
-                                        ', zero-shot'), position],
-                         ignore_index=True)
+    recall = _lc_recall(all_n)
+    shown = ['PI, zero-shot', 'YaRN, zero-shot'] + arms
+    position = _lc_position(all_w[all_w['model'].isin(shown)])
+    context = _lc_context(all_w, shown + ([ref_name] if ref_name else []))
+    table = _lc_table(tier, T, all_w, all_n, recall, arms, ref_name)
     parts = [parts[k] for k in cfgs]
+    empty = lambda k: pd.DataFrame(columns=C[k])
     return LcRuns(
-        table, pd.concat([p['log'] for p in parts], ignore_index=True)[
-            C['logs']], position, recall, gain,
-        pd.concat([p['timeline'] for p in parts], ignore_index=True)[
-            C['timeline']], _lc_short(windows, items, arms), windows, items,
-        zs.table, zs.position, zs.recall, zs.gain, zs_config, '')
-
-def _lc_zs_for_merge():
-    """The zero-shot part for the T2 merge: the file lc-zeroshot wrote, or
-    computed here (about 30 minutes) when that regeneration was not run."""
-    call = _lc_zeroshot_call()
-    config = d2l._jsonable(call)
-    path = _lc_zs_path()
-    if os.path.exists(path):
-        res = d2l._read_result(path, 'json-table')
-        d2l._check_config(res, config, os.path.basename(path))
-        return LcZeroShot(res.table, res.position, res.recall, res.gain,
-                          ''), config
-    return _lc_zeroshot_compute(**call), config
+        table, cat([p['log'] for p in parts], C['logs']), position, context,
+        recall, _lc_gain(windows), cat([empty('timeline')] + [
+            p['timeline'] for p in parts if len(p['timeline'])],
+            C['timeline']), _lc_short(tier, windows, items, needles, arms),
+        windows, needles, items, zs.table, zs.windows, zs.needles, zs_config,
+        empty('windows') if ref is None else ref.windows,
+        empty('needles') if ref is None else ref.needles, ref_config, tier,
+        '')
 
 def _lc_t1_compute(cfgs):
     """The T1 campaign in one process: zero-shot on the t1 checkpoint at
-    the T2 lengths over 4, every arm and seed, and the merge."""
-    call = dict(_lc_zeroshot_call(), base='t1')
-    call['lengths'] = tuple(L // 4 for L in call['lengths'])
+    the T1 lengths, every arm and seed, and the merge."""
+    spec = _LC_TIERS['t1']
+    call = dict(_lc_zeroshot_call(), base='t1',
+                lengths=(spec['trained'], spec['length']))
     zs = _lc_zeroshot_compute(**call)
     parts = {k: _lc_arm_run(c) for k, c in cfgs.items()}
     return _lc_merge(parts, cfgs, zs, d2l._jsonable(call))
@@ -29325,14 +29904,15 @@ def _lc_t1_compute(cfgs):
 def lc_arms(arms, base, tokens, seq_len, batch_tokens, peak_lr=1e-4,
             warmup=20, decay_frac=0.15, long_share=0.5):
     """Extend base ('r2' at 4K or 't1' at 1K) to seq_len, one run per arm
-    and seed, and evaluate it: LcRuns(table, logs, position, recall, gain,
-    timeline, short, windows, items, zeroshot, zs_position, zs_recall,
-    zs_gain, zs_config, label). arms = {name: dict(scheme, stages[,
-    seeds, mscale])}, stages a tuple of (window T, scale s, share of the
-    tokens). base 'r2' (T2: one regeneration per arm, lc-t2-pi, -yarn,
-    -prog, merged by lc-t2-evals) or 't1' (the regeneration lc-t1).
-    Otherwise the committed result; while the T2 arms are pending, the T1
-    arms, labelled so (every show_lc_* display prints the label)."""
+    and seed, and evaluate it: LcRuns(table, logs, position, context,
+    recall, gain, timeline, short, windows, needles, items, zs_table,
+    zs_windows, zs_needles, zs_config, ref_windows, ref_needles,
+    ref_config, label). arms = {name: dict(scheme, stages, seeds[,
+    mscale])}, stages a tuple of (window T, scale s, share of the tokens).
+    base 'r2' (T2: one regeneration per arm and seed, _LC_T2_NAMES, merged
+    by lc-t2-evals) or 't1' (the regeneration lc-t1). Otherwise the
+    committed result; while the T2 arms are pending, the T1 arms, labelled
+    so (every show_lc_* display prints the label)."""
     config = dict(arms=arms, base=base, tokens=tokens, seq_len=seq_len,
                   batch_tokens=batch_tokens, peak_lr=peak_lr, warmup=warmup,
                   decay_frac=decay_frac, long_share=long_share)
@@ -29341,22 +29921,33 @@ def lc_arms(arms, base, tokens, seq_len, batch_tokens, peak_lr=1e-4,
     if base == 't1':
         res = d2l._pretrain_result('lc-t1', lambda: _lc_t1_compute(cfgs),
                                    config)
-    else:
-        if set(arms) - set(_LC_T2_NAMES) or any(s for _, s in cfgs):
-            raise ValueError(f'T2 arms are {sorted(_LC_T2_NAMES)}, seed 0')
-        parts = {_LC_T2_NAMES[a]: (lambda c=c: _lc_arm_run(c), c)
-                 for (a, _), c in cfgs.items()}
-        names = {_LC_T2_NAMES[a]: (a, s) for a, s in cfgs}
+        return d2l._as_tuple(LcRuns, res, _LC_COLUMNS)
+    if set(cfgs) - set(_LC_T2_NAMES):
+        raise ValueError(f'T2 arms and seeds are {sorted(_LC_T2_NAMES)}')
+    only = os.environ.get('D2L_PRETRAIN_ONLY')
+    if only and 'lc-t2-evals' in d2l._regenerating():
+        _lc_eval_one(cfgs, only)  # one model; the merge reads it back
+        return d2l._as_tuple(LcRuns, d2l._pending_result('lc-t2-evals'),
+                             _LC_COLUMNS)
+    parts = {_LC_T2_NAMES[k]: (lambda c=c: _lc_arm_run(c), c)
+             for k, c in cfgs.items()}
+    names = {_LC_T2_NAMES[k]: k for k in cfgs}
 
-        def merge(results):
-            zs, zs_config = _lc_zs_for_merge()
-            return _lc_merge({names[k]: d2l._part(v) for k, v in
-                              results.items()}, cfgs, zs, zs_config)
-        res = d2l._pretrain_merged('lc-t2-evals', parts, merge, config,
-                                   fallback='lc-t1')
+    def merge(results):
+        zs, zs_config = _lc_part_for_merge(
+            'lc-zeroshot', _lc_zeroshot_call(), _lc_zeroshot_compute,
+            lambda r: LcZeroShot(r.table, r.windows, r.needles, ''))
+        ref, ref_config = _lc_part_for_merge(
+            'lc-reference', _lc_reference_call(), _lc_reference_compute,
+            lambda r: LcReference(r.windows, r.needles, ''))
+        return _lc_merge({names[k]: d2l._part(v) for k, v in
+                          results.items()}, cfgs, zs, zs_config, ref,
+                         ref_config)
+    res = d2l._pretrain_merged('lc-t2-evals', parts, merge, config,
+                               fallback='lc-t1')
     return d2l._as_tuple(LcRuns, res, _LC_COLUMNS)
 
-def lc_probe(micro_batches=(1, 2), steps=10, warmup=3):
+def lc_memory_probe(micro_batches=(1, 2), steps=10, warmup=3):
     """The D2 probe of the T2 arms on one GPU: per configuration (the PI
     arm at each micro-batch size, and the progressive arm's first stage,
     8K pieces, at the first) peak GiB reserved, median seconds per step
@@ -29389,18 +29980,40 @@ def lc_probe(micro_batches=(1, 2), steps=10, warmup=3):
                          gib=torch.cuda.max_memory_reserved(dev) / 2 ** 30,
                          step_s=t, tok_s=cfg['global_batch'] *
                          cfg['seq_len'] / t,
-                         arm_hours=_lc_configs(**_lc_t2_call())[arm, 0][
-                             'steps'] * t / 3600))
+                         arm_hours=cfgs[arm, 0]['steps'] * t / 3600))
         del model
         torch._dynamo.reset()
         d2l.lm_free()
     return pd.DataFrame(rows)
 
-def plot_lc_train(logs, smooth=10):
-    """Training loss (a running mean over smooth steps) against tokens for
-    each arm's first seed, the progressive arm's stage switch marked.
+def _lc_rules(axes, chance=1 / 8):
+    """Chance (dashed) and the reach thresholds 0.5 and 0.25 (dotted).
 
     Defined in :numref:`sec_lm_long_context`"""
+    axes.axhline(chance, color='black', ls='--', lw=0.8)
+    for y in (0.5, 0.25):
+        axes.axhline(y, color='black', ls=':', lw=0.8)
+
+def _lc_recall_axes(axes, curves, grey=(), title=None):
+    """Recall against gap (log axis) on axes: curves {label: bins} (gap_lo,
+    gap_hi, rate, lo, hi), each with its Wilson band; labels in grey drawn
+    in grey."""
+    for i, (label, b) in enumerate(curves.items()):
+        x = np.sqrt(b['gap_lo'] * b['gap_hi']).to_numpy()
+        color = '0.5' if label in grey else f'C{i % 10}'
+        axes.plot(x, b['rate'], '-o', ms=3, color=color, label=label)
+        axes.fill_between(x, b['lo'], b['hi'], color=color, alpha=0.15,
+                          linewidth=0)
+    _lc_rules(axes)
+    axes.set_xscale('log', base=2)
+    axes.set_ylim(0, 1.02)
+    axes.set_xlabel('gap (tokens back)')
+    if title:
+        axes.set_title(title)
+
+def plot_lc_train(logs, smooth=10):
+    """Training loss (a running mean over smooth steps) against tokens for
+    each arm's first seed, the progressive arm's stage switch marked."""
     logs = logs[logs['seed'] == 0]
     if not len(logs):
         return
@@ -29415,102 +30028,122 @@ def plot_lc_train(logs, smooth=10):
         switch = g.loc[g['stage'].diff() > 0, 'tokens'].iloc[0] / 1e6
         d2l.plt.gca().axvline(switch, color='black', ls=':', lw=1)
 
-def plot_lc_position(position):
-    """Loss by position bucket with 95% intervals, one series per model."""
-    if not len(position):
-        return
-    buckets = list(dict.fromkeys(position['bucket']))
-    series = {m: tuple(g.set_index('bucket').reindex(buckets)[k].to_numpy()
-                       for k in ('nll', 'lo', 'hi'))
-              for m, g in position.groupby('model', sort=False)}
-    axes = d2l.plot_intervals(buckets, series, 'position bucket',
-                              'loss (nats)')
-    axes.legend(loc='upper left', bbox_to_anchor=(1.01, 1))
+def plot_lc_loss(runs):
+    """Left: loss by position bucket with 95% intervals (the zero-shot PI
+    and YaRN models and the arms). Right: the loss of the second half of
+    each window given c tokens of context minus given the first context,
+    in bits per byte when the reference model is drawn (other tokenizer),
+    else in nats per token."""
+    fig, (a, b) = d2l.plt.subplots(1, 2, figsize=(8, 2.8))
+    p = runs.position
+    buckets = list(dict.fromkeys(p['bucket']))
+    d2l.plot_intervals(buckets, {
+        m: tuple(g.set_index('bucket').reindex(buckets)[k].to_numpy()
+                 for k in ('nll', 'lo', 'hi'))
+        for m, g in p.groupby('model', sort=False)}, 'position bucket',
+        'loss (nats)', axes=a)
+    c = runs.context
+    bpb = len(runs.ref_needles) > 0
+    cols = ('bpb', 'bpb_lo', 'bpb_hi') if bpb else ('nats', 'lo', 'hi')
+    names = list(dict.fromkeys(c['context']))
+    d2l.plot_intervals(names, {
+        m: tuple(g.set_index('context').reindex(names)[k].to_numpy()
+                 for k in cols)
+        for m, g in c.groupby('model', sort=False)}, 'context given',
+        f'Δ loss ({"bits per byte" if bpb else "nats"})', axes=b,
+        reference=0.0)
+    for ax in (a, b):
+        if ax.get_legend():
+            ax.get_legend().remove()
+    b.legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize='small')
 
-def plot_recall_grid(recall, models=('PI', 'YaRN'), threshold=0.5):
-    """Recall over length (columns) and depth (rows) for each model on
-    one 0-1 scale, with the threshold as a contour."""
-    if not len(recall):
-        return
-    lengths = sorted(recall['length'].unique())
-    depths = sorted(recall['depth'].unique())
-    acc = recall.groupby(['model', 'length', 'depth'])['correct'].mean()
-    M = np.array([[[acc.get((m, L, d), np.nan) for L in lengths]
-                   for d in depths] for m in models])
-    d2l.show_heatmaps(torch.tensor(M)[None], 'length', 'depth',
-                      titles=list(models), figsize=(5, 2.5), cmap='Blues',
-                      xticklabels=[_length_name(L) for L in lengths],
-                      yticklabels=[f'{d:.1f}' for d in depths])
-    for ax in d2l.plt.gcf().axes:  # recall on 0-1 in every panel and bar
-        for image in ax.images:
-            image.set_clim(0, 1)
-    for ax, Z in zip(d2l.plt.gcf().axes, M):
-        if np.nanmin(Z) < threshold < np.nanmax(Z):
-            ax.contour(Z, levels=[threshold], colors='black',
-                       linewidths=1.5)
+def plot_lc_recall(runs):
+    """Recall against gap with Wilson bands (seeds pooled): at the arms'
+    length the zero-shot PI model, the arms and the reference (grey); at
+    the trained length the base unscaled, the arms and the reference."""
+    r = runs.recall[runs.recall['seed'] == -1]
+    T, ref = int(r['length'].max()), None
+    if len(runs.ref_needles):
+        ref = runs.ref_needles['model'].iloc[0]
+    L0 = min(L for L in r['length'].unique())
+    arms = list(dict.fromkeys(runs.table['arm']))[:-2 if ref else -1]
+    fig, axes = d2l.plt.subplots(1, 2, figsize=(8, 2.8), sharey=True)
+    for ax, L, first in ((axes[0], T, 'PI, zero-shot'), (axes[1], L0,
+                                                          'base')):
+        curves = {m: r[(r['model'] == m) & (r['length'] == L)]
+                  for m in [first] + arms + ([ref] if ref else [])}
+        _lc_recall_axes(ax, {m: b for m, b in curves.items() if len(b)},
+                        grey=(ref,), title=f'window {_length_name(L)}')
+    axes[0].set_ylabel('recall')
+    axes[1].legend(loc='upper left', bbox_to_anchor=(1.01, 1),
+                   fontsize='small')
+
+def plot_reach_train(probe):
+    """Recall against gap at the trained length, one line per checkpoint,
+    a panel per run (t1 at 1K, r2 at 4K)."""
+    fig, axes = d2l.plt.subplots(1, 2, figsize=(8, 2.8), sharey=True)
+    for ax, (m, x) in zip(axes, probe.reach_train.groupby('model',
+                                                          sort=False)):
+        for i, (step, b) in enumerate(x.groupby('step')):
+            g = np.sqrt(b['gap_lo'] * b['gap_hi'])
+            ax.plot(g, b['rate'], '-o', ms=3, color=d2l.plt.cm.viridis(
+                i / max(1, x['step'].nunique() - 1)), label=f'step {step}')
+        _lc_rules(ax)
+        ax.set_xscale('log', base=2)
+        ax.set_xlabel('gap (tokens back)')
+        ax.set_title(f'{m} at {_length_name(int(x["gap_hi"].max()))}')
+        ax.legend(fontsize='x-small')
+    axes[0].set_ylabel('recall')
 
 def plot_lc_gain(gain):
     """Long-context gain against the gap bucket with 95% intervals."""
-    g = gain[~gain['rule'].astype(bool)]
-    if not len(g):
+    if not len(gain):
         return
-    buckets = list(dict.fromkeys(g['bucket']))
+    buckets = list(dict.fromkeys(gain['bucket']))
     series = {m: tuple(x.set_index('bucket').reindex(buckets)[k].to_numpy()
                        for k in ('gain', 'lo', 'hi'))
-              for m, x in g.groupby('model', sort=False)}
+              for m, x in gain.groupby('model', sort=False)}
     axes = d2l.plot_intervals(buckets, series,
-                              'gap to the previous occurrence', 'gain (nats)')
+                              'gap to the previous occurrence', 'gain (nats)',
+                              reference=0.0)
     axes.legend(loc='upper left', bbox_to_anchor=(1.01, 1))
 
 def scheme_difference(runs, a='YaRN', b='PI'):
-    """a minus b on recall at the longest length (pooled over depths) and
-    on the loss in the last position bucket, with 95% intervals: over
-    seeds (t interval) when both arms have two or more, else over the
-    items and windows of the single run (paired resampling). A dict:
-    recall, recall_lo, recall_hi, nll, nll_lo, nll_hi, method."""
-    import warnings
-    r, w = runs.recall, runs.windows
-    Lmax = r['length'].max()
-    last = w[w['measure'] == 'nll']['bucket'].iloc[-1]
-    seeds = sorted(set(r[r['model'] == a]['seed'])
-                   & set(r[r['model'] == b]['seed']))
-    rl = r[r['length'] == Lmax]
-    wl = w[(w['measure'] == 'nll') & (w['bucket'] == last)]
-    if len(seeds) >= 2:
-        acc = rl.groupby(['model', 'seed'])['correct'].mean()
-        nll = wl.groupby(['model', 'seed'])[['sum', 'n']].sum()
-        nll = nll['sum'] / nll['n']
-        dr = [acc[a, s] - acc[b, s] for s in seeds]
-        dn = [nll[a, s] - nll[b, s] for s in seeds]
-        (mr, hr), (mn, hn) = d2l.t_interval(dr), d2l.t_interval(dn)
-        return dict(recall=mr, recall_lo=mr - hr, recall_hi=mr + hr,
-                    nll=mn, nll_lo=mn - hn, nll_hi=mn + hn,
-                    method=f't interval, {len(seeds)} seeds')
-    pick = lambda df, m, keys: df[df['model'] == m].sort_values(keys)
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        res = d2l.paired_bootstrap(
-            pick(rl, a, ['depth', 'item'])['correct'].to_numpy(float),
-            pick(rl, b, ['depth', 'item'])['correct'].to_numpy(float),
-            n_boot=2000)
-    wa, wb = pick(wl, a, ['window']), pick(wl, b, ['window'])
-    mn, lo, hi = window_ci(wa['sum'].to_numpy() / wa['n'].to_numpy()
-                           - wb['sum'].to_numpy() / wb['n'].to_numpy(),
-                           np.ones(len(wa)))
-    return dict(recall=res.mean, recall_lo=res.ci[0], recall_hi=res.ci[1],
-                nll=mn, nll_lo=lo, nll_hi=hi,
-                method='single run, paired resampling')
+    """a minus b per seed (both arms trained on the same data order), on
+    the loss in the last position bucket, near recall (32, 512] and far
+    recall (beyond the trained length) at the arms' length: a dict of
+    (mean, lo, hi) per measure (a t interval over the seeds; nan below two
+    seeds) and the seeds."""
+    w, n = runs.windows, runs.needles
+    L0 = int(n['length'].min())
+    T = int(n['length'].max())
+    last = bucket_name(T - L0, T)
+    seeds = sorted(set(n[n['model'] == a]['seed'])
+                   & set(n[n['model'] == b]['seed']))
+    wl = w[(w['measure'] == 'nll') & (w['bucket'] == last)].groupby(
+        ['model', 'seed'])[['sum', 'n']].sum()
+    nll = wl['sum'] / wl['n']
+    at = n[n['length'] == T]
+    rate = lambda m, s, lo, hi: at[(at['model'] == m) & (at['seed'] == s) & (
+        at['gap'] > lo) & (at['gap'] <= hi)]['correct'].mean()
+    out = dict(seeds=seeds)
+    for name, f in (('loss', lambda m, s: nll[m, s]),
+                    ('near', lambda m, s: rate(m, s, *_LC_NEAR)),
+                    ('far', lambda m, s: rate(m, s, L0, T))):
+        d = [f(a, s) - f(b, s) for s in seeds]
+        if len(d) < 2:
+            out[name] = (float(np.mean(d)) if d else math.nan, math.nan,
+                         math.nan)
+        else:
+            m, h = d2l.t_interval(d)
+            out[name] = (m, m - h, m + h)
+    return out
 
 def _lc_tier_of(runs):
-    """'t1' or 't2' from the longest length of a result's recall grid;
-    None for a pending result (no rows).
+    """'t1' or 't2' of a result; None for a pending one (no rows).
 
     Defined in :numref:`sec_lm_long_context`"""
-    if not len(runs.recall):
-        return None
-    L = int(runs.recall['length'].max())
-    return next((t for t, s in _LC_TIERS.items() if max(s['lengths']) == L),
-                None)
+    return getattr(runs, 'tier', None) if len(runs.needles) else None
 
 def _lc_head(res, table, what):
     """Print res's label (a stand-in or pending result) and, when table has
@@ -29521,7 +30154,10 @@ def _lc_head(res, table, what):
     return bool(len(table))
 
 def _num(x, digits, sign=False):
-    """x at digits decimals (never '-0.00'), with its sign if sign."""
+    """x at digits decimals (never '-0.00'), with its sign if sign; '-'
+    for nan."""
+    if x is None or (isinstance(x, float) and math.isnan(x)):
+        return '-'
     return f'{round(float(x), digits) + 0:{"+" if sign else ""}.{digits}f}'
 
 def _interval(x, lo, hi, digits, sign=False):
@@ -29529,145 +30165,245 @@ def _interval(x, lo, hi, digits, sign=False):
     return (f'{_num(x, digits, sign)} [{_num(lo, digits, sign)}, '
             f'{_num(hi, digits, sign)}]')
 
+def _pm(x, lo, hi, digits, sign=False):
+    """'x±h' with h the half-width of [lo, hi]; '-' for nan."""
+    if math.isnan(float(x)):
+        return '-'
+    return f'{_num(x, digits, sign)}±{_num((hi - lo) / 2, digits)}'
+
+def _tokens(x):
+    """A gap or length in tokens: '1,024'; '-' for nan."""
+    return '-' if math.isnan(float(x)) else f'{int(x):,}'
+
+def show_lc_format(probe):
+    """The format table: recall at 1K of each model on the template and on
+    the one-hop needle, with 95% Wilson intervals, under the label."""
+    if not _lc_head(probe, probe.format, 'lc-probe'):
+        return
+    t = probe.format
+    rows = {}
+    for r in t.itertuples():
+        rows.setdefault(r.model, {})[r.format] = _interval(r.rate, r.lo, r.hi,
+                                                           2)
+    print(pd.DataFrame([[m, v.get('template', '-'), v.get('one-hop', '-')]
+                        for m, v in rows.items()],
+                       columns=['model', 'template', 'one-hop']).to_string(
+        index=False))
+
+def _copying_steps(x):
+    """(a, b): the last checkpoint before recall in (32, 64] becomes
+    detectable (Wilson lower bound above 0.25) and the first at which it
+    is; None where there is none."""
+    b = x[x['gap_lo'] == 32].sort_values('step')
+    ok = b['lo'] > 0.25
+    first = b['step'][ok].min() if ok.any() else None
+    before = b['step'][~ok & (b['step'] < (first or math.inf))]
+    return (int(before.max()) if len(before) else None,
+            None if first is None else int(first))
+
+def show_reach_train(probe):
+    """When copying appears in each run, the reach of the last run at its
+    first and last checkpoint after that, and the plot."""
+    if not _lc_head(probe, probe.reach_train, 'lc-probe'):
+        return
+    parts = []
+    for m, x in probe.reach_train.groupby('model', sort=False):
+        a, b = _copying_steps(x)
+        parts.append(f'between steps {a:,} and {b:,} ({m})' if a and b else
+                     f'by step {b:,} ({m})' if b else
+                     f'not by step {int(x["step"].max()):,} ({m})')
+    print('copying appears ' + ' and '.join(parts))
+    m, x = list(probe.reach_train.groupby('model', sort=False))[-1]
+    steps = sorted(x['step'].unique())
+    _, b = _copying_steps(x)
+    s0 = b or steps[0]
+    r = {s: d2l.reach(x[x['step'] == s]) for s in (s0, steps[-1])}
+    L = int(x['gap_hi'].max())
+    print(f'{m} reach at {_length_name(L)}: {r[s0]:,} at step {s0:,} → '
+          f'{r[steps[-1]]:,} at step {steps[-1]:,}')
+    plot_reach_train(probe)
+
 def show_lc_zeroshot(zs):
-    """The zero-shot table (loss per position bucket; recall per length
-    with its 95% Wilson half-width) and the loss by position with 95%
-    intervals, under the result's label."""
+    """The zero-shot table: per scheme at the longest length (and the
+    unscaled base at the trained length, the control) the losses of the
+    first and last position buckets, recall in (128, 256] and in the top
+    octave of gap (±: half the 95% interval), and the reach."""
     if not _lc_head(zs, zs.table, 'lc-zeroshot'):
         return
-    t = zs.table.copy()
-    for c in [c for c in t.columns if c.startswith('NLL ')]:
-        t[c] = t[c].map(lambda x: _num(x, 2))
-    acc = zs.recall.groupby(['model', 'length'])['correct'].agg(
-        ['sum', 'count'])
-    for L in sorted(zs.recall['length'].unique()):
-        cells = []
-        for name in t['scheme']:
-            k, n = (int(v) for v in acc.loc[(name, L)])
-            lo, hi = d2l.wilson_ci(k, n)
-            cells.append(f'{k / n:.2f} ± {(hi - lo) / 2:.2f}')
-        t[f'recall {_length_name(L)}'] = cells
-    print(t.to_string(index=False))
-    plot_lc_position(zs.position)
-
-def show_lc_table(runs):
-    """The arms' table: seeds, val loss at the trained length and its change
-    from the base, the loss in the last position bucket, recall at the
-    trained and the longest length with its 95% interval (Wilson for one
-    run, the range over seeds for several) and the effective context."""
-    if not _lc_head(runs, runs.table, 'arms'):
-        return
-    t = runs.table
-    multi = 'min' in t.columns
-    lo, hi = ('min', 'max') if multi else ('95% lo', '95% hi')
-    seeds = runs.recall.groupby('model')['seed'].nunique()
-    out = pd.DataFrame({'arm': t['arm'],
-                        'seeds': [int(seeds.get(a, 0)) for a in t['arm']]})
-    for c in t.columns[1:4]:  # val loss, Δ val, last-bucket NLL
-        out[c] = t[c].map(lambda x: _num(x, 3))
-    for c in [c for c in t.columns if c.startswith('recall ')]:
-        out[c] = t[c].map(lambda x: _num(x, 2))
-    out['seed range' if multi else '95% CI'] = [
-        f'[{_num(a, 2)}, {_num(b, 2)}]' for a, b in zip(t[lo], t[hi])]
-    out['effective'] = t['effective']
+    t = zs.table
+    T, L0 = int(t['length'].max()), int(t['length'].min())
+    out = pd.DataFrame({
+        'scheme': [f'{s} at {_length_name(L)}' if L != T else s
+                   for s, L in zip(t['scheme'], t['length'])],
+        f'loss 0-{_length_name(L0)}': [_pm(*r, 2) for r in zip(
+            t['first'], t['first lo'], t['first hi'])],
+        f'loss {bucket_name(T - L0, T)}': [_pm(*r, 2) for r in zip(
+            t['last'], t['last lo'], t['last hi'])],
+        'recall 128-256': [_pm(*r, 2) for r in zip(
+            t['near'], t['near lo'], t['near hi'])],
+        'recall L/2-L': [_pm(*r, 2) for r in zip(
+            t['far'], t['far lo'], t['far hi'])],
+        'reach': t['reach'].map(_tokens)})
     print(out.to_string(index=False))
 
-def show_lc_position(runs):
-    """The loss by position bucket of every model, under the label."""
-    if _lc_head(runs, runs.position, 'position'):
-        plot_lc_position(runs.position)
-
-def show_lc_recall(runs, effective, threshold=0.5):
-    """Per model the effective context and the worst depth at the longest
-    length, then the recall grids of PI and YaRN, under the label."""
-    if not _lc_head(runs, runs.recall, 'recall'):
+def show_lc_table(runs):
+    """The arms' table (seeds averaged): val loss at the trained length and
+    its change from the base, the loss in the last position bucket, the
+    loss on the second half with the whole window minus with the trained
+    length [95% CI], near and far recall at the arms' length, reach and
+    detectable to (±: half the 95% interval)."""
+    if not _lc_head(runs, runs.table, 'lc-t2-evals'):
         return
+    t = runs.table
+    T, L0 = (_LC_TIERS[_lc_tier_of(runs)][k] for k in ('length', 'trained'))
+    print(pd.DataFrame({
+        'arm': t['arm'],
+        f'val {_length_name(L0)} (Δ)': [
+            '-' if math.isnan(v) else f'{_num(v, 3)} ({_num(d, 3, True)})'
+            for v, d in zip(t['val'], t['Δ val'])],
+        f'NLL {bucket_name(T - L0, T)}': t['NLL last'].map(
+            lambda x: _num(x, 3)),
+        f'{_length_name(T)} − {_length_name(L0)} ctx': [
+            _pm(x, lo, hi, 3, True)
+            for x, lo, hi in zip(t['ctx'], t['ctx lo'], t['ctx hi'])],
+        'near': t['near'].map(lambda x: _num(x, 2)),
+        'far': t['far'].map(lambda x: _num(x, 2)),
+        'reach': t['reach'].map(_tokens),
+        'detect.': t['detectable'].map(_tokens)}).to_string(index=False))
+
+def show_lc_loss(runs):
+    """The two loss panels (by position; against the context given)."""
+    if _lc_head(runs, runs.position, 'lc-t2-evals'):
+        plot_lc_loss(runs)
+
+def lc_reach_lines(runs, reach, seed=0):
+    """'model: reach x, detectable to y' at the arms' length for each arm
+    (seed given), the zero-shot PI model and the reference, with reach the
+    page's function."""
     r = runs.recall
-    lengths = sorted(r['length'].unique())
-    grid = r.groupby(['model', 'length', 'depth'])['correct'].mean()
-    rows = []
-    for model, L in effective.items():
-        worst = grid[model, lengths[-1]]
-        rows.append((model, _context_name(int(L), lengths),
-                     f'{worst.idxmin():.1f} ({worst.min():.0%})'))
-    print(pd.DataFrame(rows, columns=[
-        'model', 'effective', f'worst depth at {_length_name(lengths[-1])}'
-    ]).to_string(index=False))
-    plot_recall_grid(r, models=('PI', 'YaRN'), threshold=threshold)
+    T = int(r['length'].max())
+    lines = []
+    for m in dict.fromkeys(r['model']):
+        b = r[(r['model'] == m) & (r['length'] == T) & (r['seed'] == seed)]
+        if len(b) and (m in set(runs.table['arm']) or m in (
+                'PI, zero-shot', *set(runs.ref_needles['model']))):
+            lines.append(f'{m}: reach {reach(b):,}, detectable to '
+                         f'{reach(b, 0.25, strict=True):,}')
+    return lines
+
+def show_lc_recall(runs, reach):
+    """Under the label: seed 0's reach and detectable range per model
+    (reach the page's function), then the two recall panels."""
+    if not _lc_head(runs, runs.recall, 'lc-t2-evals'):
+        return
+    print('\n'.join(lc_reach_lines(runs, reach)))
+    plot_lc_recall(runs)
 
 def show_lc_gain(runs):
-    """The long-context gain per gap bucket with 95% intervals (nats), as a
-    table and a plot, under the label."""
-    gain = runs.gain[~runs.gain['rule'].astype(bool)]
-    if not _lc_head(runs, gain, 'gain'):
+    """The long-context gain per gap bucket (nats; ±: half the 95%
+    interval), as a table and a plot, under the label."""
+    gain = runs.gain
+    if not _lc_head(runs, gain, 'lc-t2-evals'):
         return
-    cell = {(r.model, r.bucket): _interval(r.gain, r.lo, r.hi, 2)
+    cell = {(r.model, r.bucket): _pm(r.gain, r.lo, r.hi, 2)
             for r in gain.itertuples()}
     buckets = list(dict.fromkeys(gain['bucket']))
     print(pd.DataFrame(
-        [[m] + [cell.get((m, b), '') for b in buckets]
-         for m in dict.fromkeys(gain['model'])],
-        columns=['model'] + [f'gap {b}' for b in buckets]).to_string(
-        index=False))
-    plot_lc_gain(runs.gain)
+        [[m] + [cell.get((m, b), '-') for b in buckets]
+         for m in dict.fromkeys(gain['model']) if m != 'base'],
+        columns=['arm'] + buckets).to_string(index=False))
+    plot_lc_gain(gain[gain['model'] != 'base'])
 
-def lc_first_steps(runs, margin, threshold=0.5):
-    """Per arm (its first seed): the first evaluated step at which the loss
-    in the last position bucket is within margin of the base's loss in its
-    trained window on the same books, recall at the longest length has a
-    lower 95% bound of at least threshold, and the gain at the longest gaps
-    a lower bound above 0 ('not reached' if never)."""
+def lc_first_steps(runs, margin):
+    """Per arm and seed with a timeline: the tokens at the first periodic
+    evaluation at which the loss in the last position bucket is within
+    margin of the unscaled base's loss in its trained window on the same
+    windows, near recall has a lower 95% Wilson bound of at least 0.5, far
+    recall one above 0.25, and the gain beyond the trained length a lower
+    bound above 0 ('not reached' if never); and the arms and seeds without
+    a timeline."""
     spec = _LC_TIERS[_lc_tier_of(runs)]
-    w = runs.windows
-    base = w[(w['model'] == 'base') & (w['measure'] == 'nll')
+    w = runs.zs_windows
+    base = w[(w['model'] == 'none') & (w['measure'] == 'nll')
              & (w['bucket'] == bucket_name(0, spec['trained']))
-             & (w['window'] < spec['eval_books'])]
+             & (w['window'] < spec['eval_windows'])]
     ref = base['sum'].sum() / base['n'].sum()
-    tl = runs.timeline[runs.timeline['seed'] == 0]
     rows = []
-    for arm, t in tl.groupby('arm', sort=False):
-        rows.append([arm] + [str(t['step'][ok].min()) if ok.any()
-                             else 'not reached' for ok in (
-            t['nll_last'] <= ref + margin, t['recall_lo'] >= threshold,
-            t['gain_lo'] > 0)])
-    return pd.DataFrame(rows, columns=['arm', 'perplexity', 'recall',
-                                       'gain'])
+    for (arm, seed), t in runs.timeline.groupby(['arm', 'seed'], sort=False):
+        first = lambda ok: (f'{t["tokens"][ok].min() / 1e6:.0f}M'
+                            if ok.any() else 'not reached')
+        rows.append((arm, seed, first(t['nll_last'] <= ref + margin),
+                     first(t['near_lo'] >= 0.5), first(t['far_lo'] > 0.25),
+                     first(t['gain_lo'] > 0)))
+    have = {(a, s) for a, s, *_ in rows}
+    missing = [f'{a} s{s}' for a, s in dict.fromkeys(zip(
+        runs.logs['arm'], runs.logs['seed'])) if (a, s) not in have]
+    return pd.DataFrame(rows, columns=['arm', 'seed', 'loss', 'near recall',
+                                       'far recall', 'gain']), missing
 
-def show_lc_first_steps(runs, margin, threshold=0.5):
-    """lc_first_steps under the label."""
-    if _lc_head(runs, runs.timeline, 'timeline'):
-        print(lc_first_steps(runs, margin, threshold).to_string(index=False))
+def show_lc_first_steps(runs, margin):
+    """lc_first_steps under the label: the table, then the arms without a
+    timeline."""
+    if not _lc_head(runs, runs.timeline, 'lc-t2-evals'):
+        return
+    table, missing = lc_first_steps(runs, margin)
+    print(table.to_string(index=False))
+    if missing:
+        print('no timeline (trained before the periodic needle '
+              f'evaluation): {", ".join(missing)}')
 
 def show_lc_short(runs):
-    """Per arm the val loss at the trained length and the suite mean minus
-    the base's, with paired 95% intervals, under the label."""
-    if not _lc_head(runs, runs.short, 'short-context cost'):
+    """Per arm the val loss at the trained length, the suite mean and near
+    recall at the trained length minus the base's, with paired 95%
+    intervals, under the label."""
+    if not _lc_head(runs, runs.short, 'lc-t2-evals'):
         return
     s = runs.short
     print(pd.DataFrame({
         'arm': s['arm'],
-        'Δ val loss (nats)': [_interval(*x, 3, sign=True) for x in zip(
+        'Δ val loss': [_interval(*x, 3, sign=True) for x in zip(
             s['Δ val'], s['val lo'], s['val hi'])],
-        'Δ suite accuracy': [_interval(*x, 3, sign=True) for x in zip(
-            s['Δ suite'], s['suite lo'], s['suite hi'])]}).to_string(
+        'Δ suite': [_interval(*x, 3, sign=True) for x in zip(
+            s['Δ suite'], s['suite lo'], s['suite hi'])],
+        'Δ near recall': [_interval(*x, 2, sign=True) for x in zip(
+            s['Δ near'], s['near lo'], s['near hi'])]}).to_string(
         index=False))
 
-def show_scheme_difference(runs, tier, a='YaRN', b='PI'):
-    """a minus b (scheme_difference) on recall at the longest length and on
-    the loss in the last position bucket, in three lines; 'T2: pending'
-    when runs is not a result of tier ('T1' or 'T2'), such as the T1
-    stand-in for the T2 arms."""
-    if _lc_tier_of(runs) != tier.lower():
-        print(f'{tier}: pending')
+def show_lc_seeds(t1, t2, a='YaRN', b='PI'):
+    """The T1 table (as show_lc_table, without the context column), the
+    T1 base's control (recall in (32, 64] at its trained length), then a
+    minus b with a t interval over the seeds at T1 and at T2 ('T2:
+    pending' while the T2 result is the T1 stand-in or pending)."""
+    if not _lc_head(t1, t1.table, 'lc-t1'):
         return
-    d = scheme_difference(runs, a, b)
-    L = _length_name(int(runs.recall['length'].max()))
-    last = runs.windows[runs.windows['measure'] == 'nll']['bucket'].iloc[-1]
-    print(f'{tier} ({d["method"]}): {a} - {b}')
-    print(f'  recall at {L}: ' + _interval(
-        d['recall'], d['recall_lo'], d['recall_hi'], 2, sign=True))
-    print(f'  NLL {last} (nats): ' + _interval(
-        d['nll'], d['nll_lo'], d['nll_hi'], 3, sign=True))
+    t = t1.table
+    T, L0 = (_LC_TIERS['t1'][k] for k in ('length', 'trained'))
+    print(pd.DataFrame({
+        'arm': t['arm'],
+        f'val {_length_name(L0)} (Δ)': [
+            '-' if math.isnan(v) else f'{_num(v, 3)} ({_num(d, 3, True)})'
+            for v, d in zip(t['val'], t['Δ val'])],
+        f'NLL {bucket_name(T - L0, T)}': t['NLL last'].map(
+            lambda x: _num(x, 3)),
+        'near': t['near'].map(lambda x: _num(x, 2)),
+        f'far at {_length_name(T)}': t['far'].map(lambda x: _num(x, 2)),
+        'reach': t['reach'].map(_tokens)}).to_string(index=False))
+    r = t1.recall
+    c = r[(r['model'] == 'base') & (r['length'] == L0) & (r['gap_lo'] == 32)
+          & (r['seed'] == -1)]
+    if len(c):
+        print(f'control: the t1 base at {_length_name(L0)}, 32-64 back: '
+              + _interval(c['rate'].iloc[0], c['lo'].iloc[0],
+                          c['hi'].iloc[0], 2))
+    for tier, runs in (('T1', t1), ('T2', t2)):
+        if _lc_tier_of(runs) != tier.lower() or d2l._label_of(runs):
+            print(f'{tier}: pending')
+            continue
+        d = scheme_difference(runs, a, b)
+        print(f'{a} − {b}, {tier} ({len(d["seeds"])} seeds): loss '
+              f'{_interval(*d["loss"], 3, True)}\n  near '
+              f'{_interval(*d["near"], 2, True)}, far '
+              f'{_interval(*d["far"], 2, True)}')
 
 d2l.DATA_HUB['lm-decode-rates-v1'] = (
     d2l.LM_DATA_URL + 'lm-decode-rates-v1.json.gz',

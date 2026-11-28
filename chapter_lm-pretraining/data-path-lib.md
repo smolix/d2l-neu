@@ -138,8 +138,9 @@ PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'smollm3-4', 'smollm3-5',  # smollm3-symbolic joins here (and in
     # _RERUN_ARTIFACT, PRETRAIN_JOBS) if 21.4's full GSM8K rules it in
     # (_SMOLLM3_RUNGS)
-    'lc-t1', 'lc-zeroshot', 'lc-t2-pi', 'lc-t2-yarn', 'lc-t2-prog',
-    'lc-t2-evals',
+    'lc-t1', 'lc-zeroshot', 'lc-reference', 'lc-probe', 'lc-t2-pi',
+    'lc-t2-yarn', 'lc-t2-prog', 'lc-t2-pi-s1', 'lc-t2-pi-s2',
+    'lc-t2-yarn-s1', 'lc-t2-yarn-s2', 'lc-t2-evals',
     'decode-rates')
 
 #@save
@@ -159,9 +160,12 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     'cpt-qwen-B': 'cpt-runs', 'cpt-qwen-C': 'cpt-runs',
     'cpt-qwen-A2': 'cpt-runs', 'cpt-qwen-evals': 'cpt-runs',
     **{f'smollm3-{i}': 'smollm3-trajectory' for i in range(6)},
-    'lc-t1': 'lc-t1', 'lc-zeroshot': 'lc-zeroshot', 'lc-t2-pi': 'lc-evals',
-    'lc-t2-yarn': 'lc-evals', 'lc-t2-prog': 'lc-evals',
-    'lc-t2-evals': 'lc-evals', 'decode-rates': 'decode-rates'}
+    'lc-t1': 'lc-t1', 'lc-zeroshot': 'lc-zeroshot',
+    'lc-reference': 'lc-reference', 'lc-probe': 'lc-probe',
+    **{n: 'lc-evals' for n in ('lc-t2-pi', 'lc-t2-yarn', 'lc-t2-prog',
+                               'lc-t2-pi-s1', 'lc-t2-pi-s2', 'lc-t2-yarn-s1',
+                               'lc-t2-yarn-s2', 'lc-t2-evals')},
+    'decode-rates': 'decode-rates'}
 ```
 
 21.1's committed results (the `DATA_HUB` entries follow the uploads).

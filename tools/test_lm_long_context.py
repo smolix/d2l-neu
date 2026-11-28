@@ -1801,7 +1801,8 @@ class PageCellsTest(unittest.TestCase):
         first build's results, the test books cut to their first 16K
         tokens), no page cell names one, and the library names each only
         in its registration. Run B's 16K weights stay -v1 (seed 0 of the
-        T2 arms, the 'r2-16k-*' presets)."""
+        T2 arms, the 'r2-16k-*' presets). The registrations go once -v2
+        loads (F60 pruning): a key then occurs nowhere, which also passes."""
         old = ('lm-lc-evals-v1', 'lm-lc-t1-v1', 'lm-pg19-test-v1')
         self.assertFalse(set(old) & {v[0] for v in
                                      d2l.PRETRAIN_ARTIFACTS.values()})
@@ -1817,10 +1818,14 @@ class PageCellsTest(unittest.TestCase):
         with open(d2l.__file__) as f:
             lib = f.read()
         for k in old:
-            ext = '.tar' if 'pg19' in k else '.json.gz'
-            self.assertEqual(lib.count(k), 2, k)  # the DATA_HUB entry only
-            self.assertIn(f"d2l.DATA_HUB['{k}'] = (\n    d2l.LM_DATA_URL + "
-                          f"'{k}{ext}',", lib)
+            # the DATA_HUB entry only, or nothing once it is pruned
+            self.assertIn(lib.count(k), (0, 2), k)
+            if k in d2l.DATA_HUB:
+                ext = '.tar' if 'pg19' in k else '.json.gz'
+                self.assertIn(f"d2l.DATA_HUB['{k}'] = (\n    "
+                              f"d2l.LM_DATA_URL + '{k}{ext}',", lib)
+            else:
+                self.assertEqual(lib.count(k), 0, k)
 
 
 class PendingPageTest(unittest.TestCase):

@@ -27490,9 +27490,6 @@ _SMOLLM3_ANSWERS = {  # task: what score_gsm8k is given
                          force=32, batch=dict(completion=32, chat=32,
                                               force=8))}
 
-_SMOLLM3_LIVE = dict(budget=dict(completion=256, chat=4096),
-                     batch=dict(completion=25, chat=25))  # the page's check
-
 _SMOLLM3_RUNGS = {  # conditional regeneration: (task, checkpoints)
     'smollm3-symbolic': ('gsm-symbolic', ('lc64k', 'mid'))}
 
@@ -27914,19 +27911,23 @@ def smollm3_trajectory(names):
               'checkpoint'],
         answers=_smollm3_answer_columns())))
 
-def smollm3_gsm8k(names, n=50):
+def smollm3_gsm8k(names, n=32):
     """GSM8K scored live for SmolLM3 checkpoints names on the first n of
-    the 500 committed items, in both formats (greedy, the committed
-    budgets, no forced answers), one checkpoint loaded at a time: a
-    DataFrame checkpoint, format, item_id, score, cut and the other flags
-    of score_gsm8k (no text)."""
+    the 500 committed items, in both formats, with the committed settings
+    (greedy, budgets and batch sizes; no forced answers), one checkpoint
+    loaded at a time: a DataFrame checkpoint, format, item_id, score, cut
+    and the other flags of score_gsm8k (no text). Greedy decoding in bf16
+    depends on which replies share a batch, so n = 32, the committed
+    batch, gives the committed replies of the first batch on the same GPU
+    type (measured on an RTX 4090: 32 of 32 equal; 25 items in a batch
+    of 25 changed every reply and 5 of the 25 chat scores)."""
     cfg = _SMOLLM3_ANSWERS['gsm8k']
     items = gsm8k_items(cfg['n'], cfg['seed'])[:n]
     tok, out = _smollm3_tokenizer('mid'), []
     for name in names:
         model = _smollm3_load(name)
-        res = score_gsm8k(model, tok, items, budget=_SMOLLM3_LIVE['budget'],
-                          batch_size=_SMOLLM3_LIVE['batch'], force=0,
+        res = score_gsm8k(model, tok, items, budget=cfg['budget'],
+                          batch_size=cfg['batch'], force=0,
                           end_token='<|end_of_text|>')
         out.append(res.drop(columns=_GSM8K_TEXT).assign(
             checkpoint=_SMOLLM3[name][0]))

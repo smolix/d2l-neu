@@ -376,6 +376,12 @@ FULL_CARD_NOTEBOOKS = {
     # visible card (a whole 24 GB card apiece), and are launched by hand with
     # CUDA_VISIBLE_DEVICES set, not through the scheduler.
     "chapter_lm-encoders/rag.ipynb": 1,
+    # 21.4's live cell generates with SmolLM3-3B in bf16 (5.7 GiB of
+    # weights) at the committed batch of 32 with a 4,096-token chat budget:
+    # 16.1 GiB allocated and 20.9 GiB reserved with expandable segments (F27
+    # smoke, 2026-11-28, RTX 4090), above two slots' 15 GiB; the cell takes
+    # about 11 minutes of the run.
+    "chapter_lm-pretraining/continued-pretraining.ipynb": 1,
     # 19.6 reads the recorded answers in a normal build, but times retrieval
     # and reranking for the text, and its regeneration runs
     # (D2L_RERUN=rag-gen-stages, rag-gen-fix) load the same generator.
@@ -454,12 +460,8 @@ HEAVY_GPU_NOTEBOOKS = {
     # in the extension runs) takes a whole card: run it on a card masked for
     # it alone.
     ("pytorch", "chapter_lm-data/tokenizers.ipynb"): 2,
-    # 21.4's live cell generates with SmolLM3-3B in bf16 (5.7 GiB of
-    # weights) at batch 25 with a 4,096-token chat budget: 25 x ~4,400
-    # positions x 72 KiB of KV cache, about 7.5 GiB, so ~13.5-14 GiB in all
-    # (estimate; 8.3 GiB measured at batch 8, F25 smoke). Its cell-8 forward
-    # of Qwen3-0.6B-Base is smaller.
-    ("pytorch", "chapter_lm-pretraining/continued-pretraining.ipynb"): 2,
+    # 21.4 takes a whole card (FULL_CARD_NOTEBOOKS: its live cell reserves
+    # 20.9 GiB).
     # 21.5 runs the reference model at 16K tokens (32 books, 50 recall items
     # through the cached scorer: about 8 GiB).
     ("pytorch", "chapter_lm-pretraining/long-context.ipynb"): 2,

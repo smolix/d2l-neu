@@ -179,6 +179,8 @@ print(f'resumed at step 4,321: next 100 batches '
 assert abs(share - 0.25) < 3 * se and same
 ```
 
+<!-- Placeholder (prose): claim 2: read the two lines at their printed precision (the realized share within three standard errors of 0.25; the resumed stream identical for 100 batches), and say why it matters for the arms: B's replay share is exact at every step, not on average, and a run that stops and resumes reads the batches it would have read. -->
+
 ### Measuring Gain and Forgetting
 
 <!-- Placeholder (prose): the two numbers per arm: domain gain = base loss minus arm loss on the domain validation set, forgetting = arm loss minus base loss on the general set, both in nats per token. Each is a ratio (summed NLL over scored tokens), and tokens within a document are correlated, so the interval resamples whole documents; base and arms share each set's resamples, which makes the differences paired. -->
@@ -526,11 +528,13 @@ if len(show):  # empty while the trajectory is pending
 
 <!-- Placeholder (prose): claim 10g. Base checkpoints are calibrated on general text: entropy about equal to loss, best temperature 1 (quote LC 64K's rows; the plot shows all five base checkpoints on the diagonal). After the reasoning stage the model is overconfident on general text: entropy well below the loss (0.7-1.4 nats in the investigation), best temperature 1.25-1.5, which recovers about a third of the rise; the rest is lost ranking (top-1 accuracy lower), which no temperature repairs. On the traces (seen) the prediction is a low loss with entropy matching it: the model learned the confidence that is right for the text it trained on, far more predictable than web text, and carries it to text where it is wrong. If mid-training is overconfident on the traces too, the cause stated is repetition (four epochs), not the domain. The traces are seen documents: "calibrated on its training text", not "on new traces". The diagnostic transfers to any fine-tuned model: entropy against loss and the best temperature tell a confidence problem that one scalar repairs from a loss of knowledge. -->
 
-<!-- Placeholder (prose): two checkpoints re-scored live: LC 64K and mid-training on the first 50 of the 500 GSM8K items in both formats (greedy, the same budgets, no forced answers), against the committed accuracies, on the same 50 items and on all 500. With 50 items the live interval (Wilson, 95%) is wide, about ±14 points, so the 500-item check almost cannot fail; the same-items column is the reproduction check (equal up to bf16 batch effects). If the normal run is over 15 minutes, the cell drops to 25 items or to mid-training only, and says so. -->
+<!-- Placeholder (prose): two checkpoints re-scored live: LC 64K and mid-training on the first 32 of the 500 GSM8K items in both formats (greedy, the committed budgets and batch sizes, no forced answers), against the committed accuracies, on the same 32 items and on all 500. Why 32 in one batch (the cell's comment): greedy decoding in bf16 is not batch-invariant, because the kernels' reduction order depends on the batch shape, and over thousands of generated tokens one changed argmax changes the rest of the reply. The committed run batched 32 replies, so the live cell batches the same 32: on the same GPU type it reproduces them token for token (measured on mid-training: 32 of 32 replies equal), whereas 25 items in a batch of 25 changed every reply and moved 5 of the 25 chat scores. One chat batch takes about 5 minutes (mid-training's replies often run to the 4,096-token budget), so two batches per checkpoint would take the normal run past 15 minutes. With 32 items the live interval (Wilson, 95%) is wide, about ±17 points, so the 500-item check almost cannot fail; the same-items column is the reproduction check. -->
 
 ```{.python .input #continued-pretraining-smollm3-live}
 %%tab pytorch
-live = d2l.smollm3_gsm8k(['lc64k', 'mid'], n=50)
+# 32 items in one batch, as the committed run batched them (greedy decoding
+# in bf16 depends on the batch); two batches would take over 15 minutes
+live = d2l.smollm3_gsm8k(['lc64k', 'mid'], n=32)
 gsm = traj.answers[traj.answers['task'] == 'gsm8k']
 mean = lambda d: d.groupby(['checkpoint', 'format'])['score'].mean()
 same = mean(gsm[gsm['item_id'].isin(set(live['item_id']))])
@@ -546,7 +550,7 @@ for (name, fmt), g in live.groupby(['checkpoint', 'format'], sort=False):
     print(f'{name:<14}{label:<8}{now:<24}{then[0]:<23}{then[1]}')
 ```
 
-<!-- Placeholder (prose): claim 11: the live score equals the committed score on the same 50 items up to a few items, and each 500-item value lies inside its live interval (or report the difference and its cause: greedy decoding in bf16 is not batch-invariant, and the live run batches 25 replies where the committed one batched 32). Hand-off: the long-context stages are what sec_lm_long_context trains; SmolLM3's authors report that the reasoning stage cost long-context recall on RULER and merged the released model 0.9/0.1 with a mid-training checkpoint to recover it (one sentence, cited). -->
+<!-- Placeholder (prose): claim 11: the live score equals the committed score on the same 32 items exactly (the same batch on the same GPU type; on another GPU the replies may differ, which is the batch-invariance point above), and each 500-item value lies inside its live interval (else report the difference and its cause). Hand-off: the long-context stages are what sec_lm_long_context trains; SmolLM3's authors report that the reasoning stage cost long-context recall on RULER and merged the released model 0.9/0.1 with a mid-training checkpoint to recover it (one sentence, cited). -->
 
 ## Summary
 

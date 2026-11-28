@@ -52,8 +52,9 @@ per-ending counts and the build's targets added) replaced the peS2o one (`lm-cpt
 `lm-pes2o-12m-v1`, `lm-pes2o-val-v1`, uploaded 2026-11-25), which no page
 reads any more (the builder's check compares the rebuilt replay and general
 validation shards with manifest-v1's layout hashes); the keys stay until
-the section's close-out, which removes them for the pruning tool. `lm-fwedu-replay-12m-v1` serves both, and
-21.5's T1 replay.
+the trace-corpus results (`lm-cpt-runs-v2`, `lm-cpt-t1-v2`) are
+registered, then their registrations go and the pruning tool lists them.
+`lm-fwedu-replay-12m-v1` serves both, and 21.5's T1 replay.
 
 ```{.python .input #continued-pretraining-lib-hub}
 %%tab pytorch
@@ -95,8 +96,9 @@ computed yet as pending (with the T1 arms as the stand-in for the Qwen
 arms) instead of failing. The arms' results on the trace corpus are
 `lm-cpt-runs-v2` and `lm-cpt-t1-v2` (their stored configurations name the
 data they trained on, so a result from another corpus is refused); the
-peS2o runs `lm-cpt-runs-v1` and `lm-cpt-t1-v1` stay registered until the
-section's close-out, but no page reads them. The SmolLM3 trajectory is
+peS2o runs `lm-cpt-runs-v1` and `lm-cpt-t1-v1` stay registered until
+version 2 is, but no page reads them (a test checks that no artifact name
+points at a replaced key). The SmolLM3 trajectory is
 `lm-smollm3-trajectory-v2` (bits per byte with no prefix token, the
 trace domain, calibration, GSM8K); `lm-smollm3-trajectory-v1` stays
 registered because version 2 copies its per-item cloze scores.
@@ -1790,7 +1792,14 @@ the artifact) for LC 64K and mid-training, read by `symbolic_check`
 `cloze_task_deltas` gives the per-task cloze changes the page shows
 only as thin lines. `smollm3_gsm8k` is the page's live check: two
 checkpoints on the first n of the 500 items, both formats, no forced
-answers.
+answers, the committed batch sizes. The page takes n = 32, one batch per
+checkpoint and format, exactly the committed run's first batch: greedy
+decoding in bf16 depends on which replies share a batch (measured in the
+fix pass on mid-training: the first 32 items at batch 32 gave the
+committed replies, 32 of 32; the first 25 at batch 25 changed every reply
+and 5 of the 25 chat scores), and one chat batch runs about 5 minutes
+because mid-training's replies run to the 4,096-token budget, so two
+batches per checkpoint would take the normal run past 15 minutes.
 
 ```{.python .input #continued-pretraining-lib-smollm3}
 %%tab pytorch
@@ -1828,10 +1837,6 @@ _SMOLLM3_ANSWERS = {  # task: what score_gsm8k is given
                                                   chat=4096),
                          force=32, batch=dict(completion=32, chat=32,
                                               force=8))}
-
-#@save
-_SMOLLM3_LIVE = dict(budget=dict(completion=256, chat=4096),
-                     batch=dict(completion=25, chat=25))  # the page's check
 
 #@save
 _SMOLLM3_RUNGS = {  # conditional regeneration: (task, checkpoints)
@@ -2257,19 +2262,23 @@ def smollm3_trajectory(names):
               'checkpoint'],
         answers=_smollm3_answer_columns())))
 
-def smollm3_gsm8k(names, n=50):
+def smollm3_gsm8k(names, n=32):
     """GSM8K scored live for SmolLM3 checkpoints names on the first n of
-    the 500 committed items, in both formats (greedy, the committed
-    budgets, no forced answers), one checkpoint loaded at a time: a
-    DataFrame checkpoint, format, item_id, score, cut and the other flags
-    of score_gsm8k (no text)."""
+    the 500 committed items, in both formats, with the committed settings
+    (greedy, budgets and batch sizes; no forced answers), one checkpoint
+    loaded at a time: a DataFrame checkpoint, format, item_id, score, cut
+    and the other flags of score_gsm8k (no text). Greedy decoding in bf16
+    depends on which replies share a batch, so n = 32, the committed
+    batch, gives the committed replies of the first batch on the same GPU
+    type (measured on an RTX 4090: 32 of 32 equal; 25 items in a batch
+    of 25 changed every reply and 5 of the 25 chat scores)."""
     cfg = _SMOLLM3_ANSWERS['gsm8k']
     items = gsm8k_items(cfg['n'], cfg['seed'])[:n]
     tok, out = _smollm3_tokenizer('mid'), []
     for name in names:
         model = _smollm3_load(name)
-        res = score_gsm8k(model, tok, items, budget=_SMOLLM3_LIVE['budget'],
-                          batch_size=_SMOLLM3_LIVE['batch'], force=0,
+        res = score_gsm8k(model, tok, items, budget=cfg['budget'],
+                          batch_size=cfg['batch'], force=0,
                           end_token='<|end_of_text|>')
         out.append(res.drop(columns=_GSM8K_TEXT).assign(
             checkpoint=_SMOLLM3[name][0]))

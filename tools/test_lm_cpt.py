@@ -1259,10 +1259,10 @@ class SmolLM3Test(unittest.TestCase):
         traj = d2l._smollm3_merge(smollm3_points(n_items=4, n_docs=2),
                                   list(d2l._smollm3_call()['names']))
         live = pd.DataFrame([dict(checkpoint=c, format=f, item_id=str(j),
-                                  score=float(j < 20))
+                                  score=float(j < 16))
                              for c in ('LC 64K', 'mid-training')
                              for f in ('completion', 'chat')
-                             for j in range(50)])
+                             for j in range(32)])
         with mock.patch.object(d2l, 'smollm3_gsm8k',
                                lambda names, n: live):
             lines = run_cell('continued-pretraining-smollm3-live',
@@ -1270,13 +1270,13 @@ class SmolLM3Test(unittest.TestCase):
         self.assertEqual(len(lines), 5)
         self.assertLessEqual(max(map(len, lines)), 80)
         self.assertEqual(lines[0].split()[:6], ['checkpoint', 'format',
-                                                'live', '(n', '=', '50)'])
+                                                'live', '(n', '=', '32)'])
         self.assertTrue(lines[0].endswith('committed: same items  all items'))
-        # committed: 100% on the first 50 items (j < 250), 50% on all 500
+        # committed: 100% on the first 32 items (j < 250), 50% on all 500
         self.assertEqual(lines[1].split()[-2:], ['100%', '50%'])
         self.assertIn('8-shot', lines[1])
         self.assertRegex(lines[2],
-                         r'^LC 64K +chat +40% \[\d\d, \d\d\] +100% +50%$')
+                         r'^LC 64K +chat +50% \[\d\d, \d\d\] +100% +50%$')
         self.assertEqual(lines[0].index('committed'),
                          lines[2].index('100%'))
 
@@ -1423,13 +1423,25 @@ class SmolLM3Test(unittest.TestCase):
                 mock.patch.object(d2l, '_smollm3_tokenizer', lambda n: n), \
                 mock.patch.object(d2l, 'lm_free', lambda: None):
             res = d2l.smollm3_gsm8k(['lc64k', 'mid'], n=50)
+            calls_50, calls[:] = list(calls), []
+            d2l.smollm3_gsm8k(['mid'])  # the default: the page's 32 items
+        self.assertEqual(calls[0][1], items[:32])
+        self.assertIn("smollm3_gsm8k(['lc64k', 'mid'], n=32)",
+                      page_cells()['continued-pretraining-smollm3-live'])
+        calls = calls_50
         self.assertEqual([c[0] for c in calls], ['lc64k', 'mid'])
         self.assertEqual(calls[0][1], items[:50])
         kw = calls[0][2]
         self.assertEqual((kw['force'], kw['end_token'], kw['budget']),
                          (0, '<|end_of_text|>', dict(completion=256,
                                                      chat=4096)))
-        self.assertEqual(kw['batch_size'], d2l._SMOLLM3_LIVE['batch'])
+        # the committed batch sizes: the first 32 items share one batch, as
+        # in the regeneration, so greedy bf16 gives the committed replies
+        cfg = d2l._SMOLLM3_ANSWERS['gsm8k']
+        self.assertEqual(kw['batch_size'], cfg['batch'])
+        self.assertEqual(kw['budget'], cfg['budget'])
+        self.assertEqual(cfg['batch']['chat'], 32)
+        self.assertFalse(hasattr(d2l, '_SMOLLM3_LIVE'))
         self.assertEqual(list(res.columns)[:2], ['checkpoint', 'format'])
         self.assertNotIn('text', res.columns)
         self.assertEqual(set(res['checkpoint']), {'LC 64K', 'mid-training'})
@@ -2070,6 +2082,40 @@ class PageCellsTest(unittest.TestCase):
         self.assertEqual([r.split()[-2:] for r in out[11:]],
                          [['0.300', '3'], ['0.000', '3'], ['0.000', '3']])
         self.assertLessEqual(max(map(len, out)), 80)
+
+    def test_no_replaced_key_read(self):
+        """F27: no artifact name points at a key version 2 or 3 replaced
+        (the peS2o corpus and its results, SmolLM3's v1), and the page
+        names none; v1's cloze scores are read only by the SmolLM3
+        regeneration (_smollm3_point), never on the page's path."""
+        old = {'lm-cpt-qwen-manifest-v1', 'lm-cpt-qwen-manifest-v2',
+               'lm-pes2o-12m-v1', 'lm-pes2o-val-v1', 'lm-cpt-runs-v1',
+               'lm-cpt-t1-v1', 'lm-smollm3-trajectory-v1'}
+        keys = {v[0] for v in d2l.PRETRAIN_ARTIFACTS.values()}
+        self.assertFalse(old & keys)
+        for name, new in (('cpt-runs', 'lm-cpt-runs-v2'),
+                          ('cpt-t1', 'lm-cpt-t1-v2'),
+                          ('cpt-qwen-manifest', 'lm-cpt-qwen-manifest-v3'),
+                          ('smollm3-trajectory',
+                           'lm-smollm3-trajectory-v2')):
+            self.assertEqual(d2l.PRETRAIN_ARTIFACTS[name][0], new)
+        with open(PAGE) as f:
+            src = f.read()
+        code = ''.join(page_cells().values())
+        self.assertFalse([k for k in old if k in code])
+        self.assertNotIn('pes2o', code.lower())
+        self.assertNotIn('_smollm3_cloze', src)
+        import ast
+        import inspect
+        with open(inspect.getsourcefile(d2l)) as f:
+            tree = ast.parse(f.read())
+        callers = sorted({f.name for f in ast.walk(tree)
+                          if isinstance(f, ast.FunctionDef)
+                          and f.name != '_smollm3_cloze'
+                          for c in ast.walk(f) if isinstance(c, ast.Call)
+                          and getattr(c.func, 'id', getattr(
+                              c.func, 'attr', None)) == '_smollm3_cloze'})
+        self.assertEqual(callers, ['_smollm3_point'])
 
 
 class JobsTest(unittest.TestCase):

@@ -426,7 +426,7 @@ d2l.show_lc_short(lc)
 
 ### Seeds at Small Scale
 
-<!-- Placeholder (prose): three seeds at T2 bound a scheme difference only loosely; the T1 configuration repeats the comparison on the t1 checkpoint (trained at 1K) extended to 4K with five seeds of the data order (16M tokens per arm). The control line is the t1 base's recall 32-64 back inside its trained window. Then the scheme difference YaRN minus PI per seed with a t interval over the seeds, at T1 (five) and at T2 (three): the loss in the last bucket, near and far recall. A direction is claimed only where an interval excludes zero. -->
+<!-- Placeholder (prose): three seeds at T2 bound a scheme difference only loosely; the T1 configuration repeats the comparison on the t1 checkpoint (trained at 1K) extended to 4K with five seeds of the data order (16M tokens per arm). Each arm's row is the mean over the seeds named beside it. The last column is recall 32-64 back at 1K: the base's row is the control (the base copies inside its trained window), the arms' rows show what extension to 4K left of that short-range copying (claim 9 at T1, beside the val-loss change in the second column). Then the scheme difference YaRN minus PI per seed with a t interval over the seeds, at T1 (five) and at T2 (three): the loss in the last bucket, near and far recall. A direction is claimed only where an interval excludes zero. -->
 
 ```{.python .input #long-context-t1}
 %%tab pytorch

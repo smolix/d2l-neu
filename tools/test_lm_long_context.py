@@ -972,6 +972,42 @@ class ConfigTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'warmup'):
                 d2l._lc_check_recipe(cfgs['PI', 1])
 
+    def test_t1_recipe(self):
+        """The new T1 seeds 3-4 must have the recipe of the first build's
+        seed 0 (its arm.json): a seed-3 arm against a seed 0 recorded with
+        another warmup is refused, and _lc_arm_run makes the check for a
+        T1 seed > 0 before it trains (it does not for seed 0)."""
+        cfgs = d2l._lc_configs(**d2l._lc_t1_call())
+        with mock.patch.object(d2l, '_lc_base_path', lambda b: __file__), \
+                tempfile.TemporaryDirectory() as root, \
+                mock.patch.object(d2l, '_job_root', lambda: root):
+            job = d2l._lc_job(cfgs['YaRN', 0])
+            os.makedirs(job)
+            with open(os.path.join(job, 'arm.json'), 'w') as f:
+                json.dump(d2l._lc_identity(cfgs['YaRN', 0]), f)
+            for seed in (3, 4):
+                d2l._lc_check_recipe(cfgs['YaRN', seed])
+            with open(os.path.join(job, 'arm.json'), 'w') as f:
+                json.dump(d2l._lc_identity(dict(cfgs['YaRN', 0],
+                                                warmup=10)), f)
+            with self.assertRaisesRegex(ValueError, 'seed 3 differs .*warmup'):
+                d2l._lc_check_recipe(cfgs['YaRN', 3])
+
+            class Checked(Exception):
+                pass
+
+            def check(cfg):
+                raise Checked(cfg['seed'])
+            with mock.patch.object(d2l, '_lc_check_recipe', check), \
+                    mock.patch.object(d2l, '_lc_check_disk',
+                                      lambda cfg: (_ for _ in ()).throw(
+                                          OSError('no training here'))):
+                with self.assertRaises(Checked):
+                    d2l._lc_arm_run(cfgs['PI', 3])
+                with self.assertRaisesRegex(OSError, 'no training here'):
+                    d2l._lc_arm_run(cfgs['PI', 0])
+            self.assertFalse(os.path.exists(d2l._lc_job(cfgs['PI', 3])))
+
     def test_set_scheme(self):
         m = toy_model()
         d2l._lc_set_scheme(m, 'yarn', 4, 64)
@@ -1175,6 +1211,26 @@ class EvalIsolationTest(ArmsBase):
             self.assertTrue(torch.equal(a, b), k)
 
 
+class PairingTest(ArmsBase):
+    """Claim 5 pairs YaRN with PI by seed: the seed fixes the data order,
+    which the scheme does not touch."""
+    def test_same_data_order(self):
+        with tempfile.TemporaryDirectory() as root, self.campaign(root):
+            cfgs = d2l._lc_configs(ARMS, 't1', **CALL)
+
+            def batches(cfg):
+                stream = d2l._lc_stream(self.shards, cfg)
+                return [stream.batch(k) for k in range(cfg['steps'])]
+            pi, yarn, prog = (batches(cfgs[k]) for k in (
+                ('PI', 0), ('YaRN', 0), ('YaRN-prog', 0)))
+            other = batches(cfgs['YaRN', 1])
+        for a, b, c, d in zip(pi, yarn, prog, other):
+            for k in ('input_ids', 'doc_ids', 'pos_ids'):
+                self.assertTrue(torch.equal(a[k], b[k]), k)
+            self.assertTrue(torch.equal(a['input_ids'], c['input_ids']))
+            self.assertFalse(torch.equal(a['input_ids'], d['input_ids']))
+
+
 class ArmsEndToEndTest(ArmsBase):
     def test_t1_campaign(self):
         """A toy T1 campaign through lc_arms with D2L_RERUN=lc-t1, and the
@@ -1218,6 +1274,11 @@ class ArmsEndToEndTest(ArmsBase):
                                                          'full'})
         d = d2l.scheme_difference(runs, 'YaRN', 'PI')
         self.assertEqual(d['seeds'], [0, 1])
+        n = runs.needles
+        unpaired = runs._replace(needles=n[~((n['model'] == 'YaRN')
+                                             & (n['seed'] == 1))])
+        with self.assertRaisesRegex(ValueError, 'pairs the arms by seed'):
+            d2l.scheme_difference(unpaired, 'YaRN', 'PI')
         label = '[T2 run pending; showing the T1 configuration]'
         for cell, out in shown.items():
             if cell != 'seeds':
@@ -1242,10 +1303,19 @@ class ArmsEndToEndTest(ArmsBase):
         self.assertIn('YaRN-prog (1 seed)', shown['arms'])
         lines = check_display(self, shown['seeds'])
         self.assertEqual(lines[0].split()[0], 'arm')
-        self.assertTrue(lines[5].startswith('control: the t1 base at 512'))
-        self.assertTrue(lines[6].startswith('YaRN − PI, T1 (2 seeds): loss '))
-        self.assertTrue(lines[7].startswith('  near '))
-        self.assertEqual(lines[8:], ['T2: pending'])
+        self.assertTrue(lines[0].endswith('32-64 at 512'), lines[0])
+        self.assertEqual([x.split(' (')[0].split()[0] for x in lines[1:5]],
+                         ['PI', 'YaRN', 'YaRN-prog', 'base'])
+        self.assertIn('PI (2 seeds)', lines[1])
+        self.assertIn('YaRN-prog (1 seed)', lines[3])
+        r = runs.recall
+        c = r[(r['model'] == 'base') & (r['length'] == 512)
+              & (r['gap_lo'] == 32) & (r['seed'] == -1)].iloc[0]
+        self.assertTrue(lines[4].endswith(d2l._pm(c['rate'], c['lo'],
+                                                  c['hi'], 2)), lines[4])
+        self.assertTrue(lines[5].startswith('YaRN − PI, T1 (2 seeds): loss '))
+        self.assertTrue(lines[6].startswith('  near '))
+        self.assertEqual(lines[7:], ['T2: pending'])
 
     def displays(self, runs):
         """The page's displays of T2 results on runs as the T1 stand-in."""

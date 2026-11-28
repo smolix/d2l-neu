@@ -1747,9 +1747,11 @@ def _lc_identity(cfg):
                 base=[cfg['base'], d2l._file_id(_lc_base_path(cfg['base']))])
 
 def _lc_check_recipe(cfg):
-    """Refuse a T2 arm of seed > 0 whose configuration differs from its
+    """Refuse an arm of seed > 0 whose configuration differs from its
     seed-0 arm (the finished folder's record, else the configuration seed 0
-    would have) in anything but the seed and the evaluation flag."""
+    would have) in anything but the seed and the evaluation flag: the new
+    T2 seeds 1-2 and T1 seeds 3-4 train with the recipe of the first
+    build's seeds."""
     zero = dict(cfg, seed=0)
     path = os.path.join(_lc_job(zero), 'arm.json')
     ref = _lc_identity(zero)
@@ -1884,7 +1886,7 @@ def _lc_arm_run(cfg):
     done = os.path.join(job, 'DONE')
     if not d2l._cpt_check_job(job, ident):
         d2l._cpt_check_job(job, ident, 'arm.json')  # resume the same arm
-        if cfg['tier'] == 't2' and cfg['seed']:
+        if cfg['seed']:
             _lc_check_recipe(cfg)
         _lc_check_disk(cfg)
         os.makedirs(job, exist_ok=True)
@@ -2341,13 +2343,17 @@ def scheme_difference(runs, a='YaRN', b='PI'):
     the loss in the last position bucket, near recall (32, 512] and far
     recall (beyond the trained length) at the arms' length: a dict of
     (mean, lo, hi) per measure (a t interval over the seeds; nan below two
-    seeds) and the seeds."""
+    seeds) and the seeds. Each difference pairs the two arms of one seed,
+    so both arms must have the same seeds."""
     w, n = runs.windows, runs.needles
     L0 = int(n['length'].min())
     T = int(n['length'].max())
     last = bucket_name(T - L0, T)
-    seeds = sorted(set(n[n['model'] == a]['seed'])
-                   & set(n[n['model'] == b]['seed']))
+    seeds = [sorted(set(n[n['model'] == m]['seed'])) for m in (a, b)]
+    if seeds[0] != seeds[1]:
+        raise ValueError(f'{a} has seeds {seeds[0]}, {b} {seeds[1]}: the '
+                         'difference pairs the arms by seed')
+    seeds = seeds[0]
     wl = w[(w['measure'] == 'nll') & (w['bucket'] == last)].groupby(
         ['model', 'seed'])[['sum', 'n']].sum()
     nll = wl['sum'] / wl['n']
@@ -2727,16 +2733,27 @@ def show_lc_short(runs):
         index=False))
 
 def show_lc_seeds(t1, t2, a='YaRN', b='PI'):
-    """The T1 table (as show_lc_table, without the context column), the
-    T1 base's control (recall in (32, 64] at its trained length), then a
-    minus b with a t interval over the seeds at T1 and at T2 ('T2:
-    pending' while the T2 result is the T1 stand-in or pending)."""
+    """The T1 table (as show_lc_table, without the context column; the
+    number of seeds by each arm) with one more column, recall 32-64 back
+    at the base's trained length (the base's row is its control, the arms'
+    rows what extension left of it), then a minus b with a t interval over
+    the seeds at T1 and at T2 ('T2: pending' while the T2 result is the T1
+    stand-in or pending)."""
     if not _lc_head(t1, t1.table, 'lc-t1'):
         return
-    t = t1.table
+    t, r = t1.table, t1.recall
     T, L0 = (_LC_TIERS['t1'][k] for k in ('length', 'trained'))
+    seeds = t1.needles.groupby('model')['seed'].nunique()
+    name = lambda m: (f'{m} ({seeds[m]} seed{"s" if seeds[m] > 1 else ""})'
+                      if m in seeds.index and m != 'base' else m)
+
+    def short(m):  # recall 32-64 back at L0, seeds pooled per query
+        c = r[(r['model'] == m) & (r['length'] == L0) & (r['gap_lo'] == 32)
+              & (r['seed'] == -1)]
+        return (_pm(*c[['rate', 'lo', 'hi']].iloc[0], 2) if len(c)
+                else '-')
     print(pd.DataFrame({
-        'arm': t['arm'],
+        'arm': t['arm'].map(name),
         f'val {_length_name(L0)} (Δ)': [
             '-' if math.isnan(v) else f'{_num(v, 3)} ({_num(d, 3, True)})'
             for v, d in zip(t['val'], t['Δ val'])],
@@ -2744,14 +2761,9 @@ def show_lc_seeds(t1, t2, a='YaRN', b='PI'):
             lambda x: _num(x, 3)),
         'near': t['near'].map(lambda x: _num(x, 2)),
         f'far at {_length_name(T)}': t['far'].map(lambda x: _num(x, 2)),
-        'reach': t['reach'].map(_tokens)}).to_string(index=False))
-    r = t1.recall
-    c = r[(r['model'] == 'base') & (r['length'] == L0) & (r['gap_lo'] == 32)
-          & (r['seed'] == -1)]
-    if len(c):
-        print(f'control: the t1 base at {_length_name(L0)}, 32-64 back: '
-              + _interval(c['rate'].iloc[0], c['lo'].iloc[0],
-                          c['hi'].iloc[0], 2))
+        'reach': t['reach'].map(_tokens),
+        f'32-64 at {_length_name(L0)}': t['arm'].map(short)}).to_string(
+        index=False))
     for tier, runs in (('T1', t1), ('T2', t2)):
         if _lc_tier_of(runs) != tier.lower() or d2l._label_of(runs):
             print(f'{tier}: pending')

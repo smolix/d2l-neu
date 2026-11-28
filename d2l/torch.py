@@ -29412,13 +29412,40 @@ _LC_PROBE_COLUMNS = {
     'format_items': ['model', 'format', 'item', 'correct'],
     'reach_queries': ['model', 'step', 'tokens'] + _LC_QUERY_COLUMNS}
 
-def _lc_probe_compute(t1_steps, r2_steps):
-    """LcProbe: the format table and reach during pretraining.
+_LC_PROBE_FINAL = {'t1': 1526, 'r2': 6000}  # the format table's checkpoints
+
+def _lc_probe_keys(t1_steps, r2_steps):
+    """{key: sha1} of every checkpoint lc_probe_runs reads, in the order
+    it reads them: the registered keys of the t1 and r2 runs (the final
+    ones of the format table first); KeyError for a key not registered.
 
     Defined in :numref:`sec_lm_long_context`"""
+    keys = [d2l._reference_key(p, s) for p, steps in (
+        ('t1', (_LC_PROBE_FINAL['t1'], *t1_steps)),
+        ('r2', (_LC_PROBE_FINAL['r2'], *r2_steps))) for s in steps]
+    missing = [k for k in keys if k not in d2l.DATA_HUB]
+    if missing:
+        raise KeyError(f'not registered: {", ".join(missing)}')
+    return {k: d2l.DATA_HUB[k][1] for k in dict.fromkeys(keys)}
+
+def _lc_probe_model(preset, step, device):
+    """The checkpoint of run preset at step from its registered key
+    (downloaded and sha1-checked on first use), in bf16 on device; never a
+    job folder or a local next version (load_reference_model reads those
+    during some regenerations)."""
+    key = d2l._reference_key(preset, step)
+    if key not in d2l.DATA_HUB:
+        raise KeyError(f'{key} is not registered')
+    with d2l._quiet():
+        path = d2l.download_keyed(key)
+    return d2l._load_bf16(path, torch.bfloat16, device)
+
+def _lc_probe_compute(t1_steps, r2_steps):
+    """LcProbe: the format table and reach during pretraining."""
     f, dev, tok = _LC_PROBE, _lc_device(), lc_tokenizer()
-    load = lambda preset: lambda: (d2l.load_reference_model(
-        preset=preset, device=dev), tok)
+    _lc_probe_keys(t1_steps, r2_steps)  # every key registered, before work
+    load = lambda preset: lambda: (_lc_probe_model(
+        preset, _LC_PROBE_FINAL[preset], dev), tok)
     models = [('oracle', lambda: (None, tok)), ('t1', load('t1')),
               ('r2', load('r2')), (_LC_REFERENCE.split('/')[-1],
                                    lambda: _lc_load_reference(_LC_REFERENCE))]
@@ -29431,6 +29458,9 @@ def _lc_probe_compute(t1_steps, r2_steps):
                 pred = (_format_oracle(it) if model is None else int(
                     np.argmax(_choice_ll(model, it['ctx'], it['conts']))))
                 rows.append((name, fmt, i, pred == it['gold']))
+        if model is None:  # the control: the items are solvable by copying
+            bad = [r for r in rows if r[0] == name and not r[3]]
+            assert not bad, f'oracle copier misses {len(bad)} format items'
         del model
         d2l.lm_free()
     items = pd.DataFrame(rows, columns=_LC_PROBE_COLUMNS['format_items'])
@@ -29444,7 +29474,7 @@ def _lc_probe_compute(t1_steps, r2_steps):
         L = c.arch.T
         needles = needle_windows(tok, L, f['windows'])
         for step in steps:
-            model = d2l.load_reference_model(step, preset=preset, device=dev)
+            model = _lc_probe_model(preset, step, dev)
             q = needle_recall(model, needles).assign(
                 model=preset, step=step, tokens=step * c.global_batch * L)
             queries.append(q)
@@ -29463,10 +29493,13 @@ def lc_probe_runs(t1_steps, r2_steps):
     for the oracle copier, t1, r2 and Qwen3-0.6B-Base) and recall by gap
     at the trained length for the checkpoints of t1 (at 1K) and r2 (at 4K)
     at the steps given, 500 windows each: LcProbe(format, reach_train,
-    format_items, reach_queries, label). Regeneration lc-probe; otherwise
-    the committed lm-lc-probe-v1; pending while that is."""
+    format_items, reach_queries, label). Regeneration lc-probe (the
+    checkpoints from their registered keys only); otherwise the committed
+    lm-lc-probe-v1, whose stored configuration names the same keys and
+    sha1; pending while that is."""
     config = dict(t1_steps=t1_steps, r2_steps=r2_steps, probe=_LC_PROBE,
-                  reference=[_LC_REFERENCE, d2l.HF_REVISIONS[_LC_REFERENCE]])
+                  reference=[_LC_REFERENCE, d2l.HF_REVISIONS[_LC_REFERENCE]],
+                  checkpoints=_lc_probe_keys(t1_steps, r2_steps))
     res = d2l._pretrain_result('lc-probe', lambda: _lc_probe_compute(
         t1_steps, r2_steps), config)
     return d2l._as_tuple(LcProbe, res, _LC_PROBE_COLUMNS)
@@ -30153,21 +30186,32 @@ def plot_lc_recall(runs):
                    fontsize='small')
 
 def plot_reach_train(probe):
-    """Recall against gap at the trained length, one line per checkpoint,
-    a panel per run (t1 at 1K, r2 at 4K)."""
-    fig, axes = d2l.plt.subplots(1, 2, figsize=(8, 2.8), sharey=True)
-    for ax, (m, x) in zip(axes, probe.reach_train.groupby('model',
-                                                          sort=False)):
-        for i, (step, b) in enumerate(x.groupby('step')):
-            g = np.sqrt(b['gap_lo'] * b['gap_hi'])
-            ax.plot(g, b['rate'], '-o', ms=3, color=d2l.plt.cm.viridis(
-                i / max(1, x['step'].nunique() - 1)), label=f'step {step}')
-        _lc_rules(ax)
+    """Recall against gap (log axis, each octave bin at its geometric
+    middle) at the trained length, one line per checkpoint from light
+    (early) to dark (late), a panel per run (t1 at 1K, r2 at 4K), each
+    with its legend beside it; chance dashed, the reach thresholds 0.5 and
+    0.25 dotted."""
+    runs = list(probe.reach_train.groupby('model', sort=False))
+    fig, axes = d2l.plt.subplots(1, len(runs), figsize=(4.5 * len(runs), 2.8),
+                                 sharey=True, squeeze=False,
+                                 layout='constrained')
+    for ax, (m, x) in zip(axes[0], runs):
+        by = [(step, b.sort_values('gap_lo')) for step, b in x.groupby('step')]
+        g = [np.sqrt(b['gap_lo'] * b['gap_hi']).to_numpy() for _, b in by]
+        names = [f'step {step:,}' for step, _ in by]
+        d2l.plot(g, [b['rate'].to_numpy() for _, b in by],
+                 'gap (tokens back)', 'recall' if ax is axes[0, 0] else '',
+                 ylim=(0, 1.02), xscale='log', fmts=['-o'] * len(by),
+                 figsize=(4.5 * len(runs), 2.8), axes=ax)
+        for i, line in enumerate(ax.get_lines()):
+            line.set_color(d2l.plt.cm.viridis_r(0.15 + 0.75 * i / max(
+                1, len(by) - 1)))
+            line.set_markersize(3)
+        ax.legend(names, fontsize='x-small', loc='center left',
+                  bbox_to_anchor=(1, 0.5))  # beside the curves, recoloured
         ax.set_xscale('log', base=2)
-        ax.set_xlabel('gap (tokens back)')
+        _lc_rules(ax)
         ax.set_title(f'{m} at {_length_name(int(x["gap_hi"].max()))}')
-        ax.legend(fontsize='x-small')
-    axes[0].set_ylabel('recall')
 
 def plot_lc_gain(gain):
     """Long-context gain against the gap bucket with 95% intervals."""

@@ -17,7 +17,11 @@ cache slots equal to full forwards on a tiny model (fp32 1e-5, also under
 YaRN scaling), `reach` on synthetic Wilson tables (first bin failing: 0;
 all passing: the top edge; a failing middle bin; strict 0.25), the octave
 bins partition the queries (edges inclusive above), the format items
-(oracle 100%, the cached candidate scorer against full forwards). The
+(oracle 100%, the cached candidate scorer against full forwards); the
+lc-probe computation (checkpoints from their registered keys only, never a
+job folder or a local next version; the keys and sha1 in the stored
+configuration; an oracle miss stops it; the stored layout on toys) and the
+reach-train plot (one recoloured line per checkpoint, legend beside). The
 loss measurements (`nll_by_position` buckets average to the total;
 `long_context_gain` on a synthetic repeat; `sliding_nlls` against an
 explicit short context; `context_nlls` against `sliding_nlls` on the whole
@@ -585,6 +589,14 @@ class ProbeDisplayTest(unittest.TestCase):
         probe = probe_result()
         with contextlib.redirect_stdout(io.StringIO()) as buf:
             d2l.show_reach_train(probe)
+        ax, = d2l.plt.gcf().axes  # one run, one panel
+        curves = [l for l in ax.get_lines() if len(l.get_xdata()) > 2]
+        self.assertEqual(len(curves), 4)  # one line per checkpoint
+        self.assertEqual(len({l.get_color() for l in curves}), 4)
+        self.assertEqual([t.get_text() for t in ax.get_legend().get_texts()],
+                         ['step 500', 'step 1,000', 'step 2,000',
+                          'step 4,000'])
+        self.assertEqual(ax.get_title(), 'r2 at 4K')
         d2l.plt.close('all')
         lines = check_display(self, buf.getvalue())
         self.assertEqual(lines[0], 'copying appears between steps 500 and '
@@ -621,6 +633,140 @@ class ProbeDisplayTest(unittest.TestCase):
         self.assertLess(lo, d)
         self.assertTrue(all(math.isnan(v) for v in
                             d2l.recall_unpaired(a, c.iloc[:0])))
+
+
+class ProbeComputeTest(unittest.TestCase):
+    """lc-probe reads its checkpoints from their registered keys only (plan
+    review, finding 12), names them with their sha1 in its configuration,
+    refuses to start on an oracle miss, and returns the format table and
+    reach during pretraining in the stored layout."""
+    T1, R2 = (509, 1017, 1526), (500, 1000, 2000, 3000, 4000, 6000)
+
+    def test_keys(self):
+        keys = d2l._lc_probe_keys(self.T1, self.R2)
+        self.assertEqual(list(keys), [
+            'lm-r2t1-s1526-v1', 'lm-r2t1-s509-v1', 'lm-r2t1-s1017-v1',
+            'lm-r2-s6000-v1', 'lm-r2-s500-v1', 'lm-r2-s1000-v1',
+            'lm-r2-s2000-v1', 'lm-r2-s3000-v1', 'lm-r2-s4000-v1'])
+        for k, sha1 in keys.items():
+            self.assertEqual(sha1, d2l.DATA_HUB[k][1])
+            self.assertRegex(sha1, r'^[0-9a-f]{40}$')
+        hub = dict(d2l.DATA_HUB)
+        del hub['lm-r2t1-s1017-v1']
+        with mock.patch.dict(d2l.DATA_HUB, hub, clear=True), \
+                self.assertRaisesRegex(KeyError, 'lm-r2t1-s1017-v1'):
+            d2l._lc_probe_keys(self.T1, self.R2)
+        with self.assertRaises(ValueError):  # a step the run never saved
+            d2l._lc_probe_keys((500,), self.R2)
+
+    def test_config_names_keys(self):
+        seen = {}
+
+        def result(name, compute, config, **kw):
+            seen.update(name=name, config=config)
+            return d2l._pending_result(name)
+        with mock.patch.object(d2l, '_pretrain_result', result):
+            d2l.lc_probe_runs(self.T1, self.R2)
+        self.assertEqual(seen['name'], 'lc-probe')
+        self.assertEqual(seen['config']['checkpoints'],
+                         d2l._lc_probe_keys(self.T1, self.R2))
+
+    def test_registered_not_local(self):
+        """With D2L_RERUN naming lc-probe and t1-evals, a local next
+        version and a t1 job folder both exist; load_reference_model reads
+        the job folder, _lc_probe_model the registered key."""
+        reg, local = toy_model(seed=1), toy_model(seed=2)
+        with tempfile.TemporaryDirectory() as tmp:
+            key = 'lm-r2t1-s509-v1'
+            files = {}
+            for name, m in (('reg', reg), ('next', local), ('job', local)):
+                files[name] = os.path.join(tmp, f'{name}.safetensors')
+                d2l._save_bf16(files[name], m, 509)
+            calls = []
+
+            def keyed(k, *a, **kw):
+                calls.append(k)
+                return files['reg']
+            job = os.path.join(tmp, 'ch21', 't1-s0', 'ckpt')
+            os.makedirs(job)
+            os.link(files['job'], os.path.join(job, 's509.safetensors'))
+            os.link(files['next'], os.path.join(
+                tmp, d2l._next_key(key) + '.safetensors'))
+            with mock.patch.object(d2l, 'download_keyed', keyed), \
+                    mock.patch.object(d2l, '_rerun_dir', lambda: tmp), \
+                    mock.patch.object(d2l, '_job_root',
+                                      lambda: os.path.join(tmp, 'ch21')), \
+                    mock.patch.dict(os.environ,
+                                    {'D2L_RERUN': 'lc-probe,t1-evals'}):
+                got = d2l._lc_probe_model('t1', 509, 'cpu')
+                other = d2l.load_reference_model(509, preset='t1')
+            self.assertEqual(calls, [key])
+            w = lambda m: next(m.parameters())
+            self.assertEqual(w(got).dtype, torch.bfloat16)
+            self.assertTrue(torch.equal(w(got), w(reg).bfloat16()))
+            self.assertFalse(torch.equal(w(other), w(reg).bfloat16()))
+
+    def compute(self, oracle=None):
+        """_lc_probe_compute on toys: 3 format items of 1,024 tokens from
+        fixture books, 2 needle windows of 160 tokens per run; returns
+        (result, the (preset, step) loads in order)."""
+        tok = r2_tok()
+        B = [b.numpy() for b in r2_books(tok, 4, 2047)]
+        g = torch.Generator().manual_seed(0)
+        nd = d2l.Needles(torch.randint(32, V, (2, 158), generator=g),
+                         torch.randint(32, V, (2, 8), generator=g),
+                         torch.randint(32, V, (2, 8), generator=g),
+                         torch.tensor([[40, 50, 60, 70, 80, 90, 100, 120]] * 2),
+                         198)
+        loads = []
+
+        def model(preset, step, device):
+            loads.append((preset, step))
+            return toy_model(seed=step, max_len=1100).float()
+        patches = [
+            mock.patch.object(d2l, '_test_book_tokens', lambda t=None: B),
+            mock.patch.object(d2l, '_needle_words', lambda: r2_words(tok)),
+            mock.patch.object(d2l, 'lc_tokenizer', lambda *a: tok),
+            mock.patch.object(d2l, '_lc_device', lambda: torch.device('cpu')),
+            mock.patch.object(d2l, '_lc_probe_model', model),
+            mock.patch.object(d2l, '_lc_load_reference', lambda m: (
+                toy_model(seed=7, max_len=1100).float(), tok)),
+            mock.patch.object(d2l, 'needle_windows', lambda t, L, n: nd),
+            mock.patch.dict(d2l._LC_PROBE, items=3, windows=2)]
+        if oracle:
+            patches.append(mock.patch.object(d2l, '_format_oracle', oracle))
+        with contextlib.ExitStack() as stack:
+            for p in patches:
+                stack.enter_context(p)
+            return d2l._lc_probe_compute(self.T1, self.R2), loads
+
+    def test_compute(self):
+        res, loads = self.compute()
+        self.assertEqual(loads, [('t1', 1526), ('r2', 6000)]
+                         + [('t1', s) for s in self.T1]
+                         + [('r2', s) for s in self.R2])
+        P = d2l._LC_PROBE_COLUMNS
+        for field in ('format', 'reach_train', 'format_items',
+                      'reach_queries'):
+            self.assertEqual(list(getattr(res, field).columns), P[field])
+        f = res.format.set_index(['model', 'format'])
+        self.assertEqual(list(dict.fromkeys(res.format['model'])),
+                         ['oracle', 't1', 'r2', 'Qwen3-0.6B-Base'])
+        self.assertTrue((f['n'] == 3).all())
+        self.assertEqual(list(f.loc['oracle']['rate']), [1.0, 1.0])
+        rt = res.reach_train
+        self.assertEqual(sorted(rt[rt['model'] == 't1']['step'].unique()),
+                         list(self.T1))
+        c = d2l.r2_config('r2')
+        x = rt[(rt['model'] == 'r2') & (rt['step'] == 1000)]
+        self.assertTrue((x['tokens'] == 1000 * c.global_batch * c.arch.T)
+                        .all())
+        self.assertEqual(int(x['n'].sum()), 16)  # 2 windows x 8 queries
+        self.assertEqual(len(res.reach_queries), 16 * 9)
+
+    def test_oracle_miss(self):
+        with self.assertRaisesRegex(AssertionError, 'oracle copier misses'):
+            self.compute(oracle=lambda it: -1)
 
 
 class MeasureTest(unittest.TestCase):

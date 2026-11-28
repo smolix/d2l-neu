@@ -1284,6 +1284,48 @@ class SchemeDifferenceTest(unittest.TestCase):
         self.assertEqual(d2l._lc_wider(d, 'x')[3], 'windows')
 
 
+class DisplayFormatTest(unittest.TestCase):
+    """F35 review findings 4 and 5: a criterion met before the first step
+    prints 'at start'; a bound that would round to 0 shows its sign."""
+    def test_bounds(self):
+        self.assertEqual(d2l._interval(0.4386, 0.0033, 0.874, 2, True),
+                         '+0.44 [+0.00, +0.87]')
+        self.assertEqual(d2l._interval(0.4386, 0.0033, 0.874, 2, True, True),
+                         '+0.44 [+0.003, +0.87]')
+        self.assertEqual(d2l._interval(-1.3e-4, -4.2e-4, 1.6e-4, 3, True,
+                                       True), '+0.000 [-0.0004, +0.0002]')
+        self.assertEqual(d2l._interval(0.17, 0.0, 0.333, 2, True, True),
+                         '+0.17 [+0.00, +0.33]')  # an exact 0 stays 0.00
+        self.assertEqual(d2l._interval(0.1, 1e-9, 0.2, 2, True, True),
+                         '+0.10 [+0.00000, +0.20]')  # at most 3 more
+        self.assertEqual(d2l._interval(0.1, -0.004, 0.2, 2, True, True),
+                         '+0.10 [-0.004, +0.20]')
+        self.assertEqual(d2l._bound(math.nan, 2), '-')
+
+    def test_first_steps(self):
+        spec = d2l._LC_TIERS['t1']
+        T, L0 = spec['length'], spec['trained']
+        zs = pd.DataFrame(dict(
+            model='none', measure='nll', bucket=d2l.bucket_name(0, L0),
+            window=[0, 1], sum=[3.0, 3.0], n=[1.0, 1.0]))
+        steps = [0, 64, 128]
+        tl = pd.DataFrame(dict(
+            arm='PI', seed=1, length=T, step=steps,
+            tokens=[s * 1_000_000 for s in steps],
+            nll_last=[4.0, 3.2, 3.01], near_lo=[0.1, 0.2, 0.6],
+            far_lo=[0.3, 0.3, 0.3], gain_lo=[-0.1, -0.1, -0.1]))
+        logs = pd.DataFrame(dict(arm=['PI', 'PI', 'YaRN'], seed=[0, 1, 0]))
+        runs = d2l.LcRuns(**{f: pd.DataFrame()
+                             for f in d2l.LcRuns._fields})._replace(
+            zs_windows=zs, timeline=tl, logs=logs, tier='t1',
+            needles=pd.DataFrame(dict(model=['PI'])))
+        table, missing = d2l.lc_first_steps(runs, 0.05)
+        self.assertEqual(table.iloc[0].tolist(),
+                         ['PI', 1, '128M', '128M', 'at start',
+                          'not reached'])
+        self.assertEqual(missing, ['PI s0', 'YaRN s0'])
+
+
 class ArmsEndToEndTest(ArmsBase):
     def test_t1_campaign(self):
         """A toy T1 campaign through lc_arms with D2L_RERUN=lc-t1, and the
@@ -1635,8 +1677,7 @@ class ArmsEndToEndTest(ArmsBase):
         self.assertEqual(len(lines), 4)  # header, PI s1, YaRN s1, missing
         self.assertEqual([x.split()[:2] for x in lines[1:3]],
                          [['PI', '1'], ['YaRN', '1']])
-        self.assertEqual(lines[3], 'no timeline (trained before the periodic '
-                                   'needle evaluation): PI s0, YaRN s0, '
+        self.assertEqual(lines[3], 'no timeline: PI s0, YaRN s0, '
                                    'YaRN-prog s0')
         lines = check_display(self, seeds)
         self.assertIn('T1: pending', lines)

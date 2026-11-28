@@ -30369,10 +30369,21 @@ def _num(x, digits, sign=False):
         return '-'
     return f'{round(float(x), digits) + 0:{"+" if sign else ""}.{digits}f}'
 
-def _interval(x, lo, hi, digits, sign=False):
-    """'x [lo, hi]' at digits decimals."""
-    return (f'{_num(x, digits, sign)} [{_num(lo, digits, sign)}, '
-            f'{_num(hi, digits, sign)}]')
+def _bound(x, digits, sign=False):
+    """An interval bound at digits decimals, or at up to three more while a
+    nonzero bound would round to 0, so its side of zero shows."""
+    d = digits
+    while (x is not None and not math.isnan(float(x)) and x != 0
+           and round(float(x), d) == 0 and d < digits + 3):
+        d += 1
+    return _num(x, d, sign)
+
+def _interval(x, lo, hi, digits, sign=False, resolve=False):
+    """'x [lo, hi]' at digits decimals; with resolve, a bound that would
+    round to 0 gets the decimals that show its sign (_bound)."""
+    b = _bound if resolve else _num
+    return (f'{_num(x, digits, sign)} [{b(lo, digits, sign)}, '
+            f'{b(hi, digits, sign)}]')
 
 def _pm(x, lo, hi, digits, sign=False):
     """'x±h' with h the half-width of [lo, hi]; '-' for nan."""
@@ -30558,7 +30569,8 @@ def show_lc_table(runs):
     whole window minus with the trained length [95% CI], near and far
     recall at the arms' length, reach and detectable to (±: half the 95%
     interval); then each progressive arm minus its one-shot arm at seed 0
-    of each, labelled single-seed."""
+    of each, labelled single-seed (a bound that would round to 0 printed
+    to the decimals that show its sign)."""
     if not _lc_head(runs, runs.table, 'lc-t2-evals'):
         return
     t = runs.table
@@ -30586,10 +30598,10 @@ def show_lc_table(runs):
         if b not in arms:
             continue
         d = _lc_seed_diff(runs, a, b)
+        iv = lambda k, digits: _interval(*d[k], digits, True, resolve=True)
         print(f'{a} − {b}, seed 0 of each (single seed): loss '
-              f'{bucket_name(T - L0, T)} {_interval(*d["loss"], 3, True)}\n'
-              f'  near {_interval(*d["near"], 2, True)}, far '
-              f'{_interval(*d["far"], 2, True)}')
+              f'{bucket_name(T - L0, T)} {iv("loss", 3)}\n'
+              f'  near {iv("near", 2)}, far {iv("far", 2)}')
 
 def show_lc_loss(runs):
     """The two loss panels (by position; against the context given)."""
@@ -30670,9 +30682,10 @@ def lc_first_steps(runs, margin):
     margin of the unscaled base's loss in its trained window on the same
     windows, near recall has a lower 95% Wilson bound of at least 0.5, far
     recall one above 0.25, and the gain beyond the trained length a lower
-    bound above 0 ('not reached' if never), from the evaluations at the
-    arms' length (a progressive arm's first-stage rows are at its shorter
-    window); and the arms and seeds without a timeline."""
+    bound above 0 ('at start' if met at the evaluation before the first
+    step, 'not reached' if never), from the evaluations at the arms' length
+    (a progressive arm's first-stage rows are at its shorter window); and
+    the arms and seeds without a timeline."""
     spec = _LC_TIERS[_lc_tier_of(runs)]
     w = runs.zs_windows
     base = w[(w['model'] == 'none') & (w['measure'] == 'nll')
@@ -30682,8 +30695,12 @@ def lc_first_steps(runs, margin):
     rows = []
     tl = runs.timeline[runs.timeline['length'] == spec['length']]
     for (arm, seed), t in tl.groupby(['arm', 'seed'], sort=False):
-        first = lambda ok: (f'{t["tokens"][ok].min() / 1e6:.0f}M'
-                            if ok.any() else 'not reached')
+        def first(ok):
+            if not ok.any():
+                return 'not reached'
+            tok = t['tokens'][ok].min()
+            return 'at start' if tok == 0 else f'{tok / 1e6:.0f}M'
+
         rows.append((arm, seed, first(t['nll_last'] <= ref + margin),
                      first(t['near_lo'] >= 0.5), first(t['far_lo'] > 0.25),
                      first(t['gain_lo'] > 0)))
@@ -30694,15 +30711,15 @@ def lc_first_steps(runs, margin):
                                        'far recall', 'gain']), missing
 
 def show_lc_first_steps(runs, margin):
-    """lc_first_steps under the label: the table, then the arms without a
-    timeline."""
+    """lc_first_steps under the label: the table, then the arms and seeds
+    without a timeline (named, not explained: the result does not record
+    why one is missing)."""
     if not _lc_head(runs, runs.timeline, 'lc-t2-evals'):
         return
     table, missing = lc_first_steps(runs, margin)
     print(table.to_string(index=False))
     if missing:
-        print('no timeline (trained before the periodic needle '
-              f'evaluation): {", ".join(missing)}')
+        print(f'no timeline: {", ".join(missing)}')
 
 def show_lc_short(runs):
     """Per arm the val loss at the trained length, the suite mean and near
@@ -30730,7 +30747,8 @@ def show_lc_seeds(t1, t2, a='YaRN', b='PI'):
     the T2 result is the T1 stand-in or pending): per measure the wider of
     the t interval over the seeds and the window-resampled interval of the
     seed mean (the one containing zero if only one does; `_lc_wider`),
-    named after its source (seeds, windows)."""
+    named after its source (seeds, windows); a bound that would round to 0
+    is printed to the decimals that show its sign (claim 5 reads it)."""
     if not _lc_head(t1, t1.table, 'lc-t1'):
         return
     t, r = t1.table, t1.recall
@@ -30762,8 +30780,8 @@ def show_lc_seeds(t1, t2, a='YaRN', b='PI'):
             continue
         d = scheme_difference(runs, a, b)
         c = {k: _lc_wider(d, k) for k in ('loss', 'near', 'far')}
-        f = lambda k, digits: (f'{_interval(*c[k][:3], digits, True)} '
-                               f'({c[k][3]})')
+        f = lambda k, digits: (f'{_interval(*c[k][:3], digits, True, True)}'
+                               f' ({c[k][3]})')
         print(f'{a} − {b}, {tier} ({len(d["seeds"])} seeds): loss '
               f'{f("loss", 3)}\n  near {f("near", 2)}, far {f("far", 2)}')
 

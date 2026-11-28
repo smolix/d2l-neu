@@ -28301,6 +28301,8 @@ _LC_NEAR = (32, 512)  # the near gaps of every table
 
 _LC_GROWTH = (256, 1024)  # the gaps of reach growth during pretraining
 
+_LC_GROWTH_STEPS = (1000, 6000)  # r2's reach growth: from step to step
+
 _LC_SHORT = 256  # the sliding context of the gain, the first context
 
 _LC_REFERENCE = 'Qwen/Qwen3-0.6B-Base'  # ruling (d) of 2026-11-25
@@ -29412,25 +29414,25 @@ _LC_PROBE_COLUMNS = {
     'format_items': ['model', 'format', 'item', 'correct'],
     'reach_queries': ['model', 'step', 'tokens'] + _LC_QUERY_COLUMNS}
 
-_LC_PROBE_FINAL = {'t1': 1526, 'r2': 6000}  # the format table's checkpoints
-
 def _lc_probe_keys(t1_steps, r2_steps):
-    """{key: sha1} of every checkpoint lc_probe_runs reads, in the order
-    it reads them: the registered keys of the t1 and r2 runs (the final
-    ones of the format table first); KeyError for a key not registered.
+    """{key: sha1} of every checkpoint lc_probe_runs reads: the registered
+    keys of the t1 and r2 runs, per run the format table's final checkpoint
+    (_reference_key's default) first, then the steps; KeyError for a key
+    not registered.
 
     Defined in :numref:`sec_lm_long_context`"""
     keys = [d2l._reference_key(p, s) for p, steps in (
-        ('t1', (_LC_PROBE_FINAL['t1'], *t1_steps)),
-        ('r2', (_LC_PROBE_FINAL['r2'], *r2_steps))) for s in steps]
+        ('t1', (None, *t1_steps)), ('r2', (None, *r2_steps)))
+            for s in steps]
     missing = [k for k in keys if k not in d2l.DATA_HUB]
     if missing:
         raise KeyError(f'not registered: {", ".join(missing)}')
     return {k: d2l.DATA_HUB[k][1] for k in dict.fromkeys(keys)}
 
 def _lc_probe_model(preset, step, device):
-    """The checkpoint of run preset at step from its registered key
-    (downloaded and sha1-checked on first use), in bf16 on device; never a
+    """The checkpoint of run preset at step (None: the final one) from its
+    registered key (downloaded and sha1-checked on first use), in bf16 on
+    device; never a
     job folder or a local next version (load_reference_model reads those
     during some regenerations)."""
     key = d2l._reference_key(preset, step)
@@ -29444,8 +29446,7 @@ def _lc_probe_compute(t1_steps, r2_steps):
     """LcProbe: the format table and reach during pretraining."""
     f, dev, tok = _LC_PROBE, _lc_device(), lc_tokenizer()
     _lc_probe_keys(t1_steps, r2_steps)  # every key registered, before work
-    load = lambda preset: lambda: (_lc_probe_model(
-        preset, _LC_PROBE_FINAL[preset], dev), tok)
+    load = lambda preset: lambda: (_lc_probe_model(preset, None, dev), tok)
     models = [('oracle', lambda: (None, tok)), ('t1', load('t1')),
               ('r2', load('r2')), (_LC_REFERENCE.split('/')[-1],
                                    lambda: _lc_load_reference(_LC_REFERENCE))]
@@ -29453,14 +29454,16 @@ def _lc_probe_compute(t1_steps, r2_steps):
     for name, get in models:
         model, tk = get()
         for fmt in ('template', 'one-hop'):
-            for i, it in enumerate(_format_items(tk, fmt, f['length'],
-                                                 f['items'])):
+            its = _format_items(tk, fmt, f['length'], f['items'])
+            # the control, on every model's own items (Qwen3 has its own
+            # tokenizer): each item is solvable by copying
+            bad = sum(_format_oracle(it) != it['gold'] for it in its)
+            assert not bad, (f'oracle copier misses {bad} {fmt} items '
+                             f'({name})')
+            for i, it in enumerate(its):
                 pred = (_format_oracle(it) if model is None else int(
                     np.argmax(_choice_ll(model, it['ctx'], it['conts']))))
                 rows.append((name, fmt, i, pred == it['gold']))
-        if model is None:  # the control: the items are solvable by copying
-            bad = [r for r in rows if r[0] == name and not r[3]]
-            assert not bad, f'oracle copier misses {len(bad)} format items'
         del model
         d2l.lm_free()
     items = pd.DataFrame(rows, columns=_LC_PROBE_COLUMNS['format_items'])
@@ -30346,9 +30349,10 @@ def _reach_verdict(r):
 def show_reach_train(probe):
     """When copying appears in each run (from a checkpoint at chance to one
     with recall in (32, 64] detectable); for the last run (r2) its reach
-    at each checkpoint from the first detectable one on, and its recall in
-    _LC_GROWTH at the last checkpoint minus at that first one (paired by
-    query, window-resampled 95% interval); then the plot."""
+    at each checkpoint from _LC_GROWTH_STEPS[0] to _LC_GROWTH_STEPS[1], and
+    its recall in _LC_GROWTH at the second minus at the first (paired by
+    query, window-resampled 95% interval): claim 11 at fixed steps, the
+    copying line alone follows the data; then the plot."""
     if not _lc_head(probe, probe.reach_train, 'lc-probe'):
         return
     parts = []
@@ -30360,18 +30364,20 @@ def show_reach_train(probe):
     print('copying appears ' + ' and '.join(parts))
     m, x = list(probe.reach_train.groupby('model', sort=False))[-1]
     steps = sorted(x['step'].unique())
-    s0 = _copying_steps(x)[1] or steps[0]
-    shown = [s for s in steps if s >= s0]
+    s0, s1 = _LC_GROWTH_STEPS
+    if s0 not in steps or s1 not in steps:
+        raise ValueError(f'{m} has no checkpoint at step {s0} or {s1}')
+    shown = [s for s in steps if s0 <= s <= s1]
     r = [d2l.reach(x[x['step'] == s]) for s in shown]
     L = _length_name(int(x['gap_hi'].max()))
-    print(f'{m} reach at {L} (steps {s0:,} → {shown[-1]:,}): '
+    print(f'{m} reach at {L} (steps {s0:,} → {s1:,}): '
           f'{", ".join(f"{v:,}" for v in r)}; {_reach_verdict(r)}')
     q = probe.reach_queries
     q = q[(q['model'] == m) & (q['gap'] > _LC_GROWTH[0])
           & (q['gap'] <= _LC_GROWTH[1])]
-    d = recall_paired(q[q['step'] == shown[-1]], q[q['step'] == s0])
+    d = recall_paired(q[q['step'] == s1], q[q['step'] == s0])
     gaps = f'{_LC_GROWTH[0]}-{_length_name(_LC_GROWTH[1])}'
-    print(f'{m} recall {gaps} back, step {shown[-1]:,} − '
+    print(f'{m} recall {gaps} back, step {s1:,} − '
           f'step {s0:,}: {_interval(*d, 2, sign=True)} (paired by query)')
     plot_reach_train(probe)
 

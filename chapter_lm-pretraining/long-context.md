@@ -249,7 +249,7 @@ probe = d2l.lc_probe_runs(t1_steps=(509, 1017, 1526),
 d2l.show_lc_format(probe)
 ```
 
-<!-- Placeholder (prose): reach during pretraining: recall by gap at the trained length for the committed checkpoints of t1 (at 1K) and r2 (at 4K). The steps between which copying appears (from a checkpoint whose 32-64 interval contains chance, 1/8, to the first with a lower 95% bound above 0.25; 'by step b' alone when the checkpoint before is already above chance), the reach at each checkpoint from then on and whether it is non-decreasing (within one bin), and recall 256-1K back at the last checkpoint minus at the first detectable one, paired by query (claim 11), as measured; the induction-head literature (cited) places the onset early in training. -->
+<!-- Placeholder (prose): reach during pretraining: recall by gap at the trained length for the committed checkpoints of t1 (at 1K) and r2 (at 4K). The steps between which copying appears (from a checkpoint whose 32-64 interval contains chance, 1/8, to the first with a lower 95% bound above 0.25; 'by step b' alone when the checkpoint before is already above chance), r2's reach at each checkpoint from step 1,000 to step 6,000 and whether it is non-decreasing (within one bin), and its recall 256-1K back at step 6,000 minus at step 1,000, paired by query (claim 11, fixed steps), as measured; the induction-head literature (cited) places the onset early in training. -->
 
 ```{.python .input #long-context-reach-train}
 %%tab pytorch

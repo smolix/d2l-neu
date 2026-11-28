@@ -520,7 +520,7 @@ class FormatTest(unittest.TestCase):
         self.assertLess(len(tri(b[0]['ctx']) & tri(a[1]['ctx'])), 30)
 
 
-def probe_result(steps=(500, 1000, 2000, 4000), n_win=40, seed=0):
+def probe_result(steps=(500, 1000, 2000, 6000), n_win=40, seed=0):
     """A synthetic LcProbe: the format items of two models, and r2's
     queries at 4K whose recall at gaps 256-1K grows with the step."""
     rng = np.random.default_rng(seed)
@@ -595,22 +595,44 @@ class ProbeDisplayTest(unittest.TestCase):
         self.assertEqual(len({l.get_color() for l in curves}), 4)
         self.assertEqual([t.get_text() for t in ax.get_legend().get_texts()],
                          ['step 500', 'step 1,000', 'step 2,000',
-                          'step 4,000'])
+                          'step 6,000'])
         self.assertEqual(ax.get_title(), 'r2 at 4K')
         d2l.plt.close('all')
         lines = check_display(self, buf.getvalue())
         self.assertEqual(lines[0], 'copying appears between steps 500 and '
                                    '1,000 (r2)')
-        self.assertRegex(lines[1], r'^r2 reach at 4K \(steps 1,000 → 4,000\)'
+        self.assertRegex(lines[1], r'^r2 reach at 4K \(steps 1,000 → 6,000\)'
                                    r': [\d,]+(, [\d,]+){2}; non-decreasing')
         q = probe.reach_queries
         q = q[(q['gap'] > 256) & (q['gap'] <= 1024)]
-        d = (q[q['step'] == 4000]['correct'].mean()
+        d = (q[q['step'] == 6000]['correct'].mean()
              - q[q['step'] == 1000]['correct'].mean())
         self.assertTrue(lines[2].startswith(
-            f'r2 recall 256-1K back, step 4,000 − step 1,000: {d:+.2f} ['),
+            f'r2 recall 256-1K back, step 6,000 − step 1,000: {d:+.2f} ['),
             lines[2])
         self.assertTrue(lines[2].endswith('(paired by query)'))
+        d2l.plt.close('all')
+
+    def test_growth_fixed_steps(self):
+        """Claim 11 compares steps 1000 and 6000 whatever the copying
+        checkpoint: copying detectable at step 500 leaves both lines at
+        1,000 → 6,000; a run without step 1000 is refused."""
+        probe = probe_result()
+        rt = probe.reach_train
+        early = (rt['step'] == 500) & (rt['gap_lo'] == 32)
+        rt.loc[early, ['lo', 'hi']] = [0.3, 0.6]  # detectable at step 500
+        with contextlib.redirect_stdout(io.StringIO()) as buf:
+            d2l.show_reach_train(probe)
+        d2l.plt.close('all')
+        lines = check_display(self, buf.getvalue())
+        self.assertEqual(lines[0], 'copying appears by step 500 (r2)')
+        self.assertIn('(steps 1,000 → 6,000)', lines[1])
+        self.assertIn('step 6,000 − step 1,000:', lines[2])
+        drop = probe_result(steps=(500, 2000, 3000, 6000))
+        with self.assertRaisesRegex(ValueError, 'step 1000'), \
+                contextlib.redirect_stdout(io.StringIO()):
+            d2l.show_reach_train(drop)
+        d2l.plt.close('all')
         self.assertEqual(d2l._reach_verdict([256, 128, 512]),
                          'non-decreasing within one bin')
         self.assertEqual(d2l._reach_verdict([512, 128]), 'falling')
@@ -722,7 +744,7 @@ class ProbeComputeTest(unittest.TestCase):
 
         def model(preset, step, device):
             loads.append((preset, step))
-            return toy_model(seed=step, max_len=1100).float()
+            return toy_model(seed=step or 0, max_len=1100).float()
         patches = [
             mock.patch.object(d2l, '_test_book_tokens', lambda t=None: B),
             mock.patch.object(d2l, '_needle_words', lambda: r2_words(tok)),
@@ -742,7 +764,7 @@ class ProbeComputeTest(unittest.TestCase):
 
     def test_compute(self):
         res, loads = self.compute()
-        self.assertEqual(loads, [('t1', 1526), ('r2', 6000)]
+        self.assertEqual(loads, [('t1', None), ('r2', None)]  # finals
                          + [('t1', s) for s in self.T1]
                          + [('r2', s) for s in self.R2])
         P = d2l._LC_PROBE_COLUMNS
@@ -767,6 +789,19 @@ class ProbeComputeTest(unittest.TestCase):
     def test_oracle_miss(self):
         with self.assertRaisesRegex(AssertionError, 'oracle copier misses'):
             self.compute(oracle=lambda it: -1)
+
+    def test_oracle_checks_every_model(self):
+        """The control runs on each model's own items: a miss on the
+        reference's items (its own tokenizer) stops the job there."""
+        real, calls = d2l._format_oracle, []
+
+        def oracle(it):  # right on the first three models' items
+            calls.append(1)
+            return real(it) if len(calls) <= 24 else -1
+        with self.assertRaisesRegex(AssertionError,
+                                    r'misses 3 template items '
+                                    r'\(Qwen3-0.6B-Base\)'):
+            self.compute(oracle=oracle)
 
 
 class MeasureTest(unittest.TestCase):

@@ -9,7 +9,7 @@ Qwen3-0.6B-Base config (6 N_mm = 3,575,906,304, F(T=2,048) =
 4,985,192,448), `causal_half`, `T=None`; `mfu` arithmetic; `r2_config`
 overrides (an unknown field raises); `_RUN_NAMES`, `PRETRAIN_JOBS` and
 `_RERUN_ARTIFACT` against `PRETRAIN_RERUN_NAMES`, which equals the
-chapter's 46 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
+chapter's 47 names; `pretrain` on a 2-layer toy (30 steps, accumulation 1
 vs 4 at the same global batch, fp32 1e-5), resume after 20 of 40 steps
 (losses 1e-6) and a branch from a saved state; the stats-step columns
 `entropy_<l>` and `log_z` (finite; `log_z` the explicit mean logsumexp
@@ -120,8 +120,8 @@ RERUN_NAMES = (
     'eps-headroom',
     'reference-run', 'ladder', 'inst-t2', 'reference-evals', 't1-evals',
     'ladder-evals',
-    'gemm-sweep', 'lowp-runs', 'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B',
-    'cpt-qwen-C', 'cpt-qwen-A2', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1',
+    'gemm-sweep', 'lowp-runs', 'lowp-blackwell', 'cpt-t1', 'cpt-qwen-A',
+    'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2', 'cpt-qwen-evals', 'smollm3-0', 'smollm3-1',
     'smollm3-2', 'smollm3-3', 'smollm3-4', 'smollm3-5', 'lc-t1',
     'lc-zeroshot', 'lc-reference', 'lc-probe', 'lc-t2-pi', 'lc-t2-yarn',
     'lc-t2-prog', 'lc-t2-pi-s1', 'lc-t2-pi-s2', 'lc-t2-yarn-s1',

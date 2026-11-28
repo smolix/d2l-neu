@@ -20,6 +20,25 @@ for natively compiled arms, a profile per arm); `lowp_arms` and
 `fp8_gemm_sweep` pending, and a stored labelled result prints its label;
 `has_fp8_cores` and `device_name` on the CPU; the jobs of `PRETRAIN_JOBS`
 against the page's literals.
+
+The native FP4 path (Blackwell; claim 13 of the section, the only on-box
+evidence for it: the build box has no FP4 tensor cores), on the CPU with the
+compute capability mocked and `_fp4_scaled_mm` stubbed: dispatch by
+capability ((8, 9), (9, 0), (11, 0) simulated; (10, 0), (10, 3), (12, 0),
+(12, 1) native after one probe, cached), the probe (a failing or wrong GEMM
+falls back to the simulator with a one-line reason in `fp4_backend`), a
+torch without the FP4 dtypes; the E2M1 packing (known bytes, round trip)
+and the blocked scale layout (inverse, and against the cuBLAS offset
+formula looped as in torch's own `from_blocked`); operand equality: the
+packed codes, un-swizzled E4M3/E8M0 scales and tensor scale handed to the
+GEMM, decoded by this file's own E2M1 reference, equal the simulator's
+quantized operands of the forward, input-gradient and weight-gradient GEMMs
+exactly (NVFP4 with 16 x 16 weight tiles repeated into 1 x 16 blocks, 1-D
+weight blocks, MXFP4; fp32 inputs exactly, bf16 inputs up to the
+simulator's rounding to bf16), and the layer's outputs and gradients match;
+the backend never enters `lowp_arms`'s configuration or the state dict;
+`_lowp_convert`'s FP4 recipes; the `lowp-blackwell` job, its run folder and
+its campaign entry in `tools/lm_campaigns.yaml`.
 """
 import ast
 import collections
@@ -28,12 +47,14 @@ import io
 import math
 import os
 import re
+import tempfile
 import unittest
 from unittest import mock
 
 import numpy as np
 import pandas as pd
 import torch
+import yaml
 from torch.nn import functional as F
 
 from d2l import torch as d2l
@@ -300,6 +321,420 @@ class Fp4Test(unittest.TestCase):
             self.assertLess(rel(g[0], g_ref[0]), 0.3)
             self.assertLess(rel(g[1], g_ref[1]), 0.3)
             self.assertTrue(all(bool(torch.isfinite(t).all()) for t in g))
+
+
+# References for the native FP4 tests, written from the formats' definitions
+# (not from the library): E2M1 by its bit fields (sign, two exponent bits
+# with bias 1, one mantissa bit), element 2j in the low half of byte j (as
+# torch's pack_uint4 and torchao), and the cuBLAS offset of scale (i, j) in
+# the blocked layout, looped as torch.testing's from_blocked does.
+def ref_e2m1(n):
+    n = n.long()
+    e, m = (n >> 1) & 3, (n & 1).float()
+    v = torch.where(e == 0, 0.5 * m, torch.exp2(e.float() - 1) * (1 + m / 2))
+    return torch.where((n >> 3) & 1 == 1, -v, v)
+
+
+def ref_unpack(packed):
+    b = packed.view(torch.uint8).long()
+    return ref_e2m1(torch.stack([b & 15, b >> 4], -1).flatten(-2))
+
+
+def ref_unblock(flat, rows, cols):
+    flat, out = flat.view(torch.uint8), torch.zeros(rows, cols,
+                                                    dtype=torch.uint8)
+    tiles_per_row = -(-cols // 4)
+    for i in range(rows):
+        for j in range(cols):
+            outer, inner = i % 128, j % 4
+            off = (512 * ((i // 128) * tiles_per_row + j // 4)
+                   + (outer % 32) * 16 + (outer // 32) * 4 + inner)
+            out[i, j] = flat[off]
+    return out
+
+
+def ref_dequant(packed, scales, t, block, kind):
+    """The operand (rows, K) that codes, blocked scales and tensor scale t
+    stand for, in the simulator's order: code x (block scale x t)."""
+    v = ref_unpack(packed)
+    bits = ref_unblock(scales, v.shape[0], v.shape[1] // block)
+    if kind == 'e4m3':
+        s = bits.view(torch.float8_e4m3fn).float() * t
+    else:
+        s = torch.exp2(bits.float() - 127)
+    return v * s.repeat_interleave(block, 1)
+
+
+def ref_gemm(a, b, scale_a, scale_b, block, kind):
+    """What the hardware computes for _fp4_scaled_mm's arguments (tensor
+    scales are applied by the caller)."""
+    A = ref_dequant(a, scale_a, 1.0, block, kind)
+    B = ref_dequant(b.T, scale_b, 1.0, block, kind)
+    return A @ B.T
+
+
+@contextlib.contextmanager
+def mocked_gpu(cc, name='NVIDIA B200', probe=None):
+    """A CUDA device of compute capability cc (no GPU touched): the
+    probe's answer is probe (None: it passes); the probe cache is empty."""
+    with mock.patch.object(torch.cuda, 'get_device_capability',
+                           lambda d=None: cc), \
+            mock.patch.object(torch.cuda, 'get_device_name',
+                              lambda d=None: name), \
+            mock.patch.dict(d2l._FP4_PROBES, clear=True), \
+            mock.patch.object(d2l, '_fp4_probe',
+                              mock.Mock(return_value=probe)) as p:
+        yield p
+
+
+class Fp4NativeTest(unittest.TestCase):
+    """The Blackwell path, on the CPU (claim 13's on-box evidence)."""
+
+    def test_api_and_pin(self):
+        self.assertIsNone(d2l._fp4_api())
+        with mock.patch.dict(torch.__dict__):
+            del torch.__dict__['float4_e2m1fn_x2']
+            self.assertIn('float4_e2m1fn_x2', d2l._fp4_api())
+        # the scaled-mm contract in _fp4_scaled_mm's docstring was checked
+        # against torch 2.11.0 and torchao 0.17: re-check it on a bump
+        self.assertTrue(torch.__version__.startswith('2.11.'),
+                        torch.__version__)
+        doc = d2l._fp4_scaled_mm.__doc__
+        for word in ('torch._scaled_mm', 'torch.nn.functional.scaled_mm',
+                     'BlockWise1x32', 'SWIZZLE_32_4_4', 'float4_e2m1fn_x2',
+                     'column-major', 'float8_e4m3fn', 'float8_e8m0fnu',
+                     '2.11.0'):
+            self.assertIn(word, doc)
+        # the call each format takes (the GPU is not touched: both mocked)
+        a = torch.zeros(128, 64, dtype=torch.uint8).view(
+            torch.float4_e2m1fn_x2)
+        for kind, dtype in (('e4m3', torch.float8_e4m3fn),
+                            ('pow2', torch.float8_e8m0fnu)):
+            s = torch.zeros(512, dtype=torch.uint8).view(dtype)
+            with mock.patch.object(torch, '_scaled_mm') as old, \
+                    mock.patch.object(F, 'scaled_mm') as new:
+                d2l._fp4_scaled_mm(a, a.T, s, s)
+            if kind == 'e4m3':
+                new.assert_not_called()
+                self.assertEqual(old.call_args.kwargs,
+                                 {'out_dtype': torch.float32})
+            else:
+                old.assert_not_called()
+                args, kw = new.call_args
+                self.assertEqual((args[3], args[5]), (
+                    F.ScalingType.BlockWise1x32,) * 2)
+                self.assertEqual(kw, dict(
+                    swizzle_a=F.SwizzleType.SWIZZLE_32_4_4,
+                    swizzle_b=F.SwizzleType.SWIZZLE_32_4_4,
+                    output_dtype=torch.float32))
+
+    def test_dispatch(self):
+        cases = {(8, 0): False, (8, 9): False, (9, 0): False, (11, 0): False,
+                 (10, 0): True, (10, 3): True, (12, 0): True, (12, 1): True}
+        for cc, native in cases.items():
+            with mocked_gpu(cc) as probe:
+                self.assertEqual(d2l.has_fp4_cores('cuda:0'), native, cc)
+                self.assertEqual(d2l.has_fp4_cores('cuda:0'), native, cc)
+                # one probe per device and format, only where it can pass
+                self.assertEqual(probe.call_count, int(native), cc)
+                d2l.has_fp4_cores('cuda:0', 'pow2')
+                self.assertEqual(probe.call_count, 2 * int(native), cc)
+        self.assertFalse(d2l.has_fp4_cores('cpu'))
+        with mocked_gpu((10, 0)), mock.patch.object(
+                d2l, '_fp4_api', lambda: 'torch 2.4 lacks float4_e2m1fn_x2'):
+            self.assertFalse(d2l.has_fp4_cores('cuda'))
+            self.assertIn('torch 2.4 lacks', d2l.fp4_backend('cuda'))
+
+    def test_backend_lines(self):
+        lines = {}
+        with mocked_gpu((8, 9), 'NVIDIA GeForce RTX 4090'):
+            lines['ada'] = d2l.fp4_backend('cuda:0')
+        with mocked_gpu((10, 0)):
+            lines['b200'] = d2l.fp4_backend('cuda:0')
+            lines['mx'] = d2l.fp4_backend('cuda:0', 'pow2')
+        with mocked_gpu((12, 0), 'NVIDIA GeForce RTX 5090',
+                        probe='the probe GEMM failed: RuntimeError: x'):
+            lines['failed'] = d2l.fp4_backend('cuda:0')
+        lines['cpu'] = d2l.fp4_backend('cpu')
+        self.assertEqual(lines, {
+            'ada': 'FP4 GEMMs on RTX 4090 (sm_89): simulated (native needs '
+                   'Blackwell: sm_100/103/120/121)',
+            'b200': 'FP4 GEMMs on B200 (sm_100): native (NVFP4: E4M3 scales,'
+                    ' blocks of 16)',
+            'mx': 'FP4 GEMMs on B200 (sm_100): native (MXFP4: E8M0 scales, '
+                  'blocks of 32)',
+            'failed': 'FP4 GEMMs on RTX 5090 (sm_120): simulated (the probe '
+                      'GEMM failed: RuntimeError: x)',
+            'cpu': 'FP4 GEMMs on CPU: simulated (native needs a Blackwell '
+                   'GPU)'})
+        for line in lines.values():  # one short line (code-guide 7.2)
+            self.assertNotIn('\n', line)
+            self.assertLessEqual(len(line), 100)
+
+    def test_probe(self):
+        for kind, block in (('e4m3', 16), ('pow2', 32)):
+            good = lambda a, b, sa, sb: ref_gemm(a, b, sa, sb, block, kind)
+            with mock.patch.object(d2l, '_fp4_scaled_mm', good):
+                self.assertIsNone(d2l._fp4_probe('cpu', kind), kind)
+            swapped = lambda a, b, sa, sb: ref_gemm(a, b, sb, sa, block, kind)
+            with mock.patch.object(d2l, '_fp4_scaled_mm', swapped):
+                self.assertIn('off the simulator by', d2l._fp4_probe('cpu',
+                                                                    kind))
+
+        def fails(*args):
+            raise RuntimeError('CUBLAS_STATUS_NOT_SUPPORTED when calling '
+                               'cublasLtMatmul\nmore detail')
+        with mock.patch.object(d2l, '_fp4_scaled_mm', fails):
+            why = d2l._fp4_probe('cpu', 'e4m3')
+        self.assertTrue(why.startswith('the probe GEMM failed: RuntimeError:'
+                                       ' CUBLAS_STATUS_NOT_SUPPORTED'), why)
+        self.assertNotIn('\n', why)
+        # on a Blackwell card whose probe fails (run here on the CPU), the
+        # backend line gives the reason and the layer stays on the simulator
+        real_probe, stub = d2l._fp4_probe, mock.Mock(side_effect=fails)
+        with mocked_gpu((10, 0)) as probe, \
+                mock.patch.object(d2l, '_fp4_scaled_mm', stub):
+            probe.side_effect = lambda dev, kind: real_probe('cpu', kind)
+            self.assertFalse(d2l.has_fp4_cores('cuda:0'))
+            self.assertEqual(stub.call_count, 1)  # the probe's one call
+            self.assertEqual(d2l.fp4_backend('cuda:0'),
+                             f'FP4 GEMMs on B200 (sm_100): simulated ({why})')
+            on_card = lambda dev, kind='e4m3': d2l._fp4_why_not(
+                'cuda:0', kind) is None  # the layer's tensors stay on the CPU
+            with mock.patch.object(d2l, 'has_fp4_cores', on_card):
+                d2l.Fp4Linear(32, 16)(torch.randn(16, 32)).sum().backward()
+            self.assertEqual(stub.call_count, 1)
+            self.assertEqual(probe.call_count, 1)  # cached
+
+    def test_layer_dispatch(self):
+        X = torch.randn(32, 64, requires_grad=True)
+        for has, native in ((True, None), (False, None), (False, True)):
+            lin = d2l.Fp4Linear(64, 32, native=native)
+            stub = mock.Mock(side_effect=lambda a, b, sa, sb: ref_gemm(
+                a, b, sa, sb, 16, 'e4m3'))
+            with mock.patch.object(d2l, 'has_fp4_cores',
+                                   lambda dev, kind='e4m3': has), \
+                    mock.patch.object(d2l, '_fp4_scaled_mm', stub):
+                lin(X).sum().backward()
+            self.assertEqual(stub.call_count, 3 if has or native else 0)
+        with self.assertRaisesRegex(ValueError, 'block 16'):
+            d2l.Fp4Linear(64, 32, block=32, native=True)(X)
+        # the format MXFP4 needs: E8M0 scales on blocks of 32
+        lin = d2l.Fp4Linear(64, 32, block=32, native=None)
+        with mock.patch.object(d2l, 'has_fp4_cores', mock.Mock()) as has:
+            lin(X)
+        has.assert_not_called()  # NVFP4 scales on blocks of 32: no hardware
+        self.assertEqual(set(d2l.Fp4Linear(64, 32, native=True).state_dict()),
+                         {'weight'})
+
+    def test_packing(self):
+        x = torch.cat([torch.tensor([0.5, 1.0, -6.0, 3.0]), torch.zeros(12)])
+        q = d2l.fake_quant_fp4(x[None], 16)
+        packed, scales, t = d2l._fp4_operand(q, x[None], 16, 'e4m3')
+        self.assertEqual(packed.dtype, torch.float4_e2m1fn_x2)
+        self.assertEqual(tuple(packed.shape), (1, 8))
+        self.assertEqual(packed.view(torch.uint8)[0].tolist(),
+                         [0x21, 0x5F, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(scales.dtype, torch.float8_e4m3fn)
+        self.assertAlmostEqual(float(scales[0]) * float(t), 1.0, places=6)
+        g = torch.Generator().manual_seed(4)
+        for kind, block in (('e4m3', 16), ('pow2', 32)):
+            x = torch.randn(40, 96, generator=g) * torch.rand(40, 1,
+                                                              generator=g)
+            x[3] = 0  # an all-zero row of blocks
+            for rounding in ('rtn', 'sr'):
+                q = d2l.fake_quant_fp4(x, block, kind, rounding,
+                                       generator=g)
+                op = d2l._fp4_operand(q, x, block, kind)
+                self.assertTrue(torch.equal(
+                    ref_dequant(*op, block, kind), q), (kind, rounding))
+        codes = torch.randint(0, 16, (4, 32), generator=g, dtype=torch.uint8)
+        codes[:, 0] = 7  # each block holds a 6: MXFP4's scale is 2^0
+        vals = ref_e2m1(codes)
+        op = d2l._fp4_operand(vals, vals, 32, 'pow2')
+        self.assertTrue(torch.equal(ref_unpack(op[0]), vals))
+        self.assertEqual(op[0].view(torch.uint8)[:, 0].tolist(),
+                         (codes[:, 0] | codes[:, 1] << 4).tolist())
+
+    def test_blocked_layout(self):
+        g = torch.Generator().manual_seed(5)
+        for rows, cols in ((128, 4), (200, 6), (37, 2), (256, 12)):
+            s = torch.randint(0, 256, (rows, cols), generator=g,
+                              dtype=torch.uint8)
+            flat = d2l._fp4_to_blocked(s)
+            self.assertEqual(flat.numel(), (-(-rows // 128) * 128)
+                             * (-(-cols // 4) * 4))
+            self.assertTrue(torch.equal(
+                d2l._fp4_from_blocked(flat, rows, cols), s))
+            self.assertTrue(torch.equal(ref_unblock(flat, rows, cols), s))
+
+    def run_layer(self, lin, X, dY, native):
+        """lin(X) and its backward with the GEMM operands recorded: the
+        simulator's (Aq, Bq) per GEMM, or the hardware's (codes, scales, t)
+        of A and B^T plus the stub's arguments."""
+        lin.native, ops, calls, sims = native, [], [], []
+        real_op, real_mm = d2l._fp4_operand, d2l._f32_mm
+        kind, block = lin.scale, lin.block
+
+        def spy_op(*args, **kw):
+            ops.append(real_op(*args, **kw))
+            return ops[-1]
+
+        def stub(a, b, sa, sb):
+            calls.append((a, b, sa, sb))
+            return ref_gemm(a, b, sa, sb, block, kind)
+
+        def spy_mm(A, B, out):
+            sims.append((A, B))
+            return real_mm(A, B, out)
+        X = X.detach().clone().requires_grad_()
+        torch.manual_seed(7)  # the same stochastic-rounding draws
+        with mock.patch.object(d2l, '_fp4_operand', spy_op), \
+                mock.patch.object(d2l, '_fp4_scaled_mm', stub), \
+                mock.patch.object(d2l, '_f32_mm', spy_mm):
+            Y = lin(X)
+            dX, dW = torch.autograd.grad(Y, (X, lin.weight), dY)
+        return (Y, dX, dW), ops, calls, sims
+
+    def check_operands(self, lin, X, dY):
+        kind, block = lin.scale, lin.block
+        sim_out, _, _, sims = self.run_layer(lin, X, dY, False)
+        nat_out, ops, calls, none = self.run_layer(lin, X, dY, True)
+        self.assertEqual((len(sims), len(ops), len(calls), len(none)),
+                         (3, 6, 3, 0))
+        for k, (Aq, Bq) in enumerate(sims):  # forward, dgrad, wgrad
+            op_a, op_bt = ops[2 * k], ops[2 * k + 1]
+            a, b, sa, sb = calls[k]
+            # the stub got exactly these operands, B column-major
+            self.assertTrue(torch.equal(a.view(torch.uint8),
+                                        op_a[0].view(torch.uint8)))
+            self.assertEqual(b.stride(0), 1)
+            self.assertTrue(torch.equal(b.T.view(torch.uint8),
+                                        op_bt[0].view(torch.uint8)))
+            self.assertIs(sa, op_a[1])
+            self.assertIs(sb, op_bt[1])
+            A = ref_dequant(*op_a, block, kind)
+            B = ref_dequant(*op_bt, block, kind).T
+            # exact for fp32 inputs; the simulator rounds bf16 inputs' operands
+            self.assertTrue(torch.equal(A.to(Aq.dtype), Aq), (kind, k))
+            self.assertTrue(torch.equal(B.to(Bq.dtype), Bq), (kind, k))
+        for got, want in zip(nat_out, sim_out):  # bf16 outputs: one rounding
+            tol = 1e-2 if got.dtype == torch.bfloat16 else 1e-5
+            self.assertEqual(got.dtype, want.dtype)
+            self.assertLess(rel(got.detach().float(), want.float()), tol)
+        return ops
+
+    def test_operand_equality_nvfp4(self):
+        g = torch.Generator().manual_seed(6)
+        torch.manual_seed(6)
+        lin = d2l.Fp4Linear(64, 32)
+        with torch.no_grad():  # rows of different size: tiles differ
+            lin.weight.mul_(torch.linspace(0.1, 4.0, 32)[:, None])
+        X, dY = torch.randn(48, 64, generator=g), torch.randn(48, 32,
+                                                             generator=g)
+        X[:, 5] *= 30  # an outlier channel
+        ops = self.check_operands(lin, X, dY)
+        # the page's 16 x 16 weight tiles: one scale repeated over 16 rows
+        for op, rows in ((ops[1], 32), (ops[3], 64)):  # W (fwd), W^T (dgrad)
+            s = d2l._fp4_from_blocked(op[1].view(torch.uint8), rows,
+                                      op[0].shape[1] * 2 // 16)
+            tiles = s.reshape(rows // 16, 16, -1)
+            self.assertTrue(bool((tiles == tiles[:, :1]).all()))
+            self.assertGreater(len(torch.unique(s)), 1)
+        # 1-D weight blocks and no rotation; bf16 activations and gradients
+        lin = d2l.Fp4Linear(64, 32, weight_block2d=False, hadamard=0)
+        self.check_operands(lin, X, dY)
+        self.check_operands(d2l.Fp4Linear(64, 32), X.bfloat16(),
+                            dY.bfloat16())
+
+    def test_operand_equality_mxfp4(self):
+        g = torch.Generator().manual_seed(8)
+        torch.manual_seed(8)
+        lin = d2l.Fp4Linear(64, 64, block=32, scale='pow2')
+        X, dY = torch.randn(64, 64, generator=g), torch.randn(64, 64,
+                                                             generator=g)
+        ops = self.check_operands(lin, X, dY)
+        for packed, scales, t in ops:
+            self.assertEqual(scales.dtype, torch.float8_e8m0fnu)
+            self.assertEqual(float(t), 1.0)
+
+    def test_backend_not_in_config(self):
+        cfg = d2l.r2_config('fp8')
+        arms = {'bf16': ('bf16', (0,)), 'nvfp4-mlp': ('nvfp4-mlp', (0,))}
+        configs = []
+
+        class Seen(Exception):
+            pass
+
+        def fake(name, compute, config, **kw):
+            configs.append((name, config))
+            raise Seen
+        for has in (True, False):
+            with mock.patch.object(d2l, 'has_fp4_cores',
+                                   lambda dev, kind='e4m3': has), \
+                    mock.patch.object(d2l, '_pretrain_result', fake), \
+                    self.assertRaises(Seen):
+                d2l.lowp_arms(cfg, arms)
+        self.assertEqual(configs[0], configs[1])
+        self.assertEqual(configs[0][0], 'lowp-runs')
+        self.assertNotIn('native', str(configs[0][1]))
+
+    def test_convert(self):
+        def convert(recipe, has):
+            torch.manual_seed(0)
+            model = d2l.PackedGPT.from_arch(TOY)
+            with mock.patch.object(d2l, 'has_fp4_cores',
+                                   lambda dev, kind='e4m3': has):
+                got = d2l._lowp_convert(model, recipe)
+            return got, model.blks[0].ffn.W_1
+        for recipe, has, want, native in (
+                ('nvfp4-mlp', True, 'eager', True),
+                ('nvfp4-mlp', False, 'simulated', False),
+                ('nvfp4-mlp-sim', True, 'simulated', False),
+                ('nvfp4-mlp-native', True, 'eager', True)):
+            got, lin = convert(recipe, has)
+            self.assertEqual(got, want, recipe)
+            self.assertIsInstance(lin, d2l.Fp4Linear)
+            self.assertIs(lin.native, native)
+        with self.assertRaisesRegex(RuntimeError, 'simulated'):
+            convert('nvfp4-mlp-native', False)
+        with self.assertRaises(ValueError):
+            convert('nvfp4-mlp-x', True)
+
+    def test_blackwell_job(self):
+        name, kw = d2l.PRETRAIN_JOBS['lowp-blackwell']
+        self.assertEqual(name, 'lowp_arms')
+        kw = kw()
+        self.assertEqual(kw['job'], 'lowp-blackwell')
+        self.assertEqual(kw['cfg'], d2l.r2_config('fp8', steps=400, decay=60,
+                                                  val_every=100))
+        self.assertEqual({r for r, _ in kw['arms'].values()},
+                         {'bf16', 'nvfp4-mlp-sim', 'nvfp4-mlp-native'})
+        self.assertEqual(kw['arms']['bf16'][1], (0, 1, 2, 3))
+        self.assertEqual(d2l._RERUN_ARTIFACT['lowp-blackwell'],
+                         'lowp-blackwell')
+        key = d2l.PRETRAIN_ARTIFACTS['lowp-blackwell'][0]
+        self.assertEqual(key, 'lm-lowp-blackwell-v1')
+        with open(os.path.join(ROOT, 'tools', 'lm_campaigns.yaml')) as f:
+            camp = yaml.safe_load(f)
+        entry = next(e for e in camp['campaigns']
+                     if e['id'] == '21.3-lowp-blackwell')
+        self.assertEqual(entry['command'],
+                         'python tools/lm_regen.py lowp-blackwell')
+        self.assertTrue(any(o.endswith(f'-> {key}')
+                            for o in entry['outputs']))
+        # its runs keep their own folder (the lowp-runs files never clash)
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(d2l, '_job_root', lambda: tmp), \
+                mock.patch.object(d2l, '_lowp_run', side_effect=RuntimeError
+                                  ('stop')) as run:
+            for job in ('lowp-runs', 'lowp-blackwell'):
+                with self.assertRaisesRegex(RuntimeError, 'stop'):
+                    d2l._lowp_run_cached(kw['cfg'], 'bf16', 'bf16', 0, False,
+                                         False, job=job)
+            self.assertEqual(sorted(os.listdir(tmp)),
+                             ['lowp', 'lowp-blackwell'])
+            self.assertEqual(run.call_count, 2)
 
 
 class ModelTest(unittest.TestCase):

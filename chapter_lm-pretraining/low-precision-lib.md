@@ -13,6 +13,9 @@ that the section explains in a sentence but does not show
 - the tile layouts behind `fp8_quant`'s granularities, the operand
   statistics behind `Fp8Linear.stats()`, the GEMM and layout helpers of
   `Fp8Linear` and `Fp4Linear`, the Hadamard matrix;
+- the native FP4 path on Blackwell (`has_fp4_cores`, `fp4_backend`, the
+  E2M1 packing, the blocked scale layout, the probe GEMM, `_fp4_mm`) and
+  its campaign `lowp-blackwell`;
 - the opening's activation capture (`mlp_input`);
 - the Inductor workaround for fp8 copies (`_lowp_compile_settings`);
 - the GEMM sweep (`fp8_gemm_sweep`) and the six-arm driver (`lowp_arms`:
@@ -46,6 +49,8 @@ d2l.PRETRAIN_ARTIFACTS['gemm-sweep'] = (
     'lm-fp8-gemm-sweep-v1', 'json-table')
 d2l.PRETRAIN_ARTIFACTS['lowp-runs'] = (
     'lm-lowp-runs-v1', 'json-table')
+d2l.PRETRAIN_ARTIFACTS['lowp-blackwell'] = (  # campaign 21.3-lowp-blackwell
+    'lm-lowp-blackwell-v1', 'json-table')      # (tools/lm_campaigns.yaml)
 ```
 
 The jobs of `tools/lm_regen.py`: the page's two computing calls written a
@@ -65,6 +70,22 @@ d2l.PRETRAIN_JOBS['lowp-runs'] = ('lowp_arms', lambda: dict(
           'rowwise': ('torchao-rowwise', (0,)),
           'delayed': ('fp8-delayed', (0,)),
           'nvfp4-mlp': ('nvfp4-mlp', (0,))}))
+```
+
+The Blackwell campaign (not run on the build box, which has no FP4
+tensor cores): the `nvfp4-mlp` arm with native and with simulated FP4
+GEMMs, 400 steps of the `fp8` preset, against four bf16 seeds for the
+noise scale (claim 13 of the section).
+
+```{.python .input #low-precision-lib-registries-1}
+%%tab pytorch
+#@save
+d2l.PRETRAIN_JOBS['lowp-blackwell'] = ('lowp_arms', lambda: dict(
+    cfg=d2l.r2_config('fp8', steps=400, decay=60, val_every=100),
+    arms={'bf16': ('bf16', (0, 1, 2, 3)),
+          'nvfp4-sim': ('nvfp4-mlp-sim', (0,)),
+          'nvfp4-native': ('nvfp4-mlp-native', (0,))},
+    job='lowp-blackwell'))
 ```
 
 ## Formats, Tiles and Operand Statistics
@@ -238,19 +259,256 @@ def _rotate_rows(X, H):
     return torch.einsum('ij,gjc->gic', H.to(X.device), Xg).reshape(X.shape)
 
 #@save
-def _fp4_weight(W, block, block2d, dim=-1):
-    """W fake-quantized to NVFP4: in block x block tiles (one scale each,
-    so the forward and the input-gradient GEMM read the same quantized W)
-    or in 1 x block blocks along dim."""
+def _fp4_weight(W, block, block2d, dim=-1, scale='e4m3'):
+    """W fake-quantized to FP4 (NVFP4 by default): in block x block tiles
+    (one scale each, so the forward and the input-gradient GEMM read the
+    same quantized W) or in 1 x block blocks along dim."""
     if not block2d:
-        return d2l.fake_quant_fp4(W, block, dim=dim)
+        return d2l.fake_quant_fp4(W, block, scale, dim=dim)
     N, K = W.shape
     if N % block or K % block:
         raise ValueError(f'{N} x {K} does not split into {block}-blocks')
     tiles = W.reshape(N // block, block, K // block, block).transpose(1, 2)
-    q = d2l.fake_quant_fp4(tiles.reshape(-1, block * block), block * block)
+    q = d2l.fake_quant_fp4(tiles.reshape(-1, block * block), block * block,
+                           scale)
     return q.reshape(N // block, K // block, block, block).transpose(
         1, 2).reshape(N, K)
+```
+
+## Native FP4 on Blackwell
+
+Blackwell's tensor cores multiply E2M1 operands with block scales: NVFP4
+(an E4M3 scale per 16 values along the reduction dimension, under an fp32
+tensor scale) and MXFP4 (an E8M0 scale per 32). `Fp4Linear` keeps the
+simulator's quantization (round to nearest, stochastic rounding, the
+Hadamard rotation: all in software) and, on such a card, hands the same
+operands to the hardware as codes and scales instead of multiplying the
+dequantized values in fp32. The 16 x 16 weight tiles become 1 x 16 blocks
+by repeating each tile's scale over its 16 rows. Whether a card qualifies
+is decided once per device and format: its compute capability, the calls
+the installed torch offers, and one probe GEMM against the simulator; any
+failure leaves the simulator in place with a one-line reason
+(`fp4_backend`). The build box (RTX 4090, compute capability 8.9) has no
+FP4 tensor cores: there, the tests in `tools/test_lm_low_precision.py`
+check the hardware operands on the CPU with the capability mocked and the
+GEMM stubbed.
+
+```{.python .input #low-precision-lib-native-fp4-on-blackwell}
+%%tab pytorch
+#@save
+_FP4_CAPABILITIES = ((10, 0), (10, 3), (12, 0), (12, 1))  # B200/B300, RTX 50
+
+#@save
+_FP4_HW = {'e4m3': ('NVFP4', 16, torch.float8_e4m3fn, 'E4M3'),
+           'pow2': ('MXFP4', 32, getattr(torch, 'float8_e8m0fnu', None),
+                    'E8M0')}  # scale kind: format, block, scale dtype
+
+#@save
+_FP4_PROBES = {}  # (device type, index, scale kind): None or why not
+
+#@save
+def _fp4_api():
+    """None if the installed torch has what the native FP4 path calls (the
+    float4_e2m1fn_x2 and float8_e8m0fnu dtypes, torch._scaled_mm and
+    torch.nn.functional.scaled_mm, all in torch 2.11.0), else why not."""
+    missing = [n for n in ('float4_e2m1fn_x2', 'float8_e8m0fnu',
+                           '_scaled_mm') if not hasattr(torch, n)]
+    missing += [f'F.{n}' for n in ('scaled_mm', 'ScalingType', 'SwizzleType')
+                if not hasattr(F, n)]
+    if missing:
+        return f'torch {torch.__version__} lacks {", ".join(missing)}'
+    return None
+
+#@save
+def _fp4_to_blocked(s):
+    """A (rows, cols) uint8 matrix of block scales in cuBLAS's layout for
+    1 x 16 and 1 x 32 block scaling, flattened: rows padded to a multiple
+    of 128 and columns to a multiple of 4 (with zeros), tiles of 128 x 4
+    in row-major tile order, scale (r, c) of a tile at offset
+    (r % 32) * 16 + (r // 32) * 4 + c (the cuBLAS documentation, '1D block
+    scaling factors layout')."""
+    R, C = s.shape
+    nr, nc = -(-R // 128), -(-C // 4)
+    p = s.new_zeros(nr * 128, nc * 4)
+    p[:R, :C] = s
+    tiles = p.reshape(nr, 128, nc, 4).permute(0, 2, 1, 3)
+    return tiles.reshape(-1, 4, 32, 4).transpose(1, 2).reshape(-1)
+
+#@save
+def _fp4_from_blocked(flat, rows, cols):
+    """The (rows, cols) scale matrix that _fp4_to_blocked laid out."""
+    nr, nc = -(-rows // 128), -(-cols // 4)
+    t = flat.reshape(nr * nc, 32, 4, 4).transpose(1, 2)
+    t = t.reshape(nr, nc, 128, 4).permute(0, 2, 1, 3)
+    return t.reshape(nr * 128, nc * 4)[:rows, :cols]
+
+#@save
+def _fp4_block_scales(x, block, scale, tiles=False):
+    """The scales fake_quant_fp4(x, block, scale) gives the rows of x
+    (blocks along the last dimension), or with tiles the scales of
+    _fp4_weight's block x block tiles repeated over each tile's rows: the
+    scale codes (rows, K // block) as uint8, their values in fp32 (tensor
+    scale applied, as the simulator multiplies), and the tensor scale."""
+    R, K = x.shape
+    xf = x.detach().float()
+    if tiles:
+        if R % block or K % block:
+            raise ValueError(f'{R} x {K} does not split into {block}-tiles')
+        amax = xf.reshape(R // block, block, K // block, block).abs().amax(
+            (1, 3)).repeat_interleave(block, 0)
+    else:
+        amax = xf.reshape(R, K // block, block).abs().amax(-1)
+    if scale == 'e4m3':  # NVFP4: amax / 6 in E4M3 under one fp32 scale
+        s = amax / 6
+        t = s.amax() / 448
+        t = torch.where(t > 0, t, 1.0)
+        s8 = (s / t).to(torch.float8_e4m3fn)
+        return s8.view(torch.uint8), s8.float() * t, t
+    e = torch.floor(torch.log2(amax)) - 2  # MXFP4: E8M0, 2^e
+    bits = (e + 127).clamp(0, 254)  # an all-zero block: any scale
+    return bits.to(torch.uint8), torch.exp2(e), torch.ones((), device=x.device)
+
+#@save
+def _fp4_codes(q, s):
+    """The 4-bit E2M1 codes of q = value x s (s per element): bit 3 the
+    sign, bits 0-2 the index of |q / s| in E2M1 (0, 0.5, 1, 1.5, 2, 3, 4,
+    6 are codes 0 to 7); 0 where s is 0."""
+    grid = torch.tensor(d2l.E2M1, device=q.device)
+    z = torch.where(s > 0, q.float().abs() / s, 0.0)
+    i = torch.bucketize(z, (grid[1:] + grid[:-1]) / 2)  # nearest grid value
+    return (i | ((q < 0).long() << 3)).to(torch.uint8)
+
+#@save
+def _fp4_operand(q, x, block, scale, tiles=False):
+    """The hardware form of q, the simulator's quantization of x (both
+    (R, K), blocks along K): the E2M1 codes packed two per byte (element
+    2j in the low half of byte j) as an (R, K / 2) float4_e2m1fn_x2 tensor,
+    the block scales (R, K / block) as E4M3 or E8M0 in _fp4_to_blocked's
+    layout, and the fp32 tensor scale (1 for MXFP4)."""
+    bits, s, t = _fp4_block_scales(x, block, scale, tiles)
+    c = _fp4_codes(q, s.repeat_interleave(block, -1))
+    packed = (c[:, ::2] | (c[:, 1::2] << 4)).view(torch.float4_e2m1fn_x2)
+    return packed, _fp4_to_blocked(bits).view(_FP4_HW[scale][2]), t
+
+#@save
+def _fp4_scaled_mm(a, b, scale_a, scale_b):
+    """The FP4 GEMM on the tensor cores, with fp32 output, through the entry
+    points torchao 0.17 uses with torch 2.11.0: a is an (M, K / 2)
+    float4_e2m1fn_x2 tensor (row-major), b (K / 2, N) (column-major: the
+    transpose of a row-major (N, K / 2) tensor), scale_a and scale_b the
+    (M, K / block) and (N, K / block) block scales flat in
+    _fp4_to_blocked's layout. NVFP4 (float8_e4m3fn scales, block 16):
+    torch._scaled_mm(a, b, scale_a, scale_b, out_dtype=torch.float32).
+    MXFP4 (float8_e8m0fnu, block 32): torch.nn.functional.scaled_mm with
+    ScalingType.BlockWise1x32 and SwizzleType.SWIZZLE_32_4_4 (torch._scaled_mm
+    refuses it: 'Invalid scaling configuration'; torch 2.11 runs it on
+    B200/B300 only). The fp32 tensor scales are not passed: the caller
+    multiplies the product."""
+    if scale_a.dtype == torch.float8_e4m3fn:
+        return torch._scaled_mm(a, b, scale_a, scale_b,
+                                out_dtype=torch.float32)
+    blockwise = F.ScalingType.BlockWise1x32
+    swizzle = F.SwizzleType.SWIZZLE_32_4_4
+    return F.scaled_mm(a, b, scale_a, blockwise, scale_b, blockwise,
+                       swizzle_a=swizzle, swizzle_b=swizzle,
+                       output_dtype=torch.float32)
+
+#@save
+def _fp4_native_mm(a, b, block, scale):
+    """A @ B in fp32 on FP4 tensor cores for a = (Aq, A[, tiles]) with A
+    (M, K) and b = (Bq, B[, tiles]) with B (K, N): Aq, Bq the simulator's
+    quantization of A and B in blocks along K."""
+    fa = _fp4_operand(a[0], a[1], block, scale, *a[2:])
+    fb = _fp4_operand(b[0].T, b[1].T, block, scale, *b[2:])
+    with torch.autocast(a[0].device.type, enabled=False):
+        Y = _fp4_scaled_mm(fa[0], fb[0].T, fa[1], fb[1])
+    return Y * (fa[2] * fb[2])
+
+#@save
+def _fp4_probe(device, scale):
+    """One 128 x 128 x 128 GEMM through the native path against the
+    simulator's on device: None if they agree to 1e-2 (relative Frobenius
+    error), else why not, in one line."""
+    block = _FP4_HW[scale][1]
+    g = torch.Generator().manual_seed(0)
+    A, B = (torch.randn(128, 128, generator=g).to(device) for _ in range(2))
+    qa = d2l.fake_quant_fp4(A, block, scale)
+    qb = d2l.fake_quant_fp4(B, block, scale, dim=0)
+    try:
+        got = _fp4_native_mm((qa, A), (qb, B), block, scale)
+    except (RuntimeError, TypeError, ValueError, NotImplementedError) as e:
+        msg = (str(e).strip().splitlines() or [''])[0][:60]
+        return f'the probe GEMM failed: {type(e).__name__}: {msg}'
+    ref = _f32_mm(qa, qb, torch.float32)
+    err = float(torch.linalg.norm(got.float() - ref) / torch.linalg.norm(ref))
+    if not err < 1e-2:
+        return f'the probe GEMM is off the simulator by {err:.1e}'
+    return None
+
+#@save
+def _fp4_why_not(device, scale='e4m3'):
+    """None if device runs FP4 GEMMs with scale kind scale natively, else
+    why not (the probe runs once per device and scale kind)."""
+    device = torch.device(device)
+    if device.type != 'cuda':
+        return 'native needs a Blackwell GPU'
+    if torch.cuda.get_device_capability(device) not in _FP4_CAPABILITIES:
+        return 'native needs Blackwell: sm_100/103/120/121'
+    why = _fp4_api()
+    if why is not None:
+        return why
+    key = (device.type, device.index, scale)
+    if key not in _FP4_PROBES:
+        _FP4_PROBES[key] = _fp4_probe(device, scale)
+    return _FP4_PROBES[key]
+
+#@save
+def has_fp4_cores(device, scale='e4m3'):
+    """Whether device multiplies FP4 operands natively: a Blackwell GPU
+    (compute capability 10.0, 10.3, 12.0 or 12.1) whose native GEMM, NVFP4
+    ('e4m3') or MXFP4 ('pow2'), passes a probe against the simulator."""
+    return _fp4_why_not(device, scale) is None
+
+#@save
+def fp4_backend(device, scale='e4m3'):
+    """One line: which path Fp4Linear's GEMMs take on device, and why."""
+    device = torch.device(device)
+    where = device_name(device)
+    if device.type == 'cuda':
+        where += ' (sm_{}{})'.format(*torch.cuda.get_device_capability(
+            device))
+    why = _fp4_why_not(device, scale)
+    fmt, block, _, kind = _FP4_HW[scale]
+    how = (f'native ({fmt}: {kind} scales, blocks of {block})'
+           if why is None else f'simulated ({why})')
+    return f'FP4 GEMMs on {where}: {how}'
+
+#@save
+def _fp4_native(lin, device):
+    """Whether Fp4Linear lin multiplies on FP4 tensor cores on device:
+    lin.native, or when it is None, whether the device has them for lin's
+    format (NVFP4: E4M3 scales, block 16; MXFP4: E8M0, block 32)."""
+    if lin.native is False:
+        return False
+    hw = _FP4_HW.get(lin.scale)
+    if hw is None or hw[1] != lin.block:
+        if lin.native:
+            raise ValueError(f'native FP4 takes NVFP4 (e4m3, block 16) or '
+                             f'MXFP4 (pow2, block 32), not {lin.scale!r} '
+                             f'with block {lin.block}')
+        return False
+    return bool(lin.native) or has_fp4_cores(device, lin.scale)
+
+#@save
+def _fp4_mm(a, b, lin, out_dtype):
+    """A @ B for Fp4Linear lin, with a = (Aq, A[, tiles]), b = (Bq, B[,
+    tiles]) as in _fp4_native_mm: Aq @ Bq in fp32 (simulated) or on FP4
+    tensor cores, returned as out_dtype. The simulator's operands are
+    rounded to the inputs' dtype (bf16 under autocast), the hardware's are
+    not: the two differ by at most that rounding."""
+    if _fp4_native(lin, a[0].device):
+        return _fp4_native_mm(a, b, lin.block, lin.scale).to(out_dtype)
+    return _f32_mm(a[0], b[0], out_dtype)
 ```
 
 ## The Opening's Activations
@@ -594,8 +852,10 @@ def _torchao_float8(model, recipe):
 #@save
 def _lowp_convert(model, recipe):
     """Convert model for a recipe; returns 'yes' (native fp8, compiled),
-    'eager' (native fp8 GEMMs outside the compiled graph), 'simulated', or
-    '—' (bf16)."""
+    'eager' (native fp8 or FP4 GEMMs outside the compiled graph),
+    'simulated', or '—' (bf16). 'nvfp4-mlp' takes the FP4 tensor cores
+    where the card has them (has_fp4_cores), 'nvfp4-mlp-sim' never,
+    'nvfp4-mlp-native' always (an error elsewhere)."""
     dev = next(model.parameters()).device
     if recipe == 'bf16':
         return '—'
@@ -613,10 +873,18 @@ def _lowp_convert(model, recipe):
         _swap_linears(model, lambda i, o: d2l.Fp8Linear(
             i, o, scale_mode='delayed', native=native))
         return 'eager' if native else 'simulated'
-    if recipe == 'nvfp4-mlp':
-        _swap_linears(model, d2l.Fp4Linear, ('ffn.W_g', 'ffn.W_1',
-                                             'ffn.W_2'))
-        return 'simulated'
+    if recipe.startswith('nvfp4-mlp'):  # the FP4 GEMMs run eagerly
+        native = {'nvfp4-mlp': None, 'nvfp4-mlp-sim': False,
+                  'nvfp4-mlp-native': True}.get(recipe, 'unknown')
+        if native == 'unknown':
+            raise ValueError(f'unknown recipe {recipe!r}')
+        if native is None:
+            native = d2l.has_fp4_cores(dev)
+        elif native and not d2l.has_fp4_cores(dev):
+            raise RuntimeError(f'{recipe}: {d2l.fp4_backend(dev)}')
+        _swap_linears(model, lambda i, o: d2l.Fp4Linear(i, o, native=native),
+                      ('ffn.W_g', 'ffn.W_1', 'ffn.W_2'))
+        return 'eager' if native else 'simulated'
     raise ValueError(f'unknown recipe {recipe!r}')
 
 #@save
@@ -716,9 +984,12 @@ def _lowp_run(cfg, recipe, seed, profile=False, stats=False):
                 profile=prof.get('table'))
 
 #@save
-def _lowp_run_cached(cfg, name, recipe, seed, profile, stats):
-    """_lowp_run, or the file an earlier attempt of the same run wrote."""
-    folder = os.path.join(d2l._job_root(), 'lowp')
+def _lowp_run_cached(cfg, name, recipe, seed, profile, stats,
+                     job='lowp-runs'):
+    """_lowp_run, or the file an earlier attempt of the same run wrote (in
+    the job's folder)."""
+    folder = os.path.join(d2l._job_root(),
+                          'lowp' if job == 'lowp-runs' else job)
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, f'{name}-s{seed}.json.gz')
     config = dict(cfg=d2l._cfg_json(cfg), recipe=recipe, seed=seed,
@@ -776,19 +1047,23 @@ def _lowp_merge(runs, arms):
                     profile, label='')
 
 #@save
-def lowp_arms(cfg, arms):
+def lowp_arms(cfg, arms, job='lowp-runs'):
     """Train cfg once per arm and seed; arms = {name: (recipe, seeds)} with
     recipes 'bf16', 'torchao-tensorwise', 'torchao-rowwise' (native if the
     card can, else the simulated rowwise Fp8Linear), 'fp8-delayed' (the
     from-scratch Fp8Linear with delayed scaling, operand statistics every
-    10 steps) and 'nvfp4-mlp' (Fp4Linear on the MLP). A run's model and
+    10 steps) and 'nvfp4-mlp' (Fp4Linear on the MLP; native FP4 GEMMs on
+    Blackwell, simulated elsewhere; '-sim' and '-native' force either;
+    the backend is not part of the configuration). A run's model and
     data seed are its seed. The first arm is the baseline; every arm's
     first seed is profiled over steps 200-210. Returns LowpRuns: table (per
     arm: runs, native, final validation loss (seed mean), tokens/s (median
     over steps 200-400) and its IQR, ratio to the baseline, peak GiB;
     speeds only where the fp8 GEMMs run natively in the compiled step),
     losses, stats, profile (per arm). Computed only in a regeneration (one
-    whole card, about an hour); else the committed result."""
+    whole card, about an hour); else the committed result. job names the
+    regeneration ('lowp-runs', or 'lowp-blackwell': native against
+    simulated FP4 on a Blackwell card)."""
     config = dict(cfg=d2l._cfg_json(cfg),
                   arms={k: [r, list(s)] for k, (r, s) in arms.items()})
 
@@ -798,10 +1073,10 @@ def lowp_arms(cfg, arms):
         _fp8_compile_check(_torchao_recipes(arms))
         runs = {(name, s): _lowp_run_cached(
             cfg, name, recipe, s, profile=(s == seeds[0]),
-            stats=(recipe == 'fp8-delayed'))
+            stats=(recipe == 'fp8-delayed'), job=job)
             for name, (recipe, seeds) in arms.items() for s in seeds}
         return _lowp_merge(runs, arms)
-    result = d2l._pretrain_result('lowp-runs', compute, config)
+    result = d2l._pretrain_result(job, compute, config)
     return d2l._show_label(d2l._as_tuple(LowpRuns, result, _LOWP_COLUMNS))
 
 #@save

@@ -132,7 +132,7 @@ PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'inst-t1-softcap', 'inst-t1-clip', 'inst-t1-warmup', 'size-xfer-pilot',
     'size-xfer', 'spike-replay', 'eps-headroom', 'reference-run', 'ladder',
     'inst-t2', 'reference-evals', 't1-evals', 'ladder-evals',
-    'gemm-sweep', 'lowp-runs',
+    'gemm-sweep', 'lowp-runs', 'lowp-blackwell',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
     'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2', 'smollm3-3',
     'smollm3-4', 'smollm3-5',  # smollm3-symbolic joins here (and in
@@ -156,7 +156,8 @@ _RERUN_ARTIFACT = {  # regeneration name: the load name of what it writes
     'reference-run': 'reference-run-log', 'ladder': 'ladder-logs',
     'inst-t2': 'instability-t2', 'reference-evals': 'reference-evals',
     't1-evals': 't1-evals', 'ladder-evals': 'ladder-evals', 'gemm-sweep': 'gemm-sweep',
-    'lowp-runs': 'lowp-runs', 'cpt-t1': 'cpt-t1', 'cpt-qwen-A': 'cpt-runs',
+    'lowp-runs': 'lowp-runs', 'lowp-blackwell': 'lowp-blackwell',
+    'cpt-t1': 'cpt-t1', 'cpt-qwen-A': 'cpt-runs',
     'cpt-qwen-B': 'cpt-runs', 'cpt-qwen-C': 'cpt-runs',
     'cpt-qwen-A2': 'cpt-runs', 'cpt-qwen-evals': 'cpt-runs',
     **{f'smollm3-{i}': 'smollm3-trajectory' for i in range(6)},

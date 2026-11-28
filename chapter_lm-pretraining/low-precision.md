@@ -395,42 +395,50 @@ saturated = float((q.float().abs() == 448).float().mean())
 print(f'delayed scaling after a 6× jump: {saturated:.0%} saturated at 448')
 ```
 
-<!-- Placeholder (prose): Fp4Linear simulates the NVFP4 training recipe of the NVFP4 pretraining paper: round-to-nearest for the forward operands, 16x16 blocks for the weights (so the forward and the input gradient read the same quantized W), stochastic rounding on the gradients, and a random 16x16 Hadamard transform over tokens on both inputs of the weight-gradient GEMM; which layers stay in higher precision is quoted from the paper and the Nemotron 3 report. Numerics only. -->
+<!-- Placeholder (prose): Fp4Linear implements the NVFP4 training recipe of the NVFP4 pretraining paper (simulated here; native on Blackwell, below): round-to-nearest for the forward operands, 16x16 blocks for the weights (so the forward and the input gradient read the same quantized W), stochastic rounding on the gradients, and a random 16x16 Hadamard transform over tokens on both inputs of the weight-gradient GEMM; which layers stay in higher precision is quoted from the paper and the Nemotron 3 report. On this box: numerics only, no speed. -->
 
 ```{.python .input #low-precision-fp4-linear}
 %%tab pytorch
 #@save
 class _Fp4Matmul(torch.autograd.Function):
-    """Y = X W^T with simulated NVFP4 operands (the NVFP4 recipe)."""
+    """Y = X W^T with NVFP4 operands (the NVFP4 recipe): simulated, or
+    on FP4 tensor cores where the GPU has them (d2l._fp4_mm)."""
     @staticmethod
     def forward(ctx, X, W, lin):
         ctx.lin = lin
         ctx.save_for_backward(X, W)
-        Wq = d2l._fp4_weight(W, lin.block, lin.weight_block2d)
-        return d2l._f32_mm(fake_quant_fp4(X, lin.block), Wq.T,
+        Wq = d2l._fp4_weight(W, lin.block, lin.weight_block2d,
+                             scale=lin.scale)
+        x = (fake_quant_fp4(X, lin.block, lin.scale), X)
+        return d2l._fp4_mm(x, (Wq.T, W.T, lin.weight_block2d), lin,
                            d2l._out_dtype(X))
 
     @staticmethod
     def backward(ctx, dY):
         (X, W), lin = ctx.saved_tensors, ctx.lin
-        q = lambda t, r, dim=-1: fake_quant_fp4(t, lin.block, rounding=r,
-                                                dim=dim)
+        q = lambda t, r, dim=-1: fake_quant_fp4(t, lin.block, lin.scale,
+                                                rounding=r, dim=dim)
         sr = 'sr' if lin.sr_grads else 'rtn'  # stochastic for gradients
-        Wq = d2l._fp4_weight(W, lin.block, lin.weight_block2d, dim=0)
-        dX = d2l._f32_mm(q(dY, sr), Wq, X.dtype)  # dY W
+        Wq = d2l._fp4_weight(W, lin.block, lin.weight_block2d, dim=0,
+                             scale=lin.scale)
+        w = (Wq, W, lin.weight_block2d)  # A @ B operands: (quantized, raw)
+        dX = d2l._fp4_mm((q(dY, sr), dY), w, lin, X.dtype)  # dY W
         if lin.H is not None:  # rotate each 16 tokens: dY^T X is unchanged
             X, dY = d2l._rotate_rows(X, lin.H), d2l._rotate_rows(dY, lin.H)
-        dW = d2l._f32_mm(q(dY, sr, 0).T, q(X, 'rtn', 0), W.dtype)
+        dW = d2l._fp4_mm((q(dY, sr, 0).T, dY.T), (q(X, 'rtn', 0), X), lin,
+                         W.dtype)
         return dX, dW, None  # dW = dY^T X, blocks along the tokens
 
 #@save
 class Fp4Linear(nn.Linear):
-    """nn.Linear with simulated NVFP4 training GEMMs; numerics only."""
+    """nn.Linear with NVFP4 (or MXFP4: block=32, scale='pow2') training
+    GEMMs; native=None: on FP4 tensor cores where the GPU has them."""
     def __init__(self, in_features, out_features, bias=False, block=16,
-                 weight_block2d=True, hadamard=16, sr_grads=True):
+                 weight_block2d=True, hadamard=16, sr_grads=True,
+                 scale='e4m3', native=None):
         super().__init__(in_features, out_features, bias=bias)
         self.block, self.weight_block2d = block, weight_block2d
-        self.sr_grads = sr_grads
+        self.sr_grads, self.scale, self.native = sr_grads, scale, native
         H = (d2l._hadamard(hadamard, torch.Generator().manual_seed(0))
              if hadamard else None)  # a random Hadamard transform
         self.register_buffer('H', H, persistent=False)
@@ -439,6 +447,13 @@ class Fp4Linear(nn.Linear):
         Y = _Fp4Matmul.apply(X.reshape(-1, X.shape[-1]), self.weight, self)
         Y = Y.reshape(*X.shape[:-1], -1)
         return Y if self.bias is None else Y + self.bias
+```
+
+<!-- Placeholder (prose): which path ran. Blackwell GPUs (B200 and B300, the RTX 50 series) have FP4 tensor cores and Fp4Linear uses them there: the same quantized operands (rounding, stochastic rounding and the Hadamard rotation stay in software) go to the hardware as packed E2M1 codes with their E4M3 block scales and the fp32 tensor scale (MXFP4: E8M0 scales per 32, native on B200/B300 only with torch 2.11), and the 16 x 16 weight tiles become the hardware's 1 x 16 blocks by repeating each tile's scale. The build box (4 x RTX 4090, compute capability 8.9) has none, so every FP4 number in this section comes from the simulator; the native path is tested on the CPU with the hardware mocked (tools/test_lm_low_precision.py: the codes and scales handed to the GEMM reconstruct the simulator's operands exactly in all three GEMMs) and has not run on Blackwell here (claim 13; campaign lowp-blackwell). Quote no native FP4 speed from a datasheet as if measured. -->
+
+```{.python .input #low-precision-fp8-and-nvfp4-linear-layers-1}
+%%tab pytorch
+print(d2l.fp4_backend(d2l.try_gpu()))
 ```
 
 ### When fp8 Pays: the Crossover and Amdahl's Bound

@@ -46,3 +46,30 @@ campaigns:
     measured: 49 runs, 2.7 GPU-hours of runs (3.1 GPU-hours of reserved cards), 46 min wall on four RTX 4090s; the time stop left 4 runs at their step-768 checkpoints, and the resume finished them
     outputs:
       - data/lm/rerun/mix-t2s/lm-mix-runs-t2s-v1.json -> lm-mix-runs-t2s-v1 (registered)
+  - id: 21.3-lowp-blackwell
+    section: sec_lm_low_precision (chapter_lm-pretraining/low-precision.md)
+    tier: T1 on Blackwell (one B200/B300 or RTX 50-series card; compute capability 10.0, 10.3, 12.0 or 12.1)
+    status: packaged, not run (no FP4 tensor cores on the RTX 4090s)
+    ruling: D3 revised 2026-11-25 (NVFP4/MXFP4 simulated on Ada, native on Blackwell)
+    config: d2l.PRETRAIN_JOBS['lowp-blackwell'] (fp8 preset, 400 steps)
+    schedule: decay 60, validation every 100; arms bf16 seeds 0-3, nvfp4-mlp simulated and native, seed 0
+    check: >-
+      before the runs, python -c "from d2l import torch as d2l; print(d2l.fp4_backend('cuda'))"
+      must print "native (NVFP4: E4M3 scales, blocks of 16)"; a "simulated (...)" line names why not
+      (capability, torch API, or the probe GEMM against the simulator), and the native arm then refuses to start
+    command: python tools/lm_regen.py lowp-blackwell
+    resume: the same command (each run's file in data/lm/rerun/ch21/lowp-blackwell/ is reused)
+    depends:
+      - lm-r2-tokenizer-v1
+      - lm-fwedu-shards-100m-v1
+      - lm-fwedu-val-v1
+    runs: 6 runs of 400 steps (6.6M tokens each); FP4 GEMMs eager, no speed claimed
+    predicted_gpu_hours: 0.5  # RTX 4090 arms (lm-lowp-runs-v1): bf16 about 3.5 min per 1,221 steps, simulated nvfp4-mlp about 17 min; at 400 steps about 25 min on a 4090, less on a B200
+    memory_gib_per_run: 12  # lm-lowp-runs-v1 peak on the RTX 4090: bf16 10.1 GiB, nvfp4-mlp 11.3 GiB
+    gpus: one card; the runs are sequential in one process
+    outputs:
+      - data/lm/rerun/lm-lowp-blackwell-v1.json.gz -> lm-lowp-blackwell-v1
+    after: >-
+      upload and register lm-lowp-blackwell-v1 in low-precision-lib.md's data-hub cell; add the page cell that
+      prints the native - simulated final validation loss of the nvfp4 arms against the bf16 seeds' SD at
+      400 steps (claim 13: within one SD) and rewrite the "not run on Blackwell" sentences of 21.3

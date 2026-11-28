@@ -2,7 +2,7 @@
 """Run one long regeneration job of chapter 21 without a notebook.
 
     python tools/lm_regen.py <name> [--resume] [--only RUN]
-    python tools/lm_regen.py --prefetch
+    python tools/lm_regen.py --prefetch [--sources NAME,...]
 
 `<name>` is a key of `d2l.PRETRAIN_JOBS` (path (b) of the chapter's rule
 R1: jobs over 30 minutes, or ones that hold whole cards for hours). The
@@ -21,7 +21,10 @@ state) and is accepted for the launcher's command line.
 
 `--prefetch` downloads every registered chapter-21 artifact and the pinned
 Hub weights and data of `d2l.PRETRAIN_SOURCES` into HF_HOME, quietly, so a
-capture run never downloads.
+capture run never downloads. `--sources` limits it to those
+`PRETRAIN_SOURCES` models and fetches no artifact, so large weights can come
+in waves as disk allows (21.4's six SmolLM3 branches, 37 GB: LC 64K and
+mid-training first, `--sources smollm3-lc64k,smollm3-mid`).
 
 Run it under the GPU-lock helper (gpu_run.sh); it exits non-zero on failure.
 """
@@ -34,9 +37,14 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHAPTER = os.path.join(REPO, 'chapter_lm-pretraining')
 
 
-def prefetch(d2l):
-    keys = sorted({k for k, _ in d2l.PRETRAIN_ARTIFACTS.values()
-                   if k in d2l.DATA_HUB})
+def prefetch(d2l, sources=None):
+    models = {n for n, (kind, *_) in d2l.PRETRAIN_SOURCES.items()
+              if kind == 'model'}
+    if sources is not None and set(sources) - models:
+        raise SystemExit(f'not a model of PRETRAIN_SOURCES: '
+                         f'{sorted(set(sources) - models)}')
+    keys = [] if sources is not None else sorted(
+        {k for k, _ in d2l.PRETRAIN_ARTIFACTS.values() if k in d2l.DATA_HUB})
     for key in keys:
         t = time.time()
         with d2l._quiet():
@@ -45,7 +53,7 @@ def prefetch(d2l):
               f'({time.time() - t:.0f} s)', flush=True)
     from huggingface_hub import snapshot_download
     for name, (kind, repo, rev, _) in sorted(d2l.PRETRAIN_SOURCES.items()):
-        if kind != 'model':
+        if kind != 'model' or (sources is not None and name not in sources):
             continue  # datasets are read per file by the builders
         t = time.time()
         with d2l._quiet():
@@ -63,11 +71,15 @@ def main():
     p.add_argument('--only')
     p.add_argument('--merge', action='store_true')
     p.add_argument('--prefetch', action='store_true')
+    p.add_argument('--sources', help='with --prefetch: comma-separated '
+                   'PRETRAIN_SOURCES model names (no artifacts)')
     a = p.parse_args()
     os.chdir(CHAPTER)
     if a.prefetch:
         from d2l import torch as d2l
-        return prefetch(d2l)
+        return prefetch(d2l, a.sources.split(',') if a.sources else None)
+    if a.sources:
+        p.error('--sources goes with --prefetch')
     if not a.name:
         p.error('give a job name or --prefetch')
     os.environ['D2L_RERUN'] = a.name

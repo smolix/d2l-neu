@@ -21459,9 +21459,9 @@ PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'gemm-sweep', 'lowp-runs',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
     'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2', 'smollm3-3',
-    'smollm3-4', 'smollm3-5',  # smollm3-math-{2,4,5} and smollm3-symbolic
-    # join here (and in _RERUN_ARTIFACT, PRETRAIN_JOBS) when 21.4's gate
-    # rules them in (_SMOLLM3_RUNGS)
+    'smollm3-4', 'smollm3-5',  # smollm3-symbolic joins here (and in
+    # _RERUN_ARTIFACT, PRETRAIN_JOBS) if 21.4's full GSM8K rules it in
+    # (_SMOLLM3_RUNGS)
     'lc-t1', 'lc-zeroshot', 'lc-t2-pi', 'lc-t2-yarn', 'lc-t2-prog',
     'lc-t2-evals',
     'decode-rates')
@@ -26600,26 +26600,9 @@ def gsm8k_force_prompt(prompt, text):
     close = '\n</think>' if opened and not closed else ''
     return prompt + text + close + '\n\n' + _GSM8K_CUE
 
-def _answer_rules(kind):
-    """How score_gsm8k reads and compares answers of kind 'gsm8k' (the
-    chain-of-thought format, stop at 'Q:', numbers compared as
-    extract_answer writes them) or 'math' (MATH-500's numeric subset:
-    the Minerva format, stop at 'Problem:', values compared as
-    fractions)."""
-    if kind == 'gsm8k':
-        num = lambda t: d2l.extract_answer(t, 'gsm8k')
-        return dict(stop='Q:', completion=num, chat=gsm8k_chat_answer,
-                    force_stop='}', forced=num)
-    if kind == 'math':
-        return dict(stop='Problem:', completion=math_completion_answer,
-                    chat=math_chat_answer, force_stop='}$',
-                    forced=lambda t: math_prediction_value(
-                        d2l.extract_answer('\\boxed{' + t + '}', 'boxed')))
-    raise ValueError(f"kind is 'gsm8k' or 'math', not {kind!r}")
-
 def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
                 budget=None, batch_size=None, chat_prompt=None, force=None,
-                end_token='<|endoftext|>', kind='gsm8k'):
+                end_token='<|endoftext|>'):
     """GSM8K replies of model (greedy) per item and format ('completion':
     the 8-shot prompt; 'chat': chat_prompt(question), by default
     gsm8k_chat_prompt): a DataFrame with format, item_id, score (exact
@@ -26633,20 +26616,19 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
     (None when not forced). budget is {format: n}, batch_size {format or
     'force': n}; end_token is the tokenizer's document end (Qwen3's
     <|endoftext|>, SmolLM3's <|end_of_text|>), which ends a completion,
-    and with <|im_end|> a chat reply. kind 'math' scores MATH-500 items
-    (_answer_rules) in the same two formats."""
+    and with <|im_end|> a chat reply."""
     budget = {**_CPT_GSM8K['budget'], **(budget or {})}
     batch = {**_GSM8K_BATCH, **(batch_size or {})}
     force = _CPT_GSM8K['force'] if force is None else force
     chat_prompt = chat_prompt or gsm8k_chat_prompt
-    rules = _answer_rules(kind)
+    num = lambda t: d2l.extract_answer(t, 'gsm8k')
     ids = {m: tokenizer.convert_tokens_to_ids(m) for m in
            (end_token, '<|im_end|>')}
     rows = []
     for fmt in formats:
         if fmt == 'completion':  # a ChatML end is text here, not a stop
             prompts, stop, eos = ([it['prompt'] for it in items],
-                                  [rules['stop']], [ids[end_token]])
+                                  ['Q:'], [ids[end_token]])
         elif fmt == 'chat':
             prompts, stop, eos = ([chat_prompt(it['question'])
                                    for it in items], None, list(ids.values()))
@@ -26656,7 +26638,8 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
                             eos_token_ids=eos, stop=stop,
                             batch_size=batch[fmt])
         if fmt == 'chat':
-            preds = [rules['chat'](g.text, g.finish_reason) for g in gens]
+            preds = [gsm8k_chat_answer(g.text, g.finish_reason)
+                     for g in gens]
             todo = [i for i, g in enumerate(gens) if force and (
                 g.finish_reason == 'length'
                 or _think_state(g.text) == (True, False))]  # no answer
@@ -26666,13 +26649,13 @@ def score_gsm8k(model, tokenizer, items, formats=('completion', 'chat'),
                     model, tokenizer, [gsm8k_force_prompt(prompts[i],
                                                           gens[i].text)
                                        for i in todo], force,
-                    eos_token_ids=eos, stop=[rules['force_stop']],
+                    eos_token_ids=eos, stop=['}'],
                     batch_size=batch['force'])
                 for i, m in zip(todo, more):
-                    forced[i] = rules['forced'](m.text)
+                    forced[i] = num(m.text)
                     more_text[i] = m.text
         else:  # the reply has ended at its first chat marker
-            preds = [rules['completion'](g.text[:min(
+            preds = [num(g.text[:min(
                 [g.text.find(m) for m in _CHAT_MARKS if m in g.text],
                 default=None)]) for g in gens]
             forced, more_text = preds, [None] * len(gens)
@@ -27505,20 +27488,13 @@ _SMOLLM3_ANSWERS = {  # task: what score_gsm8k is given
     'gsm-symbolic': dict(instances=5, budget=dict(completion=256,
                                                   chat=4096),
                          force=32, batch=dict(completion=32, chat=32,
-                                              force=8)),
-    'math500': dict(budget=dict(completion=1024, chat=8192), force=32,
-                    batch=dict(completion=16, chat=16, force=8))}
+                                              force=8))}
 
 _SMOLLM3_LIVE = dict(budget=dict(completion=256, chat=4096),
                      batch=dict(completion=25, chat=25))  # the page's check
 
 _SMOLLM3_RUNGS = {  # conditional regeneration: (task, checkpoints)
-    'smollm3-math-2': ('math500', ('stage3',)),
-    'smollm3-math-4': ('math500', ('lc64k',)),
-    'smollm3-math-5': ('math500', ('mid',)),
     'smollm3-symbolic': ('gsm-symbolic', ('lc64k', 'mid'))}
-
-_MATH_SCORER = 2  # raise when math_value or the math answer rules change
 
 _BPB_SCORER = 1  # raise when _scored_doc, _doc_stats or _logit_stats change
 
@@ -27532,39 +27508,6 @@ _SMOLLM3_V1_PINS = {  # the revisions lm-smollm3-trajectory-v1 scored
     'lc32k': '24cc7e71eb21218315ef02c257b192cdd263b302',
     'lc64k': 'd4d10f417b85b7e385c163118183748bd67a34f6',
     'mid': '0485ec16b618f88f6dbb27b23dbdecca1d6a1cdd'}
-
-_MINERVA_DEMOS = [  # the 4-shot MATH prompt after Lewkowycz et al. (2022)
-    ('Find the domain of the expression  $\\frac{\\sqrt{x-2}}'
-     '{\\sqrt{5-x}}$.',
-     'The expressions inside each square root must be non-negative. '
-     'Therefore, $x-2 \\ge 0$, so $x\\ge2$, and $5 - x \\ge 0$, so '
-     '$x \\le 5$. Also, the denominator cannot be equal to zero, so '
-     '$5-x>0$, which gives $x<5$. Therefore, the domain of the expression '
-     'is $\\boxed{[2,5)}$.\nFinal Answer: The final answer is $[2,5)$. I '
-     'hope it is correct.'),
-    ('If $\\det \\mathbf{A} = 2$ and $\\det \\mathbf{B} = 12,$ then find '
-     '$\\det (\\mathbf{A} \\mathbf{B}).$',
-     'We have that $\\det (\\mathbf{A} \\mathbf{B}) = (\\det \\mathbf{A})'
-     '(\\det \\mathbf{B}) = (2)(12) = \\boxed{24}.$\nFinal Answer: The '
-     'final answer is $24$. I hope it is correct.'),
-    ('Terrell usually lifts two 20-pound weights 12 times. If he uses two '
-     '15-pound weights instead, how many times must Terrell lift them in '
-     'order to lift the same total weight?',
-     'If Terrell lifts two 20-pound weights 12 times, he lifts a total of '
-     '$2\\cdot 12\\cdot20=480$ pounds of weight.  If he lifts two 15-pound '
-     'weights instead for $n$ times, he will lift a total of '
-     '$2\\cdot15\\cdot n=30n$ pounds of weight.  Equating this to 480 '
-     'pounds, we can solve for $n$:\n\\begin{align*}\n30n&=480\\\\\n'
-     '\\Rightarrow\\qquad n&=480/30=\\boxed{16}\n\\end{align*}\nFinal '
-     'Answer: The final answer is $16$. I hope it is correct.'),
-    ('If the system of equations\n\n\\begin{align*}\n6x-4y&=a,\\\\\n'
-     '6y-9x &=b.\n\\end{align*}has a solution $(x, y)$ where $x$ and $y$ '
-     'are both nonzero, find $\\frac{a}{b},$ assuming $b$ is nonzero.',
-     'If we multiply the first equation by $-\\frac{3}{2}$, we obtain\n\n'
-     '$$6y-9x=-\\frac{3}{2}a.$$Since we also know that $6y-9x=b$, we have'
-     '\n\n$$-\\frac{3}{2}a=b\\Rightarrow\\frac{a}{b}=\\boxed{-\\frac{2}'
-     '{3}}.$$\nFinal Answer: The final answer is $-\\frac{2}{3}$. I hope '
-     'it is correct.')]
 
 def _smollm3_call():
     return dict(names=('stage1', 'stage2', 'stage3', 'lc32k', 'lc64k',
@@ -27724,92 +27667,6 @@ def _smollm3_docs(model, tokenizer, texts):
     out['bpb'] = out['nll_t1'] / (math.log(2) * out['bytes'])
     return out
 
-def math_value(s):
-    """An answer that is a number, as a canonical string ('-5', '2/3',
-    '5/4' for 1.25): an integer, a decimal or a simple fraction (a/b,
-    \\frac{a}{b}, \\dfrac, \\tfrac, \\frac34; a sign before any of them),
-    after removing $ signs, LaTeX spacing (\\!, \\,, \\;) and thousands
-    separators (1,000 or 1{,}000); None for anything else (a unit, a
-    variable, a list, a root, pi)."""
-    from fractions import Fraction
-    if s is None:
-        return None
-    t = str(s).strip()
-    for junk in ('$', '\\!', '\\,', '\\;', '{,}'):
-        t = t.replace(junk, '' if junk != '{,}' else ',')
-    t = t.replace(' ', '').replace('\u2212', '-')
-    m = (re.fullmatch(r'(-?)\\[dt]?frac\{(-?\d+)\}\{(-?\d+)\}', t)
-         or re.fullmatch(r'(-?)\\[dt]?frac(\d)(\d)', t)
-         or re.fullmatch(r'(-?)(\d+)/(\d+)', t))
-    if m:
-        if int(m.group(3)) == 0:
-            return None
-        v = Fraction(int(m.group(2)), int(m.group(3)))
-        v = -v if m.group(1) else v
-    elif re.fullmatch(r'-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?|-?\.\d+', t):
-        v = Fraction(t.replace(',', ''))
-    else:
-        return None
-    return str(v.numerator) if v.denominator == 1 else \
-        f'{v.numerator}/{v.denominator}'
-
-def math_prediction_value(s):
-    """math_value of a model's answer after removing what may follow or
-    precede a number in it: \\$ and \\%, a degree sign (^\\circ), and a
-    trailing unit in \\text{}, \\mbox{} or \\mathrm{} ('5\\text{ cm}' is
-    5). References stay strict (math500_items keeps only bare numbers)."""
-    if s is None:
-        return None
-    t = str(s).strip()
-    for junk in ('\\$', '\\%', '%', '^\\circ', '^{\\circ}', '\\circ'):
-        t = t.replace(junk, '')
-    t = re.sub(r'(?<=[\d}.])\s*\\(?:text|textrm|mbox|mathrm)\s*\{[^{}]*\}'
-               r'\s*$', '', t.strip())
-    return math_value(t)
-
-def math_completion_answer(text):
-    """The answer of a Minerva-format completion: the math_prediction_value
-    of what follows its last 'final answer is' (up to '. I hope' or the
-    line's end), else of its last \\boxed{}."""
-    m = list(re.finditer(r'final answer is\s*(.*?)(?:\.\s*I hope|\n|$)',
-                         text, re.I))
-    v = math_prediction_value(m[-1].group(1).strip().rstrip('.')) \
-        if m else None
-    return v if v is not None else math_prediction_value(
-        d2l.extract_answer(text, 'boxed'))
-
-def math_chat_answer(text, finish_reason):
-    """The answer of a chat reply to a MATH problem, or None: none for a
-    reply cut at the budget or with a think block never closed (as
-    gsm8k_chat_answer); else, after the last </think>, the
-    math_prediction_value of the last \\boxed{}, else
-    math_completion_answer's."""
-    opened, closed = _think_state(text)
-    if finish_reason == 'length' or (opened and not closed):
-        return None
-    tail = text.split('</think>')[-1]
-    v = math_prediction_value(d2l.extract_answer(tail, 'boxed'))
-    return v if v is not None else math_completion_answer(tail)
-
-def math500_items():
-    """The MATH-500 problems whose reference answer is a number
-    (math_value is not None), as gsm8k_items: dicts with id (the unique
-    id), question, reference (canonical) and the 4-shot Minerva prompt
-    ('Problem:' / 'Solution:')."""
-    from huggingface_hub import hf_hub_download
-    _, repo, rev, _ = d2l.PRETRAIN_SOURCES['math500']
-    with d2l._quiet():
-        path = hf_hub_download(repo, d2l.PRETRAIN_SOURCE_FILES['math500'][0],
-                               repo_type='dataset', revision=rev)
-    with open(path, encoding='utf-8') as f:
-        rows = [json.loads(line) for line in f]
-    shots = ''.join(f'Problem:\n{q}\n\nSolution: {a}\n\n'
-                    for q, a in _MINERVA_DEMOS)
-    return [dict(id=r['unique_id'], question=r['problem'],
-                 reference=math_value(r['answer']),
-                 prompt=f'{shots}Problem:\n{r["problem"]}\n\nSolution:')
-            for r in rows if math_value(r['answer']) is not None]
-
 def gsm_symbolic_items(instances=5):
     """GSM-Symbolic (apple/GSM-Symbolic, chapter 18's gsm-symbolic-test,
     CC BY-NC-ND 4.0: read at run time, never stored): instances 0 to
@@ -27833,9 +27690,7 @@ def _smollm3_items(task):
     cfg = _SMOLLM3_ANSWERS[task]
     if task == 'gsm8k':
         return gsm8k_items(cfg['n'], cfg['seed'])
-    if task == 'gsm-symbolic':
-        return gsm_symbolic_items(cfg['instances'])
-    return math500_items()
+    return gsm_symbolic_items(cfg['instances'])
 
 def _smollm3_cached(name, what, ident, compute):
     """compute(), kept in ../data/lm/rerun/ch21/smollm3/<name>/<what>
@@ -27854,8 +27709,7 @@ def _smollm3_cached(name, what, ident, compute):
 
 def _smollm3_settings(task):
     """The settings a cached or merged answer file of task records."""
-    scorer = _MATH_SCORER if task == 'math500' else _GSM8K_SCORER
-    return d2l._jsonable(dict(_SMOLLM3_ANSWERS[task], scorer=scorer,
+    return d2l._jsonable(dict(_SMOLLM3_ANSWERS[task], scorer=_GSM8K_SCORER,
                               tokenizer=d2l.PRETRAIN_SOURCES[
                                   'smollm3-mid'][2]))
 
@@ -27868,8 +27722,8 @@ def _smollm3_answers(model, name, task, tokenizer):
         f'smollm3-{name}'][2], settings=_smollm3_settings(task)),
         lambda: score_gsm8k(model(), tokenizer, _smollm3_items(task),
                             budget=cfg['budget'], batch_size=cfg['batch'],
-                            force=cfg['force'], end_token='<|end_of_text|>',
-                            kind='math' if task == 'math500' else 'gsm8k'))
+                            force=cfg['force'],
+                            end_token='<|end_of_text|>'))
     return res.assign(task=task, checkpoint=_SMOLLM3[name][0])
 
 def _smollm3_cloze(name):
@@ -27948,8 +27802,8 @@ def _smollm3_point(name, texts):
                 texts=text_id)
 
 def _smollm3_rung(task, names):
-    """A conditional rung: task of _SMOLLM3_ANSWERS ('math500' or
-    'gsm-symbolic') for checkpoints names, in both formats."""
+    """A conditional rung: task of _SMOLLM3_ANSWERS ('gsm-symbolic') for
+    checkpoints names, in both formats."""
     chat_tok, out = _smollm3_tokenizer('mid'), []
     for name in names:
         held = {}
@@ -28018,8 +27872,8 @@ def smollm3_trajectory(names):
     web, science, book and traces (seen); bpb: those four columns; items:
     per-item cloze scores; docs: per document its bytes, scored tokens,
     summed NLL at each temperature of _SMOLLM3_TEMPS, entropy and top-1
-    count; answers: per item and format GSM8K (and the conditional rungs'
-    MATH-500 or GSM-Symbolic) scores. The committed full-set result
+    count; answers: per item and format GSM8K (and the conditional rung's
+    GSM-Symbolic) scores. The committed full-set result
     (regenerations smollm3-0 to smollm3-5, one checkpoint each)."""
     names = list(names)
     order = list(_smollm3_call()['names'])
@@ -28105,31 +27959,11 @@ def _answer_wide(traj, task, fmt):
     return a.pivot_table(index='item_id', columns='checkpoint',
                          values='score')
 
-def answer_table(traj, task):
-    """Per checkpoint of traj that has task's answers (in the table's
-    order): n (items), 8-shot and chat accuracy and cut, the share of
-    chat replies stopped at the budget."""
-    a = traj.answers[traj.answers['task'] == task]
-    cols = ['checkpoint', 'n', '8-shot', 'chat', 'cut']
-    if not len(a):
-        return pd.DataFrame(columns=cols)
-    g = a.groupby(['checkpoint', 'format'])[['score', 'cut']].mean().unstack(
-        'format')
-    label = [c for c in traj.table['checkpoint'] if c in g.index]
-    get = lambda col, fmt: g[col, fmt].reindex(label).to_numpy() if (
-        col, fmt) in g else np.full(len(label), np.nan)
-    n = a.groupby('checkpoint')['item_id'].nunique().reindex(label)
-    return pd.DataFrame({'checkpoint': label, 'n': n.to_numpy(),
-                         '8-shot': get('score', 'completion'),
-                         'chat': get('score', 'chat'),
-                         'cut': get('cut', 'chat')}, columns=cols)
-
 def answer_deltas(traj, task, pairs=None, n_boot=2000, seed=0):
     """Paired changes (points, items paired, 95% bootstrap interval) of
     task's 8-shot and chat accuracy between checkpoint pairs (a, b), by
-    default each checkpoint holding task against the next one that does
-    (for the MATH-500 rung: S3 → LC64K, which spans the two long-context
-    stages, and LC64K → mid): columns transition, completion, chat, each
+    default each checkpoint holding task against the next one that does:
+    columns transition, completion, chat, each
     with _lo and _hi."""
     cols = ['transition'] + [f'{k}{q}' for k in ('completion', 'chat')
                              for q in ('', '_lo', '_hi')]
@@ -28190,8 +28024,7 @@ def stage_deltas(traj, n_boot=2000, seed=0):
     same; items paired), GSM8K's 8-shot and chat accuracy in points (items
     paired), and each domain's byte-weighted bits per byte in percent
     (documents paired). Columns transition, then cloze, gsm8k_completion,
-    gsm8k_chat, web, science, book and traces, each with _lo and _hi. The
-    conditional rungs' changes are answer_deltas's."""
+    gsm8k_chat, web, science, book and traces, each with _lo and _hi."""
     names = list(traj.table['checkpoint'])
     wide = traj.items.pivot_table(index=['task', 'item_id'],
                                   columns='checkpoint', values='score')
@@ -28268,21 +28101,15 @@ def smollm3_calibration(traj):
 def plot_smollm3(traj):
     """Across the checkpoints: accuracy (left; the cloze mean with its 95%
     interval over items, every task weighing the same, the six cloze
-    tasks as thin lines, GSM8K 8-shot and chat, and MATH-500's where the
-    rung scored it) and bits per byte per domain (right)."""
+    tasks as thin lines, GSM8K 8-shot and chat) and bits per byte per
+    domain (right)."""
     import warnings
     fig, (ax1, ax2) = d2l.plt.subplots(1, 2, figsize=(8, 3.2))
     t = traj.table
     x = np.arange(len(t))
-    ys, legend = [t['cloze'], t['8-shot'], t['chat']], [
-        'cloze mean', 'GSM8K 8-shot', 'GSM8K chat']
-    m = answer_table(traj, 'math500').set_index('checkpoint').reindex(
-        t['checkpoint'])
-    if m['chat'].notna().any():  # points only where the rung ran
-        ys += [m['8-shot'].to_numpy(float), m['chat'].to_numpy(float)]
-        legend += ['MATH-500 8-shot', 'MATH-500 chat']
-    d2l.plot(x, ys, None, 'accuracy', legend=legend,
-             fmts=('o-', 's--', '^-.', 'x:', '+:'), axes=ax1,
+    d2l.plot(x, [t['cloze'], t['8-shot'], t['chat']], None, 'accuracy',
+             legend=['cloze mean', 'GSM8K 8-shot', 'GSM8K chat'],
+             fmts=('o-', 's--', '^-.'), axes=ax1,
              figsize=(8, 3.2))
     per = traj.items.groupby(['checkpoint', 'task'])['score'].mean()
     for task in SMOLLM3_TASKS:

@@ -135,9 +135,9 @@ PRETRAIN_RERUN_NAMES = (  # every regeneration name of the chapter
     'gemm-sweep', 'lowp-runs',
     'cpt-t1', 'cpt-qwen-A', 'cpt-qwen-B', 'cpt-qwen-C', 'cpt-qwen-A2',
     'cpt-qwen-evals', 'smollm3-0', 'smollm3-1', 'smollm3-2', 'smollm3-3',
-    'smollm3-4', 'smollm3-5',  # smollm3-math-{2,4,5} and smollm3-symbolic
-    # join here (and in _RERUN_ARTIFACT, PRETRAIN_JOBS) when 21.4's gate
-    # rules them in (_SMOLLM3_RUNGS)
+    'smollm3-4', 'smollm3-5',  # smollm3-symbolic joins here (and in
+    # _RERUN_ARTIFACT, PRETRAIN_JOBS) if 21.4's full GSM8K rules it in
+    # (_SMOLLM3_RUNGS)
     'lc-t1', 'lc-zeroshot', 'lc-t2-pi', 'lc-t2-yarn', 'lc-t2-prog',
     'lc-t2-evals',
     'decode-rates')

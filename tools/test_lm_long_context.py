@@ -27,6 +27,8 @@ loss measurements (`nll_by_position` buckets average to the total;
 explicit short context; `context_nlls` against `sliding_nlls` on the whole
 window; `repeat_gaps` by hand); the staged stream; the arm configurations
 and their identity (`evaluate` outside it, the seed-0 recipe check); the
+scheme difference's two intervals (over seeds; over windows with the seeds
+held fixed, the wider printed); the
 periodic needle evaluation leaves the torch, NumPy and Python generators,
 the stream state and the next batch untouched, and an arm trains to the
 same losses and weights with and without it; a toy T1 campaign through
@@ -1231,6 +1233,57 @@ class PairingTest(ArmsBase):
             self.assertFalse(torch.equal(a['input_ids'], d['input_ids']))
 
 
+class SchemeDifferenceTest(unittest.TestCase):
+    """Claim 5's two intervals: seeds that agree on fixed evaluation windows
+    give a narrow t interval; resampling the windows gives the wider one."""
+    def runs(self, n_win=64, n_q=200, seeds=(0, 1, 2, 3, 4)):
+        rng = np.random.default_rng(0)
+        base = rng.normal(4.0, 0.5, n_win)  # per-window loss of PI
+        effect = rng.normal(-0.04, 0.05, n_win)  # YaRN - PI varies by window
+        w, n = [], []
+        for s in seeds:
+            for m, shift in (('PI', 0.0), ('YaRN', effect)):
+                loss = base + shift + rng.normal(0, 1e-4, n_win)
+                w.append(pd.DataFrame(dict(
+                    model=m, seed=s, measure='nll', bucket='3-4K',
+                    window=np.arange(n_win), sum=loss * 1024.0, n=1024.0)))
+                for L, gaps in ((1024, (100, 800)), (4096, (100, 2000))):
+                    k = np.arange(n_q)
+                    n.append(pd.DataFrame(dict(
+                        model=m, seed=s, length=L, window=k // 4,
+                        needle=k % 4, gap=np.where(k % 2, *gaps),
+                        correct=rng.random(n_q) < (0.6 if m == 'YaRN'
+                                                   else 0.5))))
+        return d2l.LcRuns(**{f: pd.DataFrame() for f in d2l.LcRuns._fields}
+                          )._replace(windows=pd.concat(w, ignore_index=True),
+                                     needles=pd.concat(n, ignore_index=True))
+
+    def test_window_interval_wider(self):
+        d = d2l.scheme_difference(self.runs(), 'YaRN', 'PI')
+        self.assertEqual(d['seeds'], [0, 1, 2, 3, 4])
+        t, w = d['loss'], d['windows']['loss']
+        self.assertAlmostEqual(t[0], w[0], places=9)
+        self.assertLess(t[2] - t[1], 0.01 * (w[2] - w[1]))
+        self.assertTrue(w[1] < w[0] < w[2])
+        self.assertEqual(d2l._lc_wider(d, 'loss'), (*w, 'windows'))
+        for k in ('near', 'far'):  # recall: paired by query, same point
+            self.assertAlmostEqual(d[k][0], d['windows'][k][0], places=9)
+            self.assertTrue(d['windows'][k][1] < d['windows'][k][2])
+
+    def test_one_seed(self):
+        d = d2l.scheme_difference(self.runs(seeds=(0,)), 'YaRN', 'PI')
+        self.assertTrue(math.isnan(d['loss'][1]))
+        self.assertEqual(d2l._lc_wider(d, 'loss')[3], 'windows')
+
+    def test_zero_rule(self):
+        d = dict(x=(0.02, -0.01, 0.05), windows=dict(x=(0.02, 0.001, 0.2)))
+        self.assertEqual(d2l._lc_wider(d, 'x')[3], 'seeds')  # contains 0
+        d = dict(x=(0.1, 0.01, 0.19), windows=dict(x=(0.1, 0.09, 0.11)))
+        self.assertEqual(d2l._lc_wider(d, 'x')[3], 'seeds')  # wider
+        d = dict(x=(0.1, 0.09, 0.11), windows=dict(x=(0.1, 0.05, 0.15)))
+        self.assertEqual(d2l._lc_wider(d, 'x')[3], 'windows')
+
+
 class ArmsEndToEndTest(ArmsBase):
     def test_t1_campaign(self):
         """A toy T1 campaign through lc_arms with D2L_RERUN=lc-t1, and the
@@ -1313,8 +1366,12 @@ class ArmsEndToEndTest(ArmsBase):
               & (r['gap_lo'] == 32) & (r['seed'] == -1)].iloc[0]
         self.assertTrue(lines[4].endswith(d2l._pm(c['rate'], c['lo'],
                                                   c['hi'], 2)), lines[4])
+        self.assertIn('near at 1K', lines[0])
         self.assertTrue(lines[5].startswith('YaRN − PI, T1 (2 seeds): loss '))
+        self.assertRegex(lines[5], r'\((seeds|windows)\)$')
         self.assertTrue(lines[6].startswith('  near '))
+        self.assertRegex(lines[6], r'^  near .* \((seeds|windows)\), far .* '
+                                   r'\((seeds|windows)\)$')
         self.assertEqual(lines[7:], ['T2: pending'])
 
     def displays(self, runs):

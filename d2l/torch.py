@@ -30231,40 +30231,102 @@ def plot_lc_gain(gain):
                               reference=0.0)
     axes.legend(loc='upper left', bbox_to_anchor=(1.01, 1))
 
-def scheme_difference(runs, a='YaRN', b='PI'):
-    """a minus b per seed (both arms trained on the same data order), on
-    the loss in the last position bucket, near recall (32, 512] and far
-    recall (beyond the trained length) at the arms' length: a dict of
-    (mean, lo, hi) per measure (a t interval over the seeds; nan below two
-    seeds) and the seeds. Each difference pairs the two arms of one seed,
-    so both arms must have the same seeds."""
+def _lc_pair_windows(runs, a, b, seed, measure, L0, T):
+    """a minus b at one seed and length T, per window: a DataFrame (index
+    window; sum, n) of the summed differences and their count. measure
+    'loss': the loss in the last position bucket (paired by window);
+    'near' (32, 512] or 'far' (L0, T] recall (paired by query)."""
     w, n = runs.windows, runs.needles
+    if measure == 'loss':
+        last = bucket_name(T - L0, T)
+
+        def nll(m):
+            x = w[(w['model'] == m) & (w['seed'] == seed)
+                  & (w['measure'] == 'nll') & (w['bucket'] == last)]
+            return x.set_index('window')[['sum', 'n']]
+        la = nll(a)
+        lb = nll(b).reindex(la.index)
+        return pd.DataFrame({'sum': la['sum'] - lb['sum'], 'n': la['n']})
+    lo, hi = _LC_NEAR if measure == 'near' else (L0, T)
+
+    def queries(m):
+        return n[(n['model'] == m) & (n['seed'] == seed) & (n['length'] == T)
+                 & (n['gap'] > lo) & (n['gap'] <= hi)]
+    m = queries(a).merge(queries(b), on=['window', 'needle'],
+                         suffixes=('_a', '_b'))
+    d = m['correct_a'].astype(float) - m['correct_b'].astype(float)
+    return d.groupby(m['window']).agg(['sum', 'count']).rename(
+        columns={'count': 'n'})
+
+def _seeds_window_ci(per, n_boot=2000, seed=0):
+    """per: {seed: DataFrame (index window; sum, n)}, every seed scored on
+    the same windows. (mean, lo, hi): the mean over the seeds of each
+    seed's ratio sum / n, and its 95% interval from resampling whole
+    windows, the same draw for every seed (the seeds held fixed)."""
+    windows = sorted(set().union(*(set(x.index) for x in per.values())))
+    if not windows:
+        return (math.nan,) * 3
+    S = np.stack([x['sum'].reindex(windows, fill_value=0.0).to_numpy(float)
+                  for x in per.values()])
+    N = np.stack([x['n'].reindex(windows, fill_value=0.0).to_numpy(float)
+                  for x in per.values()])
+    with np.errstate(invalid='ignore', divide='ignore'):
+        point = float((S.sum(1) / N.sum(1)).mean())
+        idx = np.random.default_rng(seed).integers(
+            len(windows), size=(n_boot, len(windows)))
+        means = np.mean([s[idx].sum(1) / c[idx].sum(1)
+                         for s, c in zip(S, N)], 0)
+    if np.isnan(means).all():
+        return point, math.nan, math.nan
+    lo, hi = np.nanquantile(means, [0.025, 0.975])
+    return point, float(lo), float(hi)
+
+def scheme_difference(runs, a='YaRN', b='PI'):
+    """a minus b per seed (both arms trained on the same data order and
+    scored on the same windows and queries), on the loss in the last
+    position bucket, near recall (32, 512] and far recall (beyond the
+    trained length) at the arms' length. A dict with, per measure, the
+    seed mean and two 95% intervals: (mean, lo, hi) a t interval over the
+    seeds (nan below two seeds), and under 'windows' (mean, lo, hi) from
+    resampling the evaluation windows with the seeds held fixed (the t
+    interval leaves out which windows were drawn); 'seeds' the seeds.
+    Each difference pairs the two arms of one seed, so both arms must
+    have the same seeds."""
+    n = runs.needles
     L0 = int(n['length'].min())
     T = int(n['length'].max())
-    last = bucket_name(T - L0, T)
     seeds = [sorted(set(n[n['model'] == m]['seed'])) for m in (a, b)]
     if seeds[0] != seeds[1]:
         raise ValueError(f'{a} has seeds {seeds[0]}, {b} {seeds[1]}: the '
                          'difference pairs the arms by seed')
     seeds = seeds[0]
-    wl = w[(w['measure'] == 'nll') & (w['bucket'] == last)].groupby(
-        ['model', 'seed'])[['sum', 'n']].sum()
-    nll = wl['sum'] / wl['n']
-    at = n[n['length'] == T]
-    rate = lambda m, s, lo, hi: at[(at['model'] == m) & (at['seed'] == s) & (
-        at['gap'] > lo) & (at['gap'] <= hi)]['correct'].mean()
-    out = dict(seeds=seeds)
-    for name, f in (('loss', lambda m, s: nll[m, s]),
-                    ('near', lambda m, s: rate(m, s, *_LC_NEAR)),
-                    ('far', lambda m, s: rate(m, s, L0, T))):
-        d = [f(a, s) - f(b, s) for s in seeds]
+    out = dict(seeds=seeds, windows={})
+    for name in ('loss', 'near', 'far'):
+        per = {s: _lc_pair_windows(runs, a, b, s, name, L0, T)
+               for s in seeds}
+        d = [x['sum'].sum() / x['n'].sum() if x['n'].sum() else math.nan
+             for x in per.values()]
         if len(d) < 2:
             out[name] = (float(np.mean(d)) if d else math.nan, math.nan,
                          math.nan)
         else:
             m, h = d2l.t_interval(d)
             out[name] = (m, m - h, m + h)
+        out['windows'][name] = _seeds_window_ci(per)
     return out
+
+def _lc_wider(d, name):
+    """(mean, lo, hi, 'seeds' or 'windows'): of scheme_difference's two
+    intervals for one measure the one that contains zero if only one does,
+    else the wider (the window one where the t interval is nan), so the
+    printed interval excludes zero only where both do."""
+    t, w = d[name], d['windows'][name]
+    if math.isnan(t[1]):
+        return (*w, 'windows')
+    zero = [x[1] <= 0 <= x[2] for x in (t, w)]
+    if zero[0] != zero[1]:
+        return (*t, 'seeds') if zero[0] else (*w, 'windows')
+    return (*w, 'windows') if w[2] - w[1] > t[2] - t[1] else (*t, 'seeds')
 
 def _lc_tier_of(runs):
     """'t1' or 't2' of a result; None for a pending one (no rows).
@@ -30421,24 +30483,8 @@ def _lc_seed_diff(runs, a, b, seed=0):
     by query), each (difference, lo, hi) with a window-resampled 95%
     interval."""
     T, L0 = (_LC_TIERS[_lc_tier_of(runs)][k] for k in ('length', 'trained'))
-    w, n = runs.windows, runs.needles
-    last = bucket_name(T - L0, T)
-
-    def nll(m):
-        x = w[(w['model'] == m) & (w['seed'] == seed) & (w['measure'] ==
-                                                         'nll')
-              & (w['bucket'] == last)]
-        return x.set_index('window')[['sum', 'n']]
-
-    def queries(m, lo, hi):
-        return n[(n['model'] == m) & (n['seed'] == seed) & (n['length'] == T)
-                 & (n['gap'] > lo) & (n['gap'] <= hi)]
-
-    la, lb = nll(a), nll(b).reindex(nll(a).index)
-    loss = window_ci((la['sum'] - lb['sum']).to_numpy(), la['n'].to_numpy())
-    return dict(loss=loss, **{k: recall_paired(queries(a, *g), queries(b, *g))
-                              for k, g in (('near', _LC_NEAR),
-                                           ('far', (L0, T)))})
+    return {k: window_ci(*_lc_pair_windows(runs, a, b, seed, k, L0, T)[
+        ['sum', 'n']].to_numpy().T) for k in ('loss', 'near', 'far')}
 
 def show_lc_table(runs):
     """The arms' table (seeds averaged, the number of seeds by each arm):
@@ -30613,10 +30659,13 @@ def show_lc_short(runs):
 def show_lc_seeds(t1, t2, a='YaRN', b='PI'):
     """The T1 table (as show_lc_table, without the context column; the
     number of seeds by each arm) with one more column, recall 32-64 back
-    at the base's trained length (the base's row is its control, the arms'
-    rows what extension left of it), then a minus b with a t interval over
-    the seeds at T1 and at T2 ('T2: pending' while the T2 result is the T1
-    stand-in or pending)."""
+    at the base's trained length (descriptive: the base's row is the 1K
+    control, the arms' rows what extension left of it, each its own
+    Wilson interval), then a minus b at T1 and at T2 ('T2: pending' while
+    the T2 result is the T1 stand-in or pending): per measure the wider of
+    the t interval over the seeds and the window-resampled interval of the
+    seed mean (the one containing zero if only one does; `_lc_wider`),
+    named after its source (seeds, windows)."""
     if not _lc_head(t1, t1.table, 'lc-t1'):
         return
     t, r = t1.table, t1.recall
@@ -30637,7 +30686,7 @@ def show_lc_seeds(t1, t2, a='YaRN', b='PI'):
             for v, d in zip(t['val'], t['Δ val'])],
         f'NLL {bucket_name(T - L0, T)}': t['NLL last'].map(
             lambda x: _num(x, 3)),
-        'near': t['near'].map(lambda x: _num(x, 2)),
+        f'near at {_length_name(T)}': t['near'].map(lambda x: _num(x, 2)),
         f'far at {_length_name(T)}': t['far'].map(lambda x: _num(x, 2)),
         'reach': t['reach'].map(_tokens),
         f'32-64 at {_length_name(L0)}': t['arm'].map(short)}).to_string(
@@ -30647,10 +30696,11 @@ def show_lc_seeds(t1, t2, a='YaRN', b='PI'):
             print(f'{tier}: pending')
             continue
         d = scheme_difference(runs, a, b)
+        c = {k: _lc_wider(d, k) for k in ('loss', 'near', 'far')}
+        f = lambda k, digits: (f'{_interval(*c[k][:3], digits, True)} '
+                               f'({c[k][3]})')
         print(f'{a} − {b}, {tier} ({len(d["seeds"])} seeds): loss '
-              f'{_interval(*d["loss"], 3, True)}\n  near '
-              f'{_interval(*d["near"], 2, True)}, far '
-              f'{_interval(*d["far"], 2, True)}')
+              f'{f("loss", 3)}\n  near {f("near", 2)}, far {f("far", 2)}')
 
 d2l.DATA_HUB['lm-decode-rates-v1'] = (
     d2l.LM_DATA_URL + 'lm-decode-rates-v1.json.gz',

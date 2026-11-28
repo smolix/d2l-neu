@@ -1344,14 +1344,15 @@ class ArmsEndToEndTest(ArmsBase):
         self.assertIn('1K − 0-512', zl[1])
         self.assertIn('recall 0.5-1K', zl[1])
         control = zl[-1 - pairs]
-        self.assertTrue(control.startswith('none at 512 (control): loss '
-                                           '0-512 '), control)
-        self.assertIn('recall 128-256 ', control)
-        self.assertIn(', 256-512 ', control)
+        # claim 1b reads the control's Wilson bounds: [lo, hi], not ±
+        self.assertRegex(control, r'^none at 512 \(control\): recall '
+                                  r'128-256 \d\.\d\d \[\d\.\d\d, \d\.\d\d\], '
+                                  r'256-512 \d\.\d\d \[\d\.\d\d, \d\.\d\d\]; '
+                                  r'reach [\d,]+$')
         for line, (a, b) in zip(zl[-pairs:], d2l._LC_ZS_PAIRS):
             self.assertRegex(line, rf'^{a} − {b}, same windows: loss 0-512 '
                                    r'[-+]\d\.\d\d \[[-+]\d\.\d\d, '
-                                   r'[-+]\d\.\d\d\], recall 128-256 '
+                                   r'[-+]\d\.\d\d\], recall 32-512 '
                                    r'[-+]\d\.\d\d \[')
         z = runs.zs_table
         pi = z[(z['scheme'] == 'PI') & (z['length'] == 1024)].iloc[0]
@@ -1383,24 +1384,76 @@ class ArmsEndToEndTest(ArmsBase):
         self.assertEqual(lines[7:], ['T2: pending'])
 
     def zs_diff_checks(self, zs):
-        """Claim 4's paired scheme differences: the point estimates equal
-        the table's differences (the schemes share windows and queries), the
-        intervals contain them, and schemes on other windows are refused."""
+        """Claim 4's paired scheme differences: the loss point estimate
+        equals the table's difference and the near one the difference of the
+        pooled near recalls over _LC_NEAR (the schemes share windows and
+        queries), the intervals contain them, and schemes on other windows,
+        token counts or queries are refused; a pair with an absent scheme
+        prints 'not scored'."""
         z = zs.table.set_index('scheme')
-        z = z[z['length'] == z['length'].max()]
+        T = int(z['length'].max())
+        z = z[z['length'] == T]
+        near = lambda m: d2l._lc_range(zs.needles, m, T, *d2l._LC_NEAR)[0]
         for a, b in d2l._LC_ZS_PAIRS:
             d = d2l._lc_zs_diff(zs, a, b)
             self.assertAlmostEqual(d['loss'][0], z.loc[a, 'first']
                                    - z.loc[b, 'first'], places=6)
-            self.assertAlmostEqual(d['near'][0], z.loc[a, 'near']
-                                   - z.loc[b, 'near'], places=6)
+            self.assertAlmostEqual(d['near'][0], near(a) - near(b), places=6)
             for k in ('loss', 'near'):
                 self.assertTrue(d[k][1] <= d[k][0] <= d[k][2], (a, b, k, d))
-        w = zs.windows
-        other = zs._replace(windows=w[~((w['model'] == 'PI')
-                                        & (w['window'] == 0))])
+        w, n = zs.windows, zs.needles
+        pi = (w['model'] == 'PI') & (w['measure'] == 'nll')
+        other = zs._replace(windows=w[~(pi & (w['window'] == 0))])
         with self.assertRaisesRegex(ValueError, 'same windows'):
             d2l._lc_zs_diff(other, 'YaRN', 'PI')
+        fewer = w.copy()
+        fewer.loc[pi[pi].index[0], 'n'] -= 1
+        with self.assertRaisesRegex(ValueError, 'same windows'):
+            d2l._lc_zs_diff(zs._replace(windows=fewer), 'YaRN', 'PI')
+        q = n[(n['model'] == 'PI') & (n['length'] == T)
+              & (n['gap'] > d2l._LC_NEAR[0]) & (n['gap'] <= d2l._LC_NEAR[1])]
+        self.assertGreater(len(q), 1)
+        with self.assertRaisesRegex(ValueError, r'same windows \(queries\)'):
+            d2l._lc_zs_diff(zs._replace(needles=n.drop(q.index[0])), 'YaRN',
+                            'PI')
+        with contextlib.redirect_stdout(io.StringIO()) as buf:
+            d2l.show_lc_zeroshot(zs, pairs=(('YaRN', 'XYZ'),))
+        self.assertEqual(buf.getvalue().splitlines()[-1],
+                         'YaRN − XYZ: not scored')
+
+    def test_part_sizes(self):
+        """The zero-shot and reference parts store their evaluation sizes
+        and weights: read back at the same sizes, refused by the merge's
+        reader under other sizes (a smoke's patched tier). The calls are
+        looked up inside the campaign, which patches them."""
+        parts = (('lc-zeroshot', lambda: d2l._lc_zeroshot_call(),
+                  lambda r: d2l.LcZeroShot(r.table, r.windows, r.needles,
+                                           '')),
+                 ('lc-reference', lambda: d2l._lc_reference_call(),
+                  lambda r: d2l.LcReference(r.windows, r.needles, '')))
+        with tempfile.TemporaryDirectory() as root:
+            with self.campaign(root, 'lc-zeroshot,lc-reference'):
+                zs = d2l.lc_zeroshot(**d2l._lc_zeroshot_call())
+                d2l.lc_reference(**d2l._lc_reference_call())
+                for part, call, as_tuple in parts:
+                    self.assertTrue(os.path.exists(d2l._lc_part_path(part)))
+                    _, cfg = d2l._lc_part_for_merge(part, call(), None,
+                                                    as_tuple)
+                    self.assertEqual((cfg['needles'], cfg['windows'],
+                                      cfg['contexts']), (2, 4, [256, 512,
+                                                             1024]))
+                    self.assertIn('weights' if part == 'lc-zeroshot'
+                                  else 'revision', cfg)
+            for change in (dict(zs_needles=1), dict(loss_windows=2)):
+                small = {t: dict(v, **change) for t, v in TIERS.items()}
+                with self.campaign(root, ''), \
+                        mock.patch.dict(d2l._LC_TIERS, small):
+                    for part, call, as_tuple in parts:
+                        with self.assertRaisesRegex(
+                                ValueError, 'needles|windows'):
+                            d2l._lc_part_for_merge(part, call(), None,
+                                                   as_tuple)
+        self.assertEqual(len(zs.table), len(d2l._LC_SCHEMES) + 1)
 
     def displays(self, runs):
         """The page's displays of T2 results on runs as the T1 stand-in."""
@@ -1681,6 +1734,13 @@ class JobsTest(unittest.TestCase):
                          {n for n in d2l.PRETRAIN_RERUN_NAMES
                           if n.startswith('lc-')})
         self.assertIn(d2l._LC_REFERENCE, d2l.HF_REVISIONS)
+        import importlib.util  # lm_regen's expandable-segments jobs exist
+        spec = importlib.util.spec_from_file_location('lm_regen', os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'lm_regen.py'))
+        regen = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(regen)
+        self.assertEqual(regen.EXPANDABLE, {'lc-reference', 'lc-t2-evals'})
+        self.assertLessEqual(regen.EXPANDABLE, set(d2l.PRETRAIN_JOBS))
         self.assertEqual(d2l.PRETRAIN_ARTIFACTS['pg19-test'][0],
                          'lm-pg19-test-v2')
         self.assertIn('lm-pg19-test-v2', d2l.DATA_HUB)

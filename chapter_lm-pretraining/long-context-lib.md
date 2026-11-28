@@ -1229,13 +1229,16 @@ def _lc_set_scheme(model, scheme, s, trained, mscale=None):
 regeneration `lc-zeroshot` writes its result as a part of
 `lm-lc-evals-v2`, which the T2 merge folds in; a normal run reads it from
 the committed evaluations (checking the page's configuration against the
-stored one), and while those are pending shows the T1 zero-shot table that
-`lc-t1` computes on the t1 checkpoint. `lc_reference` does the same for
+stored one; a part's configuration also holds the evaluation sizes and the
+weights' identity, so a part computed at other sizes is refused), and while
+those are pending shows the T1 zero-shot table that `lc-t1` computes on the
+t1 checkpoint. `lc_reference` does the same for
 Qwen3-0.6B-Base (loaded with `load_qwen3` and wrapped by `PackedGPT.adopt`;
 its own tokenizer, pools and offsets; no gain, which needs the reference
 tokenizer's rare tokens). Every scheme is scored on the same loss and
 needle windows, so `show_lc_zeroshot`'s scheme differences (YaRN minus PI
-and minus NTK, claim 4) are paired by window and by query. The reference's
+and minus NTK, claim 4: the loss in the first bucket and near recall,
+gaps in (32, 512]) are paired by window and by query. The reference's
 chunked 16K prefill allocates about 8 GiB but fragments the caching
 allocator to about 21 GiB reserved (pilot F31), so its job holds a whole
 card and runs with `expandable_segments`.
@@ -1341,14 +1344,34 @@ def _lc_zs_as_tuple(res):
     return LcZeroShot(res.zs_table, res.zs_windows, res.zs_needles,
                       res.label)
 
-def _lc_part_result(part, compute, config, committed):
+def _lc_part_config(part, call):
+    """The configuration stored with a part of lm-lc-evals-v2 and checked
+    when it is read: the call, the evaluation sizes (needle windows per
+    length, loss windows, contexts) and the weights (the base's file id;
+    the reference's pinned revision), so a part computed at other sizes or
+    from other weights is refused."""
+    if part == 'lc-reference':
+        tier = 't2'
+        weights = dict(revision=d2l.HF_REVISIONS[call['model_id']])
+    else:
+        tier = _lc_tier(call['base'])
+        weights = dict(weights=d2l._file_id(_lc_base_path(call['base'])))
+    spec = _LC_TIERS[tier]
+    return d2l._jsonable(dict(
+        call, **weights, needles=spec['zs_needles'],
+        windows=spec['loss_windows'],
+        contexts=_lc_contexts(tier, max(call['lengths']))))
+
+def _lc_part_result(part, compute, call, committed):
     """A part of lm-lc-evals-v2: computed and written when D2L_RERUN names
     it; else committed(result) of the committed lm-lc-evals-v2 after the
-    configuration check (its field part's config); else pending."""
+    configuration check (its field part's config, _lc_part_config); else
+    pending."""
     rerun = d2l._regenerating()
     if part in rerun:
         res = compute()
-        meta = dict(config=d2l._jsonable(config), label=d2l._label_of(res))
+        meta = dict(config=_lc_part_config(part, call),
+                    label=d2l._label_of(res))
         d2l.lm_save_rerun(os.path.basename(_lc_part_path(part)),
                           lambda p: d2l._write_result(p, 'json-table', res,
                                                       meta),
@@ -1359,7 +1382,8 @@ def _lc_part_result(part, compute, config, committed):
         res = d2l.load_artifact('lc-evals')
         stored = getattr(res, {'lc-zeroshot': 'zs_config',
                                'lc-reference': 'ref_config'}[part])
-        d = d2l._config_diff(d2l._jsonable(config), d2l._jsonable(stored))
+        d = d2l._config_diff(_lc_part_config(part, call),
+                             d2l._jsonable(stored))
         if d:
             raise ValueError(f'page configuration differs from the committed '
                              f'run {key}: {part}.{d[0]} {d[1]!r} != {d[2]!r}')
@@ -1376,9 +1400,9 @@ def lc_zeroshot(base, schemes, lengths):
     reach. Regeneration lc-zeroshot; otherwise the zero-shot part of the
     committed lm-lc-evals-v2; while that is pending, the T1 zero-shot
     table, labelled so (show_lc_zeroshot prints the label)."""
-    config = dict(base=base, schemes=schemes, lengths=lengths)
+    call = dict(base=base, schemes=schemes, lengths=lengths)
     res = _lc_part_result('lc-zeroshot', lambda: _lc_zeroshot_compute(
-        base, schemes, lengths), config, _lc_zs_as_tuple)
+        **call), call, _lc_zs_as_tuple)
     if res is not None:
         return res
     if d2l._regenerating() or 'lc-zeroshot' in d2l.PRETRAIN_PENDING:
@@ -1417,11 +1441,10 @@ def lc_reference(model_id, lengths):
     LcReference(windows, needles, label). Regeneration lc-reference (a part
     of lm-lc-evals-v2 that the T2 merge folds in); otherwise the reference
     part of the committed lm-lc-evals-v2; pending while that is."""
-    config = dict(model_id=model_id, revision=d2l.HF_REVISIONS[model_id],
-                  lengths=lengths)
+    call = dict(model_id=model_id, lengths=lengths)
     res = _lc_part_result(
-        'lc-reference', lambda: _lc_reference_compute(model_id, lengths),
-        config, lambda r: LcReference(r.ref_windows, r.ref_needles, r.label))
+        'lc-reference', lambda: _lc_reference_compute(**call), call,
+        lambda r: LcReference(r.ref_windows, r.ref_needles, r.label))
     if res is not None:
         return res
     if d2l._regenerating() or 'lc-reference' in d2l.PRETRAIN_PENDING:
@@ -1432,9 +1455,9 @@ def lc_reference(model_id, lengths):
 
 def _lc_part_for_merge(part, call, compute, as_tuple):
     """A part for the T2 merge: the file its regeneration wrote, or
-    computed here when that regeneration was not run; and its config."""
-    config = d2l._jsonable(dict(call, revision=d2l.HF_REVISIONS[
-        call['model_id']]) if part == 'lc-reference' else call)
+    computed here when that regeneration was not run; and its config
+    (_lc_part_config: a part of other sizes or weights is refused)."""
+    config = _lc_part_config(part, call)
     path = _lc_part_path(part)
     if os.path.exists(path):
         res = d2l._read_result(path, 'json-table')
@@ -2594,9 +2617,10 @@ _LC_ZS_PAIRS = (('YaRN', 'PI'), ('YaRN', 'NTK'))  # claim 4's comparisons
 def _lc_zs_diff(zs, a, b):
     """Zero-shot scheme a minus scheme b at the longest length, on the same
     windows (every scheme is scored on one set of loss and needle windows):
-    the loss in the first position bucket (paired by window) and recall in
-    the gap bin (128, 256] (paired by query), each (difference, lo, hi)
-    with a 95% interval from resampling whole windows."""
+    the loss in the first position bucket (paired by window) and near
+    recall, gaps in _LC_NEAR (paired by query), each (difference, lo, hi)
+    with a 95% interval from resampling whole windows. Raises unless both
+    were scored on the same windows, tokens and queries."""
     T, L0 = int(zs.table['length'].max()), int(zs.table['length'].min())
     first, w, n = bucket_name(0, L0), zs.windows, zs.needles
 
@@ -2605,21 +2629,30 @@ def _lc_zs_diff(zs, a, b):
               & (w['bucket'] == first)]
         return x.set_index('window')[['sum', 'n']].sort_index()
     la, lb = nll(a), nll(b)
-    if not len(la) or not la.index.equals(lb.index):
+    if (not len(la) or not la.index.equals(lb.index)
+            or not (la['n'] == lb['n']).all()):
         raise ValueError(f'{a} and {b} were not scored on the same windows')
     loss = window_ci((la['sum'] - lb['sum']).to_numpy(), la['n'].to_numpy())
-    q = lambda m: n[(n['model'] == m) & (n['length'] == T) & (n['gap'] > 128)
-                    & (n['gap'] <= 256)]
-    return {'loss': loss, 'near': recall_paired(q(a), q(b))}
+    q = lambda m: n[(n['model'] == m) & (n['length'] == T)
+                    & (n['gap'] > _LC_NEAR[0]) & (n['gap'] <= _LC_NEAR[1])]
+    key = lambda x: sorted(zip(x['window'], x['needle']))
+    qa, qb = q(a), q(b)
+    if not len(qa) or key(qa) != key(qb):
+        raise ValueError(f'{a} and {b} were not scored on the same windows '
+                         f'(queries)')
+    return {'loss': loss, 'near': recall_paired(qa, qb)}
 
 def show_lc_zeroshot(zs, pairs=_LC_ZS_PAIRS):
     """The zero-shot table: per scheme at the longest length the losses of
     the first and last position buckets and last minus first on the same
     windows, recall in (128, 256] and in the top octave of gap (±: half the
     95% interval), and the reach; then the control line, the unscaled base
-    at its trained length; then for each pair (a, b) of schemes a minus b
-    on the same windows, the loss in the first bucket and recall 128-256
-    with window-resampled 95% intervals (claim 4)."""
+    at its trained length: recall in (128, 256] and the top octave with
+    their Wilson intervals [lo, hi] (claim 1b reads the bounds against 0.5;
+    its loss 0-L0 is the none row's) and the reach; then for each pair
+    (a, b) of schemes a minus b on the same windows, the loss in the first
+    bucket and near recall (gaps in _LC_NEAR) with window-resampled 95%
+    intervals (claim 4), or 'not scored' when a scheme is absent."""
     if not _lc_head(zs, zs.table, 'lc-zeroshot'):
         return
     t = zs.table
@@ -2636,17 +2669,18 @@ def show_lc_zeroshot(zs, pairs=_LC_ZS_PAIRS):
         f'recall {bucket_name(T // 2, T)}': pm(x, 'far'),
         'reach': x['reach'].map(_tokens)}).to_string(index=False))
     for r in t[t['length'] != T].to_dict('records'):
-        c = lambda k: _pm(r[k], r[f'{k} lo'], r[f'{k} hi'], 2)
-        print(f'{r["scheme"]} at {_length_name(r["length"])} (control): loss'
-              f' {first} {c("first")}; recall 128-256 {c("near")}, '
-              f'{bucket_name(L0 // 2, L0)} {c("far")}; reach '
-              f'{_tokens(r["reach"])}')
+        c = lambda k: _interval(r[k], r[f'{k} lo'], r[f'{k} hi'], 2)
+        print(f'{r["scheme"]} at {_length_name(r["length"])} (control): '
+              f'recall 128-256 {c("near")}, {bucket_name(L0 // 2, L0)} '
+              f'{c("far")}; reach {_tokens(r["reach"])}')
+    near = f'{_LC_NEAR[0]}-{_length_name(_LC_NEAR[1])}'
     for a, b in pairs:
         if not {a, b} <= set(x['scheme']):
+            print(f'{a} − {b}: not scored')
             continue
         d = _lc_zs_diff(zs, a, b)
         print(f'{a} − {b}, same windows: loss {first} '
-              f'{_interval(*d["loss"], 2, True)}, recall 128-256 '
+              f'{_interval(*d["loss"], 2, True)}, recall {near} '
               f'{_interval(*d["near"], 2, True)}')
 
 def _lc_seed_diff(runs, a, b, seed=0):

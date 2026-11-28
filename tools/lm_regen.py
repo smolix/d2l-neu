@@ -35,6 +35,13 @@ import time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHAPTER = os.path.join(REPO, 'chapter_lm-pretraining')
+# Jobs whose memory budget assumes PyTorch's expandable segments; set before
+# torch is imported, unless the launcher set its own. lc-reference (and
+# lc-t2-evals, whose merge computes the reference when its part file is
+# missing): Qwen3's chunked 16K prefill allocates about 8 GiB but reserves
+# about 21 GiB with the default allocator, 8.3 GiB with expandable segments
+# (F31 pilot, F34 smoke, RTX 4090). Numerics are unchanged.
+EXPANDABLE = {'lc-reference', 'lc-t2-evals'}
 
 
 def prefetch(d2l, sources=None):
@@ -83,6 +90,9 @@ def main():
     if not a.name:
         p.error('give a job name or --prefetch')
     os.environ['D2L_RERUN'] = a.name
+    if a.name in EXPANDABLE:
+        os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF',
+                              'expandable_segments:True')
     if a.only:
         os.environ['D2L_PRETRAIN_ONLY'] = a.only
     if a.merge:

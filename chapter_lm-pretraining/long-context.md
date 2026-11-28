@@ -37,7 +37,7 @@ when the section is written.
 - Courses, tutorials and blogs: [SmolLM3 blog](https://huggingface.co/blog/smollm3) (a documented long-context extension stage with its data mixture).
 -->
 
-<!-- Placeholder (prose): opening. The reader has the reference model, trained at 4K, and the RoPE extension schemes of subsec_pos-context-extension. Scaled by interpolation, the model accepts 16K tokens; the cell shows the control (needle recall 32-512 tokens back inside the trained window), then the loss by position bucket at 16K and recall of values stored 8-16K back. Opening question: extended from 4K to 16K with interpolation and with YaRN on long-dependency data, which scheme keeps more of the 4K accuracy, and does perplexity or recall say so first? -->
+<!-- Placeholder (prose): opening. The reader has the reference model, trained at 4K, and the RoPE extension schemes of subsec_pos-context-extension. Scaled by interpolation, the model accepts 16K tokens; the cell shows, unscaled at 4K, needle recall 128-256 tokens back against 2-4K back (claim 1b, the opening's contrast: the base retrieves near and not across its own trained window, unless the 2-4K bound clears 0.5, in which case the opening uses the 16K contrast alone), then with PI at 16K the loss by position bucket, recall 128-256 back with the query at 16K (whether PI zero-shot still copies at short range at all) and recall 8-16K back. Opening question: extended from 4K to 16K with interpolation and with YaRN on long-dependency data, which scheme keeps more of the 4K accuracy, and does perplexity or recall say so first? -->
 
 ```{.python .input #long-context-imports}
 %%tab pytorch
@@ -58,28 +58,30 @@ import pandas as pd
 %%tab pytorch
 model = d2l.load_reference_model(device=d2l.try_gpu())  # trained at 4K
 tok, L, s = d2l.lc_tokenizer(), model.max_len, 4
-rec = d2l.needle_recall(model, d2l.needle_windows(tok, L, 100))
-near = rec[(rec['gap'] > 32) & (rec['gap'] <= 512)]['correct']
-lo, hi = d2l.wilson_ci(near.sum(), len(near))
-print(f'control, trained window, 32-512 back: recall {near.mean():.2f} '
-      f'[{lo:.2f}, {hi:.2f}]')
+pct = lambda b: f'{b.rate:.0%} [{b.lo:.0%}, {b.hi:.0%}]'  # Wilson 95%
+bins = d2l.recall_by_gap(d2l.needle_recall(
+    model, d2l.needle_windows(tok, L, 100)), L).set_index('gap_lo')
+print(f'trained window ({L // 1024}K): recall {pct(bins.loc[128])} '
+      f'128-256 back, {pct(bins.loc[L // 2])} 2-4K back (chance 12.5%)')
 d_head = model.blks[0].attention.head_dim
 model.set_rope(d2l.rope_inv_freq(d_head, scheme='pi', s=s, L=L),
                scheme='pi', scale=s)  # model.max_len is now s * L
 books = d2l.test_books(32, s * L)
 pos = d2l.nll_by_position(model, books, range(0, s * L + 1, L))
-print('loss by position (nats): ' + ', '.join(
+print('PI at 16K, no training: loss by position ' + ', '.join(
     f'{b} {v:.2f}' for b, v in zip(pos['bucket'], pos['nll'])))
-far = d2l.recall_by_gap(d2l.needle_recall(
-    model, d2l.needle_windows(tok, s * L, 100)), s * L).iloc[-1]
-print(f'recall {far.gap_lo / 1024:g}-{far.gap_hi / 1024:g}K back: '
-      f'{far.rate:.2f} [{far.lo:.2f}, {far.hi:.2f}] (chance 0.12)')
+bins = d2l.recall_by_gap(d2l.needle_recall(
+    model, d2l.needle_windows(tok, s * L, 100)), s * L).set_index('gap_lo')
+near, far = bins.loc[128], bins.loc[s * L // 2]
+print(f'recall at 128-256 back, query at 16K: {pct(near)}')
+print(f'recall at 8K-16K back: {pct(far)}')
 rising = (pos['lo'].iloc[1:] > pos['hi'].iloc[0]).any()
-print(f'reading: loss {"rising" if rising else "flat"} beyond {L / 1024:g}K,'
-      f' recall {"above" if far.lo > 1 / 8 else "at"} chance')
+side = lambda b: 'above' if b.lo > 1 / 8 else 'at'
+print(f'reading: loss {"rising" if rising else "flat"} beyond 4K; recall '
+      f'{side(near)} chance 128-256 back, {side(far)} chance 8-16K back')
 ```
 
-<!-- Placeholder (prose): reading of the opening: the model accepts the long window and its loss beyond 4K stays flat (or rises; the cell decides from the bucket intervals), yet the values stored 8-16K back are recalled at chance while the near control inside the trained window is recalled (recall falls with the gap even inside 4K; the format and reach cells measure by how much). Perplexity at a length is not use of that length. Roadmap of the section: the schemes without training, what training needs (schedule, data), three measurements, the trained arms. -->
+<!-- Placeholder (prose): reading of the opening: the window a model accepts, the window it was trained on and the distance it retrieves across are three numbers. Inside its trained window the base copies a value 128-256 tokens back and fails 2-4K back (as measured). With PI at 16K the loss beyond 4K stays flat (or rises; the cell decides from the bucket intervals); recall 128-256 back with the query at 16K says whether interpolation without training still copies at short range, and only if it does is chance-level recall 8-16K back a statement about distance (otherwise PI broke copying at every gap; state which, as measured). Perplexity at a length is not use of that length. Roadmap of the section: the schemes without training, what training needs (schedule, data), three measurements, the trained arms. -->
 
 ## Extension without Training
 
@@ -222,14 +224,13 @@ def needle_windows(tokenizer, L, n, seed=0, n_needles=8):
 
 ```{.python .input #long-context-task-checks}
 %%tab pytorch
-nd = d2l.needle_windows(tok, 16_384, 20)
-keys, values = d2l.needle_pools(tok)
-print(f'window: {nd.prefix.shape[1] + 2:,} tokens, {nd.keys.shape[1]} '
-      f'needles, gaps {int(nd.gaps.min()):,} to {int(nd.gaps.max()):,}; '
+nd = {n: d2l.needle_windows(tok, n, 20) for n in (4096, 16_384)}
+w, (keys, values) = nd[16_384], d2l.needle_pools(tok)
+print(f'window: {w.prefix.shape[1] + 2:,} tokens, {w.keys.shape[1]} '
+      f'needles, gaps {int(w.gaps.min()):,} to {int(w.gaps.max()):,}; '
       f'{len(keys):,} keys, {len(values):,} values')
 oracle = {}
-for length in (4096, 16_384):
-    w = d2l.needle_windows(tok, length, 20)
+for length, w in nd.items():
     checks = d2l.needle_diagnostics(tok, w)
     assert all(checks.values()), checks  # the pilot's checks of a miss
     rec = d2l.needle_oracle(w)
@@ -239,7 +240,7 @@ print('oracle copier: ' + ', '.join(f'{h:.0%}' for h in oracle.values())
       + ' at 4K, 16K; the pilot checks hold at both')
 ```
 
-<!-- Placeholder (prose): the format table: the first build's template against the one-hop needle on the same book windows of 1,024 tokens (200 items, the queried line at mid depth), each candidate scored by its summed log-probability, for the oracle copier, the t1 and r2 final checkpoints and Qwen3-0.6B-Base. State as measured whether the reference model fails the template and solves the one-hop needle inside its trained window, and whether Qwen3 solves both (it is the check that the template is solvable at all). -->
+<!-- Placeholder (prose): the format table: the first build's template against the one-hop needle on the same book windows of 1,024 tokens (item i of both formats: the same book, offset, relative line positions and candidate order; 200 items, the queried line at mid depth), each candidate scored by its summed log-probability, for the oracle copier, the t1 and r2 final checkpoints and Qwen3-0.6B-Base; the last column is template minus one-hop paired by item with its interval (claim 1c). State as measured whether the reference model fails the template and solves the one-hop needle inside its trained window, and whether Qwen3 solves both (it is the check that the template is solvable at all). -->
 
 ```{.python .input #long-context-format-table}
 %%tab pytorch
@@ -248,7 +249,7 @@ probe = d2l.lc_probe_runs(t1_steps=(509, 1017, 1526),
 d2l.show_lc_format(probe)
 ```
 
-<!-- Placeholder (prose): reach during pretraining: recall by gap at the trained length for the committed checkpoints of t1 (at 1K) and r2 (at 4K). The steps between which copying appears (recall 32-64 back first detectable, a lower 95% bound above 0.25) and how far reach then extends, as measured; the induction-head literature (cited) places the onset early in training. -->
+<!-- Placeholder (prose): reach during pretraining: recall by gap at the trained length for the committed checkpoints of t1 (at 1K) and r2 (at 4K). The steps between which copying appears (from a checkpoint whose 32-64 interval contains chance, 1/8, to the first with a lower 95% bound above 0.25; 'by step b' alone when the checkpoint before is already above chance), the reach at each checkpoint from then on and whether it is non-decreasing (within one bin), and recall 256-1K back at the last checkpoint minus at the first detectable one, paired by query (claim 11), as measured; the induction-head literature (cited) places the onset early in training. -->
 
 ```{.python .input #long-context-reach-train}
 %%tab pytorch
@@ -327,7 +328,7 @@ print(long.table.to_string(index=False, formatters={
     'median length': '{:,.0f}'.format}))
 ```
 
-<!-- Placeholder (prose): every scheme at scale 4 without training: the losses of the first and last position buckets on 64 test windows of 16K, needle recall at 16K in the gap bin 128-256 and in the top octave 8-16K (250 windows, ± half the 95% Wilson interval) and the reach. The "none at 4K" row is the control: its recall 128-256 back shows the probe solved inside the trained window before recall at 16K measures anything; its top octave (2-4K back) shows how far the base's own copying reaches, which need not be the whole trained window. The mscale = 1 row: YaRN's alpha and beta were tuned for head dimension 128, the reference model has 32 pairs. -->
+<!-- Placeholder (prose): every scheme at scale 4 without training: the losses of the first and last position buckets on 64 test windows of 16K and their difference on the same windows (window-bootstrap interval; claim 1 for PI), needle recall at 16K in the gap bin 128-256 and in the top octave 8-16K (250 windows, ± half the 95% Wilson interval) and the reach. The last line is the control, the unscaled base at 4K: its recall 128-256 back shows the probe solved inside the trained window before recall at 16K measures anything; its top octave (2-4K back) shows how far the base's own copying reaches, which need not be the whole trained window (claim 1b). The mscale = 1 row: YaRN's alpha and beta were tuned for head dimension 128, the reference model has 32 pairs. -->
 
 ```{.python .input #long-context-zeroshot}
 %%tab pytorch
@@ -362,7 +363,7 @@ for arm, a in ARMS.items():
 
 ### Three Arms at 16K
 
-<!-- Placeholder (prose): the result table (seeds averaged): val loss at 4K (and its change from the base), loss in the last position bucket, the loss of the second half of each window with the whole 16K window minus with its last 4K [95% CI], near recall (gaps 32-512) and far recall (4-16K back) at 16K, the reach (every octave bin up to it has a lower 95% Wilson bound of at least 0.5) and the detectable range (above 0.25). The base row is the zero-shot PI model at 16K with the base's own val loss; the Qwen3-0.6B-Base row (trained to 32K) has recall only, its losses are in its own tokens. The plot shows the training loss of each arm's first seed; the dotted line marks the progressive arm's switch to 16K. -->
+<!-- Placeholder (prose): the result table (seeds averaged): val loss at 4K (and its change from the base), loss in the last position bucket, the loss of the second half of each window with the whole 16K window minus with its last 4K [95% CI], near recall (gaps 32-512) and far recall (4-16K back) at 16K, the reach (every octave bin up to it has a lower 95% Wilson bound of at least 0.5) and the detectable range (above 0.25). Each arm's row is the mean over the seeds named beside it (PI and YaRN three, YaRN-prog one). The base row is the zero-shot PI model at 16K with the base's own val loss; the Qwen3-0.6B-Base row (trained to 32K) has recall only, its losses are in its own tokens. The line under the table compares progressive and one-shot YaRN at seed 0 of each (paired by window and query), a single-seed comparison (claim 7). The plot shows the training loss of each arm's first seed; the dotted line marks the progressive arm's switch to 16K. -->
 
 ```{.python .input #long-context-arms}
 %%tab pytorch
@@ -380,7 +381,7 @@ d2l.plot_lc_train(lc.logs)
 d2l.show_lc_loss(lc)
 ```
 
-<!-- Placeholder (prose): recall against the gap (octave bins, 500 windows per length, seeds pooled per query, Wilson bands; dashed chance, dotted 0.5 and 0.25), at 16K and inside the trained window at 4K, with Qwen3-0.6B-Base in grey. Reach is the upper edge of the largest bin up to which every bin's lower 95% Wilson bound is at least 0.5; "detectable to" uses 0.25. Both thresholds are protocol parameters, not another model's; the lines below are seed 0's. -->
+<!-- Placeholder (prose): recall against the gap (octave bins, 500 windows per length, seeds pooled per query, Wilson bands; dashed chance, dotted 0.5 and 0.25), at 16K and inside the trained window at 4K, with Qwen3-0.6B-Base in grey. Reach is the upper edge of the largest bin up to which every bin's lower 95% Wilson bound is at least 0.5; "detectable to" uses 0.25. Both thresholds are protocol parameters, not another model's; the lines below are seed 0's. Each arm's line adds its far recall (4-16K back) minus the unscaled base's recall in its own top bin (2-4K back at 4K), an unpaired difference with a window-resampled interval (claim 8); then Qwen3-0.6B-Base's recall per bin at 16K with Wilson intervals (claim 13: at least 90% in every bin, point estimate). The per-bin Wilson bands treat queries as independent and do not account for the eight queries of a window sharing its text or windows from one book overlapping; the differences resample whole windows. -->
 
 ```{.python .input #long-context-recall-grid}
 %%tab pytorch
@@ -406,7 +407,7 @@ d2l.show_lc_gain(lc)
 
 ### Which Measure Moves First
 
-<!-- Placeholder (prose): from the periodic needle evaluations of the seed-1 and seed-2 arms (every 64 steps and before the first: 50 needle windows at 16K, 16 test windows; the evaluation draws nothing from the training generators, so these seeds train as seed 0's recipe would): the first tokens at which the loss in the last bucket comes within MARGIN of the base's loss on its trained window (the same 16 windows), near recall has a lower Wilson bound of 0.5, far recall (4-16K back) one above 0.25, and the gain beyond 4K is positive. Seed 0 and the progressive arm were trained before this evaluation existed and have no timeline. State the order per arm as measured; 'perplexity first' only if it holds in every arm and seed. -->
+<!-- Placeholder (prose): from the periodic needle evaluations of the seed-1 and seed-2 arms (every 64 steps and before the first: 50 needle windows at 16K, 16 test windows; the evaluation draws nothing from the training generators, so these seeds train as seed 0's recipe would): the first tokens at which the loss in the last bucket comes within MARGIN of the base's loss on its trained window (the same 16 windows), near recall has a lower Wilson bound of 0.5, far recall (4-16K back) one above 0.25, and the gain beyond 4K is positive. Seed 0 and the progressive arm were trained before this evaluation existed and have no timeline (were they re-trained, a progressive arm's first-stage evaluations run at its 8K window and are not counted here). State the order per arm as measured; 'perplexity first' only if it holds in every arm and seed. -->
 
 ```{.python .input #long-context-first-steps}
 %%tab pytorch

@@ -28299,6 +28299,8 @@ _LC_TIERS = {
 
 _LC_NEAR = (32, 512)  # the near gaps of every table
 
+_LC_GROWTH = (256, 1024)  # the gaps of reach growth during pretraining
+
 _LC_SHORT = 256  # the sliding context of the gain, the first context
 
 _LC_REFERENCE = 'Qwen/Qwen3-0.6B-Base'  # ruling (d) of 2026-11-25
@@ -28623,14 +28625,25 @@ def needle_oracle(needles):
 def needle_diagnostics(tokenizer, needles):
     """The pilot's checks of a miss, as bools: 'oracle' (the oracle copier
     recalls every query of these windows), 'single' (every pool word is one
-    token in the form the windows use: a key on its own, as after a line
-    break, a value with its leading space), 'absent' (no key or value of a
-    window occurs in that window's text, as a word or as a token), and
-    'unique' (the needle tokens sit where the gaps say, each key once in
-    its window, the values of a window distinct)."""
+    token in the form the windows use: a key on its own and after a line
+    break, '\\n<key>' encoding as the line break and the key; a value with
+    its leading space on its own and after a key, '\\n<key> <value>'
+    encoding as three tokens), 'absent' (no key or value of a window occurs
+    in that window's text, as a word or as a token), and 'unique' (the
+    needle tokens sit where the gaps say, each key once in its window, the
+    values of a window distinct)."""
     keys, values = needle_pools(tokenizer)
-    single = all(_encode(tokenizer, w) == [i] for w, i in keys) and all(
-        _encode(tokenizer, ' ' + w) == [i] for w, i in values)
+    nl = _encode(tokenizer, '\n')
+    k0 = keys[0] if keys else ('', None)
+    with d2l._quiet():
+        in_line = tokenizer(['\n' + w for w, _ in keys] + [
+            f'\n{k0[0]} {w}' for w, _ in values],
+            add_special_tokens=False)['input_ids']
+    single = (all(_encode(tokenizer, w) == [i] for w, i in keys)
+              and all(_encode(tokenizer, ' ' + w) == [i] for w, i in values)
+              and all(x == nl + [i] for x, (_, i) in zip(in_line, keys))
+              and all(x == nl + [k0[1], i] for x, (_, i) in zip(
+                  in_line[len(keys):], values)))
     word = {i: w for w, i in keys + values}
     absent = unique = True
     for i, P in enumerate(needles.prefix):
@@ -28659,7 +28672,10 @@ def recall_by_gap(rec, L=None):
     """Recall per octave bin of gap (gap_bins(L); L defaults to the power
     of two above the largest gap): DataFrame(gap_lo, gap_hi, n, k, rate,
     lo, hi) with 95% Wilson bounds. rec has rows (gap, correct); correct
-    may be a mean over seeds of the same query."""
+    may be a mean over seeds of the same query. The Wilson bounds treat
+    the queries as independent: they do not account for the eight queries
+    of a window sharing its text, nor for windows of one book overlapping
+    (the differences below resample whole windows)."""
     L = L or 2 ** math.ceil(math.log2(max(64, int(rec['gap'].max()))))
     rows = []
     for a, b in gap_bins(L):
@@ -28674,6 +28690,39 @@ def recall_between(rec, lo, hi):
     """The share of the queries with a gap in (lo, hi] that are correct."""
     return float(rec[(rec['gap'] > lo) & (rec['gap'] <= hi)][
         'correct'].mean())
+
+def _per_window(rec):
+    """(correct, count) per window of query rows (window, correct)."""
+    per = rec.groupby('window')['correct'].agg(['sum', 'count'])
+    return (per['sum'].to_numpy(dtype=float),
+            per['count'].to_numpy(dtype=float))
+
+def recall_paired(a, b, on=('window', 'needle')):
+    """Recall of the queries a minus the same queries b (rows matched on
+    `on`, which starts with the window; correct may be a mean over seeds):
+    (difference, lo, hi), the 95% interval from resampling whole windows."""
+    m = a.merge(b, on=list(on), suffixes=('_a', '_b'))
+    if not len(m):
+        return (math.nan,) * 3
+    d = m.assign(correct=m['correct_a'].astype(float)
+                 - m['correct_b'].astype(float))
+    return d2l.window_ci(*_per_window(d))
+
+def recall_unpaired(a, b, n_boot=2000, seed=0):
+    """Recall of the queries a minus that of other queries b (rows window,
+    correct): (difference, lo, hi), the 95% interval from resampling the
+    windows of a and of b independently."""
+    if not len(a) or not len(b):
+        return (math.nan,) * 3
+    rng = np.random.default_rng(seed)
+    point, boots = [], []
+    for x in (a, b):
+        s, c = _per_window(x)
+        idx = rng.integers(len(s), size=(n_boot, len(s)))
+        point.append(s.sum() / c.sum())
+        boots.append(s[idx].sum(1) / c[idx].sum(1))
+    lo, hi = np.quantile(boots[0] - boots[1], [0.025, 0.975])
+    return float(point[0] - point[1]), float(lo), float(hi)
 
 _RECALL_ADJ = (
     'amber', 'ancient', 'autumn', 'bitter', 'bold', 'brave', 'bright',
@@ -28727,27 +28776,33 @@ def _format_items(tokenizer, fmt, L, n, seed=0, n_lines=8, depth=0.5):
     about L tokens: book text with n_lines lines inserted at token
     positions, the queried line (the first) at fraction depth of the text,
     the others at random, then the query; the candidates in a random
-    order."""
-    g = torch.Generator().manual_seed(seed * 1_000_003 + L * 1009
-                                      + (fmt == 'template'))
+    order. The window (book, offset), the lines' relative positions in
+    its text and the candidate order come from a generator that does not
+    depend on fmt, so item i of each format is the same book window (the
+    longer template lines leave a shorter prefix of the same text); only
+    the lines themselves are drawn per format."""
+    g = torch.Generator().manual_seed(seed * 1_000_003 + L * 1009)
+    gf = torch.Generator().manual_seed(seed * 1_000_003 + L * 1009 + 1
+                                       + (fmt == 'template'))
     books = [torch.as_tensor(b) for b in _test_book_tokens(tokenizer)
              if len(b) > L]
     items = []
     for i in range(n):
         book = books[i % len(books)]
         a = int(torch.randint(len(book) - L, (1,), generator=g))
+        u = torch.rand(n_lines - 1, generator=g, dtype=torch.float64)
+        order = torch.randperm(n_lines, generator=g).tolist()
         words = _text_words(tokenizer, book[a:a + L])
         lines, query, conts = _format_lines(tokenizer, fmt, n_lines, words,
-                                            book[a:a + L], g)
+                                            book[a:a + L], gf)
         budget = L - sum(map(len, lines)) - len(query) - max(map(len, conts))
         text = book[a:a + budget].tolist()
-        cuts = [round(depth * budget)] + torch.randint(
-            budget + 1, (n_lines - 1,), generator=g).tolist()
+        cuts = [round(depth * budget)] + (u * (budget + 1)).floor().long(
+            ).clamp(max=budget).tolist()
         ids, prev = [], 0
         for j in sorted(range(n_lines), key=lambda j: (cuts[j], j)):
             ids += text[prev:cuts[j]] + lines[j]
             prev = cuts[j]
-        order = torch.randperm(n_lines, generator=g).tolist()
         items.append(dict(ctx=ids + text[prev:] + query, query=query,
                           conts=[conts[j] for j in order],
                           gold=order.index(0)))
@@ -29170,11 +29225,24 @@ def _lc_tier(base):
         raise ValueError(f"base is 'r2' or 't1', not {base!r}")
     return 't2' if base == 'r2' else 't1'
 
+def _lc_bucket_delta(windows, model, a, b):
+    """The loss of model in position bucket b minus in bucket a on the same
+    windows (nats per token; seeds averaged per window), with a 95%
+    interval from resampling whole windows: (delta, lo, hi)."""
+    w = windows[(windows['model'] == model) & (windows['measure'] == 'nll')
+                & windows['bucket'].isin([a, b])]
+    per = w.groupby(['bucket', 'window'])[['sum', 'n']].mean()
+    have = set(per.index.get_level_values(0))
+    if a not in have or b not in have:
+        return (math.nan,) * 3
+    d = per.loc[b]['sum'] - per.loc[a]['sum'].reindex(per.loc[b].index)
+    return window_ci(d.to_numpy(), per.loc[b]['n'].to_numpy())
+
 def _lc_zs_table(tier, windows, needles, names):
     """Per scheme at the longest length, then 'none' at the trained length
-    (the control): the losses of the first and last position buckets, recall
-    in the gap bin (128, 256] and in the top octave (L / 2, L], with
-    intervals, and the reach."""
+    (the control): the losses of the first and last position buckets and
+    last minus first on the same windows, recall in the gap bin (128, 256]
+    and in the top octave (L / 2, L], with intervals, and the reach."""
     L0, T = _LC_TIERS[tier]['trained'], int(needles['length'].max())
     pos, rec = _lc_position(windows), _lc_recall(needles)
     first, last = bucket_name(0, L0), bucket_name(T - L0, T)
@@ -29185,9 +29253,11 @@ def _lc_zs_table(tier, windows, needles, names):
                 & (rec['length'] == L)].set_index('gap_lo')
         cell = lambda k: tuple(p.loc[k, ['nll', 'lo', 'hi']]) if (
             k in p.index and L == T) else (math.nan,) * 3
+        delta = (_lc_bucket_delta(windows, name, first, last) if L == T
+                 else (math.nan,) * 3)
         rows.append((name, L, *(cell(first) if L == T else
                                 tuple(p.loc[first, ['nll', 'lo', 'hi']])),
-                     *cell(last), *b.loc[128, ['rate', 'lo', 'hi']],
+                     *cell(last), *delta, *b.loc[128, ['rate', 'lo', 'hi']],
                      *b.loc[L // 2, ['rate', 'lo', 'hi']],
                      d2l.reach(b.reset_index())))
     return pd.DataFrame(rows, columns=d2l._LC_COLUMNS['zs_table'])
@@ -29418,9 +29488,9 @@ _LC_COLUMNS = {
     'recall': ['model', 'seed', 'length', 'gap_lo', 'gap_hi', 'n', 'k',
                'rate', 'lo', 'hi'],
     'gain': ['model', 'bucket', 'gain', 'lo', 'hi', 'n'],
-    'timeline': ['arm', 'seed', 'step', 'tokens', 'nll_first', 'nll_last',
-                 'near_k', 'near_n', 'near_lo', 'far_k', 'far_n', 'far_lo',
-                 'gain', 'gain_lo'],
+    'timeline': ['arm', 'seed', 'step', 'tokens', 'length', 'nll_first',
+                 'nll_last', 'near_k', 'near_n', 'near_lo', 'far_k', 'far_n',
+                 'far_lo', 'gain', 'gain_lo'],
     'short': ['arm', 'Δ val', 'val lo', 'val hi', 'Δ suite', 'suite lo',
               'suite hi', 'Δ near', 'near lo', 'near hi'],
     'windows': ['model', 'seed', 'measure', 'bucket', 'window', 'sum', 'n'],
@@ -29428,7 +29498,7 @@ _LC_COLUMNS = {
                 'correct'],
     'items': ['model', 'seed', 'task', 'item_id', 'score'],
     'zs_table': ['scheme', 'length', 'first', 'first lo', 'first hi',
-                 'last', 'last lo', 'last hi', 'near', 'near lo', 'near hi',
+                 'last', 'last lo', 'last hi', 'Δ', 'Δ lo', 'Δ hi', 'near', 'near lo', 'near hi',
                  'far', 'far lo', 'far hi', 'reach'],
     'zs_windows': ['model', 'seed', 'measure', 'bucket', 'window', 'sum',
                    'n'],
@@ -29570,11 +29640,15 @@ def _bf16_copy(model):
     return copy.deepcopy(model).to(torch.bfloat16).eval()
 
 def _lc_timeline_row(model, cfg, step, tokenizer):
-    """The periodic evaluation of a bf16 copy of model: the losses of the
-    first and last position buckets, near recall (32, 512] and far recall
-    (beyond the trained length) at the arm's length with lower Wilson
-    bounds, and the gain beyond the trained length with its lower bound."""
-    spec, T, L0 = _LC_TIERS[cfg['tier']], cfg['seq_len'], cfg['trained_len']
+    """The periodic evaluation of a bf16 copy of model after `step` steps:
+    the losses of the first and last position buckets, near recall
+    (32, 512] and far recall (beyond the trained length) with lower Wilson
+    bounds, and the gain beyond the trained length with its lower bound,
+    all at the window of the stage the model is in (`length`: a
+    progressive arm's first stage is evaluated at its own window, with
+    the scale it is trained at, never beyond it)."""
+    spec, L0 = _LC_TIERS[cfg['tier']], cfg['trained_len']
+    T = cfg['stages'][_lc_stage_of(cfg, max(step - 1, 0))]['T']
     ev = _bf16_copy(model)
     w, r, _ = _lc_eval(ev, tokenizer, cfg['tier'], T, (T,),
                        spec['eval_needles'], spec['eval_windows'],
@@ -29588,7 +29662,7 @@ def _lc_timeline_row(model, cfg, step, tokenizer):
         'window')[['sum', 'n']].sum()
     gain, gain_lo, _ = window_ci(g['sum'], g['n'])
     out = dict(arm=cfg['arm'], seed=cfg['seed'], step=step,
-               tokens=step * cfg['global_batch'] * T,
+               tokens=step * cfg['global_batch'] * cfg['seq_len'], length=T,
                nll_first=ratio(nll[nll['bucket'] == bucket_name(0, L0)]),
                nll_last=ratio(nll[nll['bucket'] == bucket_name(T - L0, T)]))
     for name, (a, b) in (('near', _LC_NEAR), ('far', (L0, T))):
@@ -30177,33 +30251,60 @@ def _tokens(x):
 
 def show_lc_format(probe):
     """The format table: recall at 1K of each model on the template and on
-    the one-hop needle, with 95% Wilson intervals, under the label."""
+    the one-hop needle, with 95% Wilson intervals, and template minus
+    one-hop paired by item (the same window in both formats; interval
+    from resampling items), under the label."""
     if not _lc_head(probe, probe.format, 'lc-probe'):
         return
-    t = probe.format
     rows = {}
-    for r in t.itertuples():
+    for r in probe.format.itertuples():
         rows.setdefault(r.model, {})[r.format] = _interval(r.rate, r.lo, r.hi,
                                                            2)
-    print(pd.DataFrame([[m, v.get('template', '-'), v.get('one-hop', '-')]
-                        for m, v in rows.items()],
-                       columns=['model', 'template', 'one-hop']).to_string(
+    it = probe.format_items.assign(window=probe.format_items['item'])
+    out = []
+    for m, v in rows.items():
+        x = it[it['model'] == m]
+        d = recall_paired(x[x['format'] == 'template'],
+                          x[x['format'] == 'one-hop'], on=('window',))
+        out.append([m, v.get('template', '-'), v.get('one-hop', '-'),
+                    _interval(*d, 2, sign=True)])
+    print(pd.DataFrame(out, columns=['model', 'template', 'one-hop',
+                                     'template − one-hop']).to_string(
         index=False))
 
 def _copying_steps(x):
-    """(a, b): the last checkpoint before recall in (32, 64] becomes
-    detectable (Wilson lower bound above 0.25) and the first at which it
-    is; None where there is none."""
+    """(a, b): b the first checkpoint at which recall in (32, 64] is
+    detectable (Wilson lower bound above 0.25); a the checkpoint before it
+    when that one is at chance (its Wilson interval contains 1/8), else
+    None; b None where no checkpoint is detectable."""
     b = x[x['gap_lo'] == 32].sort_values('step')
     ok = b['lo'] > 0.25
-    first = b['step'][ok].min() if ok.any() else None
-    before = b['step'][~ok & (b['step'] < (first or math.inf))]
-    return (int(before.max()) if len(before) else None,
-            None if first is None else int(first))
+    if not ok.any():
+        return None, None
+    first = int(b['step'][ok].min())
+    before = b[b['step'] < first]
+    if not len(before):
+        return None, first
+    last = before.iloc[-1]
+    chance = last['lo'] <= 1 / 8 <= last['hi']
+    return (int(last['step']) if chance else None), first
+
+def _reach_verdict(r):
+    """'non-decreasing' if no reach falls below the one before it, 'non-
+    decreasing within one bin' if none falls below half the largest one
+    before it, else 'falling'."""
+    if all(b >= a for a, b in zip(r, r[1:])):
+        return 'non-decreasing'
+    top = np.maximum.accumulate(r)
+    return ('non-decreasing within one bin' if all(
+        b >= a / 2 for a, b in zip(top, r[1:])) else 'falling')
 
 def show_reach_train(probe):
-    """When copying appears in each run, the reach of the last run at its
-    first and last checkpoint after that, and the plot."""
+    """When copying appears in each run (from a checkpoint at chance to one
+    with recall in (32, 64] detectable); for the last run (r2) its reach
+    at each checkpoint from the first detectable one on, and its recall in
+    _LC_GROWTH at the last checkpoint minus at that first one (paired by
+    query, window-resampled 95% interval); then the plot."""
     if not _lc_head(probe, probe.reach_train, 'lc-probe'):
         return
     parts = []
@@ -30215,49 +30316,91 @@ def show_reach_train(probe):
     print('copying appears ' + ' and '.join(parts))
     m, x = list(probe.reach_train.groupby('model', sort=False))[-1]
     steps = sorted(x['step'].unique())
-    _, b = _copying_steps(x)
-    s0 = b or steps[0]
-    r = {s: d2l.reach(x[x['step'] == s]) for s in (s0, steps[-1])}
-    L = int(x['gap_hi'].max())
-    print(f'{m} reach at {_length_name(L)}: {r[s0]:,} at step {s0:,} → '
-          f'{r[steps[-1]]:,} at step {steps[-1]:,}')
+    s0 = _copying_steps(x)[1] or steps[0]
+    shown = [s for s in steps if s >= s0]
+    r = [d2l.reach(x[x['step'] == s]) for s in shown]
+    L = _length_name(int(x['gap_hi'].max()))
+    print(f'{m} reach at {L} (steps {s0:,} → {shown[-1]:,}): '
+          f'{", ".join(f"{v:,}" for v in r)}; {_reach_verdict(r)}')
+    q = probe.reach_queries
+    q = q[(q['model'] == m) & (q['gap'] > _LC_GROWTH[0])
+          & (q['gap'] <= _LC_GROWTH[1])]
+    d = recall_paired(q[q['step'] == shown[-1]], q[q['step'] == s0])
+    gaps = f'{_LC_GROWTH[0]}-{_length_name(_LC_GROWTH[1])}'
+    print(f'{m} recall {gaps} back, step {shown[-1]:,} − '
+          f'step {s0:,}: {_interval(*d, 2, sign=True)} (paired by query)')
     plot_reach_train(probe)
 
 def show_lc_zeroshot(zs):
-    """The zero-shot table: per scheme at the longest length (and the
-    unscaled base at the trained length, the control) the losses of the
-    first and last position buckets, recall in (128, 256] and in the top
-    octave of gap (±: half the 95% interval), and the reach."""
+    """The zero-shot table: per scheme at the longest length the losses of
+    the first and last position buckets and last minus first on the same
+    windows, recall in (128, 256] and in the top octave of gap (±: half the
+    95% interval), and the reach; then the control line, the unscaled base
+    at its trained length."""
     if not _lc_head(zs, zs.table, 'lc-zeroshot'):
         return
     t = zs.table
     T, L0 = int(t['length'].max()), int(t['length'].min())
-    out = pd.DataFrame({
-        'scheme': [f'{s} at {_length_name(L)}' if L != T else s
-                   for s, L in zip(t['scheme'], t['length'])],
-        f'loss 0-{_length_name(L0)}': [_pm(*r, 2) for r in zip(
-            t['first'], t['first lo'], t['first hi'])],
-        f'loss {bucket_name(T - L0, T)}': [_pm(*r, 2) for r in zip(
-            t['last'], t['last lo'], t['last hi'])],
-        'recall 128-256': [_pm(*r, 2) for r in zip(
-            t['near'], t['near lo'], t['near hi'])],
-        'recall L/2-L': [_pm(*r, 2) for r in zip(
-            t['far'], t['far lo'], t['far hi'])],
-        'reach': t['reach'].map(_tokens)})
-    print(out.to_string(index=False))
+    first, last = f'0-{_length_name(L0)}', bucket_name(T - L0, T)
+    pm = lambda x, k, d=2, sign=False: [_pm(*r, d, sign) for r in zip(
+        x[k], x[f'{k} lo'], x[f'{k} hi'])]
+    x = t[t['length'] == T]
+    print(pd.DataFrame({
+        'scheme': x['scheme'], f'loss {first}': pm(x, 'first'),
+        f'loss {last}': pm(x, 'last'),
+        f'{last} − {first}': pm(x, 'Δ', sign=True),
+        'recall 128-256': pm(x, 'near'),
+        f'recall {bucket_name(T // 2, T)}': pm(x, 'far'),
+        'reach': x['reach'].map(_tokens)}).to_string(index=False))
+    for r in t[t['length'] != T].to_dict('records'):
+        c = lambda k: _pm(r[k], r[f'{k} lo'], r[f'{k} hi'], 2)
+        print(f'{r["scheme"]} at {_length_name(r["length"])} (control): loss'
+              f' {first} {c("first")}; recall 128-256 {c("near")}, '
+              f'{bucket_name(L0 // 2, L0)} {c("far")}; reach '
+              f'{_tokens(r["reach"])}')
+
+def _lc_seed_diff(runs, a, b, seed=0):
+    """a minus b, both at one seed, at the arms' length: the loss in the
+    last position bucket (paired by window), near and far recall (paired
+    by query), each (difference, lo, hi) with a window-resampled 95%
+    interval."""
+    T, L0 = (_LC_TIERS[_lc_tier_of(runs)][k] for k in ('length', 'trained'))
+    w, n = runs.windows, runs.needles
+    last = bucket_name(T - L0, T)
+
+    def nll(m):
+        x = w[(w['model'] == m) & (w['seed'] == seed) & (w['measure'] ==
+                                                         'nll')
+              & (w['bucket'] == last)]
+        return x.set_index('window')[['sum', 'n']]
+
+    def queries(m, lo, hi):
+        return n[(n['model'] == m) & (n['seed'] == seed) & (n['length'] == T)
+                 & (n['gap'] > lo) & (n['gap'] <= hi)]
+
+    la, lb = nll(a), nll(b).reindex(nll(a).index)
+    loss = window_ci((la['sum'] - lb['sum']).to_numpy(), la['n'].to_numpy())
+    return dict(loss=loss, **{k: recall_paired(queries(a, *g), queries(b, *g))
+                              for k, g in (('near', _LC_NEAR),
+                                           ('far', (L0, T)))})
 
 def show_lc_table(runs):
-    """The arms' table (seeds averaged): val loss at the trained length and
-    its change from the base, the loss in the last position bucket, the
-    loss on the second half with the whole window minus with the trained
-    length [95% CI], near and far recall at the arms' length, reach and
-    detectable to (±: half the 95% interval)."""
+    """The arms' table (seeds averaged, the number of seeds by each arm):
+    val loss at the trained length and its change from the base, the loss
+    in the last position bucket, the loss on the second half with the
+    whole window minus with the trained length [95% CI], near and far
+    recall at the arms' length, reach and detectable to (±: half the 95%
+    interval); then each progressive arm minus its one-shot arm at seed 0
+    of each, labelled single-seed."""
     if not _lc_head(runs, runs.table, 'lc-t2-evals'):
         return
     t = runs.table
     T, L0 = (_LC_TIERS[_lc_tier_of(runs)][k] for k in ('length', 'trained'))
+    seeds = runs.needles.groupby('model')['seed'].nunique()
+    name = lambda a: (f'{a} ({seeds[a]} seed{"s" if seeds[a] > 1 else ""})'
+                      if a in seeds.index and a != 'base' else a)
     print(pd.DataFrame({
-        'arm': t['arm'],
+        'arm': t['arm'].map(name),
         f'val {_length_name(L0)} (Δ)': [
             '-' if math.isnan(v) else f'{_num(v, 3)} ({_num(d, 3, True)})'
             for v, d in zip(t['val'], t['Δ val'])],
@@ -30270,6 +30413,16 @@ def show_lc_table(runs):
         'far': t['far'].map(lambda x: _num(x, 2)),
         'reach': t['reach'].map(_tokens),
         'detect.': t['detectable'].map(_tokens)}).to_string(index=False))
+    arms = set(t['arm'])
+    for a in t['arm']:
+        b = a[:-len('-prog')] if a.endswith('-prog') else None
+        if b not in arms:
+            continue
+        d = _lc_seed_diff(runs, a, b)
+        print(f'{a} − {b}, seed 0 of each (single seed): loss '
+              f'{bucket_name(T - L0, T)} {_interval(*d["loss"], 3, True)}\n'
+              f'  near {_interval(*d["near"], 2, True)}, far '
+              f'{_interval(*d["far"], 2, True)}')
 
 def show_lc_loss(runs):
     """The two loss panels (by position; against the context given)."""
@@ -30279,24 +30432,54 @@ def show_lc_loss(runs):
 def lc_reach_lines(runs, reach, seed=0):
     """'model: reach x, detectable to y' at the arms' length for each arm
     (seed given), the zero-shot PI model and the reference, with reach the
-    page's function."""
+    page's function; an arm's line adds its far recall (beyond the trained
+    length) minus the unscaled base's recall in the top octave of its
+    trained window (window-resampled 95% interval, other windows)."""
     r = runs.recall
-    T = int(r['length'].max())
+    T, L0 = (_LC_TIERS[_lc_tier_of(runs)][k] for k in ('length', 'trained'))
+    n = runs.needles
+    top = n[(n['model'] == 'base') & (n['seed'] == 0) & (n['length'] == L0)
+            & (n['gap'] > L0 // 2) & (n['gap'] <= L0)]
+    arms = set(runs.table['arm']) - {'base'}
     lines = []
     for m in dict.fromkeys(r['model']):
         b = r[(r['model'] == m) & (r['length'] == T) & (r['seed'] == seed)]
-        if len(b) and (m in set(runs.table['arm']) or m in (
+        if not len(b) or not (m in arms or m in (
                 'PI, zero-shot', *set(runs.ref_needles['model']))):
-            lines.append(f'{m}: reach {reach(b):,}, detectable to '
-                         f'{reach(b, 0.25, strict=True):,}')
+            continue
+        line = (f'{m}: reach {reach(b):,}, detectable to '
+                f'{reach(b, 0.25, strict=True):,}')
+        far = n[(n['model'] == m) & (n['seed'] == seed) & (n['length'] == T)
+                & (n['gap'] > L0) & (n['gap'] <= T)]
+        if m in arms and len(far) and len(top):
+            line += ('; far − base top octave ' + _interval(
+                *recall_unpaired(far, top), 2, sign=True))
+        lines.append(line)
     return lines
 
 def show_lc_recall(runs, reach):
     """Under the label: seed 0's reach and detectable range per model
-    (reach the page's function), then the two recall panels."""
+    (reach the page's function; lc_reach_lines), the reference's recall
+    per gap bin at the arms' length with 95% Wilson intervals, then the
+    two recall panels."""
     if not _lc_head(runs, runs.recall, 'lc-t2-evals'):
         return
     print('\n'.join(lc_reach_lines(runs, reach)))
+    r = runs.recall
+    T = int(r['length'].max())
+    for m in sorted(set(runs.ref_needles['model'])):
+        b = r[(r['model'] == m) & (r['length'] == T) & (r['seed'] == 0)]
+        cells = [f'{bucket_name(x.gap_lo, x.gap_hi)} '
+                 f'{_interval(x.rate, x.lo, x.hi, 2)}' for x in
+                 b.sort_values('gap_lo').itertuples()]
+        lines = [f'{m} at {_length_name(T)} by gap:']
+        for c in cells:  # wrapped between bins at 100 columns
+            if len(lines[-1]) + len(c) + 3 > 100:
+                lines[-1] += ','
+                lines.append(' ')
+            lines[-1] += (' ' if lines[-1].endswith(':') or lines[-1] == ' '
+                          else ', ') + c
+        print('\n'.join(lines))
     plot_lc_recall(runs)
 
 def show_lc_gain(runs):
@@ -30320,8 +30503,9 @@ def lc_first_steps(runs, margin):
     margin of the unscaled base's loss in its trained window on the same
     windows, near recall has a lower 95% Wilson bound of at least 0.5, far
     recall one above 0.25, and the gain beyond the trained length a lower
-    bound above 0 ('not reached' if never); and the arms and seeds without
-    a timeline."""
+    bound above 0 ('not reached' if never), from the evaluations at the
+    arms' length (a progressive arm's first-stage rows are at its shorter
+    window); and the arms and seeds without a timeline."""
     spec = _LC_TIERS[_lc_tier_of(runs)]
     w = runs.zs_windows
     base = w[(w['model'] == 'none') & (w['measure'] == 'nll')
@@ -30329,7 +30513,8 @@ def lc_first_steps(runs, margin):
              & (w['window'] < spec['eval_windows'])]
     ref = base['sum'].sum() / base['n'].sum()
     rows = []
-    for (arm, seed), t in runs.timeline.groupby(['arm', 'seed'], sort=False):
+    tl = runs.timeline[runs.timeline['length'] == spec['length']]
+    for (arm, seed), t in tl.groupby(['arm', 'seed'], sort=False):
         first = lambda ok: (f'{t["tokens"][ok].min() / 1e6:.0f}M'
                             if ok.any() else 'not reached')
         rows.append((arm, seed, first(t['nll_last'] <= ref + margin),

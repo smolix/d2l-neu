@@ -361,6 +361,18 @@ class NeedleWindowTest(unittest.TestCase):
             moved = nd._replace(gaps=nd.gaps + 1)
             d = d2l.needle_diagnostics(tok, moved)
             self.assertFalse(d['unique'])
+            (w0, i0), = pools[0][:1]
+
+            class Merged(WordTokenizer):  # '\n<first key>' is one token
+                def encode(self, text):
+                    if text.startswith('\n' + w0):
+                        return [i0] + super().encode(text[1 + len(w0):])
+                    return super().encode(text)
+
+            merged = Merged.__new__(Merged)
+            merged.__dict__.update(tok.__dict__)
+            self.assertEqual(d2l._encode(merged, w0), [i0])  # bare form fine
+            self.assertFalse(d2l.needle_diagnostics(merged, nd)['single'])
 
     def test_bins(self):
         """The octave bins partition the queries (a gap on an edge falls in
@@ -483,6 +495,132 @@ class FormatTest(unittest.TestCase):
                         self.assertAlmostEqual(ll[j], ref, delta=1e-4)
         with self.assertRaises(ValueError):
             d2l._format_items(tok, 'two-hop', 1024, 1)
+
+    def test_paired(self):
+        """Item i of the two formats is the same book window: most of the
+        one-hop context's trigrams occur in the template context (they
+        share 1-3% when the offsets differ), and the candidate order is
+        the same."""
+        tok = r2_tok()
+        B = [b.numpy() for b in r2_books(tok, 4, 2047)]
+        with mock.patch.object(d2l, '_test_book_tokens', lambda t=None: B), \
+                mock.patch.object(d2l, '_needle_words',
+                                  lambda: r2_words(tok)):
+            a = d2l._format_items(tok, 'template', 1024, 6)
+            b = d2l._format_items(tok, 'one-hop', 1024, 6)
+        tri = lambda x: {tuple(x[i:i + 3]) for i in range(len(x) - 2)}
+        for x, y in zip(a, b):
+            self.assertEqual(x['gold'], y['gold'])
+            share = len(tri(y['ctx']) & tri(x['ctx'])) / len(tri(y['ctx']))
+            self.assertGreater(share, 0.6)
+        self.assertLess(len(tri(b[0]['ctx']) & tri(a[1]['ctx'])), 30)
+
+
+def probe_result(steps=(500, 1000, 2000, 4000), n_win=40, seed=0):
+    """A synthetic LcProbe: the format items of two models, and r2's
+    queries at 4K whose recall at gaps 256-1K grows with the step."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for m, p in (('oracle', (1.0, 1.0)), ('r2', (0.1, 0.9))):
+        for f, q in zip(('template', 'one-hop'), p):
+            rows += [(m, f, i, bool(rng.random() < q)) for i in range(60)]
+    items = pd.DataFrame(rows, columns=d2l._LC_PROBE_COLUMNS['format_items'])
+    table = [(m, f, len(x), int(x.sum()), x.mean(),
+              *d2l.wilson_ci(int(x.sum()), len(x)))
+             for (m, f), x in items.groupby(['model', 'format'],
+                                            sort=False)['correct']]
+    gaps = np.exp(rng.uniform(math.log(33), math.log(4032), (n_win, 8)))
+    q, bins = [], []
+    for k, step in enumerate(steps):
+        p = np.where(gaps <= 64, [0.12, 0.9, 0.95, 0.95][k],
+                     np.where(gaps <= 1024, 0.2 + 0.2 * k, 0.1))
+        ok = rng.random(gaps.shape) < p
+        x = pd.DataFrame([(step, i, j, int(gaps[i, j]), bool(ok[i, j]))
+                          for i in range(n_win) for j in range(8)],
+                         columns=['step', 'window', 'needle', 'gap',
+                                  'correct']).assign(model='r2', tokens=step)
+        q.append(x)
+        bins.append(d2l.recall_by_gap(x, 4096).assign(model='r2', step=step,
+                                                       tokens=step))
+    P = d2l._LC_PROBE_COLUMNS
+    return d2l.LcProbe(pd.DataFrame(table, columns=P['format']),
+                       pd.concat(bins, ignore_index=True)[P['reach_train']],
+                       items, pd.concat(q, ignore_index=True)[
+                           P['reach_queries']], '')
+
+
+class ProbeDisplayTest(unittest.TestCase):
+    def test_copying_steps(self):
+        """Copying appears between a and b only when a's interval holds
+        1/8; otherwise 'by step b' alone."""
+        def x(los, his):
+            return pd.DataFrame(dict(gap_lo=32, step=[500, 1000, 2000],
+                                     lo=los, hi=his))
+        cs = d2l._copying_steps
+        self.assertEqual(cs(x([0.05, 0.3, 0.6], [0.2, 0.5, 0.8])),
+                         (500, 1000))
+        self.assertEqual(cs(x([0.15, 0.3, 0.6], [0.24, 0.5, 0.8])),
+                         (None, 1000))  # above chance, not detectable
+        self.assertEqual(cs(x([0.3, 0.4, 0.6], [0.5, 0.6, 0.8])),
+                         (None, 500))
+        self.assertEqual(cs(x([0.05, 0.1, 0.2], [0.2, 0.3, 0.4])),
+                         (None, None))
+
+    def test_format(self):
+        probe = probe_result()
+        with contextlib.redirect_stdout(io.StringIO()) as buf:
+            d2l.show_lc_format(probe)
+        lines = check_display(self, buf.getvalue())
+        self.assertEqual(lines[0].split()[:3], ['model', 'template',
+                                                'one-hop'])
+        self.assertIn('template − one-hop', lines[0])
+        it = probe.format_items
+        r2 = it[it['model'] == 'r2'].pivot(index='item', columns='format',
+                                           values='correct')
+        d = (r2['template'].astype(float) - r2['one-hop']).mean()
+        self.assertIn(f'{d:+.2f} [', lines[2])
+        self.assertIn('+0.00 [+0.00, +0.00]', lines[1])  # the oracle
+
+    def test_reach_train(self):
+        probe = probe_result()
+        with contextlib.redirect_stdout(io.StringIO()) as buf:
+            d2l.show_reach_train(probe)
+        d2l.plt.close('all')
+        lines = check_display(self, buf.getvalue())
+        self.assertEqual(lines[0], 'copying appears between steps 500 and '
+                                   '1,000 (r2)')
+        self.assertRegex(lines[1], r'^r2 reach at 4K \(steps 1,000 → 4,000\)'
+                                   r': [\d,]+(, [\d,]+){2}; non-decreasing')
+        q = probe.reach_queries
+        q = q[(q['gap'] > 256) & (q['gap'] <= 1024)]
+        d = (q[q['step'] == 4000]['correct'].mean()
+             - q[q['step'] == 1000]['correct'].mean())
+        self.assertTrue(lines[2].startswith(
+            f'r2 recall 256-1K back, step 4,000 − step 1,000: {d:+.2f} ['),
+            lines[2])
+        self.assertTrue(lines[2].endswith('(paired by query)'))
+        self.assertEqual(d2l._reach_verdict([256, 128, 512]),
+                         'non-decreasing within one bin')
+        self.assertEqual(d2l._reach_verdict([512, 128]), 'falling')
+
+    def test_differences(self):
+        """Paired: the mean of per-query differences; unpaired: the
+        difference of the rates; both with intervals around them."""
+        rng = np.random.default_rng(1)
+        a = pd.DataFrame(dict(window=np.repeat(np.arange(30), 8),
+                              needle=np.tile(np.arange(8), 30),
+                              correct=rng.random(240) < 0.7))
+        b = a.assign(correct=rng.random(240) < 0.4)
+        d, lo, hi = d2l.recall_paired(a, b)
+        self.assertAlmostEqual(d, a['correct'].mean() - b['correct'].mean())
+        self.assertLess(lo, d)
+        self.assertGreater(hi, d)
+        c = b.iloc[:80]
+        d, lo, hi = d2l.recall_unpaired(a, c)
+        self.assertAlmostEqual(d, a['correct'].mean() - c['correct'].mean())
+        self.assertLess(lo, d)
+        self.assertTrue(all(math.isnan(v) for v in
+                            d2l.recall_unpaired(a, c.iloc[:0])))
 
 
 class MeasureTest(unittest.TestCase):
@@ -905,6 +1043,22 @@ class ArmsEndToEndTest(ArmsBase):
                 check_display(self, out, label)
         self.assertEqual(shown['first-steps'].splitlines(), [label])
         self.assertIn('±', shown['zeroshot'])
+        zl = shown['zeroshot'].splitlines()
+        self.assertEqual(len(zl), 2 + len(d2l._LC_SCHEMES) + 1)
+        self.assertIn('1K − 0-512', zl[1])
+        self.assertIn('recall 0.5-1K', zl[1])
+        self.assertTrue(zl[-1].startswith('none at 512 (control): loss '
+                                          '0-512 '), zl[-1])
+        self.assertIn('recall 128-256 ', zl[-1])
+        self.assertIn(', 256-512 ', zl[-1])
+        z = runs.zs_table
+        pi = z[(z['scheme'] == 'PI') & (z['length'] == 1024)].iloc[0]
+        self.assertAlmostEqual(pi['Δ'], pi['last'] - pi['first'], places=6)
+        self.assertTrue(pi['Δ lo'] <= pi['Δ'] <= pi['Δ hi'])
+        self.assertIn('YaRN-prog − YaRN, seed 0 of each (single seed): '
+                      'loss 0.5-1K ', shown['arms'])
+        self.assertIn('PI (2 seeds)', shown['arms'])
+        self.assertIn('YaRN-prog (1 seed)', shown['arms'])
         lines = check_display(self, shown['seeds'])
         self.assertEqual(lines[0].split()[0], 'arm')
         self.assertTrue(lines[5].startswith('control: the t1 base at 512'))
@@ -977,6 +1131,9 @@ class ArmsEndToEndTest(ArmsBase):
         tl = runs.timeline
         self.assertEqual(sorted(tl[(tl['arm'] == 'PI') & (tl['seed'] == 1)]
                                 ['step']), [0, 2, 4])
+        prog = tl[tl['arm'] == 'YaRN-prog'].sort_values('step')
+        self.assertEqual(list(prog['length']), [512, 512, 1024])  # stages
+        self.assertEqual(set(tl[tl['arm'] == 'PI']['length']), {1024})
         self.assertEqual(set(runs.ref_needles['model']), {REF})
         self.assertIn(REF, set(runs.context['model']))
         with tempfile.TemporaryDirectory() as root, \
@@ -984,7 +1141,7 @@ class ArmsEndToEndTest(ArmsBase):
             self.t2_displays(runs)
 
     def t2_displays(self, runs):
-        for show, n in ((d2l.show_lc_table, 6), (d2l.show_lc_short, 4)):
+        for show, n in ((d2l.show_lc_table, 8), (d2l.show_lc_short, 4)):
             with contextlib.redirect_stdout(io.StringIO()) as buf:
                 show(runs)
             self.assertEqual(len(check_display(self, buf.getvalue())), n)
@@ -994,6 +1151,18 @@ class ArmsEndToEndTest(ArmsBase):
             out = run_cell(f'long-context-{cell}', ns)
             if cell == 'recall-grid':
                 self.assertIn(f'{REF}: reach ', out)
+                self.assertRegex(out, r'(?m)^PI: reach [\d,]+, detectable '
+                                      r'to [\d,]+; far − base top octave '
+                                      r'[-+]\d\.\d\d \[')
+                ref = out[out.index(f'{REF} at 1K by gap:'):].splitlines()
+                self.assertEqual(len(ref), 2)
+                self.assertTrue(ref[0].endswith('],'))
+                self.assertTrue(ref[1].startswith('  ') and
+                                ref[1][2].isdigit(), ref)
+                self.assertEqual(len(re.findall(r'[\dK] [\d.]+ \[', ' '.join(
+                    ref))), len(d2l.gap_bins(1024)))
+                self.assertIn(f'\n{REF} at 1K by gap: 32-64 ', out)
+                self.assertNotIn(f'{REF}: reach 0, detectable to 0; far', out)
             if cell != 'position':
                 check_display(self, out)
         steps = run_cell('long-context-first-steps', ns).splitlines()

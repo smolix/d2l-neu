@@ -27482,9 +27482,10 @@ _SMOLLM3_TEMPS = (0.8, 1.0, 1.25, 1.5, 2.0)  # the calibration grid
 
 _SMOLLM3_CTX = 2048  # window of the bits per byte; a trace's one window
 
-_SMOLLM3_ANSWERS = {  # task: what score_gsm8k is given
+_SMOLLM3_ANSWERS = {  # task: its items and what score_gsm8k is given
     'gsm8k': dict(n=500, seed=0, budget=dict(completion=256, chat=4096),
-                  force=32, batch=dict(completion=32, chat=32, force=8)),
+                  force=32, batch=dict(completion=32, chat=32, force=8),
+                  ids='e5e6d8e76651b2a68b27a087609cf599f911f941'),
     'gsm-symbolic': dict(instances=5, budget=dict(completion=256,
                                                   chat=4096),
                          force=32, batch=dict(completion=32, chat=32,
@@ -27682,12 +27683,26 @@ def gsm_symbolic_items(instances=5):
                                            r['question'], 'qa'))
             for r in rows if r['instance'] < instances]
 
+def _ids_sha1(items):
+    """SHA-1 of the items' ids in order."""
+    return hashlib.sha1('\n'.join(it['id'] for it in items).encode()
+                        ).hexdigest()
+
 def _smollm3_items(task):
-    """The items of a reasoning task of _SMOLLM3_ANSWERS."""
+    """The items of a reasoning task of _SMOLLM3_ANSWERS. GSM8K's are
+    checked against the SHA-1 of the ids in order that the settings
+    record (in every cached and merged identity), so that a changed
+    subset or order of chapter 18's items is refused, not scored or
+    paired with the committed replies of other items."""
     cfg = _SMOLLM3_ANSWERS[task]
-    if task == 'gsm8k':
-        return gsm8k_items(cfg['n'], cfg['seed'])
-    return gsm_symbolic_items(cfg['instances'])
+    if task != 'gsm8k':
+        return gsm_symbolic_items(cfg['instances'])
+    items = gsm8k_items(cfg['n'], cfg['seed'])
+    if _ids_sha1(items) != cfg['ids']:
+        raise ValueError('the GSM8K items changed (ids SHA-1 '
+                         f'{_ids_sha1(items)}, the settings record '
+                         f"{cfg['ids']}): regenerate the SmolLM3 answers")
+    return items
 
 def _smollm3_cached(name, what, ident, compute):
     """compute(), kept in ../data/lm/rerun/ch21/smollm3/<name>/<what>
@@ -27920,9 +27935,11 @@ def smollm3_gsm8k(names, n=32):
     depends on which replies share a batch, so n = 32, the committed
     batch, gives the committed replies of the first batch on the same GPU
     type (measured on an RTX 4090: 32 of 32 equal; 25 items in a batch
-    of 25 changed every reply and 5 of the 25 chat scores)."""
+    of 25 changed every reply and 7 of the 25 chat scores, 16 correct
+    to 11). The items are _smollm3_items('gsm8k'), checked against the
+    ids the committed result was scored on."""
     cfg = _SMOLLM3_ANSWERS['gsm8k']
-    items = gsm8k_items(cfg['n'], cfg['seed'])[:n]
+    items = _smollm3_items('gsm8k')[:n]
     tok, out = _smollm3_tokenizer('mid'), []
     for name in names:
         model = _smollm3_load(name)

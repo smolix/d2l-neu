@@ -380,7 +380,7 @@ FULL_CARD_NOTEBOOKS = {
     # weights) at the committed batch of 32 with a 4,096-token chat budget:
     # 16.1 GiB allocated and 20.9 GiB reserved with expandable segments (F27
     # smoke, 2026-11-28, RTX 4090), above two slots' 15 GiB; the cell takes
-    # about 11 minutes of the run.
+    # about 10.5 of the notebook's 11 minutes.
     "chapter_lm-pretraining/continued-pretraining.ipynb": 1,
     # 19.6 reads the recorded answers in a normal build, but times retrieval
     # and reranking for the text, and its regeneration runs

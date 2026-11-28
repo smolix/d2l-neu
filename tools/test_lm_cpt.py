@@ -1417,7 +1417,9 @@ class SmolLM3Test(unittest.TestCase):
             return pd.DataFrame(dict(format='chat', item_id=[
                 it['id'] for it in its], score=1.0, text='t', pred='1',
                 forced_pred='1', forced_text=None))
+        ids = dict(d2l._SMOLLM3_ANSWERS['gsm8k'], ids=d2l._ids_sha1(items))
         with mock.patch.object(d2l, 'gsm8k_items', lambda n, seed: items), \
+                mock.patch.dict(d2l._SMOLLM3_ANSWERS, gsm8k=ids), \
                 mock.patch.object(d2l, 'score_gsm8k', score), \
                 mock.patch.object(d2l, '_smollm3_load', lambda name: name), \
                 mock.patch.object(d2l, '_smollm3_tokenizer', lambda n: n), \
@@ -1445,6 +1447,35 @@ class SmolLM3Test(unittest.TestCase):
         self.assertEqual(list(res.columns)[:2], ['checkpoint', 'format'])
         self.assertNotIn('text', res.columns)
         self.assertEqual(set(res['checkpoint']), {'LC 64K', 'mid-training'})
+
+    def test_items_checked(self):
+        """F27 review 2: the GSM8K items of the live check and of the
+        regeneration must be the ones the committed result was scored on,
+        in that order (the live batch is the committed first batch); a
+        changed subset or order raises before anything is scored, and the
+        ids' SHA-1 is in every cached and merged identity."""
+        items = [dict(id=str(i)) for i in range(500)]
+        cfg = dict(d2l._SMOLLM3_ANSWERS['gsm8k'], ids=d2l._ids_sha1(items))
+        self.assertIn('ids', d2l._smollm3_settings('gsm8k'))
+        with mock.patch.dict(d2l._SMOLLM3_ANSWERS, gsm8k=cfg):
+            with mock.patch.object(d2l, 'gsm8k_items',
+                                   lambda n, seed: items):
+                self.assertEqual(d2l._smollm3_items('gsm8k'), items)
+            for drift in (items[::-1], items[1:] + [dict(id='x')]):
+                with mock.patch.object(d2l, 'gsm8k_items',
+                                       lambda n, seed: drift), \
+                        mock.patch.object(d2l, 'score_gsm8k', None), \
+                        mock.patch.object(d2l, '_smollm3_load', None):
+                    with self.assertRaisesRegex(ValueError, 'items changed'):
+                        d2l._smollm3_items('gsm8k')
+                    with self.assertRaisesRegex(ValueError, 'items changed'):
+                        d2l.smollm3_gsm8k(['mid'])
+        try:
+            real = d2l.gsm8k_items(500, 0)
+        except Exception as e:  # the dataset is not on this machine
+            self.skipTest(f'GSM8K not available: {e}')
+        self.assertEqual(d2l._ids_sha1(real),
+                         d2l._SMOLLM3_ANSWERS['gsm8k']['ids'])
 
 
 class NoPrefixBpbTest(unittest.TestCase):

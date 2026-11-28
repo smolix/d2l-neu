@@ -35,8 +35,8 @@ another arm refused, and a resumed arm equal to an uninterrupted one; the
 page's T2 cells on a pending result and the fallback's own label kept
 (and its configuration checked when given); the
 SmolLM3 trajectory (F25): the merge (token counts, byte-weighted bits per
-byte, GSM8K accuracy and cut share, no reply text, a conditional rung's
-answers), the rungs only once they are regeneration names,
+byte, GSM8K accuracy, forced accuracy and cut share, no reply text, a
+conditional rung's answers), the rungs only once they are regeneration names,
 `stage_deltas` (planted cloze, GSM8K and bits-per-byte changes) and the
 page's four cells (shapes, widths, pending), the
 calibration table (best temperature, the share of the rise recovered), the
@@ -45,7 +45,8 @@ prefix token (`_scored_doc` on a hand count, `_doc_stats` against
 `bits_per_byte` without a boundary token and a full forward,
 `_logit_stats` on fixed logits); GSM-Symbolic items, the chat template
 of the mid-training tokenizer, `score_gsm8k` under SmolLM3's end token;
-the MATH-500 rung gone after the F26 gate; the regeneration jobs against the page's literals; the reasoning-trace corpus of
+the MATH-500 rung gone after the F26 gate; `lm_regen.py --prefetch
+--sources`; the regeneration jobs against the page's literals; the reasoning-trace corpus of
 tools/build_pretraining_data.py on a 30-document fixture (ids from the
 ChatML text, stable under the order of the files; decontamination and
 special strings; training selection in id order; held-out questions
@@ -67,6 +68,7 @@ import os
 import re
 import sys
 import tempfile
+import types
 import zlib
 import unittest
 from unittest import mock
@@ -989,8 +991,8 @@ class SmolLM3Test(unittest.TestCase):
                          ['8.1T', '9.9T', '11.1T', '11.2T', '11.2T', '11.4T'])
         self.assertEqual(list(traj.table['ctx'])[-2:], ['64K', '64K'])
         self.assertEqual(list(traj.table.columns), [
-            'checkpoint', 'tokens', 'ctx', 'cloze', '8-shot', 'chat', 'cut',
-            'web', 'science', 'book', 'traces'])
+            'checkpoint', 'tokens', 'ctx', 'cloze', '8-shot', 'chat',
+            'forced', 'cut', 'web', 'science', 'book', 'traces'])
         self.assertEqual(list(traj.bpb.columns),
                          ['checkpoint', *d2l._SMOLLM3_DOMAINS])
         # byte-weighted bits per byte over the documents
@@ -1000,6 +1002,7 @@ class SmolLM3Test(unittest.TestCase):
             web['bpb'] * web['bytes']).sum() / web['bytes'].sum())
         self.assertAlmostEqual(traj.table['chat'].iloc[0], 0.5)
         self.assertAlmostEqual(traj.table['cut'].iloc[0], 0.04)
+        self.assertAlmostEqual(traj.table['forced'].iloc[0], 0.5)
         self.assertNotIn('text', traj.answers.columns)  # no reply text
         self.assertEqual(list(traj.answers.columns),
                          d2l._smollm3_answer_columns())
@@ -1058,8 +1061,9 @@ class SmolLM3Test(unittest.TestCase):
         """The F26 gate (LC 64K 84%, mid-training 63% chat on 100 items:
         neither above 85%, 21 points apart) ruled the MATH-500 rung out,
         so its code, names and page blocks are gone (the z-loss
-        precedent); the MATH-500 source pin stays for the corpus's
-        decontamination."""
+        precedent; contingent on the author's chat-budget ruling, F26
+        review finding 1: restorable from 4b08ffe6d); the MATH-500
+        source pin stays for the corpus's decontamination."""
         for gone in ('math_value', 'math_prediction_value',
                      'math_completion_answer', 'math_chat_answer',
                      'math500_items', '_MINERVA_DEMOS', '_MATH_SCORER',
@@ -1084,12 +1088,18 @@ class SmolLM3Test(unittest.TestCase):
         """Paired changes between adjacent checkpoints: a planted cloze
         gain, a +20% bits-per-byte rise on one domain and a +10-point
         GSM8K chat gain are recovered, the rest is 0 within the interval;
-        the page's cell fits 13 lines of at most 80 columns."""
+        the forced-answer change is its own column (F26 review 3: a
+        forced gain where the scored chat is unchanged); the page's cell
+        fits 13 lines of at most 80 columns."""
         pts = smollm3_points(gain=lambda i: i >= 2,
                              rise=lambda i, dom: 1.2 if dom == 'book'
                              and i >= 3 else 1.0,
                              gsm=lambda i, fmt: 0.6 if fmt == 'chat'
                              and i == 5 else 0.5)
+        lc, mid = pts['smollm3-4']['answers'], pts['smollm3-5']['answers']
+        chat = (mid['format'] == 'chat') & (mid['item_id'].astype(int) < 400)
+        pts['smollm3-5']['answers'] = mid.assign(forced=np.where(
+            chat, 1.0, mid['forced']))  # forced: 80% against LC 64K's 50%
         traj = d2l._smollm3_merge(pts, list(d2l._smollm3_call()['names']))
         deltas = d2l.stage_deltas(traj).set_index('transition')
         self.assertEqual(list(deltas.index), ['S1 → S2', 'S2 → S3',
@@ -1104,6 +1114,10 @@ class SmolLM3Test(unittest.TestCase):
                                places=6)
         self.assertGreater(deltas.gsm8k_chat_lo['LC64K → mid'], 0)
         self.assertEqual(deltas.gsm8k_completion['LC64K → mid'], 0)
+        self.assertAlmostEqual(deltas.gsm8k_forced['LC64K → mid'], 30,
+                               places=6)
+        self.assertGreater(deltas.gsm8k_forced_lo['LC64K → mid'], 0)
+        self.assertEqual(deltas.gsm8k_forced['S1 → S2'], 0)
         self.assertNotIn('math500_chat', deltas.columns)
         out = run_cell('continued-pretraining-stage-deltas',
                        dict(page_ns(), traj=traj))
@@ -1111,7 +1125,10 @@ class SmolLM3Test(unittest.TestCase):
         self.assertEqual(len(lines), 13)
         self.assertLessEqual(max(map(len, lines)), 80)
         self.assertTrue(lines[0].startswith('Δ points      cloze [95% CI]'))
-        self.assertIn('+10.0 [+', lines[5])
+        self.assertEqual(lines[0].split()[-2:], ['chat,', 'forced'])
+        self.assertRegex(lines[5], r'^LC64K → mid +[+-]\d\.\d \[.*\] +\+0 '
+                                   r'\[[+-]0, [+-]0\] +\+10 \[\+\d+, \+\d+\] '
+                                   r'+\+30 \[\+\d+, \+\d+\]$')
         self.assertEqual(lines[6].split(), ['Δ', 'BPB,', '%', 'web',
                                             'science', 'book', 'traces'])
         self.assertEqual(lines[9].split()[-2], '+20.0*')
@@ -1182,10 +1199,10 @@ class SmolLM3Test(unittest.TestCase):
         self.assertEqual(len(lines), 7)
         self.assertLessEqual(max(map(len, lines)), 80)
         self.assertEqual(lines[0].split(), [
-            'checkpoint', 'tokens', 'ctx', 'cloze', '8-shot', 'chat', 'cut',
-            'web', 'science', 'book', 'traces'])
+            'checkpoint', 'tokens', 'ctx', 'cloze', '8-shot', 'chat',
+            'forced', 'cut', 'web', 'science', 'book', 'traces'])
         self.assertRegex(lines[6], r'^mid-training +11\.4T +64K +\d+\.\d '
-                                   r'+50 +50 +4 +\d\.\d{3}')
+                                   r'+50 +50 +50 +4 +\d\.\d{3}')
         ax = d2l.plt.gcf().axes[0]
         self.assertEqual([t.get_text() for t in ax.get_legend().get_texts()],
                          ['cloze mean', 'GSM8K 8-shot', 'GSM8K chat'])
@@ -1254,7 +1271,7 @@ class SmolLM3Test(unittest.TestCase):
         self.assertLessEqual(max(map(len, lines)), 80)
         self.assertEqual(lines[0].split()[:6], ['checkpoint', 'format',
                                                 'live', '(n', '=', '50)'])
-        self.assertTrue(lines[0].endswith('committed: same items  all 500'))
+        self.assertTrue(lines[0].endswith('committed: same items  all items'))
         # committed: 100% on the first 50 items (j < 250), 50% on all 500
         self.assertEqual(lines[1].split()[-2:], ['100%', '50%'])
         self.assertIn('8-shot', lines[1])
@@ -1278,11 +1295,29 @@ class SmolLM3Test(unittest.TestCase):
                                   lambda names, n: empty), \
                 warnings_as_errors():
             out = run_cell('continued-pretraining-smollm3', ns)
-            self.assertEqual(out.splitlines()[0],
-                             '[smollm3-trajectory pending]')
-            for cell in ('stage-deltas', 'smollm3-calibration',
-                         'smollm3-live'):
-                run_cell(f'continued-pretraining-{cell}', ns)
+            # one label line, no raw empty table (F26 review 7)
+            self.assertEqual(out.splitlines(),
+                             ['[smollm3-trajectory pending]'])
+            self.assertEqual(run_cell(
+                'continued-pretraining-smollm3-calibration', ns), '')
+            run_cell('continued-pretraining-stage-deltas', ns)
+        live = pd.DataFrame([dict(checkpoint=c, format=f, item_id=str(j),
+                                  score=1.0)
+                             for c in ('LC 64K', 'mid-training')
+                             for f in ('completion', 'chat')
+                             for j in range(4)])
+        with mock.patch.object(d2l, 'PRETRAIN_PENDING', frozenset(names)), \
+                mock.patch.dict(os.environ, {'D2L_RERUN': ''}), \
+                mock.patch.dict(d2l.DATA_HUB, hub, clear=True), \
+                mock.patch.object(d2l, 'smollm3_gsm8k',
+                                  lambda names, n: live), \
+                warnings_as_errors():
+            run_cell('continued-pretraining-smollm3', ns)
+            lines = run_cell('continued-pretraining-smollm3-live',
+                             ns).splitlines()
+        self.assertEqual(len(lines), 5)
+        self.assertNotIn('nan', '\n'.join(lines))
+        self.assertEqual(lines[1].split()[-2:], ['–', '–'])
         d2l.plt.close('all')
 
     def test_texts_identity(self):
@@ -2385,6 +2420,47 @@ class TraceWindowsTest(unittest.TestCase):
             self.assertTrue(all(int(x[0]) == 151644 for x in w))
         finally:
             os.chdir(cwd)
+
+
+class PrefetchSourcesTest(unittest.TestCase):
+    def test_prefetch_sources(self):
+        """tools/lm_regen.py --prefetch --sources (F26): only the named
+        models, no artifacts; with no --sources every model and every
+        registered artifact; an unknown or dataset name refused;
+        --sources without --prefetch a parser error."""
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import lm_regen
+        fake = types.SimpleNamespace(
+            PRETRAIN_SOURCES={'m1': ('model', 'r/a', 'rev1', None),
+                              'm2': ('model', 'r/b', 'rev2', None),
+                              'ds': ('dataset', 'r/c', 'rev3', None)},
+            PRETRAIN_ARTIFACTS={'x': ('key-x', 'json')},
+            DATA_HUB={'key-x': ('url', 'sha1')},
+            _quiet=contextlib.nullcontext,
+            download_keyed=mock.Mock(return_value=__file__))
+        calls = []
+        fetch = lambda repo, revision, repo_type: calls.append(
+            (repo, revision, repo_type))
+        with mock.patch('huggingface_hub.snapshot_download', fetch), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(lm_regen.prefetch(fake, ['m2']), 0)
+            self.assertEqual(calls, [('r/b', 'rev2', 'model')])
+            fake.download_keyed.assert_not_called()
+            calls.clear()
+            lm_regen.prefetch(fake)
+            self.assertEqual(calls, [('r/a', 'rev1', 'model'),
+                                     ('r/b', 'rev2', 'model')])
+            fake.download_keyed.assert_called_once_with('key-x')
+        for bad in (['nope'], ['ds'], ['m1', 'nope']):
+            with self.assertRaises(SystemExit):
+                lm_regen.prefetch(fake, bad)
+        with mock.patch.object(sys, 'argv', ['lm_regen.py', '--sources',
+                                             'm1']), \
+                mock.patch('os.chdir'), \
+                contextlib.redirect_stderr(io.StringIO()), \
+                self.assertRaises(SystemExit) as e:
+            lm_regen.main()
+        self.assertEqual(e.exception.code, 2)
 
 
 if __name__ == '__main__':

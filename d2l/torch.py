@@ -27823,8 +27823,9 @@ def _smollm3_answer_columns():
 def _smollm3_merge(results, names, texts=None):
     """SmolTrajectory from {part: result} of smollm3_trajectory (no reply
     text): table per checkpoint (tokens seen, context length, cloze mean,
-    GSM8K 8-shot and chat accuracy, the share of chat replies cut at the
-    budget, bits per byte per domain), bpb per domain, the per-item cloze
+    GSM8K 8-shot and chat accuracy, chat accuracy with forced answers,
+    the share of chat replies cut at the budget, bits per byte per
+    domain), bpb per domain, the per-item cloze
     scores, per-document rows and every answer row. The parts must have
     read the same texts (their _bpb_texts_id), and those must be texts
     when it is given (the texts a regeneration reads now)."""
@@ -27849,7 +27850,8 @@ def _smollm3_merge(results, names, texts=None):
         index=label, columns=list(_SMOLLM3_DOMAINS)).rename_axis(
         'checkpoint').reset_index().rename_axis(columns=None)
     gsm = answers[answers['task'] == 'gsm8k'].groupby(
-        ['checkpoint', 'format'])[['score', 'cut']].mean().unstack('format')
+        ['checkpoint', 'format'])[['score', 'forced', 'cut']].mean().unstack(
+        'format')
     acc = lambda col, fmt: gsm[col, fmt].reindex(label).to_numpy() if (
         col, fmt) in gsm else np.full(len(label), np.nan)
     table = pd.DataFrame({
@@ -27859,7 +27861,7 @@ def _smollm3_merge(results, names, texts=None):
         'cloze': suite_mean(items, by=('checkpoint',)).reindex(
             label).to_numpy(),
         '8-shot': acc('score', 'completion'), 'chat': acc('score', 'chat'),
-        'cut': acc('cut', 'chat')})
+        'forced': acc('forced', 'chat'), 'cut': acc('cut', 'chat')})
     table = table.merge(bpb, on='checkpoint', how='left')
     return SmolTrajectory(table, bpb, items, docs, answers, '')
 
@@ -27867,8 +27869,11 @@ def smollm3_trajectory(names):
     """SmolLM3-3B's checkpoints `names` (of 'stage1', 'stage2', 'stage3',
     'lc32k', 'lc64k', 'mid'): SmolTrajectory(table, bpb, items, docs,
     answers, label). table: checkpoint, tokens seen, context length, cloze
-    mean, GSM8K accuracy in the 8-shot and chat formats, the share of
-    chat replies cut at the budget and bits per byte (no prefix token) on
+    mean, GSM8K accuracy in the 8-shot and chat formats, chat accuracy
+    with forced answers (a cut reply's answer forced, as score_gsm8k's
+    forced), the share of chat replies cut at the budget (a cut reply
+    scores 0 in chat, so chat / (1 - cut) is the accuracy of the replies
+    not cut) and bits per byte (no prefix token) on
     web, science, book and traces (seen); bpb: those four columns; items:
     per-item cloze scores; docs: per document its bytes, scored tokens,
     summed NLL at each temperature of _SMOLLM3_TEMPS, entropy and top-1
@@ -27903,7 +27908,7 @@ def smollm3_trajectory(names):
     cols = ['checkpoint', *_SMOLLM3_DOMAINS]
     return d2l._show_label(d2l._as_tuple(SmolTrajectory, res, dict(
         table=['checkpoint', 'tokens', 'ctx', 'cloze', '8-shot', 'chat',
-               'cut', *_SMOLLM3_DOMAINS],
+               'forced', 'cut', *_SMOLLM3_DOMAINS],
         bpb=cols, items=['task', 'item_id', 'score', 'checkpoint'],
         docs=['domain', 'doc', 'bytes', *_stat_columns(), 'bpb',
               'checkpoint'],
@@ -27950,14 +27955,15 @@ _SMOLLM3_SHORT = {'stage 1 end': 'S1', 'stage 2 end': 'S2',
 def _transition(a, b):
     return f'{_SMOLLM3_SHORT.get(a, a)} → {_SMOLLM3_SHORT.get(b, b)}'
 
-def _answer_wide(traj, task, fmt):
-    """Scores of task in format fmt: items x checkpoints.
+def _answer_wide(traj, task, fmt, value='score'):
+    """Column value (score or forced) of task in format fmt: items x
+    checkpoints.
 
     Defined in :numref:`sec_lm_continued_pretraining`"""
     a = traj.answers[(traj.answers['task'] == task)
                      & (traj.answers['format'] == fmt)]
     return a.pivot_table(index='item_id', columns='checkpoint',
-                         values='score')
+                         values=value)
 
 def answer_deltas(traj, task, pairs=None, n_boot=2000, seed=0):
     """Paired changes (points, items paired, 95% bootstrap interval) of
@@ -28021,10 +28027,12 @@ def cloze_task_deltas(traj, n_boot=2000, seed=0):
 def stage_deltas(traj, n_boot=2000, seed=0):
     """Changes between adjacent checkpoints of traj, each with a 95%
     bootstrap interval: the cloze mean in points (every task weighs the
-    same; items paired), GSM8K's 8-shot and chat accuracy in points (items
-    paired), and each domain's byte-weighted bits per byte in percent
-    (documents paired). Columns transition, then cloze, gsm8k_completion,
-    gsm8k_chat, web, science, book and traces, each with _lo and _hi."""
+    same; items paired), GSM8K's 8-shot and chat accuracy and its chat
+    accuracy with forced answers in points (items paired), and each
+    domain's byte-weighted bits per byte in percent (documents paired).
+    Columns transition, then cloze, gsm8k_completion, gsm8k_chat,
+    gsm8k_forced, web, science, book and traces, each with _lo and
+    _hi."""
     names = list(traj.table['checkpoint'])
     wide = traj.items.pivot_table(index=['task', 'item_id'],
                                   columns='checkpoint', values='score')
@@ -28034,6 +28042,7 @@ def stage_deltas(traj, n_boot=2000, seed=0):
     w = w / w.mean()  # every task weighs the same in the cloze mean
     answer = {f'gsm8k_{fmt}': _answer_wide(traj, 'gsm8k', fmt)
               for fmt in ('completion', 'chat')}
+    answer['gsm8k_forced'] = _answer_wide(traj, 'gsm8k', 'chat', 'forced')
     docs = traj.docs.assign(bits=traj.docs['bpb'] * traj.docs['bytes'])
     keys = ['cloze', *answer, *_SMOLLM3_DOMAINS]
     rows = []

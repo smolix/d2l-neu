@@ -30449,12 +30449,39 @@ def show_reach_train(probe):
           f'step {s0:,}: {_interval(*d, 2, sign=True)} (paired by query)')
     plot_reach_train(probe)
 
-def show_lc_zeroshot(zs):
+_LC_ZS_PAIRS = (('YaRN', 'PI'), ('YaRN', 'NTK'))  # claim 4's comparisons
+
+def _lc_zs_diff(zs, a, b):
+    """Zero-shot scheme a minus scheme b at the longest length, on the same
+    windows (every scheme is scored on one set of loss and needle windows):
+    the loss in the first position bucket (paired by window) and recall in
+    the gap bin (128, 256] (paired by query), each (difference, lo, hi)
+    with a 95% interval from resampling whole windows.
+
+    Defined in :numref:`sec_lm_long_context`"""
+    T, L0 = int(zs.table['length'].max()), int(zs.table['length'].min())
+    first, w, n = bucket_name(0, L0), zs.windows, zs.needles
+
+    def nll(m):
+        x = w[(w['model'] == m) & (w['measure'] == 'nll')
+              & (w['bucket'] == first)]
+        return x.set_index('window')[['sum', 'n']].sort_index()
+    la, lb = nll(a), nll(b)
+    if not len(la) or not la.index.equals(lb.index):
+        raise ValueError(f'{a} and {b} were not scored on the same windows')
+    loss = window_ci((la['sum'] - lb['sum']).to_numpy(), la['n'].to_numpy())
+    q = lambda m: n[(n['model'] == m) & (n['length'] == T) & (n['gap'] > 128)
+                    & (n['gap'] <= 256)]
+    return {'loss': loss, 'near': recall_paired(q(a), q(b))}
+
+def show_lc_zeroshot(zs, pairs=_LC_ZS_PAIRS):
     """The zero-shot table: per scheme at the longest length the losses of
     the first and last position buckets and last minus first on the same
     windows, recall in (128, 256] and in the top octave of gap (±: half the
     95% interval), and the reach; then the control line, the unscaled base
-    at its trained length."""
+    at its trained length; then for each pair (a, b) of schemes a minus b
+    on the same windows, the loss in the first bucket and recall 128-256
+    with window-resampled 95% intervals (claim 4)."""
     if not _lc_head(zs, zs.table, 'lc-zeroshot'):
         return
     t = zs.table
@@ -30476,6 +30503,13 @@ def show_lc_zeroshot(zs):
               f' {first} {c("first")}; recall 128-256 {c("near")}, '
               f'{bucket_name(L0 // 2, L0)} {c("far")}; reach '
               f'{_tokens(r["reach"])}')
+    for a, b in pairs:
+        if not {a, b} <= set(x['scheme']):
+            continue
+        d = _lc_zs_diff(zs, a, b)
+        print(f'{a} − {b}, same windows: loss {first} '
+              f'{_interval(*d["loss"], 2, True)}, recall 128-256 '
+              f'{_interval(*d["near"], 2, True)}')
 
 def _lc_seed_diff(runs, a, b, seed=0):
     """a minus b, both at one seed, at the arms' length: the loss in the
